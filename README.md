@@ -3,6 +3,8 @@ The code utilises Python 3.10.11 and the old functionality lies in the file old_
 
 Currently, the project entails multiple functionalities for experimentation, testing & future work.
 
+Most of this repo continues the work of "Adapting Specifications for Reactive Controllers", available [here](https://ieeexplore.ieee.org/abstract/document/10174043).
+
 ## Setup
 
 In order to run the code it is necessary to install the following:
@@ -12,7 +14,7 @@ In order to run the code it is necessary to install the following:
     Set macro PATH_TO_CLI at beginning of config.py
 
 ### Install clingo version 5.6.2
-A new version of Potassco's Clingo tool should be installed. As mentioned on the (website)[https://potassco.org/clingo/],
+A new version of Potassco's Clingo tool should be installed. As mentioned on the [website](https://potassco.org/clingo/),
 you may install it via conda or pip, but you will see the following message:
 ```bash
 > cingo -v
