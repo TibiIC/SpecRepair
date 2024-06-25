@@ -8,7 +8,7 @@ from spec_repair.components.spec_encoder import SpecEncoder
 from spec_repair.config import FASTLAS
 from spec_repair.enums import Learning
 from spec_repair.exceptions import NoViolationException, NoWeakeningException
-from spec_repair.heuristics import choose_one_with_heuristic, random_choice, HeuristicType, manual_choice
+from spec_repair.heuristics import choose_one_with_heuristic, random_choice, HeuristicType
 
 from spec_repair.ltl import spectra_to_df
 from spec_repair.components.spec_generator import SpecGenerator
@@ -26,7 +26,7 @@ class SpecLearner:
             trace: List[str],
             cs_traces: List[CounterTrace],
             learning_type: Learning,
-            heuristic: HeuristicType = manual_choice
+            heuristic: HeuristicType = random_choice
     ) -> Optional[list[str]]:
         spec_df: pd.DataFrame = spectra_to_df(spec)
         asp: str = self.spec_encoder.encode_ASP(spec_df, trace, cs_traces)

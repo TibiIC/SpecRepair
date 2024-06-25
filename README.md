@@ -17,7 +17,7 @@ In order to run the code it is necessary to install the following:
 A new version of Potassco's Clingo tool should be installed. As mentioned on the [website](https://potassco.org/clingo/),
 you may install it via conda or pip, but you will see the following message:
 ```bash
-> cingo -v
+> clingo -v
 clingo version 5.6.2
 ...
 Configuration: with Python 3.11.0, without Lua
@@ -61,7 +61,7 @@ For ease though:
 cd ~/Downloads # You may delete this later
 wget http://www.lrde.epita.fr/dload/spot/spot-2.11.6.tar.gz 
 tar -xf spot-2.11.6.tar.gz
-cd spot-2.11.6.tar.gz
+cd spot-2.11.6/
 # ./configure --prefix /path/to/your/tools
 ./configure # use the one above for more control over installation directory
 make
