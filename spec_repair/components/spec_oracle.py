@@ -1,3 +1,4 @@
+import copy
 import re
 from typing import Optional
 
@@ -50,6 +51,7 @@ pattern pRespondsToS(s, p) {
         return run_subprocess(cmd)
 
     def _pRespondsToS_substitution(self, spec: list[str]) -> list[str]:
+        spec = copy.deepcopy(spec)
         is_necessary = False
         for i, line in enumerate(spec):
             line = line.strip("\t|\n|;")

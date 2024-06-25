@@ -46,14 +46,14 @@ class RepairOrchestrator:
         try:
             while cs:  # not is_realisable
                 ct_asm.append(self.ct_from_cs(cs))
-                weaker_spec: list[str] = self._learner.learn_weaker_spec(
+                weak_spec: list[str] = self._learner.learn_weaker_spec(
                     spec, trace, ct_asm,
                     learning_type=Learning.ASSUMPTION_WEAKENING,
                     heuristic=manual_choice)
-                if weaker_spec == spec and stop_heuristic(spec, ct_asm):
+                if weak_spec == spec and stop_heuristic(spec, ct_asm):
                     break
-                weak_spec_history.append(weaker_spec)
-                cs = self._oracle.synthesise_and_check(weaker_spec)
+                weak_spec_history.append(weak_spec)
+                cs = self._oracle.synthesise_and_check(weak_spec)
         except NoWeakeningException as e:
             print(str(e))
 
