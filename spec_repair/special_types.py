@@ -1,6 +1,6 @@
 import re
 from abc import ABC
-from typing import Callable, Set, List
+from typing import Callable, List
 
 from spec_repair.components.counter_trace import CounterTrace
 

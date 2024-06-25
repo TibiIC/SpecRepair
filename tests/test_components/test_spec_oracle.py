@@ -49,30 +49,15 @@ class TestSpecLearner(TestCase):
              'S1 -> DEAD {highwater:true, methane:true} / {pump:false};']
         self.assertEqual(expected_cs, cs)
 
-    def test_synthesise_and_check_eventually(self):
+    def test_synthesise_and_check_asm_eventually(self):
         spec_oracle = SpecOracle()
         weakened_spec: list[str] = format_spec(read_file(
-            './test_files/minepump_aw_pump.spectra'))
+            './test_files/minepump_aw_ev.spectra'))
 
         cs: CounterStrategy = spec_oracle.synthesise_and_check(weakened_spec)
 
         expected_cs: CounterStrategy = \
             ['INI -> S0 {highwater:false, methane:false} / {pump:false};',
-             'S0 -> S1 {highwater:false, methane:true} / {pump:false};',
-             'S0 -> S1 {highwater:false, methane:true} / {pump:true};',
-             'S1 -> DEAD {highwater:true, methane:true} / {pump:false};']
-        self.assertEqual(expected_cs, cs)
-
-    def test_synthesise_and_check_eventually_gar(self):
-        spec_oracle = SpecOracle()
-        weakened_spec: list[str] = format_spec(read_file(
-            './test_files/minepump_aw_pump.spectra'))
-
-        cs: CounterStrategy = spec_oracle.synthesise_and_check(weakened_spec)
-
-        expected_cs: CounterStrategy = \
-            ['INI -> S0 {highwater:false, methane:false} / {pump:false};',
-             'S0 -> S1 {highwater:false, methane:true} / {pump:false};',
-             'S0 -> S1 {highwater:false, methane:true} / {pump:true};',
-             'S1 -> DEAD {highwater:true, methane:true} / {pump:false};']
+             'S0 -> DEAD {highwater:true, methane:true} / {pump:false};',
+             'S0 -> DEAD {highwater:true, methane:true} / {pump:true};']
         self.assertEqual(expected_cs, cs)
