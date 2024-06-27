@@ -5,8 +5,9 @@ import re
 
 from spec_repair.config import PATH_TO_CLI
 from spec_repair.util.spec_util import pRespondsToS_substitution, remove_trivial_outer_brackets, parenthetic_contents
-from spec_repair.old.specification_helper import write_file, read_file, run_subprocess, get_name, \
+from spec_repair.old.specification_helper import run_subprocess, get_name, \
     strip_vars
+from spec_repair.util.file_util import read_file_lines, write_file
 
 
 def parenthetic_contents_with_function(string, include_after=False):
@@ -177,7 +178,7 @@ def translate_spec_to_file(spec, filename, BC=""):
     output_filename = re.sub(r"/spec$", "/" + name + BC + ".spectra", output_filename)
     output_filename = re.sub(r"\.spec$", ".spectra", output_filename)
 
-    write_file(output_spec, output_filename)
+    write_file(output_filename, output_spec)
     file_for_cli = pRespondsToS_substitution(output_filename)
     return file_for_cli, output_filename
 
@@ -254,7 +255,7 @@ def violations_in_initial_conditions(file):
     :param file:
     :return:
     '''
-    spec = read_file(file)
+    spec = read_file_lines(file)
     sys_vars = strip_vars(spec, "sys")
     inits = [(line, spec[i + 1]) for i, line in enumerate(spec) if
              line.find("--") >= 0 and not re.search(r"G|F|pRespondsToS", spec[i + 1])]
@@ -290,7 +291,7 @@ def realizable(file, suppress=False):
 
 def read_BCs(folder):
     filename = folder.replace("specifications", "BCs") + "/BCs"
-    return read_file(filename)
+    return read_file_lines(filename)
 
 
 def translate_case_study(folder, start_time, delete_broken=True, broad=False):
@@ -301,7 +302,7 @@ def translate_case_study(folder, start_time, delete_broken=True, broad=False):
         log = csv.writer(file)
         log_line = [start_time, get_name(filename), ""]
         try:
-            spec = read_file(filename)
+            spec = read_file_lines(filename)
         except FileNotFoundError:
             log_line.append("Cannot find file")
             log.writerow(log_line)

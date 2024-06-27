@@ -27,10 +27,10 @@ from spec_repair.old.case_study_translator import realizable, delete_files, pare
 from spec_repair.config import PROJECT_PATH, FASTLAS, GENERATE_MULTIPLE_TRACES
 from spec_repair.enums import SimEnv, Outcome, Learning, When
 from spec_repair.old.latex_translator import spectra_to_latex, violation_to_latex
-from spec_repair.old.specification_helper import read_file, write_file, strip_vars, get_folders, \
+from spec_repair.old.specification_helper import strip_vars, get_folders, \
     CASE_STUDY_EXCLUSION_LIST, \
     dict_to_text, print_dict
-from spec_repair.util.file_util import generate_filename, generate_random_string
+from spec_repair.util.file_util import generate_filename, generate_random_string, read_file_lines, write_file
 from spec_repair.old.util_titus import simplify_assignments, generate_trace_asp, write_trace, \
     semantically_identical_spot
 
@@ -151,7 +151,7 @@ def strengthen_n(spectra_file, include_prev):
     name = re.search(r"/([^/]*)\.spectra", spectra_file).group(1)
     expressions = ["assumption", "guarantee"]
     end_file = format_iff(spectra_file)
-    old_specs = [''.join(read_file(end_file))]
+    old_specs = [''.join(read_file_lines(end_file))]
     start_files = []
     repeats = 0
     count = 0
@@ -166,7 +166,7 @@ def strengthen_n(spectra_file, include_prev):
             print("none exist")
             return None
         start_file = f"{PROJECT_PATH}/input-files/strengthened/{folder}/{name}_dropped{count}.spectra"
-        write_file(spec, start_file)
+        write_file(start_file, spec)
         if realizable(start_file, suppress=True):
             # if not contains_contradictions(start_file, "assumption|asm"):
             old_specs.append(spec)
@@ -199,7 +199,7 @@ def minepump_auto():
     # df = results_to_df(results, spectra_file)
 
 
-def minepump_test():
+def minepump_trial():
     start_file = f"{PROJECT_PATH}/input-files/case-studies/modified-specs/minepump/genuine/minepump_fixed1_normalised_dropped.spectra"
     trace_file = generate_filename(start_file, "_auto_violation.txt")
     self = Specification(start_file, trace_file, violation_list=[], include_prev=False)
@@ -207,7 +207,7 @@ def minepump_test():
     self.violation_list
 
 
-def test_specs(end_file, start_files):
+def trial_specs(end_file, start_files):
     # TODO: use these to figure out why some specs end unrealizable. - believe to do with deadlocks
     # end_file = f"{PROJECT_PATH}/input-files/examples/lift_FINAL.spectra"
     end_file = format_iff(end_file)
@@ -229,7 +229,7 @@ def drop_and_evaluate(spectra_file, repeat=1, limit=10, expressions=["assumption
     # print(realizable(new_file))
     # print(realizable(spectra_file))
     results = {}
-    old_specs = [''.join(read_file(spectra_file))]
+    old_specs = [''.join(read_file_lines(spectra_file))]
     repeats = 0
     for i in range(repeat):
         while True:
@@ -338,7 +338,7 @@ def lower_variables(spec, variables):
 
 def format_iff(spectra_file):
     out_file = generate_filename(spectra_file, "_normalised.spectra")
-    spec = read_file(spectra_file)
+    spec = read_file_lines(spectra_file)
     variables = strip_vars(spec)
     spec, variables = lower_variables(spec, variables)
     spec = [re.sub(r"next\(([^\)]*)\)", r"(next(\1))", line) for line in spec]
@@ -347,11 +347,11 @@ def format_iff(spectra_file):
     spec = name_expressions(spec)
     spec = [iff_to_dnf(line) for line in spec]
     spec = [symplify(line, variables) for line in spec]
-    write_file(spec, out_file)
+    write_file(out_file, spec)
     return out_file
 
 
-def test_unrealizable():
+def trial_unrealizable():
     end_file = f"{PROJECT_PATH}/input-files/examples/lift_FINAL.spectra"
 
     start_files = ["output-files/dropped/lift_FINAL_normalised_dropped114.spectra",
@@ -363,10 +363,10 @@ def test_unrealizable():
 
     # end_file = f"{PROJECT_PATH}/input-files/examples/Traffic/traffic_updated_FINAL.spectra"
     # start_files = ["output-files/dropped/traffic_updated_FINAL_normalised_dropped143.spectra"]
-    test_specs(end_file, start_files)
+    trial_specs(end_file, start_files)
 
 
-def genbuf_test():
+def genbuf_trial():
     spectra_file = f"{PROJECT_PATH}/input-files/examples/genbuf_05_normalised_dropped.spectra"
     violation_file = f"{PROJECT_PATH}/input-files/examples/genbuf_05_normalised_dropped_auto_violation.txt"
     self = Specification(spectra_file, violation_file)
@@ -428,16 +428,16 @@ def examples():
     # genbuf()
     # traffic_guarantee_weaken_single()
     # minepump_auto()
-    # traffic_update_test()
+    # traffic_update_trial()
 
     # NB: drop_and_run is the large evaluation:
     # drop_and_run()
-    # test_unrealizable()
-    # test_lift_unrealizable_ass_only()
-    # lift_91_no_trace_test()
+    # trial_unrealizable()
+    # trial_lift_unrealizable_ass_only()
+    # lift_91_no_trace_trial()
     minepump_motivating_example()
-    # test_traffic_48_43()
-    # lift_test()
+    # trial_traffic_48_43()
+    # lift_trial()
     # traffic_guarantee_weaken_single()
 
 
@@ -465,7 +465,7 @@ def arbiter_motivating_example():
     self.run_pipeline()
 
 
-def lift_test():
+def lift_trial():
     end_file = f"{PROJECT_PATH}/input-files/examples/lift_FINAL_normalised.spectra"
     start_file = f"{PROJECT_PATH}/input-files/examples/lift_FINAL_normalised_dropped.spectra"
     #
@@ -479,7 +479,7 @@ def lift_test():
     self.run_pipeline()
 
 
-def test_traffic_48_43():
+def trial_traffic_48_43():
     start_file = f"{PROJECT_PATH}/input-files/examples/traffic_updated_FINAL_normalised_dropped48.spectra"
     end_file = f"{PROJECT_PATH}/input-files/examples/Traffic/traffic_updated_FINAL_normalised.spectra"
     outcome, learning_time = run_simulated_environment_jit(start_file, end_file, limit=10, include_prev=False)
@@ -750,7 +750,7 @@ def arbiter():
     self.run_pipeline()
 
 
-def genbuf_unsat_test():
+def genbuf_unsat_trial():
     spectra_file = "../example-files/genbuf_05_normalised_dropped0.spectra"
     violation_file = "../example-files/genbuf_05_normalised_dropped0_auto_violation_temp.txt"
     self = Specification(spectra_file, violation_file, include_prev=False)
@@ -1046,7 +1046,7 @@ def print_case_study_simple(result_collection):
 
 def drop_random(end_file, expressions, n=1, include_prev=False, write=True):
     out_file = generate_filename(end_file, "_dropped.spectra")
-    spec = read_file(end_file)
+    spec = read_file_lines(end_file)
     # pick a line
     poss_violates = [i + 1 for i, line in enumerate(spec) if
                      re.search("assumption|ass", line) and re.search(r"G", spec[i + 1]) and not re.search(r"F",
@@ -1115,7 +1115,7 @@ def drop_random(end_file, expressions, n=1, include_prev=False, write=True):
             spec[i] = new_line
 
     if write:
-        write_file(spec, out_file)
+        write_file(out_file, spec)
     else:
         out_file = ""
     return out_file, n, ''.join(spec)
@@ -1191,7 +1191,7 @@ def generate_trace(start_file: str, end_file: str, trace_file: str, max_depth: i
 
 def force_violation(spectra_file, boundary_condition):
     # spectra_file = f"{PROJECT_PATH}/input-files/case-studies/modified-specs/without_genuine/round-robin/Round-Robin_BC0.spectra"
-    spec = read_file(spectra_file)
+    spec = read_file_lines(spectra_file)
     filter_string = "assumption"
     if boundary_condition:
         filter_string = "assumption -- negated_bc"
@@ -1261,7 +1261,7 @@ def force_violation(spectra_file, boundary_condition):
             # line = "assumption -- assumption1:\n"
             violation_list.append(name)
             output_filename = generate_filename(spectra_file, "_violation.txt")
-            write_file(output, output_filename)
+            write_file(output_filename, output)
             return output_filename, violation_list
     if len(broken_rules) > 0:
         error = "Cannot force violation of single assumption.\nThe following were attempted.\n\n"
@@ -1369,7 +1369,7 @@ def check_trivial_rq():
 
 
 def extract_raw_expressions(exp_type, file):
-    spec = read_file(file)
+    spec = read_file_lines(file)
     variables = strip_vars(spec)
     spec = simplify_assignments(spec, variables)
     expressions = [re.sub(r"\s", "", spec[i + 1]) for i, line in enumerate(spec) if re.search("^" + exp_type, line)]
@@ -1544,7 +1544,7 @@ def summarize_rq():
     # else:
     output += vio_string + "\n\n" + perf_string + "\n\n" + res_string + "\n\n"
 
-    write_file(output, "../latex/rq/tables.txt")
+    write_file("../latex/rq/tables.txt", output)
 
 
 def main():
@@ -1557,12 +1557,12 @@ def main():
     # traffic_guarantee_weaken_single()
     # minepump2_from_simulated_environment()
     # traffic_guarantee_weaken_single()
-    # test_unrealizable()
+    # trial_unrealizable()
     # genbuf_simple()
     # strengthen_all()
     # rq1_random()
     # summarize_rq()
-    # genbuf_unsat_test()
+    # genbuf_unsat_trial()
     # remove_contradictions_strengthened()
     # drop_and_run()
 

@@ -1,10 +1,10 @@
 import re
-from spec_repair.old.specification_helper import read_file, write_file
+from spec_repair.util.file_util import read_file_lines, write_file
 
 
 def violation_to_latex(filename):
     # filename = "../Translators/input-files/examples/lift_violation_modified.txt"
-    lines = read_file(filename)
+    lines = read_file_lines(filename)
     spec = ''.join(lines)
     timepoints = re.findall(r"holds_at\([^,]*,([^,]*)", spec)
     timepoints = list(dict.fromkeys(timepoints))
@@ -18,7 +18,7 @@ def violation_to_latex(filename):
         output += "$\\\\\n"
     output += r"\end{flushleft}"
     output_filename = latex_filename(filename)
-    write_file(output, output_filename)
+    write_file(output_filename, output)
 
     # spec = re.sub(r"not_holds_at\(([^,]*),([^,]*),[^\.]*\.", r"u,\2 \\\\models $!\1$", spec)
     # spec = re.sub(r"holds_at\(([^,]*),([^,]*),[^\.]*\.", r"u,\2 \\\\models $\1$", spec)
@@ -27,7 +27,7 @@ def violation_to_latex(filename):
 
 def spectra_to_latex(filename):
     # filename = "../Translators/input-files/examples/lift.spectra"
-    lines = read_file(filename)
+    lines = read_file_lines(filename)
     output = "\\begin{flushleft}\n"
     spec = ''.join(lines)
     spec = re.sub(r"boolean ([^;]*);", r"boolean \1;\\\\", spec)
@@ -50,11 +50,11 @@ def spectra_to_latex(filename):
     spec = re.sub(r"(_| |&)", '\\\\' + r"\1", spec)
     output += spec + r"\end{flushleft}"
     output_filename = latex_filename(filename)
-    write_file(output, output_filename)
+    write_file(output_filename, output)
 
 
 def asp_to_latex(filename):
-    lines = read_file(filename)
+    lines = read_file_lines(filename)
     head = True
     for i, line in enumerate(lines):
         if line[0] in ["%", "\n"]:
@@ -76,7 +76,7 @@ def asp_to_latex(filename):
     # print(''.join(lines))
     # output_filename = re.sub(r"([^/]*\.[^/]*)$", r"latex/\1", filename)
     output_filename = latex_filename(filename)
-    write_file(lines, output_filename)
+    write_file(output_filename, lines)
 
 
 def latex_filename(filename):

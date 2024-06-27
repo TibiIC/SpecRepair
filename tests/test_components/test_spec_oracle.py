@@ -3,7 +3,7 @@ from unittest import TestCase
 
 from spec_repair.components.spec_oracle import SpecOracle
 from spec_repair.ltl import CounterStrategy
-from spec_repair.old.specification_helper import read_file
+from spec_repair.util.file_util import read_file_lines
 from spec_repair.util.spec_util import format_spec
 
 
@@ -24,7 +24,7 @@ class TestSpecLearner(TestCase):
 
     def test_synthesise_and_check(self):
         spec_oracle = SpecOracle()
-        weakened_spec: list[str] = format_spec(read_file(
+        weakened_spec: list[str] = format_spec(read_file_lines(
             './test_files/minepump_aw_methane.spectra'))
 
         cs: CounterStrategy = spec_oracle.synthesise_and_check(weakened_spec)
@@ -37,7 +37,7 @@ class TestSpecLearner(TestCase):
 
     def test_synthesise_and_check_2(self):
         spec_oracle = SpecOracle()
-        weakened_spec: list[str] = format_spec(read_file(
+        weakened_spec: list[str] = format_spec(read_file_lines(
             './test_files/minepump_aw_pump.spectra'))
 
         cs: CounterStrategy = spec_oracle.synthesise_and_check(weakened_spec)
@@ -51,7 +51,7 @@ class TestSpecLearner(TestCase):
 
     def test_synthesise_and_check_asm_eventually(self):
         spec_oracle = SpecOracle()
-        weakened_spec: list[str] = format_spec(read_file(
+        weakened_spec: list[str] = format_spec(read_file_lines(
             './test_files/minepump_aw_ev.spectra'))
 
         cs: CounterStrategy = spec_oracle.synthesise_and_check(weakened_spec)

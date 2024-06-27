@@ -6,7 +6,7 @@ from unittest.mock import patch
 from spec_repair.components.repair_orchestrator import RepairOrchestrator
 from spec_repair.components.spec_learner import SpecLearner
 from spec_repair.components.spec_oracle import SpecOracle
-from spec_repair.old.specification_helper import read_file, write_file
+from spec_repair.util.file_util import write_file, read_file_lines
 from spec_repair.util.spec_util import format_spec
 
 
@@ -27,14 +27,14 @@ class TestRepairOrchestrator(TestCase):
 
     @patch('sys.stdin', io.StringIO('1\n0\n1\n'))
     def test_repair_spec(self):
-        spec: list[str] = format_spec(read_file(
+        spec: list[str] = format_spec(read_file_lines(
             '../input-files/examples/Minepump/minepump_strong.spectra'))
-        trace: list[str] = read_file(
+        trace: list[str] = read_file_lines(
             "./test_files/minepump_strong_auto_violation.txt")
-        expected_spec: list[str] = format_spec(read_file(
+        expected_spec: list[str] = format_spec(read_file_lines(
             './test_files/minepump_aw_methane_gw_methane_fix.spectra'))
 
         repairer: RepairOrchestrator = RepairOrchestrator(SpecLearner(), SpecOracle())
         new_spec = repairer.repair_spec(spec, trace)
-        write_file(new_spec, "./test_files/out/minepump_test_fix.spectra")
+        write_file("./test_files/out/minepump_test_fix.spectra", new_spec)
         self.assertEqual(expected_spec, new_spec)

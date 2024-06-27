@@ -3,12 +3,13 @@ import subprocess
 
 from spec_repair.old.case_study_translator import negate, realizable
 from spec_repair.enums import SimEnv
-from spec_repair.old.specification_helper import read_file, strip_vars, write_file, create_cmd
+from spec_repair.old.specification_helper import strip_vars, create_cmd
+from spec_repair.util.file_util import read_file_lines, write_file
 
 
 def generate_trace_asp(start_file, end_file, trace_file):
     try:
-        old_trace = read_file(trace_file)
+        old_trace = read_file_lines(trace_file)
     except FileNotFoundError:
         old_trace = []
     asp_restrictions = compose_old_traces(old_trace)
@@ -94,7 +95,7 @@ def generate_trace_asp(start_file, end_file, trace_file):
 
 def write_trace(trace, filename):
     try:
-        prev = read_file(filename)
+        prev = read_file_lines(filename)
         timepoint = int(max(re.findall(r"trace_name_(\d*)", ''.join(prev)))) + 1
     except FileNotFoundError:
         timepoint = 0
@@ -147,7 +148,7 @@ def two_period_primed_expressions(primed_expressions, variables):
 
 
 def extract_expressions(file, counter_strat=False, guarantee_only=False):
-    spec = read_file(file)
+    spec = read_file_lines(file)
     variables = strip_vars(spec)
     spec = simplify_assignments(spec, variables)
     assumptions = extract_non_liveness(spec, "assumption")
@@ -219,7 +220,7 @@ def generate_model(expressions, neg_expressions, variables, scratch=False, asp_r
     output += '\n'.join(["#show " + var + "/0." for var in variables]) + "\n"
 
     file = "/tmp/temp_asp.lp"
-    write_file(output, file)
+    write_file(file, output)
     clingo_out = run_clingo_raw(file)
     violation = True
 
@@ -374,7 +375,7 @@ def close_file_descriptors_of_subprocess(p):
 
 
 def extract_all_expressions_spot(exp_type, file, return_list=False):
-    spec = read_file(file)
+    spec = read_file_lines(file)
     variables = strip_vars(spec)
     spec = simplify_assignments(spec, variables)
     expressions = [re.sub(r"\s", "", spec[i + 1]) for i, line in enumerate(spec) if re.search("^" + exp_type, line)]

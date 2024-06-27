@@ -23,38 +23,7 @@ def get_folders(folder, exclusions=[]):
     return folders
 
 
-def read_file(spectra_file) -> list[str]:
-    with open(spectra_file, "r") as file:
-        spec: list[str] = file.readlines()
-        return spec
-
-
 # TODO: Fix infinite recursion
-def make_directories_if_needed(output_filename):
-    folder = re.sub(r"/[^/]*$", "", output_filename)
-    if not os.path.isdir(folder):
-        # infinite recursion if the path is not a directory, since
-        # re.sub(r"/[^/]*$", "", folder) == folder
-        make_directories_if_needed(folder)
-        os.mkdir(folder)
-
-
-# TODO: remove this or write_to_file() from util.py
-def write_file(spec, output_filename):
-    '''
-    NB: newline = '\\\\n' is necessary so that file is compatible with
-    linux (ILASP is run from linux).\n
-    :param spec: List of lines to save.
-    :param output_filename: filename to save to
-    '''
-    output_filename = re.sub(r"\\", "/", output_filename)
-    make_directories_if_needed(output_filename)
-    output = ''.join(spec)
-    with open(output_filename, "w", newline='\n') as file:
-        file.write(output)
-        file.close()
-
-
 def run_subprocess(cmd, encoding: str = 'utf-8', suppress=False, timeout=-1):
     # timed = timeout > 0
 

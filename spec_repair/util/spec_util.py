@@ -11,11 +11,12 @@ from spec_repair.heuristics import choose_one_with_heuristic, manual_choice, Heu
 from spec_repair.ltl import CounterStrategy, spectra_to_df
 from spec_repair.old.patterns import PRS_REG, FIRST_PRED, ALL_PREDS
 from spec_repair.config import PROJECT_PATH, FASTLAS
-from spec_repair.old.specification_helper import read_file, write_file, strip_vars, assign_equalities
+from spec_repair.old.specification_helper import strip_vars, assign_equalities
+from spec_repair.util.file_util import read_file_lines, write_file
 
 
 def pRespondsToS_substitution(output_filename):
-    spec = read_file(output_filename)
+    spec = read_file_lines(output_filename)
     found = False
     for i, line in enumerate(spec):
         line = line.strip("\t|\n|;")
@@ -32,9 +33,9 @@ def pRespondsToS_substitution(output_filename):
             replacement = "\tpRespondsToS(" + s + "," + p + ");\n"
             spec[i] = replacement
     if found:
-        spec.append(''.join(read_file(f"{PROJECT_PATH}/files/pRespondsToS.txt")))
+        spec.append(''.join(read_file_lines(f"{PROJECT_PATH}/files/pRespondsToS.txt")))
         new_filename = output_filename.replace(".spectra", "_patterned.spectra")
-        write_file(spec, new_filename)
+        write_file(new_filename, spec)
         return new_filename
     return output_filename
 
@@ -123,7 +124,7 @@ def create_trace(violation_file: Union[str, List[str]], ilasp=False, counter_str
     if violation_file == "":
         return ""
     if type(violation_file) is not list:
-        trace = read_file(violation_file)
+        trace = read_file_lines(violation_file)
     else:
         trace = violation_file
     trace = re.sub("\n+", "\n", '\n'.join(trace)).split("\n")
@@ -438,7 +439,7 @@ def component_end_consequent(line, temp_op, timepoint):
 
 
 def get_assumptions_and_guarantees_from(start_file) -> pd.DataFrame:
-    spec: List[str] = format_spec(read_file(start_file))
+    spec: List[str] = format_spec(read_file_lines(start_file))
     spec_df: pd.DataFrame = spectra_to_df(spec)
     return spec_df
 

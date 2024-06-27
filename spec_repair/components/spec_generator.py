@@ -1,13 +1,13 @@
 import pandas as pd
 
 from spec_repair.config import PROJECT_PATH
-from spec_repair.old.specification_helper import read_file
+from spec_repair.util.file_util import read_file_lines
 from spec_repair.util.spec_util import create_signature
 
 
 class SpecGenerator:
     def __init__(self, background_file_path=f"{PROJECT_PATH}/files/background_knowledge.txt"):
-        self.background_knowledge = ''.join(read_file(background_file_path))
+        self.background_knowledge = ''.join(read_file_lines(background_file_path))
 
     def generate_clingo(self, spec_df: pd.DataFrame, assumptions: str, guarantees: str, violation_trace: str,
                         cs_trace: str) -> str:

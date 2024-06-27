@@ -3,10 +3,18 @@ from spec_repair.components.spec_learner import SpecLearner
 from spec_repair.components.spec_oracle import SpecOracle
 from spec_repair.config import PROJECT_PATH
 from spec_repair.ltl import Trace
-from spec_repair.util.file_util import generate_asp_trace_to_file
+from spec_repair.old.util_titus import generate_trace_asp
+from spec_repair.util.file_util import generate_temp_filename
 from spec_repair.util.spec_util import get_assumptions_and_guarantees_from
 
+
 # TODO: use this file as replacement for Specification.py logic
+
+
+def generate_asp_trace_to_file(start_file: str, end_file: str) -> str:
+    trace_file = generate_temp_filename(".txt")
+    generate_trace_asp(start_file, end_file, trace_file)
+    return trace_file
 
 
 if __name__ == '__main__':

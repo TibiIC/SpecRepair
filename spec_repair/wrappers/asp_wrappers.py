@@ -2,9 +2,10 @@ import re
 
 from spec_repair.config import FASTLAS, MAX_ASP_HYPOTHESES, PROJECT_PATH
 from spec_repair.enums import ExpType
-from spec_repair.old.specification_helper import run_subprocess, read_file, write_file, create_cmd
+from spec_repair.old.specification_helper import run_subprocess, create_cmd
 from spec_repair.old.util_titus import run_clingo_raw
-from spec_repair.util.file_util import generate_filename, generate_temp_filename, write_to_file
+from spec_repair.util.file_util import generate_filename, generate_temp_filename, write_to_file, read_file_lines, \
+    write_file
 
 
 def integrate_pylasp(las_file):
@@ -39,7 +40,7 @@ def edit_pylasp_for_many_solutions(output, n_solutions):
         if line == "    ilasp.cdilp.add_coverage_constraint(constraint, [ce['id']])":
             shift = False
     output = '\n'.join(lines)
-    input_lines = read_file(f"{PROJECT_PATH}/files/input_text_for_pylasp.txt")
+    input_lines = read_file_lines(f"{PROJECT_PATH}/files/input_text_for_pylasp.txt")
     output = re.sub(r"(    c_egs = ilasp\.find_all_counterexamples\(solve_result\))",
                     r"\1\n" + ''.join(input_lines),
                     output)
@@ -50,9 +51,9 @@ def edit_pylasp_for_many_solutions(output, n_solutions):
 
 
 def append_pylasp_script(las_file, pylasp_script):
-    program = read_file(las_file)
+    program = read_file_lines(las_file)
     program = [pylasp_script] + program
-    write_file(program, las_file)
+    write_file(las_file, program)
 
 
 def error_check_ILASP_output(output):

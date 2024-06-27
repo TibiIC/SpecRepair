@@ -28,10 +28,11 @@ from spec_repair.enums import When, ExpType, Learning
 from spec_repair.heuristics import choose_one_with_heuristic, manual_choice, HeuristicType
 from spec_repair.ltl import spectra_to_df, filter_expressions_of_type
 from spec_repair.old.patterns import PRS_REG, FIRST_PRED, ALL_PREDS
-from spec_repair.old.specification_helper import write_file, read_file, run_subprocess, strip_vars, CASE_STUDY_FINALS
+from spec_repair.old.specification_helper import run_subprocess, strip_vars, CASE_STUDY_FINALS
 from spec_repair.old.util_titus import extract_expressions, generate_model, \
     extract_all_expressions, run_clingo_raw, extract_all_expressions_spot
-from spec_repair.util.file_util import is_file_format, generate_filename, generate_random_string, generate_temp_filename
+from spec_repair.util.file_util import is_file_format, generate_filename, generate_random_string, \
+    generate_temp_filename, read_file_lines, write_file
 
 
 def format_name(spectra_file):
@@ -47,7 +48,7 @@ def check_format(spectra_file):
 
 
 def create_signature_from_file(spectra_file):
-    variables = strip_vars(read_file(spectra_file))
+    variables = strip_vars(read_file_lines(spectra_file))
     output = "%---*** Signature  ***---\n\n"
     for var in variables:
         output += "atom(" + var + ").\n"
@@ -80,7 +81,7 @@ def run_clingo(clingo_file, return_violated_traces=False, exp_type="assumption")
         return list(filter(re.compile(rf"violation_holds\(|{exp_type}\(|entailed\(").search, output))
     else:
         output = '\n'.join(output)
-        write_file(output, answer_set)
+        write_file(answer_set, output)
         print(f"See file for output: {answer_set}")
 
 
@@ -110,7 +111,7 @@ def drop_all(end_file):
     if not re.search("normalised", end_file):
         print("file not normalised!")
         exit(1)
-    spec = read_file(end_file)
+    spec = read_file_lines(end_file)
     poss_violates = [i + 1 for i, line in enumerate(spec) if
                      re.search("assumption|ass", line) and re.search(r"G", spec[i + 1]) and not re.search(r"F",
                                                                                                           spec[i + 1])]
@@ -140,7 +141,7 @@ def drop_all(end_file):
 
 def summarize_spec(spectra_file):
     # spectra_file = f"{PROJECT_PATH}/input-files/case-studies/modified-specs/minepump/genuine/minepump_FINAL.spectra"
-    spec = read_file(spectra_file)
+    spec = read_file_lines(spectra_file)
     e_vars = strip_vars(spec, ["env"])
     s_vars = strip_vars(spec, ["sys"])
     assumptions = extract_all_expressions("assumption", spec)
@@ -231,7 +232,7 @@ def summarize_specs():
     output = "\\usepackage{booktabs}\n\\begin{document}\n\\begin{table}\n\\centering\n" + lat + \
              "\\caption{my table}\n\\label{tab:my_label}\n\\end{table}\n\\end{document}\n"
 
-    write_file(output, "latex/output" + n + ".tex")
+    write_file("latex/output" + n + ".tex", output)
 
 
 def results_to_latex(results, rows):
@@ -646,7 +647,7 @@ class Specification:
         self.counter_strat_count = 0
         self.cs_trace = ""
 
-        self.background_knowledge = ''.join(read_file(f"{PROJECT_PATH}/files/background_knowledge.txt"))
+        self.background_knowledge = ''.join(read_file_lines(f"{PROJECT_PATH}/files/background_knowledge.txt"))
 
     def run_assumption_weakening(self):
         learning_type = Learning.ASSUMPTION_WEAKENING
@@ -730,7 +731,7 @@ class Specification:
         :param spectra_file: Path to Spectra specification.
         :return: Boolean indicating success/failure.
         '''
-        self.orig_spec = read_file(self.spectra_file)
+        self.orig_spec = read_file_lines(self.spectra_file)
         if not check_format(self.orig_spec):
             print("Incorrect Spectra Format. See format_spectra_file for correct format.")
             exit(1)
@@ -834,7 +835,7 @@ class Specification:
         self.las = mode_declaration + background_knowledge + \
                    expressions_for_weakening + signature + violation_trace_ilasp + cs_trace
         if not for_clingo:
-            write_file(self.las, self.las_file)
+            write_file(self.las_file, self.las)
 
     def generate_lp_file(self, assumptions: str, guarantees: str, signature: str, violation_trace, cs_trace,
                          for_clingo: bool):
@@ -850,7 +851,7 @@ class Specification:
         :return:
         '''
         lp = self.generate_lp(assumptions, cs_trace, for_clingo, guarantees, signature, violation_trace)
-        write_file(lp, self.lp_file)
+        write_file(self.lp_file, lp)
 
     def extract_one_possible_deadlock_completion_assignments(self, trace, file):
         file = re.sub("_patterned", "", file)
@@ -991,7 +992,7 @@ class Specification:
         # original file until we move to guarantee weakening. Guarantee weakening does do this on first run.
         # self.spectra_to_DataFrames()
         self.fixed_spec_history.append(spec)
-        write_file(spec, self.fixed_spec_file)
+        write_file(self.fixed_spec_file, spec)
         # TODO: never is self.formula_df updated!!!
         return True
 
@@ -1142,7 +1143,7 @@ class Specification:
             lines: Optional[List[str]] = None
     ) -> Dict[str, str]:
         if lines is None:
-            lines = read_file(self.counter_strat_file)
+            lines = read_file_lines(self.counter_strat_file)
         start = "INI"
         output = ""
         trace_name_dict: dict[str, str] = {}
@@ -1378,7 +1379,7 @@ class Specification:
             self.fixed_spec_history.pop()
         spec = self.fixed_spec_history[len(self.fixed_spec_history) - 1]
         self.fixed_spec = spec
-        write_file(spec, self.fixed_spec_file)
+        write_file(self.fixed_spec_file, spec)
 
     def run_guarantee_weakening(self, initiate=False):
         learning_type = Learning.GUARANTEE_WEAKENING
@@ -1467,12 +1468,12 @@ def recursively_search(case_study, folder, exclusions=["genuine"]):
 
 
 def extract_nth_violation(trace_file, n):
-    traces = read_file(trace_file)
+    traces = read_file_lines(trace_file)
     trace = [x for x in traces if re.search("trace_name_" + str(n), x)]
     if len(trace) == 0:
         return ""
     temp_file = re.sub("auto_violation", "auto_violation_temp", trace_file)
-    write_file(trace, temp_file)
+    write_file(temp_file, trace)
     return temp_file
 
 
