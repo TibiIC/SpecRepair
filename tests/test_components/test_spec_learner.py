@@ -150,3 +150,22 @@ class TestSpecLearner(TestCase):
                                                   heuristic=last_choice)
 
         self.assertEqual(expected_spec, new_spec)
+
+    def test_learn_spec_lift_asm_1(self):
+        spec_learner = SpecLearner()
+
+        spec: list[str] = format_spec(read_file_lines(
+            '../input-files/examples/lift_FINAL_NEW_strong.spectra'))
+        trace: list[str] = read_file_lines(
+            "./test_files/lift_strong_auto_violation.txt")
+
+        expected_spec: list[str] = format_spec(read_file_lines(
+            './test_files/lift_aw_b1.spectra'))
+
+        new_spec: list[str]
+        new_spec = spec_learner.learn_weaker_spec(spec, trace, cs_traces=[],
+                                                  learning_type=Learning.ASSUMPTION_WEAKENING,
+                                                  heuristic=first_choice)
+
+        self.assertEqual(expected_spec, new_spec)
+
