@@ -1,3 +1,4 @@
+import os
 import unittest
 from unittest import TestCase
 
@@ -10,6 +11,18 @@ from spec_repair.enums import When, Learning, SimEnv
 
 
 class Test(TestCase):
+    @classmethod
+    def setUpClass(cls):
+        # Change the working directory to the script's directory
+        cls.original_working_directory = os.getcwd()
+        tests_dir = os.path.dirname(os.path.abspath(__file__))
+        os.chdir(tests_dir)
+
+    @classmethod
+    def tearDownClass(cls):
+        # Restore the original working directory
+        os.chdir(cls.original_working_directory)
+
     def test_integrate_rule(self):
         arrow = "->"
         conjunct = "not_holds_at(eventually,r2,V1,V2)."
@@ -134,16 +147,18 @@ class Test(TestCase):
         formula = "(next(f1=true)&b2=false&b3=false)"
         when = When.ALWAYS
         output = convert_assignments(formula, when, consequent=False)
-        self.assertEqual(output, 'holds_at(next,f1,T,S),\n\tnot_holds_at(current,b2,T,S),\n\tnot_holds_at(current,b3,T,S)')
+        self.assertEqual(output,
+                         'holds_at(next,f1,T,S),\n\tnot_holds_at(current,b2,T,S),\n\tnot_holds_at(current,b3,T,S)')
 
         output = convert_assignments(formula, when, consequent=True)
-        self.assertEqual(output, 'holds_at(next,f1,T,S),\n\tnot_holds_at(current,b2,T,S),\n\tnot_holds_at(current,b3,T,S)')
+        self.assertEqual(output,
+                         'holds_at(next,f1,T,S),\n\tnot_holds_at(current,b2,T,S),\n\tnot_holds_at(current,b3,T,S)')
 
     def test_semantical_identical_spot(self):
-        fixed = "../example-files/semantically_identical/minepump_fixed0_fixed.spectra"
-        final = "../example-files/semantically_identical/minepump_fixed1.spectra"
-        start = "../example-files/semantically_identical/minepump_fixed0.spectra"
-        inc_gar = "../example-files/semantically_identical/minepump_inc_gar.spectra"
+        fixed = "test_files/semantically_identical/minepump_fixed0_fixed.spectra"
+        final = "test_files/semantically_identical/minepump_fixed1.spectra"
+        start = "test_files/semantically_identical/minepump_fixed0.spectra"
+        inc_gar = "test_files/semantically_identical/minepump_inc_gar.spectra"
 
         result = semantically_identical_spot(fixed, final)
         self.assertEqual(SimEnv.Success, result)
