@@ -139,7 +139,7 @@ class TestSpecLearner(TestCase):
         spec: list[str] = format_spec(read_file_lines(
             '../input-files/examples/Arbiter/Arbiter_FINAL_strong.spectra'))
         trace: list[str] = read_file_lines(
-            "./test_files/minepump_strong_auto_violation.txt")
+            "./test_files/arbiter_strong_auto_violation.txt")
 
         expected_spec: list[str] = format_spec(read_file_lines(
             './test_files/arbiter_aw_ev.spectra'))
