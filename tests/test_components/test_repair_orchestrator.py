@@ -26,7 +26,7 @@ class TestRepairOrchestrator(TestCase):
         os.chdir(cls.original_working_directory)
 
     @patch('sys.stdin', io.StringIO('1\n0\n1\n'))
-    def test_repair_spec(self):
+    def test_repair_spec_minepump(self):
         spec: list[str] = format_spec(read_file_lines(
             '../input-files/examples/Minepump/minepump_strong.spectra'))
         trace: list[str] = read_file_lines(
@@ -51,4 +51,18 @@ class TestRepairOrchestrator(TestCase):
         repairer: RepairOrchestrator = RepairOrchestrator(SpecLearner(), SpecOracle())
         new_spec = repairer.repair_spec(spec, trace)
         write_file("./test_files/out/minepump_test_fix.spectra", new_spec)
+        self.assertEqual(expected_spec, new_spec)
+
+    @patch('sys.stdin', io.StringIO('5\n'))
+    def test_repair_spec_arbiter_ev(self):
+        spec: list[str] = format_spec(read_file_lines(
+            '../input-files/examples/Arbiter/Arbiter_FINAL_strong.spectra'))
+        trace: list[str] = read_file_lines(
+            "./test_files/minepump_strong_auto_violation.txt")
+        expected_spec: list[str] = format_spec(read_file_lines(
+            './test_files/arbiter_aw_ev.spectra'))
+
+        repairer: RepairOrchestrator = RepairOrchestrator(SpecLearner(), SpecOracle())
+        new_spec = repairer.repair_spec(spec, trace)
+        write_file("./test_files/out/arbiter_test_fix.spectra", new_spec)
         self.assertEqual(expected_spec, new_spec)

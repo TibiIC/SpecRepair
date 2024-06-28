@@ -1,4 +1,5 @@
 import os
+from typing import Optional
 from unittest import TestCase
 
 from spec_repair.components.spec_oracle import SpecOracle
@@ -61,3 +62,11 @@ class TestSpecLearner(TestCase):
              'S0 -> DEAD {highwater:true, methane:true} / {pump:false};',
              'S0 -> DEAD {highwater:true, methane:true} / {pump:true};']
         self.assertEqual(expected_cs, cs)
+
+    def test_synthesise_and_check_arbiter_asm_eventually(self):
+        spec_oracle = SpecOracle()
+        weakened_spec: list[str] = format_spec(read_file_lines(
+            './test_files/arbiter_aw_ev.spectra'))
+
+        cs: Optional[CounterStrategy] = spec_oracle.synthesise_and_check(weakened_spec)
+        self.assertIsNone(cs)

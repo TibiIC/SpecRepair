@@ -1,0 +1,6 @@
+not_holds_at(a,0,trace_name_0).
+not_holds_at(g1,0,trace_name_0).
+not_holds_at(g2,0,trace_name_0).
+not_holds_at(r1,0,trace_name_0).
+not_holds_at(r2,0,trace_name_0).
+

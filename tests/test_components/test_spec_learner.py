@@ -6,7 +6,7 @@ from spec_repair.components.counter_trace import CounterTrace
 from spec_repair.components.spec_learner import SpecLearner
 from spec_repair.enums import Learning
 from spec_repair.exceptions import NoWeakeningException
-from spec_repair.heuristics import T, random_choice, first_choice, manual_choice
+from spec_repair.heuristics import T, random_choice, first_choice, manual_choice, last_choice
 from spec_repair.ltl import CounterStrategy
 from spec_repair.util.file_util import read_file_lines
 from spec_repair.util.spec_util import format_spec, create_cs_traces
@@ -130,5 +130,23 @@ class TestSpecLearner(TestCase):
         new_spec = spec_learner.learn_weaker_spec(spec, trace, cs_traces=cs_traces,
                                                   learning_type=Learning.GUARANTEE_WEAKENING,
                                                   heuristic=methane_choice_gar)
+
+        self.assertEqual(expected_spec, new_spec)
+
+    def test_learn_spec_arbiter_asm_1(self):
+        spec_learner = SpecLearner()
+
+        spec: list[str] = format_spec(read_file_lines(
+            '../input-files/examples/Arbiter/Arbiter_FINAL_strong.spectra'))
+        trace: list[str] = read_file_lines(
+            "./test_files/minepump_strong_auto_violation.txt")
+
+        expected_spec: list[str] = format_spec(read_file_lines(
+            './test_files/arbiter_aw_ev.spectra'))
+
+        new_spec: list[str]
+        new_spec = spec_learner.learn_weaker_spec(spec, trace, cs_traces=[],
+                                                  learning_type=Learning.ASSUMPTION_WEAKENING,
+                                                  heuristic=last_choice)
 
         self.assertEqual(expected_spec, new_spec)
