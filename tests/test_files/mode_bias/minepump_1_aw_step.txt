@@ -1,0 +1,34 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% Mode Declaration
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+#modeh(antecedent_exception(const(expression_v), var(time), var(trace))).
+#modeh(consequent_holds(eventually,const(expression_v), var(time), var(trace))).
+#modeb(1,root_consequent_holds(eventually, const(expression_v), var(time), var(trace)), (positive)).
+#modeb(2,holds_at(const(temp_op_v), const(usable_atom), var(time), var(trace)), (positive)).
+#modeb(2,not_holds_at(const(temp_op_v), const(usable_atom), var(time), var(trace)), (positive)).
+#constant(usable_atom,highwater).
+#constant(usable_atom,methane).
+#constant(usable_atom,pump).
+#constant(temp_op_v,current).
+#constant(temp_op_v,next).
+#constant(temp_op_v,prev).
+#constant(temp_op_v,eventually).
+#constant(expression_v, assumption2_1).
+#bias("
+:- constraint.
+:- head(antecedent_exception(_,V1,V2)), body(holds_at(_,_,V3,V4)), (V3, V4) != (V1, V2).
+:- head(antecedent_exception(_,V1,V2)), body(not_holds_at(_,_,V3,V4)), (V3, V4) != (V1, V2).
+:- body(holds_at(eventually,_,V1,_)), body(holds_at(eventually,_,V2,_)), V1 != V2.
+:- head(antecedent_exception(_,V1,V2)), body(holds_at(next,_,_,_)).
+:- head(antecedent_exception(_,V1,V2)), body(not_holds_at(next,_,_,_)).
+:- head(antecedent_exception(_,V1,V2)), body(holds_at(prev,_,_,_)).
+:- head(antecedent_exception(_,V1,V2)), body(not_holds_at(prev,_,_,_)).
+:- head(antecedent_exception(assumption2_1,V1,V2)), body(holds_at(eventually,_,_,_)).
+:- head(antecedent_exception(assumption2_1,V1,V2)), body(not_holds_at(eventually,_,_,_)).
+:- head(antecedent_exception(_,_,_)), body(root_consequent_holds(_,_,_,_)).
+:- head(consequent_holds(_,_,_,_)), body(holds_at(_,_,_,_)).
+:- head(consequent_holds(_,_,_,_)), body(not_holds_at(_,_,_,_)).
+:- head(consequent_holds(eventually,E1,V1,V2)), body(root_consequent_holds(eventually,E2,V3,V4)), (E1,V1,V2) != (E2,V3,V4).
+").
+

@@ -50,14 +50,14 @@ def create_signature(spec_df: pd.DataFrame):
     return output
 
 
-def extract_variables(spec_df: pd.DataFrame) -> Set[str]:
+def extract_variables(spec_df: pd.DataFrame) -> List[str]:
     antecedents: list[list[str]] = spec_df['antecedent'].tolist()
     consequents: list[list[str]] = spec_df['consequent'].tolist()
 
     elems: list[str] = reduce(operator.concat, antecedents + consequents, [])
     all_elems = "|".join(elems)
     variables = re.findall(r"\([^,]*,([^,]*)", all_elems)
-    return set(variables)
+    return list(dict.fromkeys(variables))
 
 
 class CSTraces:

@@ -18,7 +18,7 @@ class TestSpec(TestCase):
     def test_extract_variables(self):
         spec_df: pd.DataFrame = get_assumptions_and_guarantees_from(self.minepump_spec_file)
         variables = extract_variables(spec_df)
-        self.assertSetEqual({"highwater", "methane", "pump"}, variables)
+        self.assertListEqual(["highwater", "methane", "pump"], variables)
 
     def test_create_signature(self):
         spec_df: pd.DataFrame = get_assumptions_and_guarantees_from(self.minepump_spec_file)

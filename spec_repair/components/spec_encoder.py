@@ -44,8 +44,7 @@ class SpecEncoder:
 
     def encode_ILASP(self, spec_df: pd.DataFrame, trace: List[str], ct_list: List[CounterTrace], violations: list[str],
                      learning_type: Learning):
-        ill_assign: dict = illegal_assignments(spec_df, violations, "")
-        mode_declaration = self._create_mode_bias(spec_df, violations, ill_assign, learning_type)
+        mode_declaration = self._create_mode_bias(spec_df, violations, learning_type)
         trace_asp = trace_list_to_asp_form(trace)
         trace_ilasp = trace_list_to_ilasp_form(trace_asp, learning=Learning.ASSUMPTION_WEAKENING)
         # TODO: see how to deal with generation/renaming of counter-strategy traces (based on Learning type too)
@@ -60,7 +59,7 @@ class SpecEncoder:
                                                  ct_list_ilasp)
         return las
 
-    def _create_mode_bias(self, spec_df: Spec, violations: list[str], ill_assign, learning_type):
+    def _create_mode_bias(self, spec_df: Spec, violations: list[str], learning_type):
         head = "antecedent_exception"
         next_type = ""
         in_bias = ""
@@ -119,6 +118,7 @@ class SpecEncoder:
             output += f":- {in_bias}head({head}(_,V1,V2)), {in_bias}body(holds_at(prev,_,_,_)).\n"
             output += f":- {in_bias}head({head}(_,V1,V2)), {in_bias}body(not_holds_at(prev,_,_,_)).\n"
 
+        ill_assign: dict = illegal_assignments(spec_df, violations, "")
         for name in expression_names:
             when = extract_df_content(spec_df, name, extract_col="when")
             if name in ill_assign.keys():
