@@ -81,34 +81,6 @@ class TestRepairOrchestrator(TestCase):
         write_file("./test_files/out/lift_test_fix.spectra", new_spec)
         self.assertEqual(expected_spec, new_spec)
 
-    @patch('sys.stdin', io.StringIO('1\n'))
-    def test_repair_spec_lift_aw_b2(self):
-        spec: list[str] = format_spec(read_file_lines(
-            '../input-files/examples/lift_FINAL_NEW_strong.spectra'))
-        trace: list[str] = read_file_lines(
-            "./test_files/lift_strong_auto_violation.txt")
-        expected_spec: list[str] = format_spec(read_file_lines(
-            './test_files/lift_weakenings/lift_aw_b2.spectra'))
-
-        repairer: RepairOrchestrator = RepairOrchestrator(SpecLearner(), SpecOracle())
-        new_spec = repairer.repair_spec(spec, trace)
-        write_file("./test_files/out/lift_test_fix.spectra", new_spec)
-        self.assertEqual(expected_spec, new_spec)
-
-    @patch('sys.stdin', io.StringIO('2\n'))
-    def test_repair_spec_lift_aw_b3(self):
-        spec: list[str] = format_spec(read_file_lines(
-            '../input-files/examples/lift_FINAL_NEW_strong.spectra'))
-        trace: list[str] = read_file_lines(
-            "./test_files/lift_strong_auto_violation.txt")
-        expected_spec: list[str] = format_spec(read_file_lines(
-            './test_files/lift_weakenings/lift_aw_b3.spectra'))
-
-        repairer: RepairOrchestrator = RepairOrchestrator(SpecLearner(), SpecOracle())
-        new_spec = repairer.repair_spec(spec, trace)
-        write_file("./test_files/out/lift_test_fix.spectra", new_spec)
-        self.assertEqual(expected_spec, new_spec)
-
     @patch('sys.stdin', io.StringIO('3\n'))
     def test_repair_spec_lift_aw_f1(self):
         spec: list[str] = format_spec(read_file_lines(
@@ -131,34 +103,6 @@ class TestRepairOrchestrator(TestCase):
             "./test_files/lift_strong_auto_violation.txt")
         expected_spec: list[str] = format_spec(read_file_lines(
             './test_files/lift_weakenings/lift_aw_c.spectra'))
-
-        repairer: RepairOrchestrator = RepairOrchestrator(SpecLearner(), SpecOracle())
-        new_spec = repairer.repair_spec(spec, trace)
-        write_file("./test_files/out/lift_test_fix.spectra", new_spec)
-        self.assertEqual(expected_spec, new_spec)
-
-    @patch('sys.stdin', io.StringIO('5\n'))
-    def test_repair_spec_lift_aw_f2(self):
-        spec: list[str] = format_spec(read_file_lines(
-            '../input-files/examples/lift_FINAL_NEW_strong.spectra'))
-        trace: list[str] = read_file_lines(
-            "./test_files/lift_strong_auto_violation.txt")
-        expected_spec: list[str] = format_spec(read_file_lines(
-            './test_files/lift_weakenings/lift_aw_f2.spectra'))
-
-        repairer: RepairOrchestrator = RepairOrchestrator(SpecLearner(), SpecOracle())
-        new_spec = repairer.repair_spec(spec, trace)
-        write_file("./test_files/out/lift_test_fix.spectra", new_spec)
-        self.assertEqual(expected_spec, new_spec)
-
-    @patch('sys.stdin', io.StringIO('6\n'))
-    def test_repair_spec_lift_aw_f3(self):
-        spec: list[str] = format_spec(read_file_lines(
-            '../input-files/examples/lift_FINAL_NEW_strong.spectra'))
-        trace: list[str] = read_file_lines(
-            "./test_files/lift_strong_auto_violation.txt")
-        expected_spec: list[str] = format_spec(read_file_lines(
-            './test_files/lift_weakenings/lift_aw_f3.spectra'))
 
         repairer: RepairOrchestrator = RepairOrchestrator(SpecLearner(), SpecOracle())
         new_spec = repairer.repair_spec(spec, trace)

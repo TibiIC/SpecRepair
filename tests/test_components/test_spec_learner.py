@@ -160,7 +160,7 @@ class TestSpecLearner(TestCase):
             "./test_files/lift_strong_auto_violation.txt")
 
         expected_spec: list[str] = format_spec(read_file_lines(
-            './test_files/lift_aw_b1.spectra'))
+            './test_files/lift_weakenings/lift_aw_b1.spectra'))
 
         new_spec: list[str]
         new_spec = spec_learner.learn_weaker_spec(spec, trace, cs_traces=[],
@@ -178,7 +178,7 @@ class TestSpecLearner(TestCase):
             "./test_files/lift_strong_auto_violation.txt")
 
         expected_spec: list[str] = format_spec(read_file_lines(
-            './test_files/lift_aw_ev.spectra'))
+            './test_files/lift_weakenings/lift_aw_ev.spectra'))
 
         new_spec: list[str]
         new_spec = spec_learner.learn_weaker_spec(spec, trace, cs_traces=[],
