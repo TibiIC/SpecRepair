@@ -18,3 +18,6 @@ class SpecRecorder:
             if spec == new_spec:
                 return index
         return -1
+
+    def get_specs(self) -> list[str]:
+        return [spec.get_spec() for spec in self.storage.keys()]

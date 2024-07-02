@@ -28,15 +28,14 @@ class SpecLearner:
             learning_type: Learning,
             heuristic: HeuristicType = random_choice
     ) -> Optional[list[str]]:
-        hypotheses = self._find_weaker_options(cs_traces, learning_type, spec, trace)
+        hypotheses = self.find_weakening_hypotheses(spec, trace, cs_traces, learning_type)
         if not hypotheses:
             raise NoWeakeningException(
                 f"No {learning_type.exp_type_str()} weakening produces realizable spec (las file UNSAT)")
         learning_hypothesis = select_learning_hypothesis(hypotheses, heuristic)
-        new_spec = self.spec_encoder.integrate_learned_hypothesis(spec, learning_hypothesis, learning_type)
-        return new_spec
+        return self.integrate_learning_hypothesis(spec, learning_hypothesis, learning_type)
 
-    def _find_weaker_options(self, cs_traces, learning_type, spec, trace):
+    def find_weakening_hypotheses(self, spec, trace, cs_traces, learning_type) -> Optional[List[List[str]]]:
         spec_df: pd.DataFrame = spectra_to_df(spec)
         asp: str = self.spec_encoder.encode_ASP(spec_df, trace, cs_traces)
         violations = get_violations(asp, exp_type=learning_type.exp_type())
@@ -45,18 +44,25 @@ class SpecLearner:
         ilasp: str = self.spec_encoder.encode_ILASP(spec_df, trace, cs_traces, violations, learning_type)
         output: str = run_ILASP(ilasp)
         hypotheses = get_hypotheses(output)
-        return hypotheses
+        return filter_useful_learning_hypotheses(hypotheses)
+
+    def integrate_learning_hypothesis(self, spec, learning_hypothesis, learning_type) -> list[str]:
+        return self.spec_encoder.integrate_learned_hypothesis(spec, learning_hypothesis, learning_type)
 
 
 def select_learning_hypothesis(hypotheses: List[List[str]], heuristic: HeuristicType) -> List[str]:
     # TODO: store amount of top_hyp learned
     # TODO: make sure no repeated hypotheses occur
+    learning_hyp = choose_one_with_heuristic(hypotheses, heuristic)
+    return learning_hyp
+
+
+def filter_useful_learning_hypotheses(hypotheses):
     all_hyp = hypotheses[1:]
     scores = [int(re.search(r"score (\d*)", hyp[0]).group(1)) for hyp in all_hyp if
               re.search(r"score (\d*)", hyp[0])]
     top_hyp = [hyp[1:] for i, hyp in enumerate(all_hyp) if scores[i] == min(scores)]
-    learning_hyp = choose_one_with_heuristic(top_hyp, heuristic)
-    return learning_hyp
+    return top_hyp
 
 
 def get_hypotheses(output: str) -> Optional[List[List[str]]]:

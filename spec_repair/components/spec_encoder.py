@@ -165,7 +165,7 @@ class SpecEncoder:
         output += "\").\n\n"
         return output
 
-    def integrate_learned_hypothesis(self, spec: list[str], learning_hypothesis, learning_type):
+    def integrate_learned_hypothesis(self, spec: list[str], learning_hypothesis, learning_type) -> list[str]:
         rules: list[str] = list(filter(re.compile("_exception|root_consequent_").search, learning_hypothesis))
         if len(rules) == 0:
             raise LearningException("Nothing learned")

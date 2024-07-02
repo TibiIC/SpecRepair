@@ -38,12 +38,14 @@ def random_choice(options_list: List[T]) -> T:
 
 
 def first_choice(options_list: List[T]) -> T:
-    options_list.sort()
-    assert len(options_list) >= 1
-    return options_list[0]
+    return nth_choice(0, options_list)
 
 
 def last_choice(options_list: List[T]) -> T:
+    return nth_choice(-1, options_list)
+
+
+def nth_choice(index: int, options_list: List[T]) -> T:
     options_list.sort()
-    assert len(options_list) >= 1
-    return options_list[-1]
+    assert len(options_list) >= index + 1
+    return options_list[index]

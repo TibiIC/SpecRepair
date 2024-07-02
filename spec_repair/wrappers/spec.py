@@ -90,6 +90,9 @@ class Spec:
         other_exps = other.to_spot(exp_type)
         return is_left_cmp_right(this_exps, ltl_op, other_exps)
 
+    def get_spec(self):
+        return self.text
+
 
 def is_left_cmp_right(this_exps: str, ltl_op: LTLFiltOperation, other_exps: str) -> bool:
     # TODO: introduce an assertion against ltl_ops which do not exist yet

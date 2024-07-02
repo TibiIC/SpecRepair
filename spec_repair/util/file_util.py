@@ -25,6 +25,7 @@ def write_file(filename: FilePath, content: list[str]):
 
 
 def write_to_file(filename: FilePath, content: str):
+    make_directories_if_needed(filename)
     with open(filename, 'w') as file:
         file.write(content)
 

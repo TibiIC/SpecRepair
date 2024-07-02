@@ -1,25 +1,13 @@
-from typing import Optional, List, Dict
+from typing import Optional
 
 from spec_repair.components.counter_trace import CounterTrace
 from spec_repair.components.spec_learner import SpecLearner
 from spec_repair.components.spec_oracle import SpecOracle
 from spec_repair.enums import Learning
 from spec_repair.exceptions import NoWeakeningException
-from spec_repair.heuristics import choose_one_with_heuristic, first_choice, manual_choice, random_choice
+from spec_repair.heuristics import first_choice, manual_choice
 from spec_repair.ltl import CounterStrategy
 from spec_repair.special_types import StopHeuristicType
-from spec_repair.util.file_util import read_file
-from spec_repair.util.spec_util import CSTraces, extract_trace, format_spec
-
-def counter_strat_to_trace(
-        lines: Optional[List[str]] = None
-) -> Dict[str, str]:
-    start = "INI"
-    output = ""
-    trace_name_dict: dict[str, str] = {}
-    extract_trace(lines, output, start, 0, "ini", trace_name_dict)
-
-    return trace_name_dict
 
 
 class RepairOrchestrator:
@@ -29,7 +17,13 @@ class RepairOrchestrator:
         self._ct_cnt = 0
 
     # Reimplementation of the highest level abstraction code
-    def repair_spec(self, spec: list[str], trace: list[str], stop_heuristic: StopHeuristicType = lambda a, g: True):
+    def repair_spec(
+            self,
+            spec: list[str],
+            trace: list[str],
+            stop_heuristic:
+            StopHeuristicType = lambda a, g: True
+    ) -> list[str]:
         self._ct_cnt = 0
         ct_asm, ct_gar = [], []
         weak_spec_history = []
