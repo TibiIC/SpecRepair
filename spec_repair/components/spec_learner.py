@@ -28,6 +28,15 @@ class SpecLearner:
             learning_type: Learning,
             heuristic: HeuristicType = random_choice
     ) -> Optional[list[str]]:
+        hypotheses = self._find_weaker_options(cs_traces, learning_type, spec, trace)
+        if not hypotheses:
+            raise NoWeakeningException(
+                f"No {learning_type.exp_type_str()} weakening produces realizable spec (las file UNSAT)")
+        learning_hypothesis = select_learning_hypothesis(hypotheses, heuristic)
+        new_spec = self.spec_encoder.integrate_learned_hypothesis(spec, learning_hypothesis, learning_type)
+        return new_spec
+
+    def _find_weaker_options(self, cs_traces, learning_type, spec, trace):
         spec_df: pd.DataFrame = spectra_to_df(spec)
         asp: str = self.spec_encoder.encode_ASP(spec_df, trace, cs_traces)
         violations = get_violations(asp, exp_type=learning_type.exp_type())
@@ -36,12 +45,7 @@ class SpecLearner:
         ilasp: str = self.spec_encoder.encode_ILASP(spec_df, trace, cs_traces, violations, learning_type)
         output: str = run_ILASP(ilasp)
         hypotheses = get_hypotheses(output)
-        if not hypotheses:
-            raise NoWeakeningException(
-                f"No {learning_type.exp_type_str()} weakening produces realizable spec (las file UNSAT)")
-        learning_hypothesis = select_learning_hypothesis(hypotheses, heuristic)
-        new_spec = self.spec_encoder.integrate_learned_hypotheses(spec, learning_hypothesis, learning_type)
-        return new_spec
+        return hypotheses
 
 
 def select_learning_hypothesis(hypotheses: List[List[str]], heuristic: HeuristicType) -> List[str]:
