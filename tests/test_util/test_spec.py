@@ -14,19 +14,32 @@ def is_ascending(timepoint_poss: list[int]) -> bool:
 
 class TestSpec(TestCase):
     minepump_spec_file = '../../input-files/examples/Minepump/minepump_strong.spectra'
+    traffic_spec_file = '../test_files/traffic/traffic_single_strong.spectra'
 
     def test_extract_variables(self):
         spec_df: pd.DataFrame = get_assumptions_and_guarantees_from(self.minepump_spec_file)
         variables = extract_variables(spec_df)
         self.assertListEqual(["highwater", "methane", "pump"], variables)
 
-    def test_create_signature(self):
+    def test_create_signature_methane(self):
         spec_df: pd.DataFrame = get_assumptions_and_guarantees_from(self.minepump_spec_file)
         signature: str = create_signature(spec_df)
         header_pattern: re.Pattern = re.compile(r"^%-{3}\*{3}\s*Signature\s*\*{3}-{3}$", flags=re.MULTILINE)
         self.assertRegex(signature, header_pattern)
         header_pos = header_pattern.search(signature).end()
         for var in ["highwater", "methane", "pump"]:
+            atom_pattern = re.compile(rf"^atom\({var}\).$", flags=re.MULTILINE)
+            self.assertRegex(signature, atom_pattern)
+            atom_pos = atom_pattern.search(signature).start()
+            self.assertLess(header_pos, atom_pos)
+
+    def test_create_signature_traffic(self):
+        spec_df: pd.DataFrame = get_assumptions_and_guarantees_from(self.traffic_spec_file)
+        signature: str = create_signature(spec_df)
+        header_pattern: re.Pattern = re.compile(r"^%-{3}\*{3}\s*Signature\s*\*{3}-{3}$", flags=re.MULTILINE)
+        self.assertRegex(signature, header_pattern)
+        header_pos = header_pattern.search(signature).end()
+        for var in ["car", "emergency", "green", "police"]:
             atom_pattern = re.compile(rf"^atom\({var}\).$", flags=re.MULTILINE)
             self.assertRegex(signature, atom_pattern)
             atom_pos = atom_pattern.search(signature).start()

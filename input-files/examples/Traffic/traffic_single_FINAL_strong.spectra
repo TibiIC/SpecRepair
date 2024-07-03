@@ -1,4 +1,4 @@
-spec TrafficE2
+module TrafficE2
 
 env boolean car;
 env boolean emergency;
@@ -6,19 +6,18 @@ env boolean police;
 sys boolean green;
 
 
-gar green_often:
+guarantee -- green_often
 	G(car -> F(green));
 
-gar no_car_often:
+guarantee -- no_car_often
     GF(!car);
 
-asm not_police_often:
+assumption -- not_police_often
 	GF(!police);
 
-asm car_idle_when_red:
+assumption -- car_idle_when_red
 	G(car & !green -> next(car));
 
-asm car_moves_when_green:
+assumption -- car_moves_when_green
 	G(car & green -> next(!car));
-
 

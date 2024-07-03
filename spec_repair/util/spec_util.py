@@ -45,7 +45,7 @@ def create_signature(spec_df: pd.DataFrame):
     variables = extract_variables(spec_df)
     output = "%---*** Signature  ***---\n\n"
     for var in sorted(variables):
-        output += "atom(" + var + ").\n"
+        output += f"atom({var}).\n"
     output += "\n\n"
     return output
 

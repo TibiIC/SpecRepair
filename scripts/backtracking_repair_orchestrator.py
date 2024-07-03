@@ -1,6 +1,6 @@
 from collections import deque
 from copy import copy
-from typing import Optional, Deque
+from typing import Optional, Deque, Set
 
 from spec_repair.builders.spec_recorder import SpecRecorder
 from spec_repair.components.counter_trace import CounterTrace
@@ -39,11 +39,16 @@ class BacktrackingRepairOrchestrator:
             trace: list[str],
             stop_heuristic: StopHeuristicType = lambda a, g: True
     ) -> SpecRecorder:
+        self._ct_cnt = 0
         stack: Deque[RepairNode] = deque()
+        visited_nodes: Set[RepairNode] = set()
         unique_specs = SpecRecorder()
         hypotheses = self._learner.find_weakening_hypotheses(spec, trace, [], Learning.ASSUMPTION_WEAKENING)
         for hypothesis in hypotheses:
-            stack.append(RepairNode(spec, [], hypothesis, Learning.ASSUMPTION_WEAKENING))
+            node = RepairNode(spec, [], hypothesis, Learning.ASSUMPTION_WEAKENING)
+            if node not in visited_nodes:
+                stack.append(node)
+                visited_nodes.add(node)
 
         while stack:
             repair_node = stack.pop()
@@ -56,7 +61,10 @@ class BacktrackingRepairOrchestrator:
                 ct_list.append(self.ct_from_cs(cs))
                 hypotheses = self._learner.find_weakening_hypotheses(spec, trace, ct_list, repair_node.learning_type)
                 for hypothesis in hypotheses:
-                    stack.append(RepairNode(spec, ct_list, hypothesis, repair_node.learning_type))
+                    node = RepairNode(spec, ct_list, hypothesis, repair_node.learning_type)
+                    if node not in visited_nodes:
+                        stack.append(node)
+                        visited_nodes.add(node)
 
         return unique_specs
 

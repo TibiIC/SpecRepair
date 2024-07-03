@@ -6,7 +6,8 @@ from unittest.mock import patch
 from spec_repair.components.repair_orchestrator import RepairOrchestrator
 from spec_repair.components.spec_learner import SpecLearner
 from spec_repair.components.spec_oracle import SpecOracle
-from spec_repair.util.file_util import write_file, read_file_lines
+from spec_repair.old.util_titus import generate_trace_asp
+from spec_repair.util.file_util import write_file, read_file_lines, generate_filename
 from spec_repair.util.spec_util import format_spec
 
 
@@ -121,4 +122,32 @@ class TestRepairOrchestrator(TestCase):
         repairer: RepairOrchestrator = RepairOrchestrator(SpecLearner(), SpecOracle())
         new_spec = repairer.repair_spec(spec, trace)
         write_file("./test_files/out/lift_test_fix.spectra", new_spec)
+        self.assertEqual(expected_spec, new_spec)
+
+    @patch('sys.stdin', io.StringIO('0\n'))
+    def test_repair_spec_lift_well_sep(self):
+        spec: list[str] = format_spec(read_file_lines(
+            '../input-files/examples/lift_well_sep_strong.spectra'))
+        trace: list[str] = read_file_lines(
+            "./test_files/lift_strong_auto_violation.txt")
+        expected_spec: list[str] = format_spec(read_file_lines(
+            "./test_files/lift_well_sep_fix_b1.spectra"))
+
+        repairer: RepairOrchestrator = RepairOrchestrator(SpecLearner(), SpecOracle())
+        new_spec = repairer.repair_spec(spec, trace)
+        write_file("./test_files/out/lift_test_fix.spectra", new_spec)
+        self.assertEqual(expected_spec, new_spec)
+
+    @patch('sys.stdin', io.StringIO('0\n'))
+    def test_repair_spec_traffic_single(self):
+        spec: list[str] = format_spec(read_file_lines(
+            './test_files/traffic/traffic_single_strong.spectra'))
+        trace: list[str] = read_file_lines(
+            "./test_files/traffic/traffic_single_auto_violation.txt")
+        expected_spec: list[str] = format_spec(read_file_lines(
+            './test_files/traffic/traffic_single.spectra'))
+
+        repairer: RepairOrchestrator = RepairOrchestrator(SpecLearner(), SpecOracle())
+        new_spec = repairer.repair_spec(spec, trace)
+        write_file("./test_files/out/traffic_test_fix.spectra", new_spec)
         self.assertEqual(expected_spec, new_spec)

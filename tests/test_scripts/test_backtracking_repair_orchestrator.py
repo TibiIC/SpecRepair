@@ -5,7 +5,7 @@ from scripts.backtracking_repair_orchestrator import BacktrackingRepairOrchestra
 from spec_repair.builders.spec_recorder import SpecRecorder
 from spec_repair.components.spec_learner import SpecLearner
 from spec_repair.components.spec_oracle import SpecOracle
-from spec_repair.util.file_util import read_file_lines, read_file, write_to_file
+from spec_repair.util.file_util import read_file_lines, write_to_file
 from spec_repair.util.spec_util import format_spec
 from spec_repair.wrappers.spec import Spec
 

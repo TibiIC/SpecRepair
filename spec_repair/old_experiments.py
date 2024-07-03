@@ -453,6 +453,30 @@ def lift_motivating_example():
     self.run_pipeline()
 
 
+def traffic_single_motivating_example():
+    # These are the ones with initial conditions:
+    start_file = f"{PROJECT_PATH}/input-files/examples/Traffic/traffic_single_FINAL_strong.spectra"
+    end_file = f"{PROJECT_PATH}/input-files/examples/Traffic/traffic_single_FINAL.spectra"
+
+    trace_file = generate_filename(start_file, "_auto_violation.txt")
+    delete_files(trace_file)
+    generate_trace_asp(start_file, end_file, trace_file)
+    self = Specification(start_file, trace_file, include_prev=False, random_hypothesis=True)
+    self.run_pipeline()
+
+
+def traffic_motivating_example():
+    # These are the ones with initial conditions:
+    start_file = f"{PROJECT_PATH}/input-files/examples/Traffic/traffic_updated_FINAL_strong.spectra"
+    end_file = f"{PROJECT_PATH}/input-files/examples/Traffic/traffic_updated_FINAL.spectra"
+
+    trace_file = generate_filename(start_file, "_auto_violation.txt")
+    delete_files(trace_file)
+    generate_trace_asp(start_file, end_file, trace_file)
+    self = Specification(start_file, trace_file, include_prev=False, random_hypothesis=True)
+    self.run_pipeline()
+
+
 def arbiter_motivating_example():
     # These are the ones with initial conditions:
     start_file = f"{PROJECT_PATH}/input-files/examples/Arbiter/Arbiter_FINAL_strong.spectra"
@@ -1551,7 +1575,8 @@ def main():
     # arbiter_motivating_example()
     # minepump_motivating_example_thread_safe()
     # minepump_motivating_example()
-    lift_motivating_example()
+    # lift_motivating_example()
+    traffic_single_motivating_example()
     # lift()
     # arbiter()
     # traffic_guarantee_weaken_single()
