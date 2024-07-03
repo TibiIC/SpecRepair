@@ -18,7 +18,7 @@ class RepairNode:
             self,
             spec: list[str],
             ct_list: Optional[any],
-            learning_hypothesis: str,
+            learning_hypothesis: Optional[list[str]],
             learning_type: Learning
     ):
         self.spec = spec
@@ -34,7 +34,8 @@ class RepairNode:
                 self.learning_type == other.learning_type)
 
     def __hash__(self):
-        return hash((tuple(self.spec), tuple(self.ct_list), tuple(self.learning_hypothesis), self.learning_type))
+        hashable_learning_hypothesis = tuple(self.learning_hypothesis) if self.learning_hypothesis is not None else None
+        return hash((tuple(self.spec), tuple(self.ct_list), hashable_learning_hypothesis, self.learning_type))
 
 
 class BacktrackingRepairOrchestrator:
