@@ -1,4 +1,4 @@
-spec TrafficE2
+module TrafficE2
 
 env boolean carA;
 env boolean carB;
@@ -7,30 +7,30 @@ env boolean emergency;
 sys boolean greenA;
 sys boolean greenB;
 
-asm no_emergency_often:
+assumption -- no_emergency_often
 	GF(!emergency);
 
-gar lights_not_both_red:
+guarantee -- lights_not_both_red
 	G(!greenA | !greenB);
 
-gar carA_leads_to_greenA:
+guarantee -- carA_leads_to_greenA
 	G(carA -> F(greenA));
 
-gar carB_lead_to_greenB:
+guarantee -- carB_lead_to_greenB
 	G(carB -> F(greenB));
 
-gar red_when_emergency:
+guarantee -- red_when_emergency
 	G(emergency -> !greenA & !greenB);
 
-asm carA_idle_when_red:
+assumption -- carA_idle_when_red
 	G(carA & !greenA & !emergency -> next(carA));
 
-asm carB_idle_when_red:
+assumption -- carB_idle_when_red
 	G(carB & !greenB & !emergency -> next(carB));
 
-asm carA_moves_when_green:
+assumption -- carA_moves_when_green
 	G(carA & greenA & !emergency -> next(!carA));
 
-asm carB_moves_when_green:
+assumption -- carB_moves_when_green
 	G(carB & greenB & !emergency -> next(!carB));
 
