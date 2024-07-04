@@ -101,7 +101,7 @@ class TestBacktrackingRepairOrchestrator(TestCase):
 
         self.assertEqual(expected_specs, new_specs)
 
-    @unittest.skip("Probably takes way too long to finalise")
+    # @unittest.skip("Probably takes way too long to finalise")
     def test_bfs_repair_spec_minepump(self):
         spec: list[str] = format_spec(read_file_lines(
             './test_files/minepump_strong.spectra'))

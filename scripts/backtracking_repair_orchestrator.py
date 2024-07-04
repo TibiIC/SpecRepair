@@ -37,6 +37,15 @@ class RepairNode:
         hashable_learning_hypothesis = tuple(self.learning_hypothesis) if self.learning_hypothesis is not None else None
         return hash((tuple(self.spec), tuple(self.ct_list), hashable_learning_hypothesis, self.learning_type))
 
+    def __str__(self):
+        return f"""
+        Spec: {self.spec}
+        CTs: {self.ct_list}
+        Learning Hypothesis: {self.learning_hypothesis}
+        Learning Type: {self.learning_type}
+        Weak Spec History: {self.weak_spec_history}
+        """
+
 
 class BacktrackingRepairOrchestrator:
     def __init__(self, learner: SpecLearner, oracle: SpecOracle):
@@ -64,30 +73,28 @@ class BacktrackingRepairOrchestrator:
                 visited_nodes.add(node)
 
         while stack:
-            node = stack.pop()
+            node = stack.popleft()
             try:
                 new_spec = self._learner.integrate_learning_hypothesis(node.spec, node.learning_hypothesis, node.learning_type)
+                node.weak_spec_history.append(new_spec)
                 cs = self._oracle.synthesise_and_check(new_spec)
                 if not cs:
                     unique_specs.add(Spec(''.join(new_spec)))
                 else:
                     ct_list = copy(node.ct_list)
-                    ct_list.append(self.ct_from_cs(cs))
-                    hypotheses = self._learner.find_weakening_hypotheses(spec, trace, ct_list, node.learning_type)
+                    ct = self.ct_from_cs(cs)
+                    ct_list.append(ct)
+                    hypotheses = self._learner.find_weakening_hypotheses(node.spec, trace, ct_list, node.learning_type)
                     for hypothesis in hypotheses:
-                        match node.learning_type:
-                            case Learning.ASSUMPTION_WEAKENING:
-                                node = RepairNode(copy(spec), copy(ct_list), hypothesis, node.learning_type)
-                            case Learning.GUARANTEE_WEAKENING:
-                                node = RepairNode(copy(new_spec), copy(ct_list), hypothesis, node.learning_type)
-                            case _:
-                                raise ValueError("Invalid learning type")
-                        node.weak_spec_history.append(new_spec)
-                        if node not in visited_nodes:
-                            stack.append(node)
-                            visited_nodes.add(node)
+                        new_node = copy(node)
+                        new_node.learning_hypothesis = hypothesis
+                        new_node.ct_list.append(ct)
+                        if new_node not in visited_nodes:
+                            stack.append(new_node)
+                            visited_nodes.add(new_node)
             except NoWeakeningException as e:
                 print(str(e))
+                print(node)
                 node = copy(node)
                 node.spec = node.weak_spec_history[0]
                 node.ct_list = node.ct_list[:1]
@@ -97,11 +104,11 @@ class BacktrackingRepairOrchestrator:
                     visited_nodes.add(node)
                     hypotheses = self._learner.find_weakening_hypotheses(node.spec, trace, node.ct_list, node.learning_type)
                     for hypothesis in hypotheses:
-                        node = copy(node)
-                        node.learning_hypothesis = hypothesis
-                        if node not in visited_nodes:
-                            stack.append(node)
-                            visited_nodes.add(node)
+                        new_node = copy(node)
+                        new_node.learning_hypothesis = hypothesis
+                        if new_node not in visited_nodes:
+                            stack.append(new_node)
+                            visited_nodes.add(new_node)
 
         return unique_specs
 
