@@ -1,5 +1,6 @@
 import os
 import unittest
+from typing import List
 from unittest import TestCase
 
 from scripts.backtracking_repair_orchestrator import BacktrackingRepairOrchestrator
@@ -12,6 +13,7 @@ from spec_repair.wrappers.spec import Spec
 
 
 class TestBacktrackingRepairOrchestrator(TestCase):
+    maxDiff = None
 
     @classmethod
     def setUpClass(cls):
@@ -108,9 +110,9 @@ class TestBacktrackingRepairOrchestrator(TestCase):
 
     # @unittest.skip("Probably takes way too long to finalise")
     def test_bfs_repair_spec_minepump(self):
-        spec: list[str] = format_spec(read_file_lines(
+        spec: List[str] = format_spec(read_file_lines(
             './test_files/minepump_strong.spectra'))
-        trace: list[str] = read_file_lines(
+        trace: List[str] = read_file_lines(
             "./test_files/minepump_strong_auto_violation.txt")
         repairer: BacktrackingRepairOrchestrator = BacktrackingRepairOrchestrator(SpecLearner(), SpecOracle())
 

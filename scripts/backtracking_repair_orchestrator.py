@@ -1,5 +1,7 @@
+from __future__ import annotations
+
 from collections import deque
-from copy import copy
+from copy import deepcopy
 from typing import Optional, Deque, Set
 
 from spec_repair.builders.spec_recorder import SpecRecorder
@@ -11,6 +13,41 @@ from spec_repair.exceptions import NoWeakeningException
 from spec_repair.heuristics import first_choice
 from spec_repair.special_types import StopHeuristicType
 from spec_repair.wrappers.spec import Spec
+
+
+class BaseRepairNode:
+    def __init__(
+            self,
+            spec: list[str],
+            ct_list: Optional[any],
+            learning_type: Learning
+    ):
+        self.spec = spec
+        self.ct_list = ct_list
+        self.learning_type = learning_type
+
+    def __eq__(self, other) -> bool:
+        return (self.spec == other.spec and
+                self.ct_list == other.ct_list and
+                self.learning_type == other.learning_type)
+
+    def __hash__(self) -> int:
+        return hash((tuple(self.spec), tuple(self.ct_list), self.learning_type))
+
+    def __str__(self) -> str:
+        return f"""
+        Spec: {self.spec}
+        CTs: {self.ct_list}
+        Learning Type: {self.learning_type}
+        """
+
+    def get_hypothesised_repair_node(self, learning_hypothesis: list[str]) -> RepairNode:
+        return RepairNode(
+            deepcopy(self.spec),
+            deepcopy(self.ct_list),
+            learning_hypothesis,
+            deepcopy(self.learning_type)
+        )
 
 
 class RepairNode:
@@ -65,25 +102,43 @@ class BacktrackingRepairOrchestrator:
         visited_nodes: Set[RepairNode] = set()
         unique_specs = SpecRecorder()
         # TODO: what if the first spec cannot be weakened by assumption weakening?
-        hypotheses = self._learner.find_weakening_hypotheses(spec, trace, [], Learning.ASSUMPTION_WEAKENING)
-        for hypothesis in hypotheses:
-            node = RepairNode(spec, [], hypothesis, Learning.ASSUMPTION_WEAKENING)
-            if node not in visited_nodes:
-                stack.append(node)
+        node = RepairNode(spec, [], None, Learning.ASSUMPTION_WEAKENING)
+        try:
+            hypotheses = self._learner.find_weakening_hypotheses(node.spec, trace, node.ct_list, node.learning_type)
+        except NoWeakeningException as e:
+            print(str(e))
+            print(node)
+            node.spec = node.weak_spec_history[0]
+            node.ct_list = node.ct_list[:1]
+            node.learning_hypothesis = None
+            node.learning_type = Learning.GUARANTEE_WEAKENING
+            if node in visited_nodes:
+                hypotheses = []  # No learning needed anymore, steps would be repeated
+            else:
                 visited_nodes.add(node)
+                hypotheses = self._learner.find_weakening_hypotheses(node.spec, trace, node.ct_list,
+                                                                     node.learning_type)
+        for hypothesis in hypotheses:
+            new_node = deepcopy(node)
+            new_node.learning_hypothesis = hypothesis
+            if new_node not in visited_nodes:
+                stack.append(new_node)
+                visited_nodes.add(new_node)
 
         while stack:
             node = stack.popleft()
-            new_spec = self._learner.integrate_learning_hypothesis(node.spec, node.learning_hypothesis, node.learning_type)
+            new_spec = self._learner.integrate_learning_hypothesis(node.spec, node.learning_hypothesis,
+                                                                   node.learning_type)
             node.weak_spec_history.append(new_spec)
             cs = self._oracle.synthesise_and_check(new_spec)
             if not cs:
                 unique_specs.add(Spec(''.join(new_spec)))
             else:
-                node = copy(node)
+                node = deepcopy(node)
                 node.ct_list.append(self.ct_from_cs(cs))
                 try:
-                    hypotheses = self._learner.find_weakening_hypotheses(node.spec, trace, node.ct_list, node.learning_type)
+                    hypotheses = self._learner.find_weakening_hypotheses(node.spec, trace, node.ct_list,
+                                                                         node.learning_type)
                 except NoWeakeningException as e:
                     print(str(e))
                     print(node)
@@ -98,7 +153,7 @@ class BacktrackingRepairOrchestrator:
                         hypotheses = self._learner.find_weakening_hypotheses(node.spec, trace, node.ct_list,
                                                                              node.learning_type)
                 for hypothesis in hypotheses:
-                    new_node = copy(node)
+                    new_node = deepcopy(node)
                     new_node.learning_hypothesis = hypothesis
                     if new_node not in visited_nodes:
                         stack.append(new_node)
