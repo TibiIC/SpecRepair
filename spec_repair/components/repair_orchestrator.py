@@ -1,6 +1,6 @@
 from typing import Optional
 
-from spec_repair.components.counter_trace import CounterTrace
+from spec_repair.components.counter_trace import CounterTrace, ct_from_cs
 from spec_repair.components.spec_learner import SpecLearner
 from spec_repair.components.spec_oracle import SpecOracle
 from spec_repair.enums import Learning
@@ -70,6 +70,6 @@ class RepairOrchestrator:
         return spec
 
     def ct_from_cs(self, cs: list[str]) -> CounterTrace:
-        ct_name = f"counter_strat_{self._ct_cnt}"
+        ct = ct_from_cs(cs, heuristic=first_choice, cs_id=self._ct_cnt)
         self._ct_cnt += 1
-        return CounterTrace(cs, heuristic=first_choice, name=ct_name)
+        return ct

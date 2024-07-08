@@ -1,8 +1,8 @@
 import os
-from typing import List, Set
+from typing import List
 from unittest import TestCase
 
-from spec_repair.components.counter_trace import CounterTrace
+from spec_repair.components.counter_trace import CounterTrace, ct_from_cs
 from spec_repair.components.spec_learner import SpecLearner
 from spec_repair.enums import Learning
 from spec_repair.exceptions import NoWeakeningException
@@ -69,7 +69,7 @@ class TestSpecLearner(TestCase):
             ['INI -> S0 {highwater:false, methane:false} / {pump:false};',
              'S0 -> DEAD {highwater:true, methane:true} / {pump:false};',
              'S0 -> DEAD {highwater:true, methane:true} / {pump:true};']
-        cs_trace: CounterTrace = CounterTrace(cs, name="counter_strat_0", heuristic=first_choice)
+        cs_trace: CounterTrace = ct_from_cs(cs, heuristic=first_choice, cs_id=0)
         cs_traces: List[CounterTrace] = [cs_trace]
 
         expected_spec: list[str] = format_spec(read_file_lines(
@@ -100,8 +100,8 @@ class TestSpecLearner(TestCase):
              'S0 -> S1 {highwater:false, methane:true} / {pump:false};',
              'S0 -> S1 {highwater:false, methane:true} / {pump:true};',
              'S1 -> DEAD {highwater:true, methane:true} / {pump:false};']
-        ct0: CounterTrace = CounterTrace(cs1, name="counter_strat_0", heuristic=first_choice)
-        ct1: CounterTrace = CounterTrace(cs2, name="counter_strat_1", heuristic=first_choice)
+        ct0: CounterTrace = ct_from_cs(cs1, heuristic=first_choice, cs_id=0)
+        ct1: CounterTrace = ct_from_cs(cs2, heuristic=first_choice, cs_id=1)
         cs_traces: List[CounterTrace] = [ct0, ct1]
 
         with self.assertRaises(NoWeakeningException):
@@ -120,7 +120,7 @@ class TestSpecLearner(TestCase):
             ['INI -> S0 {highwater:false, methane:false} / {pump:false};',
              'S0 -> DEAD {highwater:true, methane:true} / {pump:false};',
              'S0 -> DEAD {highwater:true, methane:true} / {pump:true};']
-        cs_trace: CounterTrace = CounterTrace(cs, name="counter_strat_0", heuristic=first_choice)
+        cs_trace: CounterTrace = ct_from_cs(cs, heuristic=first_choice, cs_id=0)
         cs_traces: List[CounterTrace] = [cs_trace]
 
         expected_spec: list[str] = format_spec(read_file_lines(
