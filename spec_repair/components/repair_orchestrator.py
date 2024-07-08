@@ -70,6 +70,6 @@ class RepairOrchestrator:
         return spec
 
     def ct_from_cs(self, cs: list[str]) -> CounterTrace:
-        ct = ct_from_cs(cs, heuristic=first_choice, cs_id=self._ct_cnt)
+        ct = ct_from_cs(cs, heuristic=manual_choice, cs_id=self._ct_cnt)
         self._ct_cnt += 1
         return ct

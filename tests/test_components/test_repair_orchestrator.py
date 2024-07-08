@@ -6,8 +6,7 @@ from unittest.mock import patch
 from spec_repair.components.repair_orchestrator import RepairOrchestrator
 from spec_repair.components.spec_learner import SpecLearner
 from spec_repair.components.spec_oracle import SpecOracle
-from spec_repair.old.util_titus import generate_trace_asp
-from spec_repair.util.file_util import write_file, read_file_lines, generate_filename
+from spec_repair.util.file_util import write_file, read_file_lines
 from spec_repair.util.spec_util import format_spec
 
 
@@ -26,7 +25,7 @@ class TestRepairOrchestrator(TestCase):
         # Restore the original working directory
         os.chdir(cls.original_working_directory)
 
-    @patch('sys.stdin', io.StringIO('1\n0\n1\n'))
+    @patch('sys.stdin', io.StringIO('1\n0\n0\n0\n1\n1\n'))
     def test_repair_spec_minepump(self):
         spec: list[str] = format_spec(read_file_lines(
             '../input-files/examples/Minepump/minepump_strong.spectra'))
@@ -40,7 +39,7 @@ class TestRepairOrchestrator(TestCase):
         write_file("./test_files/out/minepump_test_fix.spectra", new_spec)
         self.assertEqual(expected_spec, new_spec)
 
-    @patch('sys.stdin', io.StringIO('3\n0\n5\n'))
+    @patch('sys.stdin', io.StringIO('3\n0\n0\n0\n5\n\n0'))
     def test_repair_spec_minepump_ev(self):
         spec: list[str] = format_spec(read_file_lines(
             '../input-files/examples/Minepump/minepump_strong.spectra'))
@@ -164,4 +163,18 @@ class TestRepairOrchestrator(TestCase):
         repairer: RepairOrchestrator = RepairOrchestrator(SpecLearner(), SpecOracle())
         new_spec = repairer.repair_spec(spec, trace)
         write_file("./test_files/out/traffic_test_fix.spectra", new_spec)
+        self.assertEqual(expected_spec, new_spec)
+
+    @patch('sys.stdin', io.StringIO('3\n0\n2\n6\n2\n11\n4\n'))
+    def test_repair_spec_arbiter_gw(self):
+        spec: list[str] = format_spec(read_file_lines(
+            '../input-files/examples/Arbiter/Arbiter_FINAL_strong.spectra'))
+        trace: list[str] = read_file_lines(
+            "./test_files/arbiter_strong_auto_violation.txt")
+        expected_spec: list[str] = format_spec(read_file_lines(
+            './test_files/arbiter_aw_gw.spectra'))
+
+        repairer: RepairOrchestrator = RepairOrchestrator(SpecLearner(), SpecOracle())
+        new_spec = repairer.repair_spec(spec, trace)
+        write_file("./test_files/out/arbiter_test_fix.spectra", new_spec)
         self.assertEqual(expected_spec, new_spec)

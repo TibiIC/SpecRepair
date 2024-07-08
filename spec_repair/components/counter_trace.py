@@ -24,6 +24,7 @@ class CounterTrace:
     def get_ilasp_form(self, learning: Learning, complete_deadlock: bool = False):
         return trace_replace_name(trace_list_to_ilasp_form(self.get_asp_form(), learning), self._path, self._name)
 
+    # TODO: Equality based only on raw_trace (or think about it more)
     def __eq__(self, other: CounterTrace) -> bool:
         return self._raw_trace == other._raw_trace and self._path == other._path
 
@@ -41,6 +42,10 @@ class CounterTrace:
 
     def __hash__(self):
         return hash((self._raw_trace, self._path))
+
+    # TODO: Streamline this to be one-two lines tops
+    def __str__(self):
+        return f"CounterTrace({self._name}):\nPATH: '{self._path}'\nTrace:\n{self._raw_trace}"
 
 
 def cts_from_cs(cs: CounterStrategy, cs_id: Optional[int] = None) -> list[CounterTrace]:
