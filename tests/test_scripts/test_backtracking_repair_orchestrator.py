@@ -43,12 +43,17 @@ class TestBacktrackingRepairOrchestrator(TestCase):
 
         # Getting expected repairs
         expected_specs_recorder: SpecRecorder = SpecRecorder()
-        for spec_file in os.listdir('./test_files/lift_weakenings'):
+        expected_specs_files: list[str] = os.listdir('./test_files/lift_weakenings')
+        expected_specs_files.sort()     # To mimic the actual order of weakening from the algorithm
+        expected_specs_files.reverse()  # To mimic the actual order of weakening from the algorithm
+        for spec_file in expected_specs_files:
+            print(spec_file)
             expected_specs_recorder.add(
                 Spec(''.join(format_spec(read_file_lines(f'./test_files/lift_weakenings/{spec_file}')))))
         expected_specs: list = expected_specs_recorder.get_specs()
         expected_specs.sort()
 
+        self.assertEqual(len(expected_specs), len(new_specs))
         self.assertEqual(expected_specs, new_specs)
 
     def test_bfs_repair_spec_arbiter(self):
