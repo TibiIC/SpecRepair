@@ -159,7 +159,7 @@ class TestRepairOrchestrator(TestCase):
         trace: list[str] = read_file_lines(
             "./test_files/traffic/traffic_updated_auto_violation.txt")
         expected_spec: list[str] = format_spec(read_file_lines(
-            './test_files/traffic/traffic_updated.spectra'))
+            './test_files/traffic/traffic_updated_FINAL.spectra'))
 
         repairer: RepairOrchestrator = RepairOrchestrator(SpecLearner(), SpecOracle())
         new_spec = repairer.repair_spec(spec, trace)
