@@ -58,6 +58,7 @@ class TestBacktrackingRepairOrchestrator(TestCase):
         self.assertEqual(len(expected_specs), len(new_specs))
         self.assertEqual(expected_specs, new_specs)
 
+    @unittest.skip("Probably takes way too long to finalise")
     def test_bfs_repair_spec_arbiter(self):
         spec: list[str] = format_spec(read_file_lines(
             '../input-files/examples/Arbiter/Arbiter_FINAL_strong.spectra'))

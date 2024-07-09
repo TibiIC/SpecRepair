@@ -644,19 +644,34 @@ def integrate_assumption(assignments, line):
 
 
 def integrate_guarantee(arrow, assignments, facts, line):
-    start_line = line[0]
+    antecedent = line[0]
     end_line = line[1]
+    next_assignments = [x for i, x in enumerate(assignments) if re.search("next", facts[i])]
     ev_assignments = [x for i, x in enumerate(assignments) if re.search("eventually", facts[i])]
-    non_ev_assignments = [x for x in assignments if x not in ev_assignments]
-    non_ev = conjunct_assignments(non_ev_assignments)
+    cur_assignments = [x for x in assignments if x not in ev_assignments and x not in next_assignments]
+    cur = conjunct_assignments(cur_assignments)
+    next = conjunct_assignments(next_assignments)
     ev = conjunct_assignments(ev_assignments)
     # This is for pRespondsToS patterns:
-    respond = re.search(r"F\((.*)\)\);", end_line)
+    respond = re.search(r"F\(([^)]*)\)", end_line)
     if respond:
-        end_line = f"F({ev}{respond.group(1)}));"
-    elif re.search(r"GF\(", start_line):
-        end_line = ev + end_line
-    output = '\t' + start_line + arrow + non_ev + end_line
+        ev = f"F({disjunct_assignments([ev, respond.group(1)])})"
+        end_line = end_line.replace(f"F({respond.group(1)})", '', 1)
+    elif re.search(r"GF\(", antecedent):
+        ev_old = end_line.replace(");", "")
+        ev = disjunct_assignments([ev, ev_old])
+        end_line = end_line.replace(ev_old, '', 1)
+    # This is for next patterns:
+    respond = re.search(r"next\(([^)]*)\)", end_line)
+    if respond:
+        next = f"next({disjunct_assignments([next, respond.group(1)])})"
+        end_line = end_line.replace(f"next({respond.group(1)})", '', 1)
+    elif next:
+        next = f"next({next})"
+    end_line = end_line.replace("|", '')
+    cur = disjunct_assignments([cur, end_line.replace(");", "", 1)])
+    consequent = disjunct_assignments([cur, next, ev])
+    output = f"\t{antecedent}{arrow}{consequent});"
     if assignments == [] and FASTLAS:
         return '\n'
     return output + "\n"
@@ -679,17 +694,16 @@ def extract_assignments_from_facts(facts, learning_type):
             value = "false"
         atom_assignment = atom + "=" + value
 
-        if temp_op == "prev":
-            atom_assignment = "PREV(" + atom_assignment + ")"
-        elif temp_op == "next":
-            atom_assignment = "next(" + atom_assignment + ")"
-
         assignments.append(atom_assignment)
     return assignments
 
 
 def conjunct_assignments(assignments):
     output = '&'.join(assignments)
-    if output != "":
-        output += "|"
+    return output
+
+
+def disjunct_assignments(assignments):
+    assignments = [assignment for assignment in assignments if assignment != ""]
+    output = '|'.join(assignments)
     return output

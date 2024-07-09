@@ -1,4 +1,6 @@
 from __future__ import annotations
+
+from copy import copy
 from typing import Optional
 
 from spec_repair.enums import Learning
@@ -11,6 +13,7 @@ from spec_repair.util.spec_util import cs_to_named_cs_traces, trace_replace_name
 class CounterTrace:
     def __init__(self, raw_trace: str, raw_path: str, name: Optional[str] = None):
         self._raw_trace, self._path = raw_trace, raw_path
+        self._init_trace = copy(self._raw_trace)
         if name is not None:
             self._name = name
             self._raw_trace = trace_replace_name(self._raw_trace, self._path, name)
@@ -24,26 +27,25 @@ class CounterTrace:
     def get_ilasp_form(self, learning: Learning, complete_deadlock: bool = False):
         return trace_replace_name(trace_list_to_ilasp_form(self.get_asp_form(), learning), self._path, self._name)
 
-    # TODO: Equality based only on raw_trace (or think about it more)
     def __eq__(self, other: CounterTrace) -> bool:
-        return self._raw_trace == other._raw_trace and self._path == other._path
+        return self._init_trace == other._init_trace
 
     def __le__(self, other: CounterTrace) -> bool:
-        return self._path <= other._path and self._raw_trace <= other._raw_trace
+        return self._init_trace <= other._init_trace
 
     def __lt__(self, other: CounterTrace) -> bool:
-        return self._path < other._path and self._raw_trace < other._raw_trace
+        return self._init_trace < other._init_trace
 
     def __ge__(self, other: CounterTrace) -> bool:
-        return self._path >= other._path and self._raw_trace >= other._raw_trace
+        return self._init_trace >= other._init_trace
 
     def __gt__(self, other: CounterTrace) -> bool:
-        return self._path > other._path and self._raw_trace > other._raw_trace
+        return self._init_trace > other._init_trace
 
     def __hash__(self):
-        return hash((self._raw_trace, self._path))
+        return hash(self._init_trace)
 
-    # TODO: Streamline this to be one-two lines tops
+    # TODO: Streamline this to be one-two lines maximum
     def __str__(self):
         return f"CounterTrace({self._name}):\nPATH: '{self._path}'\nTrace:\n{self._raw_trace}"
 

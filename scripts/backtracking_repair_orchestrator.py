@@ -5,7 +5,7 @@ from copy import deepcopy
 from typing import Optional, Deque, Set
 
 from spec_repair.builders.spec_recorder import SpecRecorder
-from spec_repair.components.counter_trace import CounterTrace, ct_from_cs
+from spec_repair.components.counter_trace import CounterTrace, ct_from_cs, cts_from_cs
 from spec_repair.components.spec_learner import SpecLearner
 from spec_repair.components.spec_oracle import SpecOracle
 from spec_repair.enums import Learning
@@ -72,7 +72,7 @@ class RepairNode:
 
     def __hash__(self):
         hashable_learning_hypothesis = tuple(self.learning_hypothesis) if self.learning_hypothesis is not None else None
-        return hash((tuple(self.spec), tuple(self.ct_list), hashable_learning_hypothesis, self.learning_type))
+        return hash((tuple(self.spec), tuple(sorted(self.ct_list)), hashable_learning_hypothesis, self.learning_type))
 
     def __str__(self):
         return f"""
@@ -101,8 +101,8 @@ class BacktrackingRepairOrchestrator:
         stack: Deque[RepairNode] = deque()
         visited_nodes: Set[RepairNode] = set()
         unique_specs = SpecRecorder()
-        node = RepairNode(spec, [], None, Learning.ASSUMPTION_WEAKENING)
-        self._enqueue_weaker_repair_candidates(node, trace, stack, visited_nodes)
+        root_node = RepairNode(spec, [], None, Learning.ASSUMPTION_WEAKENING)
+        self._enqueue_weaker_repair_candidates(root_node, trace, stack, visited_nodes)
 
         while stack:
             node = stack.popleft()
@@ -113,9 +113,11 @@ class BacktrackingRepairOrchestrator:
             if not cs:
                 unique_specs.add(Spec(''.join(new_spec)))
             else:
-                node = deepcopy(node)
-                node.ct_list.append(self._ct_from_cs(cs))
-                self._enqueue_weaker_repair_candidates(node, trace, stack, visited_nodes)
+                cts = self._cts_from_cs(cs)
+                for ct in cts:
+                    node = deepcopy(node)
+                    node.ct_list.append(ct)
+                    self._enqueue_weaker_repair_candidates(node, trace, stack, visited_nodes)
 
         return unique_specs
 
@@ -173,3 +175,11 @@ class BacktrackingRepairOrchestrator:
         ct = ct_from_cs(cs, heuristic=first_choice, cs_id=self._ct_cnt)
         self._ct_cnt += 1
         return ct
+
+    def _cts_from_cs(self, cs: list[str]) -> list[CounterTrace]:
+        """
+        Create all CounterTrace objects from a counter strategy
+        """
+        cts = cts_from_cs(cs, cs_id=self._ct_cnt)
+        self._ct_cnt += 1
+        return cts

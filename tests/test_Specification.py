@@ -36,13 +36,6 @@ class Test(TestCase):
         output = integrate_rule(arrow, conjunct, learning_type, line)
         self.assertEqual(output, "\tG(r1=true->F(r2=false&a=true|g1=true));\n")
 
-        arrow = ""
-        conjunct = ' holds_at(eventually,green,V1,V2).'
-        learning_type = Learning.GUARANTEE_WEAKENING
-        line = ['GF(', 'car=false);']
-        output = integrate_rule(arrow, conjunct, learning_type, line)
-        self.assertEqual(output, "\tGF(green=true|car=false);\n")
-
         arrow = "->"
         conjunct = ' holds_at(current,highwater,V1,V2); holds_at(current,methane,V1,V2).'
         line = ['G(highwater=true', 'next(pump=true));']
@@ -69,7 +62,7 @@ class Test(TestCase):
         line = ["G(car=true&green=true", "next(car=false));"]
         learning_type = Learning.GUARANTEE_WEAKENING
         output = integrate_rule(arrow, conjunct, learning_type, line)
-        self.assertEqual(output, "\tG(car=true&green=true->next(emergency=false)|next(car=false));\n")
+        self.assertEqual(output, "\tG(car=true&green=true->next(emergency=false|car=false));\n")
 
         arrow = "->"
         conjunct = "not_holds_at(next,emergency,V0,V1)."
@@ -77,6 +70,81 @@ class Test(TestCase):
         learning_type = Learning.ASSUMPTION_WEAKENING
         output = integrate_rule(arrow, conjunct, learning_type, line)
         self.assertEqual(output, "\tG(car=true & green=true&next(emergency=true)->next(car=false));\n")
+
+    def test_always_eventually(self):
+        arrow = ""
+        conjunct = ' holds_at(eventually,green,V1,V2).'
+        learning_type = Learning.GUARANTEE_WEAKENING
+        line = ['GF(', 'car=false);']
+        output = integrate_rule(arrow, conjunct, learning_type, line)
+        self.assertEqual(output, "\tGF(green=true|car=false);\n")
+
+    def test_integrate_or_inside_or_rule(self):
+        arrow = "->"
+        conjunct = "holds_at(current,c,V0,V1)."
+        line = ["G(a=true", "b=true);"]
+        learning_type = Learning.GUARANTEE_WEAKENING
+        output = integrate_rule(arrow, conjunct, learning_type, line)
+        self.assertEqual("\tG(a=true->c=true|b=true);\n", output)
+
+    def test_integrate_or_inside_next_or_rule(self):
+        arrow = "->"
+        conjunct = "holds_at(current,c,V0,V1)."
+        line = ["G(a=true", "next(b=true));"]
+        learning_type = Learning.GUARANTEE_WEAKENING
+        output = integrate_rule(arrow, conjunct, learning_type, line)
+        self.assertEqual("\tG(a=true->c=true|next(b=true));\n", output)
+
+    def test_integrate_next_or_inside_next_or_rule(self):
+        arrow = "->"
+        conjunct = "holds_at(next,c,V0,V1)."
+        line = ["G(a=true", "next(b=true));"]
+        learning_type = Learning.GUARANTEE_WEAKENING
+        output = integrate_rule(arrow, conjunct, learning_type, line)
+        self.assertEqual("\tG(a=true->next(c=true|b=true));\n", output)
+
+    def test_integrate_next_or_inside_or_rule(self):
+        arrow = "->"
+        conjunct = "holds_at(next,c,V0,V1)."
+        line = ["G(a=true", "b=true);"]
+        learning_type = Learning.GUARANTEE_WEAKENING
+        output = integrate_rule(arrow, conjunct, learning_type, line)
+        self.assertEqual("\tG(a=true->b=true|next(c=true));\n", output)
+
+    def test_integrate_next_or_inside_or_next_or_rule(self):
+        arrow = "->"
+        conjunct = "holds_at(next,d,V0,V1)."
+        line = ["G(a=true", "next(c=true)|b=true);"]
+        learning_type = Learning.GUARANTEE_WEAKENING
+        output = integrate_rule(arrow, conjunct, learning_type, line)
+        self.assertEqual("\tG(a=true->b=true|next(d=true|c=true));\n", output)
+
+    def test_integrate_next_or_inside_or_next_or_rule_2(self):
+        arrow = "->"
+        conjunct = "holds_at(next,d,V0,V1)."
+        line = ["G(a=true", "b=true|next(c=true));"]
+        learning_type = Learning.GUARANTEE_WEAKENING
+        output = integrate_rule(arrow, conjunct, learning_type, line)
+        self.assertEqual("\tG(a=true->b=true|next(d=true|c=true));\n", output)
+
+    def test_integrate_or_inside_or_next_or_rule(self):
+        arrow = "->"
+        conjunct = "holds_at(current,d,V0,V1)."
+        line = ["G(a=true", "next(c=true)|b=true);"]
+        learning_type = Learning.GUARANTEE_WEAKENING
+        output = integrate_rule(arrow, conjunct, learning_type, line)
+
+        self.assertEqual("\tG(a=true->d=true|b=true|next(c=true));\n", output)
+        # NOTE: this is also correct, just non-ideal for future processing
+        "\tG(a=true->d=true|next(c=true)|b=true);\n"
+
+    def test_integrate_or_inside_or_next_or_rule_2(self):
+        arrow = "->"
+        conjunct = "holds_at(current,d,V0,V1)."
+        line = ["G(a=true", "b=true|next(c=true));"]
+        learning_type = Learning.GUARANTEE_WEAKENING
+        output = integrate_rule(arrow, conjunct, learning_type, line)
+        self.assertEqual("\tG(a=true->d=true|b=true|next(c=true));\n", output)
 
     def test_integrate_or_inside_eventually_rule(self):
         arrow = "->"
@@ -94,6 +162,22 @@ class Test(TestCase):
         output = integrate_rule(arrow, conjunct, learning_type, line)
         self.assertEqual("\tG(a=true->c=true|F(b=true));\n", output)
 
+    def test_integrate_eventually_or_rule_2(self):
+        arrow = "->"
+        conjunct = "holds_at(current,d,V0,V1)."
+        line = ["G(a=true", "c=true|F(b=true));"]
+        learning_type = Learning.GUARANTEE_WEAKENING
+        output = integrate_rule(arrow, conjunct, learning_type, line)
+        self.assertEqual("\tG(a=true->d=true|c=true|F(b=true));\n", output)
+
+    def test_integrate_eventually_or_rule_3(self):
+        arrow = "->"
+        conjunct = "holds_at(eventually,d,V0,V1)."
+        line = ["G(a=true", "c=true|F(b=true));"]
+        learning_type = Learning.GUARANTEE_WEAKENING
+        output = integrate_rule(arrow, conjunct, learning_type, line)
+        self.assertEqual("\tG(a=true->c=true|F(d=true|b=true));\n", output)
+
     def test_integrate_eventually_or_next_rule(self):
         arrow = "->"
         conjunct = "holds_at(next,c,V0,V1)."
@@ -101,6 +185,22 @@ class Test(TestCase):
         learning_type = Learning.GUARANTEE_WEAKENING
         output = integrate_rule(arrow, conjunct, learning_type, line)
         self.assertEqual("\tG(a=true->next(c=true)|F(b=true));\n", output)
+
+    def test_integrate_eventually_or_next_rule_2(self):
+        arrow = "->"
+        conjunct = "holds_at(next,d,V0,V1)."
+        line = ["G(a=true", "next(c=true)|F(b=true));"]
+        learning_type = Learning.GUARANTEE_WEAKENING
+        output = integrate_rule(arrow, conjunct, learning_type, line)
+        self.assertEqual("\tG(a=true->next(d=true|c=true)|F(b=true));\n", output)
+
+    def test_integrate_eventually_or_next_rule_3(self):
+        arrow = "->"
+        conjunct = "holds_at(eventually,d,V0,V1)."
+        line = ["G(a=true", "next(c=true)|F(b=true));"]
+        learning_type = Learning.GUARANTEE_WEAKENING
+        output = integrate_rule(arrow, conjunct, learning_type, line)
+        self.assertEqual("\tG(a=true->next(c=true)|F(d=true|b=true));\n", output)
 
     def test_integrate_eventually_rule(self):
         exp = "G(a=true);"
