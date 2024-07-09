@@ -95,6 +95,31 @@ class Test(TestCase):
         output = integrate_rule(arrow, conjunct, learning_type, line)
         self.assertEqual(output, "\tG(a=false->d=true|b=false&c=false);\n")
 
+    def test_integrate_next_conjunction(self):
+        arrow = "->"
+        conjunct = 'holds_at(next,d,V1,V2).'
+        learning_type = Learning.GUARANTEE_WEAKENING
+        line = ['G(a=false', 'next(b=false&c=false));']
+        output = integrate_rule(arrow, conjunct, learning_type, line)
+        self.assertEqual(output, "\tG(a=false->next((d=true|b=false)&(d=true|c=false)));\n")
+
+    def test_integrate_current_conjunction_2(self):
+        arrow = "->"
+        conjunct = 'holds_at(current,f,V1,V2).'
+        learning_type = Learning.GUARANTEE_WEAKENING
+        line = ['G(a=false', 'b=false&c=false&next(d=false&e=false));']
+        output = integrate_rule(arrow, conjunct, learning_type, line)
+        self.assertEqual(output, "\tG(a=false->(f=true|b=false)&(f=true|c=false)&(f=true|next(d=false&e=false)));\n")
+
+    @unittest.skip("To be expected after an extension of the weakening syntax")
+    def test_integrate_next_conjunction_2(self):
+        arrow = "->"
+        conjunct = 'holds_at(next,f,V1,V2).'
+        learning_type = Learning.GUARANTEE_WEAKENING
+        line = ['G(a=false', 'b=false&c=false&next(d=false&e=false));']
+        output = integrate_rule(arrow, conjunct, learning_type, line)
+        self.assertEqual(output, "\tG(a=false->(b=false|next(f=true))&(c=false|next(f=true))&next(f=true|d=false&e=false)));\n")
+
     # TODO: more complex test case of the above
 
     def test_always_eventually(self):

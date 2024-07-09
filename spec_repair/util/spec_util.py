@@ -655,33 +655,36 @@ def integrate_assumption(assignments, line, facts):
 
 def integrate_guarantee(arrow, assignments, facts, line):
     antecedent = line[0]
-    end_line = line[1]
+    consequent = line[1]
+    # Clean up end line
+    consequent = consequent.replace("\n", "", 1)
+    consequent = consequent.replace(");", "", 1)
+    cur = ''
+    next = ''
+    ev = ''
     next_assignments = [x for i, x in enumerate(assignments) if re.search("next", facts[i])]
     ev_assignments = [x for i, x in enumerate(assignments) if re.search("eventually", facts[i])]
     cur_assignments = [x for x in assignments if x not in ev_assignments and x not in next_assignments]
-    cur = conjunct_assignments(cur_assignments)
-    next = conjunct_assignments(next_assignments)
-    ev = conjunct_assignments(ev_assignments)
-    # This is for pRespondsToS patterns:
-    respond = re.search(r"F\(([^)]*)\)", end_line)
-    if respond:
-        ev = f"F({disjunct_assignments([ev, respond.group(1)])})"
-        end_line = end_line.replace(f"F({respond.group(1)})", '', 1)
-    elif re.search(r"GF\(", antecedent):
-        ev_old = end_line.replace(");", "")
-        ev = disjunct_assignments([ev, ev_old])
-        end_line = end_line.replace(ev_old, '', 1)
-    # This is for next patterns:
-    respond = re.search(r"next\(([^)]*)\)", end_line)
-    if respond:
-        next = f"next({disjunct_assignments([next, respond.group(1)])})"
-        end_line = end_line.replace(f"next({respond.group(1)})", '', 1)
-    elif next:
-        next = f"next({next})"
-    end_line = end_line.replace("\n", "", 1)
-    end_line = end_line.replace(");", "", 1)
-    cur = disjunct_assignments([cur] + get_disjuncts(end_line))
-    consequent = disjunct_assignments([cur, next, ev])
+    amended_conjunctions = []
+    for conjunct in get_conjuncts(consequent):
+        # This is for pRespondsToS patterns:
+        respond = re.search(r"F\(([^)]*)\)", conjunct)
+        if respond:
+            ev = f"F({disjunct_assignments(ev_assignments + [respond.group(1)])})"
+            conjunct = conjunct.replace(f"F({respond.group(1)})", '', 1)
+        elif re.search(r"GF\(", antecedent):
+            ev = disjunct_assignments(ev_assignments + [conjunct])
+            conjunct = conjunct.replace(conjunct, '', 1)
+        # This is for next patterns:
+        respond = re.search(r"next\(([^)]*)\)", conjunct)
+        if respond:
+            next = f"next({disjunct_assignments(next_assignments + [respond.group(1)])})"
+            conjunct = conjunct.replace(f"next({respond.group(1)})", '', 1)
+        elif next_assignments:
+            next = f"next({disjunct_assignments(next_assignments)})"
+        cur = disjunct_assignments(cur_assignments + get_disjuncts(conjunct))
+        amended_conjunctions.append(disjunct_assignments([cur, next, ev]))
+    consequent = conjunct_assignments(amended_conjunctions)
     output = f"\t{antecedent}{arrow}{consequent});"
     if assignments == [] and FASTLAS:
         return '\n'
@@ -709,21 +712,23 @@ def extract_assignments_from_facts(facts, learning_type):
     return assignments
 
 
-def get_conjuncts(disjunct: str):
+def get_conjuncts(disjunct: str) -> List[str]:
     return disjunct.split("&")
 
 
-def get_disjuncts(conjunct: str):
+def get_disjuncts(conjunct: str) -> List[str]:
     return conjunct.split("|")
 
 
-def conjunct_assignments(assignments):
+def conjunct_assignments(assignments: list[str]) -> str:
     assignments = [assignment for assignment in assignments if assignment != ""]
     output = '&'.join(assignments)
+    if '|' in output and '&' in output:
+        output = f"({')&('.join(assignments)})"
     return output
 
 
-def disjunct_assignments(assignments):
+def disjunct_assignments(assignments: list[str]) -> str:
     assignments = [assignment for assignment in assignments if assignment != ""]
     output = '|'.join(assignments)
     return output
