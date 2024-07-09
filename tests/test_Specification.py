@@ -71,6 +71,32 @@ class Test(TestCase):
         output = integrate_rule(arrow, conjunct, learning_type, line)
         self.assertEqual(output, "\tG(car=true & green=true&next(emergency=true)->next(car=false));\n")
 
+    def test_integrate_current_multiple_current_consequent_disjunction(self):
+        arrow = ""
+        conjunct = 'holds_at(current,c,V1,V2).'
+        learning_type = Learning.GUARANTEE_WEAKENING
+        line = ['G(', 'a=false|b=false);']
+        output = integrate_rule(arrow, conjunct, learning_type, line)
+        self.assertEqual(output, "\tG(c=true|a=false|b=false);\n")
+
+    def test_integrate_current_or_next(self):
+        arrow = "->"
+        conjunct = 'holds_at(current,c,V1,V2).'
+        learning_type = Learning.GUARANTEE_WEAKENING
+        line = ['G(a=true', 'next(b=true));']
+        output = integrate_rule(arrow, conjunct, learning_type, line)
+        self.assertEqual(output, "\tG(a=true->c=true|next(b=true));\n")
+
+    def test_integrate_current_conjunction(self):
+        arrow = "->"
+        conjunct = 'holds_at(current,d,V1,V2).'
+        learning_type = Learning.GUARANTEE_WEAKENING
+        line = ['G(a=false', 'b=false&c=false);']
+        output = integrate_rule(arrow, conjunct, learning_type, line)
+        self.assertEqual(output, "\tG(a=false->d=true|b=false&c=false);\n")
+
+    # TODO: more complex test case of the above
+
     def test_always_eventually(self):
         arrow = ""
         conjunct = ' holds_at(eventually,green,V1,V2).'
@@ -232,6 +258,12 @@ class Test(TestCase):
         learning_type = Learning.ASSUMPTION_WEAKENING
         output = eventualise_consequent(exp, learning_type)
         self.assertEqual("\tG(a=true->F(b=false & c=true));\n", output)
+
+    def test_integrate_eventually_rule_5(self):
+        exp = "G(a=true&b=true->next(c=false|d=false));"
+        learning_type = Learning.ASSUMPTION_WEAKENING
+        output = eventualise_consequent(exp, learning_type)
+        self.assertEqual("\tG(a=true&b=true->F(c=false|d=false));\n", output)
 
     def test_exp_split(self):
         exp = "G(a=true);"

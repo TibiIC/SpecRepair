@@ -15,10 +15,8 @@ guarantee -- guarantee2_1
 guarantee -- guarantee3_1
 		G(a=false->a=false|g1=false&g2=false);
 
-
 guarantee -- guarantee4
 	    G( r2=true| g1=false | g2=false);
-
 
 assumption -- a_always
 	G(r1=true-> a=true);

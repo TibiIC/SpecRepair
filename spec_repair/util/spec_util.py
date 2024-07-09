@@ -609,14 +609,15 @@ def integrate_rule(arrow, conjunct, learning_type, line):
     assignments = extract_assignments_from_facts(facts, learning_type)
 
     if learning_type == Learning.ASSUMPTION_WEAKENING:
-        return integrate_assumption(assignments, line)
+        return integrate_assumption(assignments, line, facts)
 
     if learning_type == Learning.GUARANTEE_WEAKENING:
         return integrate_guarantee(arrow, assignments, facts, line)
 
 
-def integrate_assumption(assignments, line):
-    # assignments = [x for x in assignments if x not in next_assignments]
+def integrate_assumption(assignments, line, facts):
+    next_assignments = [x for i, x in enumerate(assignments) if re.search("next", facts[i])]
+    cur_assignments = [x for x in assignments if x not in next_assignments]
     orig_ant = re.search(r"(G\(|GF\()(.*)$", line[0])
     if orig_ant:
         op = orig_ant.group(1)
@@ -624,13 +625,22 @@ def integrate_assumption(assignments, line):
     else:
         op = ""
         head = line[0]
-    disjuncts = head.split("|")
+    disjuncts = get_disjuncts(head)
     amended_disjuncts = []
     for disjunct in disjuncts:
-        antecedent = '&'.join([disjunct] + assignments)
-        # antecedent = disjunct + "&" + '&'.join(assignments)
+        conjuncts = get_conjuncts(disjunct)
+        next_conjuncts = [x for x in conjuncts if re.search("next", x)] + next_assignments
+        cur_conjuncts = [x for x in conjuncts if x not in next_conjuncts] + cur_assignments
+
+        antecedent = ""
+        if cur_conjuncts:
+            antecedent += conjunct_assignments(cur_conjuncts)
+        if cur_conjuncts and next_conjuncts:
+            antecedent += "&"
+        if next_conjuncts:
+            antecedent += f"next({conjunct_assignments(next_conjuncts)})"
         amended_disjuncts.append(antecedent)
-    antecedent_total = op + "|".join(amended_disjuncts)
+    antecedent_total = op + disjunct_assignments(amended_disjuncts)
     consequent = line[1]
     output = antecedent_total + "->" + consequent
     # This is in case there was no antecedent to start with:
@@ -668,8 +678,9 @@ def integrate_guarantee(arrow, assignments, facts, line):
         end_line = end_line.replace(f"next({respond.group(1)})", '', 1)
     elif next:
         next = f"next({next})"
-    end_line = end_line.replace("|", '')
-    cur = disjunct_assignments([cur, end_line.replace(");", "", 1)])
+    end_line = end_line.replace("\n", "", 1)
+    end_line = end_line.replace(");", "", 1)
+    cur = disjunct_assignments([cur] + get_disjuncts(end_line))
     consequent = disjunct_assignments([cur, next, ev])
     output = f"\t{antecedent}{arrow}{consequent});"
     if assignments == [] and FASTLAS:
@@ -698,7 +709,16 @@ def extract_assignments_from_facts(facts, learning_type):
     return assignments
 
 
+def get_conjuncts(disjunct: str):
+    return disjunct.split("&")
+
+
+def get_disjuncts(conjunct: str):
+    return conjunct.split("|")
+
+
 def conjunct_assignments(assignments):
+    assignments = [assignment for assignment in assignments if assignment != ""]
     output = '&'.join(assignments)
     return output
 
