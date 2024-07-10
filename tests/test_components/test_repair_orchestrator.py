@@ -6,6 +6,7 @@ from unittest.mock import patch
 from spec_repair.components.repair_orchestrator import RepairOrchestrator
 from spec_repair.components.spec_learner import SpecLearner
 from spec_repair.components.spec_oracle import SpecOracle
+from spec_repair.old.util_titus import generate_trace_asp
 from spec_repair.util.file_util import write_file, read_file_lines
 from spec_repair.util.spec_util import format_spec
 
@@ -177,4 +178,19 @@ class TestRepairOrchestrator(TestCase):
         repairer: RepairOrchestrator = RepairOrchestrator(SpecLearner(), SpecOracle())
         new_spec = repairer.repair_spec(spec, trace)
         write_file("./test_files/out/arbiter_test_fix.spectra", new_spec)
+        self.assertEqual(expected_spec, new_spec)
+
+    @patch('sys.stdin', io.StringIO('2\n'))
+    def test_repair_spec_genbuf(self):
+        spec_file = '../input-files/examples/genbuf_05_normalised_dropped.spectra'
+        expected_file = './test_files/genbuf_FINAL.spectra'
+        trace_file = './test_files/genbuf_auto_violation.txt'
+
+        spec: list[str] = format_spec(read_file_lines(spec_file))
+        expected_spec: list[str] = format_spec(read_file_lines(expected_file))
+        trace: list[str] = read_file_lines(trace_file)
+
+        repairer: RepairOrchestrator = RepairOrchestrator(SpecLearner(), SpecOracle())
+        new_spec = repairer.repair_spec(spec, trace)
+        write_file("./test_files/out/genbuf_test_fix.spectra", new_spec)
         self.assertEqual(expected_spec, new_spec)

@@ -95,8 +95,6 @@ class Test(TestCase):
         output = integrate_rule(arrow, conjunct, learning_type, line)
         self.assertEqual(output, "\tG(a=false->d=true|b=false&c=false);\n")
 
-    # TODO: more complex test case of the above
-
     def test_always_eventually(self):
         arrow = ""
         conjunct = ' holds_at(eventually,green,V1,V2).'
