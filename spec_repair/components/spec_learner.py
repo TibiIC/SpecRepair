@@ -7,7 +7,7 @@ from spec_repair.components.counter_trace import CounterTrace
 from spec_repair.components.spec_encoder import SpecEncoder
 from spec_repair.config import FASTLAS
 from spec_repair.enums import Learning
-from spec_repair.exceptions import NoViolationException, NoWeakeningException
+from spec_repair.exceptions import NoViolationException, NoWeakeningException, DeadlockRequiredException
 from spec_repair.heuristics import choose_one_with_heuristic, random_choice, HeuristicType
 
 from spec_repair.ltl import spectra_to_df
@@ -38,6 +38,11 @@ class SpecLearner:
         violations = get_violations(asp, exp_type=learning_type.exp_type())
         if not violations:
             raise NoViolationException("Violation trace is not violating!")
+        # TODO: use the following to figure out when is deadlock completion required
+        deadlock_required = re.findall(r"entailed\((counter_strat_\d*_\d*)\)", ''.join(violations))
+        if deadlock_required:
+            print("Deadlock required for realisability")
+            raise DeadlockRequiredException("Deadlock completion required for realisability")
         ilasp: str = self.spec_encoder.encode_ILASP(spec_df, trace, cs_traces, violations, learning_type)
         output: str = run_ILASP(ilasp)
         hypotheses = get_hypotheses(output)

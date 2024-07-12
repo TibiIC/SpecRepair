@@ -13,7 +13,6 @@ guarantee -- initial_guarantee
 guarantee -- guarantee1_1
 		G(highwater=true->highwater=true|next(pump=true));
 
-
 guarantee -- guarantee2_1
 	G(methane=true->next(pump=false));
 

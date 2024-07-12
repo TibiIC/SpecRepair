@@ -6,5 +6,9 @@ class NoWeakeningException(Exception):
     pass
 
 
+class DeadlockRequiredException(Exception):
+    pass
+
+
 class LearningException(Exception):
     pass

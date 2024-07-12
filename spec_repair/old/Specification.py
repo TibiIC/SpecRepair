@@ -1411,15 +1411,6 @@ class Specification:
     def get_all_guarantee_names(self):
         return self.formula_df["name"].loc[self.formula_df["type"] == "guarantee"].to_list()
 
-    def remove_trace(self, lines_to_clean, trace_name, type):
-        if type == "PI":
-            pattern = r"#pos\(\{},\{entailed\(" + trace_name + r".+?(?=}\)\.)"
-            # pattern = r"#neg\(\\{entailed\(" + trace_name + r".+?(?=}\)\.)"
-            lines_to_clean = re.sub(pattern, r"%", lines_to_clean, flags=re.DOTALL)
-            return lines_to_clean
-        if type == "LP":
-            return re.sub(r".*" + trace_name + ".*", "", lines_to_clean)
-
     def log(self, output, print_out):
         if print_out:
             print(output)

@@ -9,7 +9,7 @@ from spec_repair.components.counter_trace import CounterTrace, ct_from_cs, cts_f
 from spec_repair.components.spec_learner import SpecLearner
 from spec_repair.components.spec_oracle import SpecOracle
 from spec_repair.enums import Learning
-from spec_repair.exceptions import NoWeakeningException
+from spec_repair.exceptions import NoWeakeningException, DeadlockRequiredException
 from spec_repair.heuristics import first_choice
 from spec_repair.special_types import StopHeuristicType
 from spec_repair.wrappers.spec import Spec
@@ -161,6 +161,7 @@ class BacktrackingRepairOrchestrator:
                 visited_nodes.add(node)
                 hypotheses = self._learner.find_weakening_hypotheses(node.spec, trace, node.ct_list,
                                                                      node.learning_type)
+
         for hypothesis in hypotheses:
             new_node = deepcopy(node)
             new_node.learning_hypothesis = hypothesis
