@@ -17,12 +17,12 @@ def generate_trace_asp(start_file, end_file, trace_file):
     trace = {}
 
     initial_expressions, prevs, primed_expressions, unprimed_expressions, variables \
-        = extract_expressions(end_file, counter_strat=True)
+        = extract_expressions_from_file(end_file, counter_strat=True)
     initial_expressions_s, prevs_s, primed_expressions_s, unprimed_expressions_s, variables_s \
-        = extract_expressions(start_file, counter_strat=True)
+        = extract_expressions_from_file(start_file, counter_strat=True)
 
     # To include starting guarantees:
-    ie_g, prevs_g, pe_g, upe_g, v_g = extract_expressions(start_file, guarantee_only=True)
+    ie_g, prevs_g, pe_g, upe_g, v_g = extract_expressions_from_file(start_file, guarantee_only=True)
     initial_expressions += ie_g
     primed_expressions += pe_g
     unprimed_expressions += upe_g
@@ -147,8 +147,12 @@ def two_period_primed_expressions(primed_expressions, variables):
     return next1_2 + next2_3 + prev1_2 + prev2_3
 
 
-def extract_expressions(file, counter_strat=False, guarantee_only=False):
+def extract_expressions_from_file(file, counter_strat=False, guarantee_only=False):
     spec = read_file_lines(file)
+    return extract_expressions_from_spec(spec, counter_strat, guarantee_only)
+
+
+def extract_expressions_from_spec(spec: list[str], counter_strat=False, guarantee_only=False):
     variables = strip_vars(spec)
     spec = simplify_assignments(spec, variables)
     assumptions = extract_non_liveness(spec, "assumption")

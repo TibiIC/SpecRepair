@@ -1574,9 +1574,9 @@ def summarize_rq():
 def main():
     # arbiter_motivating_example()
     # minepump_motivating_example_thread_safe()
-    # minepump_motivating_example()
+    minepump_motivating_example()
     # lift_motivating_example()
-    traffic_motivating_example()
+    # traffic_motivating_example()
     # lift()
     # arbiter()
     # traffic_guarantee_weaken_single()

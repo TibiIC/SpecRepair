@@ -29,7 +29,7 @@ from spec_repair.heuristics import choose_one_with_heuristic, manual_choice, Heu
 from spec_repair.ltl import spectra_to_df, filter_expressions_of_type
 from spec_repair.old.patterns import PRS_REG, FIRST_PRED, ALL_PREDS
 from spec_repair.old.specification_helper import run_subprocess, strip_vars, CASE_STUDY_FINALS
-from spec_repair.old.util_titus import extract_expressions, generate_model, \
+from spec_repair.old.util_titus import extract_expressions_from_file, generate_model, \
     extract_all_expressions, run_clingo_raw, extract_all_expressions_spot
 from spec_repair.util.file_util import is_file_format, generate_filename, generate_random_string, \
     generate_temp_filename, read_file_lines, write_file
@@ -536,8 +536,8 @@ def extract_transitions(file, assumptions_only=False):
     :param file:
     :return: state_space, initial_state_space, legal_transitions
     '''
-    initial_expressions, prevs, primed_expressions, unprimed_expressions, variables = extract_expressions(file,
-                                                                                                          assumptions_only)
+    initial_expressions, prevs, primed_expressions, unprimed_expressions, variables = extract_expressions_from_file(file,
+                                                                                                                    assumptions_only)
 
     var_space = [[x, "!" + x] for x in variables]
     if len(var_space) < 20:
@@ -855,9 +855,9 @@ class Specification:
 
     def extract_one_possible_deadlock_completion_assignments(self, trace, file):
         file = re.sub("_patterned", "", file)
-        initial_expressions, prevs, primed_expressions, unprimed_expressions, variables = extract_expressions(file,
-                                                                                                              counter_strat=True)
-        initial_expressions_s, prevs_s, primed_expressions_s, unprimed_expressions_s, variables_s = extract_expressions(
+        initial_expressions, prevs, primed_expressions, unprimed_expressions, variables = extract_expressions_from_file(file,
+                                                                                                                        counter_strat=True)
+        initial_expressions_s, prevs_s, primed_expressions_s, unprimed_expressions_s, variables_s = extract_expressions_from_file(
             file, guarantee_only=True)
         primed_expressions_cleaned = [re.sub(r"PREV\((!*)([^\|^\(]*)\)", r"\1prev_\2", x) for x in primed_expressions]
         primed_expressions_cleaned_s = [re.sub(r"PREV\((!*)([^\|^\(]*)\)", r"\1prev_\2", x) for x in
