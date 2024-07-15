@@ -28,12 +28,10 @@ common_weak(next,F,P,S):-
     not next_timepoint_exists(P,S).
 
 holds_at_weak(next,F,P,S):-
-    common_weak(next,F,P,S),
-    not not_holds_at_weak(next,F,P,S).
+    common_weak(next,F,P,S).
 
 not_holds_at_weak(next,F,P,S):-
-    common_weak(next,F,P,S),
-    not holds_at_weak(next,F,P,S).
+    common_weak(next,F,P,S).
 
 holds_at(next,F,P,S):-  % Weak Definition
     holds_at_weak(next,F,P,S).
@@ -115,7 +113,8 @@ eq(T1,T2):-
 	T1 == T2.
 
 :- 	contradiction_holds(current,F,T,S).
-:- 	contradiction_holds(next,F,T,S).
+:- 	contradiction_holds(next,F,T,S),
+    next_timepoint_exists(T,S).
 :-  contradiction_holds(prev,F,T,S),
     not exist_diff_prev_timepoints(T,S).
 

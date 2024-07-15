@@ -20,7 +20,8 @@ def methane_choice_asm(options_list: List[T]) -> T:
 
 def methane_choice_gar(options_list: List[T]) -> T:
     options_list.sort()
-    assert len(options_list) == 6
+    print(options_list)
+    assert len(options_list) == 4
     return options_list[1]
 
 

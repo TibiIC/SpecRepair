@@ -1,14 +1,15 @@
 import re
+from copy import copy
 from typing import Set, Optional, List
 
 import pandas as pd
 
-from spec_repair.components.counter_trace import CounterTrace
+from spec_repair.components.counter_trace import CounterTrace, complete_ct_from_ct
 from spec_repair.components.spec_encoder import SpecEncoder
 from spec_repair.config import FASTLAS
 from spec_repair.enums import Learning
 from spec_repair.exceptions import NoViolationException, NoWeakeningException, DeadlockRequiredException
-from spec_repair.heuristics import choose_one_with_heuristic, random_choice, HeuristicType
+from spec_repair.heuristics import choose_one_with_heuristic, random_choice, HeuristicType, manual_choice
 
 from spec_repair.ltl import spectra_to_df
 from spec_repair.components.spec_generator import SpecGenerator
@@ -32,18 +33,23 @@ class SpecLearner:
         learning_hypothesis = select_learning_hypothesis(hypotheses, heuristic)
         return self.integrate_learning_hypothesis(spec, learning_hypothesis, learning_type)
 
-    def find_weakening_hypotheses(self, spec, trace, cs_traces, learning_type) -> Optional[List[List[str]]]:
+    def find_weakening_hypotheses(self, spec, trace, cts, learning_type) -> Optional[List[List[str]]]:
         spec_df: pd.DataFrame = spectra_to_df(spec)
-        asp: str = self.spec_encoder.encode_ASP(spec_df, trace, cs_traces)
+        asp: str = self.spec_encoder.encode_ASP(spec_df, trace, cts)
         violations = get_violations(asp, exp_type=learning_type.exp_type())
         if not violations:
             raise NoViolationException("Violation trace is not violating!")
-        # TODO: use the following to figure out when is deadlock completion required
-        deadlock_required = re.findall(r"entailed\((counter_strat_\d*_\d*)\)", ''.join(violations))
-        if deadlock_required:
-            print("Deadlock required for realisability")
-            raise DeadlockRequiredException("Deadlock completion required for realisability")
-        ilasp: str = self.spec_encoder.encode_ILASP(spec_df, trace, cs_traces, violations, learning_type)
+        if learning_type == Learning.GUARANTEE_WEAKENING:
+            deadlock_required = re.findall(r"entailed\((counter_strat_\d*_\d*)\)", ''.join(violations))
+            if deadlock_required:
+                for i, ct in enumerate(copy(cts)):
+                    if ct.is_deadlock() and ct.get_name() in deadlock_required:
+                        cts[i] = complete_ct_from_ct(ct, spec, deadlock_required, random_choice)
+                asp: str = self.spec_encoder.encode_ASP(spec_df, trace, cts)
+                violations = get_violations(asp, exp_type=learning_type.exp_type())
+                if not violations:
+                    raise NoViolationException("Violation trace is not violating!")
+        ilasp: str = self.spec_encoder.encode_ILASP(spec_df, trace, cts, violations, learning_type)
         output: str = run_ILASP(ilasp)
         hypotheses = get_hypotheses(output)
         if not hypotheses:

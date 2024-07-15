@@ -6,7 +6,7 @@ from copy import copy, deepcopy
 from typing import Optional
 
 from spec_repair.enums import Learning
-from spec_repair.heuristics import choose_one_with_heuristic, HeuristicType
+from spec_repair.heuristics import choose_one_with_heuristic, HeuristicType, random_choice
 from spec_repair.ltl import CounterStrategy
 from spec_repair.old.util_titus import extract_expressions_from_spec, generate_model
 from spec_repair.util.spec_util import cs_to_named_cs_traces, trace_replace_name, trace_list_to_asp_form, \
@@ -68,6 +68,12 @@ def cts_from_cs(cs: CounterStrategy, cs_id: Optional[int] = None) -> list[Counte
 
 def ct_from_cs(cs: CounterStrategy, heuristic: HeuristicType, cs_id: Optional[int] = None) -> CounterTrace:
     return choose_one_with_heuristic(cts_from_cs(cs, cs_id), heuristic)
+
+
+# CODE BELOW DEALS WITH DEADLOCK COMPLETION
+def complete_ct_from_ct(ct: CounterTrace, spec: list[str], entailed_list: list[str],
+                        heuristic: HeuristicType = random_choice) -> CounterTrace:
+    return choose_one_with_heuristic(complete_cts_from_ct(ct, spec, entailed_list), heuristic)
 
 
 def complete_cts_from_ct(ct: CounterTrace, spec: list[str], entailed_list: list[str]) -> list[CounterTrace]:

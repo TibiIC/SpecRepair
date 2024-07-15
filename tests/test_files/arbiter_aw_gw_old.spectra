@@ -13,7 +13,7 @@ guarantee -- guarantee2_1
 	G(r2=true->F(g2=true));
 
 guarantee -- guarantee3_1
-		G(a=false->g2=true|g1=false&g2=false);
+		G(a=false->a=false|g1=false&g2=false);
 
 guarantee -- guarantee4
 	    G( r2=true| g1=false | g2=false);
