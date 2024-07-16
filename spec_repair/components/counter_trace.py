@@ -90,8 +90,8 @@ def find_all_possible_deadlock_completion_assignments(ct: CounterTrace, spec: li
         spec, counter_strat=True)
     initial_expressions_s, prevs_s, primed_expressions_s, unprimed_expressions_s, variables_s = extract_expressions_from_spec(
         spec, guarantee_only=True)
-    primed_expressions_cleaned = [re.sub(r"PREV\((!*)([^\|^\(]*)\)", r"\1prev_\2", x) for x in primed_expressions]
-    primed_expressions_cleaned_s = [re.sub(r"PREV\((!*)([^\|^\(]*)\)", r"\1prev_\2", x) for x in
+    primed_expressions_cleaned = [re.sub(r"PREV\((!*)([^|^(]*)\)", r"\1prev_\2", x) for x in primed_expressions]
+    primed_expressions_cleaned_s = [re.sub(r"PREV\((!*)([^|^(]*)\)", r"\1prev_\2", x) for x in
                                     primed_expressions_s]
     final_state = last_state(ct._raw_trace, prevs)
     assignments, is_violating = next_possible_assignments(final_state, primed_expressions_cleaned,
@@ -103,21 +103,23 @@ def find_all_possible_deadlock_completion_assignments(ct: CounterTrace, spec: li
     return assignments
 
 
+# TODO: test prev_pump setting
 def last_state(trace, prevs, offset=0):
     prevs = ["prev_" + x if not re.search("prev_", x) else x for x in prevs]
-    last_timepoint = max(re.findall(r",(\d*),", trace))
-    if last_timepoint == "0" and offset != 0:
+    last_timepoint: int = max(map(int, re.findall(r",(\d*),", trace)))
+    if last_timepoint == 0 and offset != 0:
         return ()
-    last_timepoint = str(int(last_timepoint) - offset)
-    absent = re.findall(r"not_holds_at\((.*)," + last_timepoint, trace)
-    atoms = re.findall(r"holds_at\((.*)," + last_timepoint, trace)
-    assignments = ["!" + x if x in absent else x for x in atoms]
-    if last_timepoint == '0':
-        prev_assign = ["!" + x for x in prevs]
+    last_timepoint: int = last_timepoint - offset
+    absent = re.findall(rf"not_holds_at\((.*),{last_timepoint}", trace)
+    atoms = re.findall(rf"holds_at\((.*),{last_timepoint}", trace)
+    assignments = [f"!{x}" if x in absent else x for x in atoms]
+    if last_timepoint == 0:
+        prev_assign = [f"!{x}" for x in prevs]
     else:
-        prev_timepoint = str(int(last_timepoint) - 1)
-        absent = re.findall(r"not_holds_at\((.*)," + prev_timepoint, trace)
-        prev_assign = ["!" + x if x in absent else x for x in prevs]
+        prev_timepoint: int = last_timepoint - 1
+        absent = re.findall(rf"not_holds_at\((.*),{prev_timepoint}", trace)
+        prev_absent = [f"prev_{x}" for x in absent]
+        prev_assign = [f"!{x}" if x in prev_absent else x for x in prevs]
     assignments += prev_assign
     variables = [re.sub(r"!", "", x) for x in assignments]
     assignments = [i for _, i in sorted(zip(variables, assignments))]

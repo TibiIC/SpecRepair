@@ -44,6 +44,7 @@ class SpecLearner:
             if deadlock_required:
                 for i, ct in enumerate(copy(cts)):
                     if ct.is_deadlock() and ct.get_name() in deadlock_required:
+                        # SIDE EFFECT: modifies cts
                         cts[i] = complete_ct_from_ct(ct, spec, deadlock_required, random_choice)
                 asp: str = self.spec_encoder.encode_ASP(spec_df, trace, cts)
                 violations = get_violations(asp, exp_type=learning_type.exp_type())

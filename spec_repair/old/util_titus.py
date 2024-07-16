@@ -163,7 +163,7 @@ def extract_expressions_from_spec(spec: list[str], counter_strat=False, guarante
         assumptions = []
     prev_expressions = [re.search(r"G\((.*)\);", x).group(1) for x in assumptions + guarantees if
                         re.search(r"PREV", x) and re.search("G", x)]
-    list_of_prevs = ["PREV\\(" + s + "\\)" for s in variables + ["!" + x for x in variables]]
+    list_of_prevs = [f"PREV\\({s}\\)" for s in variables + [f"!{x}" for x in variables]]
     prev_occurances = [re.findall('|'.join(list_of_prevs), exp) for exp in prev_expressions]
     prevs = [item for sublist in prev_occurances for item in sublist]
     prevs = [re.sub(r"PREV\(!*(.*)\)", r"prev_\1", x) for x in prevs]
@@ -200,28 +200,29 @@ def generate_model(expressions, neg_expressions, variables, scratch=False, asp_r
         output = ""
     expressions = aspify(expressions)
     for i, rule in enumerate(expressions):
-        name = "t" + str(i)
-        disjuncts = rule.split(";")
-        output += '\n'.join([name + " :- " + x + "." for x in disjuncts])
-        output += "\ns" + name + " :- not " + name + ".\n:- s" + name + ".\n"
+        name = f"t{i}"
+        disjuncts = [x.strip() for x in rule.split(";")]
+        for disjunct in disjuncts:
+            output += f"{name} :- {disjunct}.\n"
+        output += f"s{name} :- not {name}.\n"
+        output += f":- s{name}.\n"
 
-    # output = '\n'.join([x + "." for x in expressions])
-    # output += '\n'
-    output += '\n'.join(["{" + var + "}." for var in variables])
-    output += '\n'
+    for variable in variables:
+        output += f"{{{variable}}}.\n"
 
     neg_expressions = aspify(neg_expressions)
     rules = []
-    for i, x in enumerate(neg_expressions):
-        name = "rule" + str(i)
-        disjuncts = x.split(";")
-        output += '\n'.join([name + " :- " + dis + "." for dis in disjuncts]) + "\n"
-        # output += name + " :- " + x + ".\n"
+    for i, rule in enumerate(neg_expressions):
+        name = f"rule{i}"
+        disjuncts = [x.strip() for x in rule.split(";")]
+        for disjunct in disjuncts:
+            output += f"{name} :- {disjunct}.\n"
         rules.append(name)
 
     if len(rules) > 0:
-        output += ":- " + ','.join(rules) + ".\n"
-    output += '\n'.join(["#show " + var + "/0." for var in variables]) + "\n"
+        output += f":- {','.join(rules)}.\n"
+    for var in variables:
+        output += f"#show {var}/0.\n"
 
     file = "/tmp/temp_asp.lp"
     write_file(file, output)
@@ -301,6 +302,8 @@ def aspify(expressions):
     return expressions
 
 
+# TODO: make clingo return more solutions using --models=0
+# e.g. clingo --models=0 /tmp/temp_asp.lp
 def run_clingo_raw(filename) -> str:
     filepath = f"{filename}"
     cmd = create_cmd(['clingo', filepath])
