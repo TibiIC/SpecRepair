@@ -1,15 +1,15 @@
 import re
-from copy import copy
+from copy import copy, deepcopy
 from typing import Set, Optional, List
 
 import pandas as pd
 
-from spec_repair.components.counter_trace import CounterTrace, complete_ct_from_ct
+from spec_repair.components.counter_trace import CounterTrace, complete_ct_from_ct, complete_cts_from_ct
 from spec_repair.components.spec_encoder import SpecEncoder
 from spec_repair.config import FASTLAS
 from spec_repair.enums import Learning
 from spec_repair.exceptions import NoViolationException, NoWeakeningException, DeadlockRequiredException
-from spec_repair.heuristics import choose_one_with_heuristic, random_choice, HeuristicType, manual_choice
+from spec_repair.heuristics import choose_one_with_heuristic, random_choice, HeuristicType, manual_choice, first_choice
 
 from spec_repair.ltl import spectra_to_df
 from spec_repair.components.spec_generator import SpecGenerator
@@ -45,7 +45,7 @@ class SpecLearner:
                 for i, ct in enumerate(copy(cts)):
                     if ct.is_deadlock() and ct.get_name() in deadlock_required:
                         # SIDE EFFECT: modifies cts
-                        cts[i] = complete_ct_from_ct(ct, spec, deadlock_required, random_choice)
+                        cts[i] = complete_ct_from_ct(ct, spec, deadlock_required, first_choice)
                 asp: str = self.spec_encoder.encode_ASP(spec_df, trace, cts)
                 violations = get_violations(asp, exp_type=learning_type.exp_type())
                 if not violations:
