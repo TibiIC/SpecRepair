@@ -153,6 +153,12 @@ class BacktrackingRepairOrchestrator:
                     node.ct_list,
                     node.learning_type
                 )
+                for hypothesis in hypotheses:
+                    new_node = deepcopy(node)
+                    new_node.learning_hypothesis = hypothesis
+                    if new_node not in visited_nodes:
+                        stack.append(new_node)
+                        visited_nodes.add(new_node)
             except NoWeakeningException as e:
                 print(str(e))
                 print(node)
@@ -161,19 +167,10 @@ class BacktrackingRepairOrchestrator:
                 node.ct_list = node.ct_list[:1]
                 node.learning_hypothesis = None
                 node.learning_type = Learning.GUARANTEE_WEAKENING
-                if node in visited_nodes:
-                    hypotheses = []  # No learning needed anymore, steps would be repeated
-                else:
+                if node not in visited_nodes:
                     visited_nodes.add(node)
-                    hypotheses = self._learner.find_weakening_hypotheses(node.spec, trace, node.ct_list,
-                                                                         node.learning_type)
+                    self._enqueue_weaker_repair_candidates(node, trace, stack, visited_nodes)
 
-            for hypothesis in hypotheses:
-                new_node = deepcopy(node)
-                new_node.learning_hypothesis = hypothesis
-                if new_node not in visited_nodes:
-                    stack.append(new_node)
-                    visited_nodes.add(new_node)
 
     def _ct_from_cs(self, cs: list[str]) -> CounterTrace:
         """
