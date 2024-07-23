@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from collections import deque
 from copy import deepcopy
-from typing import Optional, Deque, Set
+from typing import Optional, Deque, Set, List
 
 from spec_repair.builders.spec_recorder import SpecRecorder
 from spec_repair.components.counter_trace import CounterTrace, ct_from_cs, cts_from_cs
@@ -127,47 +127,53 @@ class BacktrackingRepairOrchestrator:
 
     def _enqueue_weaker_repair_candidates(
             self,
-            node: RepairNode,
+            incomplete_node: RepairNode,
             trace: list[str],
             stack: Deque[RepairNode],
             visited_nodes: Set[RepairNode]
     ):
         """
         Find all possible weaker repair nodes and add them to the stack if they are not already visited
-        @param node: The node to find weaker repair nodes for
+        @param incomplete_node: The node to find weaker repair nodes for (possibly containing unresolved deadlocks)
         @param trace: The trace to learn from
         @param stack: The stack to add the new nodes to
         @param visited_nodes: The set of visited nodes
         @return: None
         """
-        try:
-            hypotheses = self._learner.find_weakening_hypotheses(
-                node.spec,
-                trace,
-                node.ct_list,
-                node.learning_type
-            )
-        except NoWeakeningException as e:
-            print(str(e))
-            print(node)
-            # TODO: weak_spec_history may be empty if the first assumption weakening fails
-            node.spec = node.weak_spec_history[0]
-            node.ct_list = node.ct_list[:1]
-            node.learning_hypothesis = None
-            node.learning_type = Learning.GUARANTEE_WEAKENING
-            if node in visited_nodes:
-                hypotheses = []  # No learning needed anymore, steps would be repeated
-            else:
-                visited_nodes.add(node)
-                hypotheses = self._learner.find_weakening_hypotheses(node.spec, trace, node.ct_list,
-                                                                     node.learning_type)
+        complete_ctss: List[List[CounterTrace]] = self._learner.violating_counter_trace_lists(incomplete_node.spec, trace,
+                                                                                              incomplete_node.ct_list,
+                                                                                              incomplete_node.learning_type)
+        for complete_cts in complete_ctss:
+            node = deepcopy(incomplete_node)
+            node.ct_list = complete_cts
+            try:
+                hypotheses = self._learner.find_weakening_hypotheses(
+                    node.spec,
+                    trace,
+                    node.ct_list,
+                    node.learning_type
+                )
+            except NoWeakeningException as e:
+                print(str(e))
+                print(node)
+                # TODO: weak_spec_history may be empty if the first assumption weakening fails
+                node.spec = node.weak_spec_history[0]
+                node.ct_list = node.ct_list[:1]
+                node.learning_hypothesis = None
+                node.learning_type = Learning.GUARANTEE_WEAKENING
+                if node in visited_nodes:
+                    hypotheses = []  # No learning needed anymore, steps would be repeated
+                else:
+                    visited_nodes.add(node)
+                    hypotheses = self._learner.find_weakening_hypotheses(node.spec, trace, node.ct_list,
+                                                                         node.learning_type)
 
-        for hypothesis in hypotheses:
-            new_node = deepcopy(node)
-            new_node.learning_hypothesis = hypothesis
-            if new_node not in visited_nodes:
-                stack.append(new_node)
-                visited_nodes.add(new_node)
+            for hypothesis in hypotheses:
+                new_node = deepcopy(node)
+                new_node.learning_hypothesis = hypothesis
+                if new_node not in visited_nodes:
+                    stack.append(new_node)
+                    visited_nodes.add(new_node)
 
     def _ct_from_cs(self, cs: list[str]) -> CounterTrace:
         """

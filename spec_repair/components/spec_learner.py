@@ -1,15 +1,15 @@
 import re
 from copy import copy, deepcopy
-from typing import Set, Optional, List
+from typing import Set, Optional, List, Tuple
 
 import pandas as pd
 
-from spec_repair.components.counter_trace import CounterTrace, complete_ct_from_ct, complete_cts_from_ct
+from spec_repair.components.counter_trace import CounterTrace, complete_cts_from_ct
 from spec_repair.components.spec_encoder import SpecEncoder
 from spec_repair.config import FASTLAS
 from spec_repair.enums import Learning
 from spec_repair.exceptions import NoViolationException, NoWeakeningException, DeadlockRequiredException
-from spec_repair.heuristics import choose_one_with_heuristic, random_choice, HeuristicType, manual_choice, first_choice
+from spec_repair.heuristics import choose_one_with_heuristic, HeuristicType, first_choice
 
 from spec_repair.ltl import spectra_to_df
 from spec_repair.components.spec_generator import SpecGenerator
@@ -25,13 +25,41 @@ class SpecLearner:
             self,
             spec: list[str],
             trace: List[str],
-            cs_traces: List[CounterTrace],
+            cts: List[CounterTrace],
             learning_type: Learning,
-            heuristic: HeuristicType = random_choice
+            heuristic: HeuristicType = first_choice
     ) -> Optional[list[str]]:
-        hypotheses = self.find_weakening_hypotheses(spec, trace, cs_traces, learning_type)
+        ctss: List[List[CounterTrace]] = self.violating_counter_trace_lists(spec, trace, cts, learning_type)
+        # TODO: split the heuristics in a manager class
+        complete_cts: List[CounterTrace] = choose_one_with_heuristic(ctss, first_choice)
+        hypotheses = self.find_weakening_hypotheses(spec, trace, complete_cts, learning_type)
         learning_hypothesis = select_learning_hypothesis(hypotheses, heuristic)
         return self.integrate_learning_hypothesis(spec, learning_hypothesis, learning_type)
+
+    def violating_counter_trace_lists(self, spec, trace, init_cts, learning_type) -> List[List[CounterTrace]]:
+        if learning_type == Learning.GUARANTEE_WEAKENING:
+            spec_df: pd.DataFrame = spectra_to_df(spec)
+            ctss: Set[Tuple[CounterTrace]] = {tuple(init_cts)}
+            unchanged = False
+            while not unchanged:
+                unchanged = True
+                for cts in deepcopy(ctss):
+                    asp: str = self.spec_encoder.encode_ASP(spec_df, trace, list(cts))
+                    violations = get_violations(asp, exp_type=learning_type.exp_type())
+                    if not violations:
+                        raise NoViolationException("Violation trace is not violating!")
+                    deadlock_required = re.findall(r"entailed\((counter_strat_\d*_\d*)\)", ''.join(violations))
+                    if deadlock_required:
+                        set_cts = set(cts)
+                        for i, ct in enumerate(copy(cts)):
+                            if ct.is_deadlock() and ct.get_name() in deadlock_required:
+                                new_set_cts = copy(set_cts)
+                                new_set_cts.remove(ct)
+                                ctss |= set([tuple(new_set_cts | {complete_ct}) for complete_ct in complete_cts_from_ct(ct, spec, deadlock_required)])
+                        ctss.remove(cts)
+                        unchanged = False
+            return [list(cts) for cts in ctss]
+        return [init_cts]
 
     def find_weakening_hypotheses(self, spec, trace, cts, learning_type) -> Optional[List[List[str]]]:
         spec_df: pd.DataFrame = spectra_to_df(spec)
@@ -42,14 +70,7 @@ class SpecLearner:
         if learning_type == Learning.GUARANTEE_WEAKENING:
             deadlock_required = re.findall(r"entailed\((counter_strat_\d*_\d*)\)", ''.join(violations))
             if deadlock_required:
-                for i, ct in enumerate(copy(cts)):
-                    if ct.is_deadlock() and ct.get_name() in deadlock_required:
-                        # SIDE EFFECT: modifies cts
-                        cts[i] = complete_ct_from_ct(ct, spec, deadlock_required, first_choice)
-                asp: str = self.spec_encoder.encode_ASP(spec_df, trace, cts)
-                violations = get_violations(asp, exp_type=learning_type.exp_type())
-                if not violations:
-                    raise NoViolationException("Violation trace is not violating!")
+                raise DeadlockRequiredException("Violation trace is not violating! Deadlock completion is required.")
         ilasp: str = self.spec_encoder.encode_ILASP(spec_df, trace, cts, violations, learning_type)
         output: str = run_ILASP(ilasp)
         hypotheses = get_hypotheses(output)

@@ -21,7 +21,7 @@ def methane_choice_asm(options_list: List[T]) -> T:
 def methane_choice_gar(options_list: List[T]) -> T:
     options_list.sort()
     print(options_list)
-    assert len(options_list) == 3
+    assert len(options_list) == 4
     return options_list[1]
 
 
@@ -51,7 +51,7 @@ class TestSpecLearner(TestCase):
             './test_files/minepump_aw_methane.spectra'))
 
         new_spec: list[str]
-        new_spec = spec_learner.learn_weaker_spec(spec, trace, cs_traces=[],
+        new_spec = spec_learner.learn_weaker_spec(spec, trace, cts=[],
                                                   learning_type=Learning.ASSUMPTION_WEAKENING,
                                                   heuristic=methane_choice_asm)
 
@@ -77,7 +77,7 @@ class TestSpecLearner(TestCase):
             './test_files/minepump_aw_pump.spectra'))
 
         new_spec: list[str]
-        new_spec = spec_learner.learn_weaker_spec(spec, trace, cs_traces=cs_traces,
+        new_spec = spec_learner.learn_weaker_spec(spec, trace, cts=cs_traces,
                                                   learning_type=Learning.ASSUMPTION_WEAKENING,
                                                   heuristic=random_choice)
 
@@ -106,7 +106,7 @@ class TestSpecLearner(TestCase):
         cs_traces: List[CounterTrace] = [ct0, ct1]
 
         with self.assertRaises(NoWeakeningException):
-            spec_learner.learn_weaker_spec(spec, trace, cs_traces=cs_traces,
+            spec_learner.learn_weaker_spec(spec, trace, cts=cs_traces,
                                            learning_type=Learning.ASSUMPTION_WEAKENING,
                                            heuristic=random_choice)
 
@@ -128,7 +128,7 @@ class TestSpecLearner(TestCase):
             './test_files/minepump_aw_methane_gw_methane_fix.spectra'))
 
         new_spec: list[str]
-        new_spec = spec_learner.learn_weaker_spec(spec, trace, cs_traces=cs_traces,
+        new_spec = spec_learner.learn_weaker_spec(spec, trace, cts=cs_traces,
                                                   learning_type=Learning.GUARANTEE_WEAKENING,
                                                   heuristic=methane_choice_gar)
 
@@ -146,7 +146,7 @@ class TestSpecLearner(TestCase):
             './test_files/arbiter_aw_ev.spectra'))
 
         new_spec: list[str]
-        new_spec = spec_learner.learn_weaker_spec(spec, trace, cs_traces=[],
+        new_spec = spec_learner.learn_weaker_spec(spec, trace, cts=[],
                                                   learning_type=Learning.ASSUMPTION_WEAKENING,
                                                   heuristic=last_choice)
 
@@ -164,7 +164,7 @@ class TestSpecLearner(TestCase):
             './test_files/lift_weakenings/lift_aw_b1.spectra'))
 
         new_spec: list[str]
-        new_spec = spec_learner.learn_weaker_spec(spec, trace, cs_traces=[],
+        new_spec = spec_learner.learn_weaker_spec(spec, trace, cts=[],
                                                   learning_type=Learning.ASSUMPTION_WEAKENING,
                                                   heuristic=first_choice)
 
@@ -182,7 +182,7 @@ class TestSpecLearner(TestCase):
             './test_files/lift_weakenings/lift_aw_ev.spectra'))
 
         new_spec: list[str]
-        new_spec = spec_learner.learn_weaker_spec(spec, trace, cs_traces=[],
+        new_spec = spec_learner.learn_weaker_spec(spec, trace, cts=[],
                                                   learning_type=Learning.ASSUMPTION_WEAKENING,
                                                   heuristic=last_choice)
 
