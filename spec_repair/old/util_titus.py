@@ -226,20 +226,19 @@ def generate_model(expressions, neg_expressions, variables, scratch=False, asp_r
 
     file = "/tmp/temp_asp.lp"
     write_file(file, output)
-    clingo_out = run_clingo_raw(file)
+    clingo_out = run_clingo_raw(file, n_models=0)
     violation = True
 
-    reg = re.search(r"Answer: 1(.*)SATISFIABLE", clingo_out, re.DOTALL)
-    if not reg:
+    matches = re.findall(r'Answer: \d+\n([^\n]*)', clingo_out)
+
+    if not matches:
         # print(clingo_out)
         # print("Something not right with model generation")
         return None, None
-    model = reg.group(1)
-    model = re.sub(r"\n", "", model)
-    state = model.split(" ")
-    [state.append("!" + x) for x in variables if x not in state]
-    state = [x for x in state if x != ""]
-    return [state], violation
+    states = [match.split() for match in matches]
+    for state in states:
+        [state.append(f"!{x}") for x in variables if x not in state]
+    return states, violation
 
 
 def asp_trace_to_spectra(name, string, n):
@@ -304,9 +303,9 @@ def aspify(expressions):
 
 # TODO: make clingo return more solutions using --models=0
 # e.g. clingo --models=0 /tmp/temp_asp.lp
-def run_clingo_raw(filename) -> str:
+def run_clingo_raw(filename, n_models: int = 1) -> str:
     filepath = f"{filename}"
-    cmd = create_cmd(['clingo', filepath])
+    cmd = create_cmd(['clingo', f'--models={n_models}', filepath])
     output = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE).communicate()[0]
     return output.decode('utf-8')
 

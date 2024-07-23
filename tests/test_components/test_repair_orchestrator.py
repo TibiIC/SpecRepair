@@ -212,6 +212,21 @@ class TestRepairOrchestrator(TestCase):
         write_file("./test_files/out/arbiter_test_fix.spectra", new_spec)
         self.assertEqual(expected_spec, new_spec)
 
+    # TODO: investigate this test case further!!!
+    @patch('sys.stdin', io.StringIO('3\n0\n2\n6\n2\n11\n0\n'))
+    def test_repair_spec_arbiter_two_aw(self):
+        spec: list[str] = format_spec(read_file_lines(
+            '../input-files/examples/Arbiter/Arbiter_FINAL_strong.spectra'))
+        trace: list[str] = read_file_lines(
+            "./test_files/arbiter_strong_auto_violation.txt")
+        expected_spec: list[str] = format_spec(read_file_lines(
+            './test_files/arbiter_aw_2.spectra'))
+
+        repairer: RepairOrchestrator = RepairOrchestrator(SpecLearner(), SpecOracle())
+        new_spec = repairer.repair_spec(spec, trace)
+        write_file("./test_files/out/arbiter_test_fix.spectra", new_spec)
+        self.assertEqual(expected_spec, new_spec)
+
     @unittest.skip("The following test takes 20 minutes or more to finalise...")
     @patch('sys.stdin', io.StringIO('2\n'))
     def test_repair_spec_genbuf(self):

@@ -16,9 +16,9 @@ from spec_repair.util.spec_util import cs_to_named_cs_traces, trace_replace_name
 class CounterTrace:
     def __init__(self, raw_trace: str, raw_path: str, name: Optional[str] = None):
         self._raw_trace, self._path = raw_trace, raw_path
-        self._init_trace = copy(self._raw_trace)
         if name is not None:
             self._name = name
+            # TODO: move getting this to a separate method
             self._raw_trace = trace_replace_name(self._raw_trace, self._path, name)
         else:
             self._name = self._path
@@ -37,22 +37,22 @@ class CounterTrace:
         return trace_replace_name(trace_list_to_ilasp_form(self.get_asp_form(), learning), self._path, self._name)
 
     def __eq__(self, other: CounterTrace) -> bool:
-        return self._init_trace == other._init_trace
+        return self._raw_trace == other._raw_trace
 
     def __le__(self, other: CounterTrace) -> bool:
-        return self._init_trace <= other._init_trace
+        return self._raw_trace <= other._raw_trace
 
     def __lt__(self, other: CounterTrace) -> bool:
-        return self._init_trace < other._init_trace
+        return self._raw_trace < other._raw_trace
 
     def __ge__(self, other: CounterTrace) -> bool:
-        return self._init_trace >= other._init_trace
+        return self._raw_trace >= other._raw_trace
 
     def __gt__(self, other: CounterTrace) -> bool:
-        return self._init_trace > other._init_trace
+        return self._raw_trace > other._raw_trace
 
     def __hash__(self):
-        return hash(self._init_trace)
+        return hash(self._raw_trace)
 
     # TODO: Streamline this to be one-two lines maximum
     def __str__(self):
@@ -80,7 +80,8 @@ def complete_cts_from_ct(ct: CounterTrace, spec: list[str], entailed_list: list[
     if ct.is_deadlock() and ct.get_name() in entailed_list:
         assignments = find_all_possible_deadlock_completion_assignments(ct, spec)
         complete_cts = [complete_ct_with_deadlock_assignment(ct, assignment) for assignment in assignments]
-        return complete_cts
+        unique_complete_cts = list(dict.fromkeys(complete_cts))
+        return unique_complete_cts
 
     return [ct]
 
