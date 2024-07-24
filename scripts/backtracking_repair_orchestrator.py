@@ -102,22 +102,28 @@ class BacktrackingRepairOrchestrator:
         visited_nodes: Set[RepairNode] = set()
         unique_specs = SpecRecorder()
         root_node = RepairNode(spec, [], None, Learning.ASSUMPTION_WEAKENING)
-        self._enqueue_weaker_repair_candidates(root_node, trace, stack, visited_nodes)
+        visited_nodes.add(root_node)
+        stack.append(root_node)
 
         while stack:
             node = stack.popleft()
-            new_spec = self._learner.integrate_learning_hypothesis(node.spec, node.learning_hypothesis,
-                                                                   node.learning_type)
-            node.weak_spec_history.append(new_spec)
-            cs = self._oracle.synthesise_and_check(new_spec)
-            if not cs:
-                unique_specs.add(Spec(''.join(new_spec)))
+            if not node.learning_hypothesis:
+                self._enqueue_weaker_repair_candidates(node, trace, stack, visited_nodes)
             else:
-                cts = self._cts_from_cs(cs)
-                for ct in cts:
-                    node = deepcopy(node)
-                    node.ct_list.append(ct)
-                    self._enqueue_weaker_repair_candidates(node, trace, stack, visited_nodes)
+                new_spec = self._learner.integrate_learning_hypothesis(node.spec, node.learning_hypothesis,
+                                                                       node.learning_type)
+                node.weak_spec_history.append(new_spec)
+                cs = self._oracle.synthesise_and_check(new_spec)
+                if not cs:
+                    unique_specs.add(Spec(''.join(new_spec)))
+                else:
+                    cts = self._cts_from_cs(cs)
+                    for ct in cts:
+                        new_node = deepcopy(node)
+                        new_node.ct_list.append(ct)
+                        if new_node not in visited_nodes:
+                            visited_nodes.add(new_node)
+                            stack.append(new_node)
 
         return unique_specs
 
@@ -169,7 +175,7 @@ class BacktrackingRepairOrchestrator:
                 node.learning_type = Learning.GUARANTEE_WEAKENING
                 if node not in visited_nodes:
                     visited_nodes.add(node)
-                    self._enqueue_weaker_repair_candidates(node, trace, stack, visited_nodes)
+                    stack.append(node)
 
 
     def _ct_from_cs(self, cs: list[str]) -> CounterTrace:

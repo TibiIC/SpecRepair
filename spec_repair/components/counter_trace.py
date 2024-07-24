@@ -18,8 +18,6 @@ class CounterTrace:
         self._raw_trace, self._path = raw_trace, raw_path
         if name is not None:
             self._name = name
-            # TODO: move getting this to a separate method
-            self._raw_trace = trace_replace_name(self._raw_trace, self._path, name)
         else:
             self._name = self._path
         self._is_deadlock = "DEAD" in self._path
@@ -30,11 +28,17 @@ class CounterTrace:
     def get_name(self) -> str:
         return self._name
 
-    def get_asp_form(self):
-        return trace_list_to_asp_form([self._raw_trace])
+    def get_raw_trace(self, is_named=True):
+        if is_named:
+            return trace_replace_name(self._raw_trace, self._path, self._name)
+        return self._raw_trace
 
-    def get_ilasp_form(self, learning: Learning, complete_deadlock: bool = False):
-        return trace_replace_name(trace_list_to_ilasp_form(self.get_asp_form(), learning), self._path, self._name)
+    def get_asp_form(self, is_named=True):
+        return trace_list_to_asp_form([self.get_raw_trace(is_named=is_named)])
+
+    def get_ilasp_form(self, learning: Learning, is_named=True):
+        # TODO: remove "trace_replace_name" as a method for adding the "CS_PATH: self._path" comment to the trace
+        return trace_replace_name(trace_list_to_ilasp_form(self.get_asp_form(is_named=is_named), learning), self._path, self._name)
 
     def __eq__(self, other: CounterTrace) -> bool:
         return self._raw_trace == other._raw_trace
@@ -56,7 +60,7 @@ class CounterTrace:
 
     # TODO: Streamline this to be one-two lines maximum
     def __str__(self):
-        return f"CounterTrace({self._name}):\nPATH: '{self._path}'\nTrace:\n{self._raw_trace}"
+        return f"CounterTrace({self._name}):\nPATH: '{self._path}'\nTrace:\n{self.get_raw_trace()}"
 
 
 def cts_from_cs(cs: CounterStrategy, cs_id: Optional[int] = None) -> list[CounterTrace]:

@@ -14,6 +14,15 @@ cs1: CounterStrategy = \
      'S0 -> DEAD {highwater:true, methane:true} / {pump:false};',
      'S0 -> DEAD {highwater:true, methane:true} / {pump:true};']
 
+cs1_raw_trace = """\
+not_holds_at(highwater,0,ini_S0_DEAD).
+not_holds_at(methane,0,ini_S0_DEAD).
+not_holds_at(pump,0,ini_S0_DEAD).
+holds_at(highwater,1,ini_S0_DEAD).
+holds_at(methane,1,ini_S0_DEAD).
+holds_at(pump,1,ini_S0_DEAD).\
+"""
+
 cs2: CounterStrategy = \
     ['INI -> S0 {highwater:false, methane:false} / {pump:false};',
      'S0 -> S1 {highwater:false, methane:true} / {pump:false};',
@@ -23,6 +32,7 @@ cs2: CounterStrategy = \
 
 class TestCounterTrace(TestCase):
     maxDiff = None
+
     @classmethod
     def setUpClass(cls):
         # Change the working directory to the script's directory
@@ -46,7 +56,7 @@ holds_at(highwater,1,ini_S0_DEAD).
 holds_at(methane,1,ini_S0_DEAD).
 holds_at(pump,1,ini_S0_DEAD).
 """
-        self.assertEqual(expected_ct_raw, ct._raw_trace)
+        self.assertEqual(expected_ct_raw, ct.get_raw_trace())
         self.assertEqual("ini_S0_DEAD", ct._path)
 
     def test_get_raw_form_2(self):
@@ -59,7 +69,7 @@ holds_at(highwater,1,ini_S0_DEAD).
 holds_at(methane,1,ini_S0_DEAD).
 not_holds_at(pump,1,ini_S0_DEAD).
 """
-        self.assertEqual(expected_ct_raw, ct._raw_trace)
+        self.assertEqual(expected_ct_raw, ct.get_raw_trace())
         self.assertEqual("ini_S0_DEAD", ct._path)
 
     def test_get_raw_form_3(self):
@@ -75,7 +85,7 @@ holds_at(highwater,2,ini_S0_S1_DEAD).
 holds_at(methane,2,ini_S0_S1_DEAD).
 not_holds_at(pump,2,ini_S0_S1_DEAD).
 """
-        self.assertEqual(expected_ct_raw, ct._raw_trace)
+        self.assertEqual(expected_ct_raw, ct.get_raw_trace())
         self.assertEqual("ini_S0_S1_DEAD", ct._path)
 
     def test_get_named_form_1(self):
@@ -88,7 +98,7 @@ holds_at(highwater,1,counter_strat_0_0).
 holds_at(methane,1,counter_strat_0_0).
 holds_at(pump,1,counter_strat_0_0).
 """
-        self.assertEqual(expected_ct_raw, ct._raw_trace)
+        self.assertEqual(expected_ct_raw, ct.get_raw_trace())
         self.assertEqual("ini_S0_DEAD", ct._path)
         self.assertEqual("counter_strat_0_0", ct._name)
 
@@ -105,7 +115,7 @@ holds_at(highwater,2,counter_strat_1_1).
 holds_at(methane,2,counter_strat_1_1).
 not_holds_at(pump,2,counter_strat_1_1).
 """
-        self.assertEqual(expected_ct_raw, ct._raw_trace)
+        self.assertEqual(expected_ct_raw, ct.get_raw_trace())
         self.assertEqual("ini_S0_S1_DEAD", ct._path)
         self.assertEqual("counter_strat_1_1", ct._name)
 
@@ -221,7 +231,7 @@ not_holds_at(highwater,2,counter_strat_0_0).
 not_holds_at(methane,2,counter_strat_0_0).
 not_holds_at(pump,2,counter_strat_0_0).\
 """
-        self.assertEqual(expected_ct_raw, ct._raw_trace)
+        self.assertEqual(expected_ct_raw, ct.get_raw_trace())
 
     def test_ct_deadlock_completion_2(self):
         ct = ct_from_cs(cs2, heuristic=partial(nth_choice, 1), cs_id=1)
@@ -242,7 +252,7 @@ not_holds_at(highwater,3,counter_strat_1_1).
 not_holds_at(methane,3,counter_strat_1_1).
 not_holds_at(pump,3,counter_strat_1_1).\
 """
-        self.assertEqual(expected_ct_raw, ct._raw_trace)
+        self.assertEqual(expected_ct_raw, ct.get_raw_trace())
 
     def test_ct_deadlock_completion_asp(self):
         ct = ct_from_cs(cs1, heuristic=first_choice, cs_id=0)
@@ -304,3 +314,8 @@ not_holds_at(methane,3,counter_strat_1_1).
 not_holds_at(pump,3,counter_strat_1_1).
 """
         self.assertEqual(expected_ct_asp, ct.get_asp_form())
+
+    def test_ct_equality(self):
+        ct1 = CounterTrace(cs1_raw_trace, "ini_S0_DEAD", "counter_strat_0_0")
+        ct2 = CounterTrace(cs1_raw_trace, "ini_S0_DEAD", "counter_strat_0_1")
+        self.assertEqual(ct1, ct2)
