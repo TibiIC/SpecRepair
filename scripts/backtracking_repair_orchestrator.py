@@ -6,12 +6,12 @@ from typing import Optional, Deque, Set, List
 
 from spec_repair.builders.spec_recorder import SpecRecorder
 from spec_repair.components.counter_trace import CounterTrace, ct_from_cs, cts_from_cs
+from spec_repair.components.heuristic_managers.heuristic_manager import HeuristicManager
 from spec_repair.components.spec_learner import SpecLearner
 from spec_repair.components.spec_oracle import SpecOracle
 from spec_repair.enums import Learning
-from spec_repair.exceptions import NoWeakeningException, DeadlockRequiredException
+from spec_repair.exceptions import NoWeakeningException
 from spec_repair.heuristics import first_choice
-from spec_repair.special_types import StopHeuristicType
 from spec_repair.wrappers.spec import Spec
 
 
@@ -85,17 +85,17 @@ class RepairNode:
 
 
 class BacktrackingRepairOrchestrator:
-    def __init__(self, learner: SpecLearner, oracle: SpecOracle):
+    def __init__(self, learner: SpecLearner, oracle: SpecOracle, heuristic_manager: HeuristicManager):
         self._learner = learner
         self._oracle = oracle
+        self._hm = heuristic_manager
         self._initialise_repair_variables()
 
     # Reimplementation of the highest level abstraction code
     def repair_spec_bfs(
             self,
             spec: list[str],
-            trace: list[str],
-            stop_heuristic: StopHeuristicType = lambda a, g: True
+            trace: list[str]
     ) -> SpecRecorder:
         self._initialise_repair_variables()
         stack: Deque[RepairNode] = deque()
@@ -117,7 +117,7 @@ class BacktrackingRepairOrchestrator:
                 if not cs:
                     unique_specs.add(Spec(''.join(new_spec)))
                 else:
-                    cts = self._cts_from_cs(cs)
+                    cts = self._selected_cts_from_cs(cs)
                     for ct in cts:
                         new_node = deepcopy(node)
                         new_node.ct_list.append(ct)
@@ -130,6 +130,7 @@ class BacktrackingRepairOrchestrator:
     def _initialise_repair_variables(self):
         # Counter for recording counter traces
         self._ct_cnt = 0
+        self._hm.reset()
 
     def _enqueue_weaker_repair_candidates(
             self,
@@ -146,19 +147,12 @@ class BacktrackingRepairOrchestrator:
         @param visited_nodes: The set of visited nodes
         @return: None
         """
-        complete_ctss: List[List[CounterTrace]] = self._learner.violating_counter_trace_lists(incomplete_node.spec, trace,
-                                                                                              incomplete_node.ct_list,
-                                                                                              incomplete_node.learning_type)
+        complete_ctss = self._complete_and_select_counter_traces(incomplete_node, trace)
         for complete_cts in complete_ctss:
             node = deepcopy(incomplete_node)
             node.ct_list = complete_cts
             try:
-                hypotheses = self._learner.find_weakening_hypotheses(
-                    node.spec,
-                    trace,
-                    node.ct_list,
-                    node.learning_type
-                )
+                hypotheses = self._find_and_select_weakening_hypotheses(node, trace)
                 for hypothesis in hypotheses:
                     new_node = deepcopy(node)
                     new_node.learning_hypothesis = hypothesis
@@ -177,6 +171,24 @@ class BacktrackingRepairOrchestrator:
                     visited_nodes.add(node)
                     stack.append(node)
 
+    def _find_and_select_weakening_hypotheses(self, node, trace):
+        hypotheses = self._learner.find_weakening_hypotheses(
+            node.spec,
+            trace,
+            node.ct_list,
+            node.learning_type
+        )
+        hypotheses = self._hm.select_weakening_hypotheses(hypotheses)
+        return hypotheses
+
+    def _complete_and_select_counter_traces(self, incomplete_node, trace):
+        complete_ctss: List[List[CounterTrace]] = self._learner.violating_counter_trace_lists(
+            incomplete_node.spec,
+            trace,
+            incomplete_node.ct_list,
+            incomplete_node.learning_type
+        )
+        return self._hm.select_complete_counter_traces(complete_ctss)
 
     def _ct_from_cs(self, cs: list[str]) -> CounterTrace:
         """
@@ -186,10 +198,10 @@ class BacktrackingRepairOrchestrator:
         self._ct_cnt += 1
         return ct
 
-    def _cts_from_cs(self, cs: list[str]) -> list[CounterTrace]:
+    def _selected_cts_from_cs(self, cs: list[str]) -> list[CounterTrace]:
         """
         Create all CounterTrace objects from a counter strategy
         """
         cts = cts_from_cs(cs, cs_id=self._ct_cnt)
         self._ct_cnt += 1
-        return cts
+        return self._hm.select_counter_traces(cts)

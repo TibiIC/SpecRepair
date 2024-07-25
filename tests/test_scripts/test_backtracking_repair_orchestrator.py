@@ -5,6 +5,8 @@ from unittest import TestCase
 
 from scripts.backtracking_repair_orchestrator import BacktrackingRepairOrchestrator
 from spec_repair.builders.spec_recorder import SpecRecorder
+from spec_repair.components.heuristic_managers.hypotheses_only_heuristic_manager import HypothesesOnlyHeuristicManager
+from spec_repair.components.heuristic_managers.no_filter_heuristic_manager import NoFilterHeuristicManager
 from spec_repair.components.spec_learner import SpecLearner
 from spec_repair.components.spec_oracle import SpecOracle
 from spec_repair.util.file_util import read_file_lines, write_to_file
@@ -33,7 +35,11 @@ class TestBacktrackingRepairOrchestrator(TestCase):
             '../input-files/examples/lift_FINAL_NEW_strong.spectra'))
         trace: list[str] = read_file_lines(
             "./test_files/lift_strong_auto_violation.txt")
-        repairer: BacktrackingRepairOrchestrator = BacktrackingRepairOrchestrator(SpecLearner(), SpecOracle())
+        repairer: BacktrackingRepairOrchestrator = BacktrackingRepairOrchestrator(
+            SpecLearner(),
+            SpecOracle(),
+            NoFilterHeuristicManager()
+        )
 
         # Getting all possible repairs
         new_specs_recorder: SpecRecorder = repairer.repair_spec_bfs(spec, trace)
@@ -46,7 +52,7 @@ class TestBacktrackingRepairOrchestrator(TestCase):
         # Getting expected repairs
         expected_specs_recorder: SpecRecorder = SpecRecorder()
         expected_specs_files: list[str] = os.listdir('./test_files/lift_weakenings')
-        expected_specs_files.sort()     # To mimic the actual order of weakening from the algorithm
+        expected_specs_files.sort()  # To mimic the actual order of weakening from the algorithm
         expected_specs_files.reverse()  # To mimic the actual order of weakening from the algorithm
         for spec_file in expected_specs_files:
             print(spec_file)
@@ -58,13 +64,17 @@ class TestBacktrackingRepairOrchestrator(TestCase):
         self.assertEqual(len(expected_specs), len(new_specs))
         self.assertEqual(expected_specs, new_specs)
 
-    @unittest.skip("Probably takes way too long to finalise")
+    # @unittest.skip("Probably takes way too long to finalise")
     def test_bfs_repair_spec_arbiter(self):
         spec: list[str] = format_spec(read_file_lines(
             '../input-files/examples/Arbiter/Arbiter_FINAL_strong.spectra'))
         trace: list[str] = read_file_lines(
             "./test_files/arbiter_strong_auto_violation.txt")
-        repairer: BacktrackingRepairOrchestrator = BacktrackingRepairOrchestrator(SpecLearner(), SpecOracle())
+        repairer: BacktrackingRepairOrchestrator = BacktrackingRepairOrchestrator(
+            SpecLearner(),
+            SpecOracle(),
+            HypothesesOnlyHeuristicManager()
+        )
 
         # Getting all possible repairs
         new_specs_recorder: SpecRecorder = repairer.repair_spec_bfs(spec, trace)
@@ -89,7 +99,11 @@ class TestBacktrackingRepairOrchestrator(TestCase):
             './test_files/traffic/traffic_updated_strong.spectra'))
         trace: list[str] = read_file_lines(
             "./test_files/traffic/traffic_updated_auto_violation.txt")
-        repairer: BacktrackingRepairOrchestrator = BacktrackingRepairOrchestrator(SpecLearner(), SpecOracle())
+        repairer: BacktrackingRepairOrchestrator = BacktrackingRepairOrchestrator(
+            SpecLearner(),
+            SpecOracle(),
+            NoFilterHeuristicManager()
+        )
 
         # Getting all possible repairs
         new_specs_recorder: SpecRecorder = repairer.repair_spec_bfs(spec, trace)
@@ -115,7 +129,11 @@ class TestBacktrackingRepairOrchestrator(TestCase):
             './test_files/minepump_strong.spectra'))
         trace: List[str] = read_file_lines(
             "./test_files/minepump_strong_auto_violation.txt")
-        repairer: BacktrackingRepairOrchestrator = BacktrackingRepairOrchestrator(SpecLearner(), SpecOracle())
+        repairer: BacktrackingRepairOrchestrator = BacktrackingRepairOrchestrator(
+            SpecLearner(),
+            SpecOracle(),
+            HypothesesOnlyHeuristicManager()
+        )
 
         # Getting all possible repairs
         new_specs_recorder: SpecRecorder = repairer.repair_spec_bfs(spec, trace)
