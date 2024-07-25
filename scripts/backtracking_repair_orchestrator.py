@@ -66,7 +66,7 @@ class RepairNode:
 
     def __eq__(self, other):
         return (self.spec == other.spec and
-                self.ct_list == other.ct_list and
+                sorted(self.ct_list) == sorted(other.ct_list) and
                 self.learning_hypothesis == other.learning_hypothesis and
                 self.learning_type == other.learning_type)
 

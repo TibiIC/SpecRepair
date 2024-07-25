@@ -16,10 +16,7 @@ from spec_repair.util.spec_util import cs_to_named_cs_traces, trace_replace_name
 class CounterTrace:
     def __init__(self, raw_trace: str, raw_path: str, name: Optional[str] = None):
         self._raw_trace, self._path = raw_trace, raw_path
-        if name is not None:
-            self._name = name
-        else:
-            self._name = self._path
+        self._name = name if name is not None else self._path
         self._is_deadlock = "DEAD" in self._path
 
     def is_deadlock(self) -> bool:

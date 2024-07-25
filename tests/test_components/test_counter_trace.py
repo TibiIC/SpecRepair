@@ -14,13 +14,22 @@ cs1: CounterStrategy = \
      'S0 -> DEAD {highwater:true, methane:true} / {pump:false};',
      'S0 -> DEAD {highwater:true, methane:true} / {pump:true};']
 
-cs1_raw_trace = """\
+cs1_1_raw_trace = """\
 not_holds_at(highwater,0,ini_S0_DEAD).
 not_holds_at(methane,0,ini_S0_DEAD).
 not_holds_at(pump,0,ini_S0_DEAD).
 holds_at(highwater,1,ini_S0_DEAD).
 holds_at(methane,1,ini_S0_DEAD).
-holds_at(pump,1,ini_S0_DEAD).\
+holds_at(pump,1,ini_S0_DEAD).
+"""
+
+cs1_2_raw_trace = """\
+not_holds_at(highwater,0,ini_S0_DEAD).
+not_holds_at(methane,0,ini_S0_DEAD).
+not_holds_at(pump,0,ini_S0_DEAD).
+holds_at(highwater,1,ini_S0_DEAD).
+holds_at(methane,1,ini_S0_DEAD).
+not_holds_at(pump,1,ini_S0_DEAD).
 """
 
 cs2: CounterStrategy = \
@@ -29,6 +38,17 @@ cs2: CounterStrategy = \
      'S0 -> S1 {highwater:false, methane:true} / {pump:true};',
      'S1 -> DEAD {highwater:true, methane:true} / {pump:false};']
 
+cs2_1_raw_trace = """\
+not_holds_at(highwater,0,ini_S0_S1_DEAD).
+not_holds_at(methane,0,ini_S0_S1_DEAD).
+not_holds_at(pump,0,ini_S0_S1_DEAD).
+not_holds_at(highwater,1,ini_S0_S1_DEAD).
+holds_at(methane,1,ini_S0_S1_DEAD).
+holds_at(pump,1,ini_S0_S1_DEAD).
+holds_at(highwater,2,ini_S0_S1_DEAD).
+holds_at(methane,2,ini_S0_S1_DEAD).
+not_holds_at(pump,2,ini_S0_S1_DEAD).
+"""
 
 class TestCounterTrace(TestCase):
     maxDiff = None
@@ -48,44 +68,17 @@ class TestCounterTrace(TestCase):
 
     def test_get_raw_form_1(self):
         ct = ct_from_cs(cs1, heuristic=first_choice)
-        expected_ct_raw = """\
-not_holds_at(highwater,0,ini_S0_DEAD).
-not_holds_at(methane,0,ini_S0_DEAD).
-not_holds_at(pump,0,ini_S0_DEAD).
-holds_at(highwater,1,ini_S0_DEAD).
-holds_at(methane,1,ini_S0_DEAD).
-holds_at(pump,1,ini_S0_DEAD).
-"""
-        self.assertEqual(expected_ct_raw, ct.get_raw_trace())
+        self.assertEqual(cs1_1_raw_trace, ct.get_raw_trace())
         self.assertEqual("ini_S0_DEAD", ct._path)
 
     def test_get_raw_form_2(self):
         ct = ct_from_cs(cs1, heuristic=last_choice)
-        expected_ct_raw = """\
-not_holds_at(highwater,0,ini_S0_DEAD).
-not_holds_at(methane,0,ini_S0_DEAD).
-not_holds_at(pump,0,ini_S0_DEAD).
-holds_at(highwater,1,ini_S0_DEAD).
-holds_at(methane,1,ini_S0_DEAD).
-not_holds_at(pump,1,ini_S0_DEAD).
-"""
-        self.assertEqual(expected_ct_raw, ct.get_raw_trace())
+        self.assertEqual(cs1_2_raw_trace, ct.get_raw_trace())
         self.assertEqual("ini_S0_DEAD", ct._path)
 
     def test_get_raw_form_3(self):
         ct = ct_from_cs(cs2, heuristic=first_choice)
-        expected_ct_raw = """\
-not_holds_at(highwater,0,ini_S0_S1_DEAD).
-not_holds_at(methane,0,ini_S0_S1_DEAD).
-not_holds_at(pump,0,ini_S0_S1_DEAD).
-not_holds_at(highwater,1,ini_S0_S1_DEAD).
-holds_at(methane,1,ini_S0_S1_DEAD).
-holds_at(pump,1,ini_S0_S1_DEAD).
-holds_at(highwater,2,ini_S0_S1_DEAD).
-holds_at(methane,2,ini_S0_S1_DEAD).
-not_holds_at(pump,2,ini_S0_S1_DEAD).
-"""
-        self.assertEqual(expected_ct_raw, ct.get_raw_trace())
+        self.assertEqual(cs2_1_raw_trace, ct.get_raw_trace())
         self.assertEqual("ini_S0_S1_DEAD", ct._path)
 
     def test_get_named_form_1(self):
@@ -316,6 +309,19 @@ not_holds_at(pump,3,counter_strat_1_1).
         self.assertEqual(expected_ct_asp, ct.get_asp_form())
 
     def test_ct_equality(self):
-        ct1 = CounterTrace(cs1_raw_trace, "ini_S0_DEAD", "counter_strat_0_0")
-        ct2 = CounterTrace(cs1_raw_trace, "ini_S0_DEAD", "counter_strat_0_1")
+        ct1 = CounterTrace(cs1_1_raw_trace, "ini_S0_DEAD", "counter_strat_0_0")
+        ct2 = CounterTrace(cs1_1_raw_trace, "ini_S0_DEAD", "counter_strat_1_2")
         self.assertEqual(ct1, ct2)
+
+    def test_ct_equality_2(self):
+        ct1 = CounterTrace(cs2_1_raw_trace, "ini_S0_S1_DEAD", "counter_strat_0_1")
+        ct2 = CounterTrace(cs2_1_raw_trace, "ini_S0_S1_DEAD", "counter_strat_1_1")
+        self.assertEqual(ct1, ct2)
+
+    def test_ct_inequality(self):
+        """
+        CounterTraces are not equal if and only if their raw traces are different
+        """
+        ct1 = CounterTrace(cs1_1_raw_trace, "ini_S0_DEAD", "counter_strat_0_0")
+        ct2 = CounterTrace(cs1_2_raw_trace, "ini_S0_DEAD", "counter_strat_0_0")
+        self.assertNotEqual(ct1, ct2)
