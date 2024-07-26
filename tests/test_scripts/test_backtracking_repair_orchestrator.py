@@ -94,6 +94,36 @@ class TestBacktrackingRepairOrchestrator(TestCase):
 
         self.assertEqual(expected_specs, new_specs)
 
+    @unittest.skip("Takes way too long to finalise")
+    def test_bfs_repair_spec_arbiter_all(self):
+        spec: list[str] = format_spec(read_file_lines(
+            '../input-files/examples/Arbiter/Arbiter_FINAL_strong.spectra'))
+        trace: list[str] = read_file_lines(
+            "./test_files/arbiter_strong_auto_violation.txt")
+        repairer: BacktrackingRepairOrchestrator = BacktrackingRepairOrchestrator(
+            SpecLearner(),
+            SpecOracle(),
+            NoFilterHeuristicManager()
+        )
+
+        # Getting all possible repairs
+        new_specs_recorder: SpecRecorder = repairer.repair_spec_bfs(spec, trace)
+        new_specs: list[str] = new_specs_recorder.get_specs()
+        new_specs.sort()
+        out_test_dir_name = "./test_files/out/arbiter_test_bfs"
+        for i, new_spec in enumerate(new_specs):
+            write_to_file(f"{out_test_dir_name}/arbiter_test_fix_{i}.spectra", new_spec)
+
+        # Getting expected repairs
+        expected_specs_recorder: SpecRecorder = SpecRecorder()
+        for spec_file in os.listdir('./test_files/arbiter_weakenings'):
+            expected_specs_recorder.add(
+                Spec(''.join(format_spec(read_file_lines(f'./test_files/arbiter_weakenings/{spec_file}')))))
+        expected_specs: list = expected_specs_recorder.get_specs()
+        expected_specs.sort()
+
+        self.assertEqual(expected_specs, new_specs)
+
     def test_bfs_repair_spec_traffic_updated(self):
         spec: list[str] = format_spec(read_file_lines(
             './test_files/traffic/traffic_updated_strong.spectra'))

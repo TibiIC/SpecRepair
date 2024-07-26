@@ -64,15 +64,26 @@ class RepairNode:
         self.learning_type = learning_type
         self.weak_spec_history = []
 
+    def get_first_weakening_if_exists(self) -> Optional[list[str]]:
+        return self.weak_spec_history[0] if self.weak_spec_history else None
+
     def __eq__(self, other):
         return (self.spec == other.spec and
                 sorted(self.ct_list) == sorted(other.ct_list) and
                 self.learning_hypothesis == other.learning_hypothesis and
-                self.learning_type == other.learning_type)
+                self.learning_type == other.learning_type and
+                self.get_first_weakening_if_exists() == other.get_first_weakening_if_exists())
 
     def __hash__(self):
         hashable_learning_hypothesis = tuple(self.learning_hypothesis) if self.learning_hypothesis is not None else None
-        return hash((tuple(self.spec), tuple(sorted(self.ct_list)), hashable_learning_hypothesis, self.learning_type))
+        hashable_first_weakening = tuple(self.get_first_weakening_if_exists()) if self.get_first_weakening_if_exists() else None
+        return hash((
+            tuple(self.spec),
+            tuple(sorted(self.ct_list)),
+            hashable_learning_hypothesis,
+            self.learning_type,
+            hashable_first_weakening
+        ))
 
     def __str__(self):
         return f"""
@@ -120,6 +131,7 @@ class BacktrackingRepairOrchestrator:
                     cts = self._selected_cts_from_cs(cs)
                     for ct in cts:
                         new_node = deepcopy(node)
+                        new_node.learning_hypothesis = None
                         new_node.ct_list.append(ct)
                         if new_node not in visited_nodes:
                             visited_nodes.add(new_node)
@@ -189,14 +201,6 @@ class BacktrackingRepairOrchestrator:
             incomplete_node.learning_type
         )
         return self._hm.select_complete_counter_traces(complete_ctss)
-
-    def _ct_from_cs(self, cs: list[str]) -> CounterTrace:
-        """
-        Create a CounterTrace object from a counter strategy
-        """
-        ct = ct_from_cs(cs, heuristic=first_choice, cs_id=self._ct_cnt)
-        self._ct_cnt += 1
-        return ct
 
     def _selected_cts_from_cs(self, cs: list[str]) -> list[CounterTrace]:
         """

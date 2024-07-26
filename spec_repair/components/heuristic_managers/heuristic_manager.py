@@ -1,17 +1,20 @@
 from abc import ABC, abstractmethod
+from typing import List
+
+from spec_repair.components.counter_trace import CounterTrace
 
 
 class HeuristicManager(ABC):
     @abstractmethod
-    def select_counter_traces(self, cts):
+    def select_counter_traces(self, cts: List[CounterTrace]) -> List[CounterTrace]:
         pass
 
     @abstractmethod
-    def select_complete_counter_traces(self, ctss):
+    def select_complete_counter_traces(self, ctss: List[List[CounterTrace]]) -> List[List[CounterTrace]]:
         pass
 
     @abstractmethod
-    def select_weakening_hypotheses(self, hypotheses):
+    def select_weakening_hypotheses(self, hypotheses: List[List[str]]) -> List[List[str]]:
         pass
 
     def reset(self):
