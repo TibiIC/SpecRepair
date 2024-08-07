@@ -11,7 +11,7 @@ class SpecGenerator:
 
     def generate_clingo(self, spec_df: pd.DataFrame, assumptions: str, guarantees: str, violation_trace: str,
                         cs_trace: str) -> str:
-        '''
+        """
         Generate the contents of the .lp file to be run in Clingo.
         Running this file will generate the violations that hold, given the problem statement
         :param assumptions: GR(1) assumptions, provided as a string in the form of Clingo-compatible statements
@@ -20,7 +20,7 @@ class SpecGenerator:
         :param violation_trace: Trace which violated the original GR(1) specification
         :param cs_trace: Traces from counter-strategies, which are supposed to violate current specification
         :return:
-        '''
+        """
         lp = self.background_knowledge + \
              assumptions + \
              guarantees + \

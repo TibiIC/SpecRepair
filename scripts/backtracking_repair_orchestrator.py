@@ -11,7 +11,6 @@ from spec_repair.components.spec_learner import SpecLearner
 from spec_repair.components.spec_oracle import SpecOracle
 from spec_repair.enums import Learning
 from spec_repair.exceptions import NoWeakeningException
-from spec_repair.heuristics import first_choice
 from spec_repair.wrappers.spec import Spec
 
 
@@ -76,7 +75,8 @@ class RepairNode:
 
     def __hash__(self):
         hashable_learning_hypothesis = tuple(self.learning_hypothesis) if self.learning_hypothesis is not None else None
-        hashable_first_weakening = tuple(self.get_first_weakening_if_exists()) if self.get_first_weakening_if_exists() else None
+        hashable_first_weakening = tuple(
+            self.get_first_weakening_if_exists()) if self.get_first_weakening_if_exists() else None
         return hash((
             tuple(self.spec),
             tuple(sorted(self.ct_list)),
@@ -109,54 +109,35 @@ class BacktrackingRepairOrchestrator:
             trace: list[str]
     ) -> SpecRecorder:
         self._initialise_repair_variables()
-        stack: Deque[RepairNode] = deque()
-        visited_nodes: Set[RepairNode] = set()
         unique_specs = SpecRecorder()
         root_node = RepairNode(spec, [], None, Learning.ASSUMPTION_WEAKENING)
-        visited_nodes.add(root_node)
-        stack.append(root_node)
+        self._visited_nodes.add(root_node)
+        self._stack.append(root_node)
 
-        while stack:
-            node = stack.popleft()
+        while self._stack:
+            node = self._stack.popleft()
             if not node.learning_hypothesis:
-                self._enqueue_weaker_repair_candidates(node, trace, stack, visited_nodes)
+                self._find_and_enqueue_weaker_spec_candidates(node, trace)
             else:
-                new_spec = self._learner.integrate_learning_hypothesis(node.spec, node.learning_hypothesis,
-                                                                       node.learning_type)
-                node.weak_spec_history.append(new_spec)
+                new_spec = self._compile_and_record_weaker_spec_candidate(node)
                 cs = self._oracle.synthesise_and_check(new_spec)
                 if not cs:
                     unique_specs.add(Spec(''.join(new_spec)))
                 else:
                     cts = self._selected_cts_from_cs(cs)
-                    for ct in cts:
-                        new_node = deepcopy(node)
-                        new_node.learning_hypothesis = None
-                        new_node.ct_list.append(ct)
-                        if new_node not in visited_nodes:
-                            visited_nodes.add(new_node)
-                            stack.append(new_node)
+                    self._enqueue_unvisited_learning_candidates(node, cts)
 
         return unique_specs
 
-    def _initialise_repair_variables(self):
-        # Counter for recording counter traces
-        self._ct_cnt = 0
-        self._hm.reset()
-
-    def _enqueue_weaker_repair_candidates(
+    def _find_and_enqueue_weaker_spec_candidates(
             self,
             incomplete_node: RepairNode,
             trace: list[str],
-            stack: Deque[RepairNode],
-            visited_nodes: Set[RepairNode]
     ):
         """
         Find all possible weaker repair nodes and add them to the stack if they are not already visited
         @param incomplete_node: The node to find weaker repair nodes for (possibly containing unresolved deadlocks)
         @param trace: The trace to learn from
-        @param stack: The stack to add the new nodes to
-        @param visited_nodes: The set of visited nodes
         @return: None
         """
         complete_ctss = self._complete_and_select_counter_traces(incomplete_node, trace)
@@ -165,23 +146,20 @@ class BacktrackingRepairOrchestrator:
             node.ct_list = complete_cts
             try:
                 hypotheses = self._find_and_select_weakening_hypotheses(node, trace)
-                for hypothesis in hypotheses:
-                    new_node = deepcopy(node)
-                    new_node.learning_hypothesis = hypothesis
-                    if new_node not in visited_nodes:
-                        stack.append(new_node)
-                        visited_nodes.add(new_node)
+                self._enqueue_unvisited_weaker_spec_candidates(node, hypotheses)
             except NoWeakeningException as e:
                 print(str(e))
                 print(node)
-                # TODO: weak_spec_history may be empty if the first assumption weakening fails
-                node.spec = node.weak_spec_history[0]
-                node.ct_list = node.ct_list[:1]
-                node.learning_hypothesis = None
-                node.learning_type = Learning.GUARANTEE_WEAKENING
-                if node not in visited_nodes:
-                    visited_nodes.add(node)
-                    stack.append(node)
+                self._initialise_guarantee_weakening(node)
+
+    def _complete_and_select_counter_traces(self, incomplete_node, trace):
+        complete_ctss: List[List[CounterTrace]] = self._learner.violating_counter_trace_lists(
+            incomplete_node.spec,
+            trace,
+            incomplete_node.ct_list,
+            incomplete_node.learning_type
+        )
+        return self._hm.select_complete_counter_traces(complete_ctss)
 
     def _find_and_select_weakening_hypotheses(self, node, trace):
         hypotheses = self._learner.find_weakening_hypotheses(
@@ -193,14 +171,46 @@ class BacktrackingRepairOrchestrator:
         hypotheses = self._hm.select_weakening_hypotheses(hypotheses)
         return hypotheses
 
-    def _complete_and_select_counter_traces(self, incomplete_node, trace):
-        complete_ctss: List[List[CounterTrace]] = self._learner.violating_counter_trace_lists(
-            incomplete_node.spec,
-            trace,
-            incomplete_node.ct_list,
-            incomplete_node.learning_type
-        )
-        return self._hm.select_complete_counter_traces(complete_ctss)
+    def _enqueue_unvisited_learning_candidates(self, node, cts):
+        for ct in cts:
+            new_node = deepcopy(node)
+            new_node.learning_hypothesis = None
+            new_node.ct_list.append(ct)
+            if new_node not in self._visited_nodes:
+                self._visited_nodes.add(new_node)
+                self._stack.append(new_node)
+
+    def _compile_and_record_weaker_spec_candidate(self, node):
+        new_spec = self._learner.integrate_learning_hypothesis(node.spec, node.learning_hypothesis,
+                                                               node.learning_type)
+        node.weak_spec_history.append(new_spec)
+        return new_spec
+
+    def _initialise_repair_variables(self):
+        # Counter for recording counter traces
+        self._ct_cnt = 0
+        self._hm.reset()
+        self._stack: Deque[RepairNode] = deque()
+        self._visited_nodes: Set[RepairNode] = set()
+
+    def _enqueue_unvisited_weaker_spec_candidates(self, node, hypotheses):
+        for hypothesis in hypotheses:
+            new_node = deepcopy(node)
+            new_node.learning_hypothesis = hypothesis
+            if new_node not in self._visited_nodes:
+                self._stack.append(new_node)
+                self._visited_nodes.add(new_node)
+
+    def _initialise_guarantee_weakening(self, node):
+        assert node.learning_type == Learning.ASSUMPTION_WEAKENING
+        # TODO: weak_spec_history may be empty if the first assumption weakening fails
+        node.spec = node.weak_spec_history[0]
+        node.ct_list = node.ct_list[:1]
+        node.learning_hypothesis = None
+        node.learning_type = Learning.GUARANTEE_WEAKENING
+        if node not in self._visited_nodes:
+            self._visited_nodes.add(node)
+            self._stack.append(node)
 
     def _selected_cts_from_cs(self, cs: list[str]) -> list[CounterTrace]:
         """
