@@ -8,7 +8,8 @@ from spec_repair.components.counter_trace import CounterTrace, complete_cts_from
 from spec_repair.components.spec_encoder import SpecEncoder
 from spec_repair.config import FASTLAS
 from spec_repair.enums import Learning
-from spec_repair.exceptions import NoViolationException, NoWeakeningException, DeadlockRequiredException
+from spec_repair.exceptions import NoViolationException, NoWeakeningException, DeadlockRequiredException, \
+    NoAssumptionWeakeningException
 from spec_repair.heuristics import choose_one_with_heuristic, HeuristicType, first_choice
 
 from spec_repair.ltl import spectra_to_df
@@ -29,14 +30,14 @@ class SpecLearner:
             learning_type: Learning,
             heuristic: HeuristicType = first_choice
     ) -> Optional[list[str]]:
-        ctss: List[List[CounterTrace]] = self.violating_counter_trace_lists(spec, trace, cts, learning_type)
+        ctss: List[List[CounterTrace]] = self.get_all_complete_counter_trace_lists(spec, trace, cts, learning_type)
         # TODO: split the heuristics in a manager class
         complete_cts: List[CounterTrace] = choose_one_with_heuristic(ctss, first_choice)
         hypotheses = self.find_weakening_hypotheses(spec, trace, complete_cts, learning_type)
         learning_hypothesis = select_learning_hypothesis(hypotheses, heuristic)
         return self.integrate_learning_hypothesis(spec, learning_hypothesis, learning_type)
 
-    def violating_counter_trace_lists(self, spec, trace, init_cts, learning_type) -> List[List[CounterTrace]]:
+    def get_all_complete_counter_trace_lists(self, spec, trace, init_cts, learning_type) -> List[List[CounterTrace]]:
         if learning_type == Learning.GUARANTEE_WEAKENING:
             spec_df: pd.DataFrame = spectra_to_df(spec)
             ctss: Set[Tuple[CounterTrace]] = {tuple(init_cts)}
@@ -55,7 +56,8 @@ class SpecLearner:
                             if ct.is_deadlock() and ct.get_name() in deadlock_required:
                                 new_set_cts = copy(set_cts)
                                 new_set_cts.remove(ct)
-                                ctss |= set([tuple(new_set_cts | {complete_ct}) for complete_ct in complete_cts_from_ct(ct, spec, deadlock_required)])
+                                ctss |= set([tuple(new_set_cts | {complete_ct}) for complete_ct in
+                                             complete_cts_from_ct(ct, spec, deadlock_required)])
                         ctss.remove(cts)
                         unchanged = False
             return [list(cts) for cts in ctss]
@@ -75,8 +77,13 @@ class SpecLearner:
         output: str = run_ILASP(ilasp)
         hypotheses = get_hypotheses(output)
         if not hypotheses:
-            raise NoWeakeningException(
-                f"No {learning_type.exp_type_str()} weakening produces realizable spec (las file UNSAT)")
+            if learning_type == Learning.GUARANTEE_WEAKENING:
+                raise NoAssumptionWeakeningException(
+                    f"No {learning_type.exp_type_str()} weakening produces realizable spec (las file UNSAT)"
+                )
+            else:
+                raise NoWeakeningException(
+                    f"No {learning_type.exp_type_str()} weakening produces realizable spec (las file UNSAT)")
         return filter_useful_learning_hypotheses(hypotheses)
 
     def integrate_learning_hypothesis(self, spec, learning_hypothesis, learning_type) -> list[str]:
