@@ -77,7 +77,7 @@ class SpecLearner:
         output: str = run_ILASP(ilasp)
         hypotheses = get_hypotheses(output)
         if not hypotheses:
-            if learning_type == Learning.GUARANTEE_WEAKENING:
+            if learning_type == Learning.ASSUMPTION_WEAKENING:
                 raise NoAssumptionWeakeningException(
                     f"No {learning_type.exp_type_str()} weakening produces realizable spec (las file UNSAT)"
                 )
