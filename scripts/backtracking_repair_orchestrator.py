@@ -5,13 +5,15 @@ from collections import deque
 from copy import deepcopy
 from typing import Optional, Deque, Set, List
 
+from spec_repair.helpers.logger import Logger, NoLogger
 from spec_repair.builders.spec_recorder import SpecRecorder
-from spec_repair.components.counter_trace import CounterTrace, ct_from_cs, cts_from_cs
+from spec_repair.components.counter_trace import CounterTrace, cts_from_cs
 from spec_repair.components.heuristic_managers.heuristic_manager import HeuristicManager
 from spec_repair.components.spec_learner import SpecLearner
 from spec_repair.components.spec_oracle import SpecOracle
 from spec_repair.enums import Learning
 from spec_repair.exceptions import NoAssumptionWeakeningException
+from spec_repair.helpers.recorder import Recorder
 from spec_repair.wrappers.spec import Spec
 
 
@@ -75,7 +77,7 @@ class CandidateRepairNode(RepairNode):
             ct_list: Optional[any],
             learning_hypothesis: Optional[list[str]],
             learning_type: Learning,
-            weak_spec_history: Optional[List[list[str]]] = None
+            weak_spec_history: Optional[List[list[str]]] = None,
     ):
         self.spec = spec
         self.ct_list = ct_list
@@ -116,10 +118,18 @@ class CandidateRepairNode(RepairNode):
 
 
 class BacktrackingRepairOrchestrator:
-    def __init__(self, learner: SpecLearner, oracle: SpecOracle, heuristic_manager: HeuristicManager):
+    def __init__(
+            self,
+            learner: SpecLearner,
+            oracle: SpecOracle,
+            heuristic_manager: HeuristicManager,
+            logger: Logger = NoLogger()
+
+    ):
         self._learner = learner
         self._oracle = oracle
         self._hm = heuristic_manager
+        self._logger = logger
         self._initialise_repair_variables()
 
     # Reimplementation of the highest level abstraction code
@@ -217,7 +227,7 @@ class BacktrackingRepairOrchestrator:
         self._ct_cnt = 0
         self._hm.reset()
         self._stack: Deque[CandidateRepairNode] = deque()
-        self._visited_nodes: Set[CandidateRepairNode] = set()
+        self._visited_nodes: Recorder[CandidateRepairNode] = Recorder()
 
     def _initialise_guarantee_weakening(self, node):
         assert node.learning_type == Learning.ASSUMPTION_WEAKENING
