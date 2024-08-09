@@ -2,7 +2,7 @@ import os
 from functools import partial
 from unittest import TestCase
 
-from spec_repair.components.counter_trace import CounterTrace, ct_from_cs, complete_cts_from_ct
+from spec_repair.helpers.counter_trace import CounterTrace, ct_from_cs, complete_cts_from_ct
 from spec_repair.enums import Learning
 from spec_repair.heuristics import first_choice, last_choice, nth_choice
 from spec_repair.ltl import CounterStrategy

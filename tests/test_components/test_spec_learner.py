@@ -2,14 +2,14 @@ import os
 from typing import List
 from unittest import TestCase
 
-from spec_repair.components.counter_trace import CounterTrace, ct_from_cs
+from spec_repair.helpers.counter_trace import CounterTrace, ct_from_cs
 from spec_repair.components.spec_learner import SpecLearner
 from spec_repair.enums import Learning
 from spec_repair.exceptions import NoWeakeningException
-from spec_repair.heuristics import T, random_choice, first_choice, manual_choice, last_choice
+from spec_repair.heuristics import T, random_choice, first_choice, last_choice
 from spec_repair.ltl import CounterStrategy
 from spec_repair.util.file_util import read_file_lines
-from spec_repair.util.spec_util import format_spec, create_cs_traces
+from spec_repair.util.spec_util import format_spec
 
 
 def methane_choice_asm(options_list: List[T]) -> T:

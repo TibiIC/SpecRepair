@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 from typing import List
 
-from spec_repair.components.counter_trace import CounterTrace
+from spec_repair.helpers.counter_trace import CounterTrace
 
 
 class HeuristicManager(ABC):

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import random
 import re
+from collections import defaultdict
 from copy import copy, deepcopy
 from typing import Optional
 
@@ -58,6 +59,30 @@ class CounterTrace:
     # TODO: Streamline this to be one-two lines maximum
     def __str__(self):
         return f"CounterTrace({self._name}):\nPATH: '{self._path}'\nTrace:\n{self.get_raw_trace()}"
+
+    def print_one_line(self):
+        # Dictionary to store states at each time point
+        state_dict = defaultdict(dict)
+
+        for s in self.get_raw_trace().split('\n'):
+            match = re.search(r'(not_holds_at|holds_at)\((\w+),(\d+),', s)
+            if match:
+                state, atom, time = match.groups()
+                state_dict[time][atom] = '!' if 'not' in state else ''
+
+        # Sort times to maintain order
+        sorted_times = sorted(state_dict.keys())
+
+        # Construct the output strings for each time step
+        output = []
+        for time in sorted_times:
+            entities = sorted(state_dict[time].keys())
+            time_output = ','.join([f"{state_dict[time][entity]}{entity}" for entity in entities])
+            output.append(time_output)
+
+        # Join the time steps with a semicolon
+        result = ';'.join(output)
+        return f"CT({result})"
 
 
 def cts_from_cs(cs: CounterStrategy, cs_id: Optional[int] = None) -> list[CounterTrace]:

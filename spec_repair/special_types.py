@@ -2,7 +2,7 @@ import re
 from abc import ABC
 from typing import Callable, List
 
-from spec_repair.components.counter_trace import CounterTrace
+from spec_repair.helpers.counter_trace import CounterTrace
 
 
 class ExceptionRule(ABC):

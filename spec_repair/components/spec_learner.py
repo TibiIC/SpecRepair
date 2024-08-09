@@ -4,7 +4,7 @@ from typing import Set, Optional, List, Tuple
 
 import pandas as pd
 
-from spec_repair.components.counter_trace import CounterTrace, complete_cts_from_ct
+from spec_repair.helpers.counter_trace import CounterTrace, complete_cts_from_ct
 from spec_repair.components.spec_encoder import SpecEncoder
 from spec_repair.config import FASTLAS
 from spec_repair.enums import Learning

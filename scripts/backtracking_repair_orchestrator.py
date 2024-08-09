@@ -1,120 +1,20 @@
 from __future__ import annotations
 
-from abc import ABC
 from collections import deque
 from copy import deepcopy
-from typing import Optional, Deque, Set, List
+from typing import Deque, List
 
 from spec_repair.helpers.logger import Logger, NoLogger
 from spec_repair.builders.spec_recorder import SpecRecorder
-from spec_repair.components.counter_trace import CounterTrace, cts_from_cs
+from spec_repair.helpers.counter_trace import CounterTrace, cts_from_cs
 from spec_repair.components.heuristic_managers.heuristic_manager import HeuristicManager
 from spec_repair.components.spec_learner import SpecLearner
 from spec_repair.components.spec_oracle import SpecOracle
 from spec_repair.enums import Learning
 from spec_repair.exceptions import NoAssumptionWeakeningException
 from spec_repair.helpers.recorder import Recorder
+from spec_repair.helpers.repair_nodes.candidate_repair_node import CandidateRepairNode
 from spec_repair.wrappers.spec import Spec
-
-
-class RepairNode(ABC):
-    def __eq__(self, other) -> bool:
-        pass
-
-
-class StartRepairNode(RepairNode):
-    def __init__(
-            self,
-            spec: list[str],
-            ct_list: Optional[any],
-            learning_type: Learning
-    ):
-        self.spec = spec
-        self.ct_list = ct_list
-        self.learning_type = learning_type
-        self.weak_spec_history = []
-
-    def __eq__(self, other) -> bool:
-        return (self.spec == other.spec and
-                self.ct_list == other.ct_list and
-                self.learning_type == other.learning_type)
-
-    def __hash__(self) -> int:
-        hashable_first_weakening = tuple(
-            self.get_first_weakening_if_exists()) if self.get_first_weakening_if_exists() else None
-        return hash((
-            tuple(self.spec),
-            tuple(sorted(self.ct_list)),
-            self.learning_type,
-            hashable_first_weakening
-        ))
-
-    def get_first_weakening_if_exists(self) -> Optional[list[str]]:
-        return self.weak_spec_history[0] if self.weak_spec_history else None
-
-    def __str__(self):
-        return f"""
-        Spec: {self.spec}
-        CTs: {self.ct_list}
-        Learning Type: {self.learning_type}
-        Weak Spec History: {self.weak_spec_history}
-        """
-
-    def get_candidate_repair_node(self, learning_hypothesis: list[str]) -> CandidateRepairNode:
-        return CandidateRepairNode(
-            deepcopy(self.spec),
-            deepcopy(self.ct_list),
-            learning_hypothesis,
-            deepcopy(self.learning_type),
-            deepcopy(self.weak_spec_history)
-        )
-
-
-class CandidateRepairNode(RepairNode):
-    def __init__(
-            self,
-            spec: list[str],
-            ct_list: Optional[any],
-            learning_hypothesis: Optional[list[str]],
-            learning_type: Learning,
-            weak_spec_history: Optional[List[list[str]]] = None,
-    ):
-        self.spec = spec
-        self.ct_list = ct_list
-        self.learning_hypothesis = learning_hypothesis
-        self.learning_type = learning_type
-        self.weak_spec_history = weak_spec_history if weak_spec_history else []
-
-    def get_first_weakening_if_exists(self) -> Optional[list[str]]:
-        return self.weak_spec_history[0] if self.weak_spec_history else None
-
-    def __eq__(self, other):
-        return (self.spec == other.spec and
-                sorted(self.ct_list) == sorted(other.ct_list) and
-                self.learning_hypothesis == other.learning_hypothesis and
-                self.learning_type == other.learning_type and
-                self.get_first_weakening_if_exists() == other.get_first_weakening_if_exists())
-
-    def __hash__(self):
-        hashable_learning_hypothesis = tuple(self.learning_hypothesis) if self.learning_hypothesis is not None else None
-        hashable_first_weakening = tuple(self.get_first_weakening_if_exists()) if self.get_first_weakening_if_exists() \
-            else None
-        return hash((
-            tuple(self.spec),
-            tuple(sorted(self.ct_list)),
-            hashable_learning_hypothesis,
-            self.learning_type,
-            hashable_first_weakening
-        ))
-
-    def __str__(self):
-        return f"""
-        Spec: {self.spec}
-        CTs: {self.ct_list}
-        Learning Hypothesis: {self.learning_hypothesis}
-        Learning Type: {self.learning_type}
-        Weak Spec History: {self.weak_spec_history}
-        """
 
 
 class BacktrackingRepairOrchestrator:
@@ -152,10 +52,12 @@ class BacktrackingRepairOrchestrator:
                 new_spec = self._compile_and_record_weaker_spec_candidate(node)
                 cs = self._oracle.synthesise_and_check(new_spec)
                 if not cs:
-                    unique_specs.add(Spec(''.join(new_spec)))
+                    node_id = self._visited_nodes.get_id(node)
+                    spec_id = unique_specs.add(Spec(''.join(new_spec)))
+                    self._logger.log_transition(node_id, f"#{spec_id}", f"End")
                 else:
                     cts = self._selected_cts_from_cs(cs)
-                    self._enqueue_unvisited_learning_candidates(node, cts)
+                    self._enqueue_unvisited_learning_candidates(node, new_spec, cts)
 
         return unique_specs
 
@@ -174,6 +76,14 @@ class BacktrackingRepairOrchestrator:
         for complete_cts in complete_ctss:
             node = deepcopy(incomplete_node)
             node.ct_list = complete_cts
+            # TODO: wrap logging logic
+            if node not in self._visited_nodes:
+                self._stack.append(node)
+                self._visited_nodes.add(node)
+            from_id = self._visited_nodes.get_id(incomplete_node)
+            to_id = self._visited_nodes.get_id(node)
+            new_cts_str = f"CTS({';'.join([ct.print_one_line() for ct in complete_cts])})"
+            self._logger.log_transition(from_id, to_id, f"{node.learning_type.name} -> {new_cts_str}")
             try:
                 hypotheses = self._learn_and_select_weakening_hypotheses(node, trace)
                 self._enqueue_unvisited_weaker_spec_candidates(node, hypotheses)
@@ -206,20 +116,26 @@ class BacktrackingRepairOrchestrator:
             if new_node not in self._visited_nodes:
                 self._stack.append(new_node)
                 self._visited_nodes.add(new_node)
+            from_id = self._visited_nodes.get_id(node)
+            to_id = self._visited_nodes.get_id(new_node)
+            self._logger.log_transition(from_id, to_id, f"{node.learning_type.name} -> {new_node.learning_hypothesis}")
 
-    def _enqueue_unvisited_learning_candidates(self, node, cts):
+    def _enqueue_unvisited_learning_candidates(self, node, new_spec, cts):
         for ct in cts:
             new_node = deepcopy(node)
             new_node.learning_hypothesis = None
+            new_node.weak_spec_history.append(new_spec)
             new_node.ct_list.append(ct)
             if new_node not in self._visited_nodes:
-                self._visited_nodes.add(new_node)
                 self._stack.append(new_node)
+                self._visited_nodes.add(new_node)
+            from_id = self._visited_nodes.get_id(node)
+            to_id = self._visited_nodes.get_id(new_node)
+            self._logger.log_transition(from_id, to_id, f"{new_node.learning_type.name} -> {ct.print_one_line()}")
 
     def _compile_and_record_weaker_spec_candidate(self, node):
         new_spec = self._learner.integrate_learning_hypothesis(node.spec, node.learning_hypothesis,
                                                                node.learning_type)
-        node.weak_spec_history.append(new_spec)
         return new_spec
 
     def _initialise_repair_variables(self):
@@ -231,14 +147,18 @@ class BacktrackingRepairOrchestrator:
 
     def _initialise_guarantee_weakening(self, node):
         assert node.learning_type == Learning.ASSUMPTION_WEAKENING
+        new_node = deepcopy(node)
         # TODO: weak_spec_history may be empty if the first assumption weakening fails
-        node.spec = node.weak_spec_history[0]
-        node.ct_list = node.ct_list[:1]
-        node.learning_hypothesis = None
-        node.learning_type = Learning.GUARANTEE_WEAKENING
-        if node not in self._visited_nodes:
-            self._visited_nodes.add(node)
-            self._stack.append(node)
+        new_node.spec = new_node.weak_spec_history[0]
+        new_node.ct_list = new_node.ct_list[:1]
+        new_node.learning_hypothesis = None
+        new_node.learning_type = Learning.GUARANTEE_WEAKENING
+        if new_node not in self._visited_nodes:
+            self._visited_nodes.add(new_node)
+            self._stack.append(new_node)
+        from_id = self._visited_nodes.get_id(node)
+        to_id = self._visited_nodes.get_id(new_node)
+        self._logger.log_transition(from_id, to_id, f"{new_node.learning_type.name} -> Start")
 
     def _selected_cts_from_cs(self, cs: list[str]) -> list[CounterTrace]:
         """

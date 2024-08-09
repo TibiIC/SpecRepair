@@ -1,11 +1,11 @@
 from typing import Optional
 
-from spec_repair.components.counter_trace import CounterTrace, ct_from_cs
+from spec_repair.helpers.counter_trace import CounterTrace, ct_from_cs
 from spec_repair.components.spec_learner import SpecLearner
 from spec_repair.components.spec_oracle import SpecOracle
 from spec_repair.enums import Learning
 from spec_repair.exceptions import NoWeakeningException
-from spec_repair.heuristics import first_choice, manual_choice
+from spec_repair.heuristics import manual_choice
 from spec_repair.ltl import CounterStrategy
 from spec_repair.special_types import StopHeuristicType
 

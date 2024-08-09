@@ -9,6 +9,7 @@ from spec_repair.components.heuristic_managers.hypotheses_only_heuristic_manager
 from spec_repair.components.heuristic_managers.no_filter_heuristic_manager import NoFilterHeuristicManager
 from spec_repair.components.spec_learner import SpecLearner
 from spec_repair.components.spec_oracle import SpecOracle
+from spec_repair.helpers.logger import RepairLogger
 from spec_repair.util.file_util import read_file_lines, write_to_file
 from spec_repair.util.spec_util import format_spec
 from spec_repair.wrappers.spec import Spec
@@ -31,6 +32,9 @@ class TestBacktrackingRepairOrchestrator(TestCase):
         os.chdir(cls.original_working_directory)
 
     def test_bfs_repair_spec_lift(self):
+        transitions_file_path = "./test_files/out/lift_test_bfs/transitions.csv"
+        if os.path.exists(transitions_file_path):
+            os.remove(transitions_file_path)
         spec: list[str] = format_spec(read_file_lines(
             '../input-files/examples/lift_FINAL_NEW_strong.spectra'))
         trace: list[str] = read_file_lines(
@@ -38,7 +42,8 @@ class TestBacktrackingRepairOrchestrator(TestCase):
         repairer: BacktrackingRepairOrchestrator = BacktrackingRepairOrchestrator(
             SpecLearner(),
             SpecOracle(),
-            NoFilterHeuristicManager()
+            NoFilterHeuristicManager(),
+            RepairLogger(transitions_file_path, debug=True)
         )
 
         # Getting all possible repairs
@@ -66,6 +71,9 @@ class TestBacktrackingRepairOrchestrator(TestCase):
 
     # @unittest.skip("Probably takes way too long to finalise")
     def test_bfs_repair_spec_arbiter(self):
+        transitions_file_path = "./test_files/out/arbiter_test_bfs/transitions.csv"
+        if os.path.exists(transitions_file_path):
+            os.remove(transitions_file_path)
         spec: list[str] = format_spec(read_file_lines(
             '../input-files/examples/Arbiter/Arbiter_FINAL_strong.spectra'))
         trace: list[str] = read_file_lines(
@@ -73,7 +81,8 @@ class TestBacktrackingRepairOrchestrator(TestCase):
         repairer: BacktrackingRepairOrchestrator = BacktrackingRepairOrchestrator(
             SpecLearner(),
             SpecOracle(),
-            HypothesesOnlyHeuristicManager()
+            HypothesesOnlyHeuristicManager(),
+            RepairLogger(transitions_file_path, debug=True)
         )
 
         # Getting all possible repairs
@@ -125,6 +134,9 @@ class TestBacktrackingRepairOrchestrator(TestCase):
         self.assertEqual(expected_specs, new_specs)
 
     def test_bfs_repair_spec_traffic_updated(self):
+        transitions_file_path = "./test_files/out/traffic_test_bfs/transitions.csv"
+        if os.path.exists(transitions_file_path):
+            os.remove(transitions_file_path)
         spec: list[str] = format_spec(read_file_lines(
             './test_files/traffic/traffic_updated_strong.spectra'))
         trace: list[str] = read_file_lines(
@@ -132,7 +144,8 @@ class TestBacktrackingRepairOrchestrator(TestCase):
         repairer: BacktrackingRepairOrchestrator = BacktrackingRepairOrchestrator(
             SpecLearner(),
             SpecOracle(),
-            NoFilterHeuristicManager()
+            NoFilterHeuristicManager(),
+            RepairLogger(transitions_file_path, debug=True)
         )
 
         # Getting all possible repairs
@@ -155,6 +168,9 @@ class TestBacktrackingRepairOrchestrator(TestCase):
 
     # @unittest.skip("Probably takes way too long to finalise")
     def test_bfs_repair_spec_minepump(self):
+        transitions_file_path = "./test_files/out/minepump_test_bfs/transitions.csv"
+        if os.path.exists(transitions_file_path):
+            os.remove(transitions_file_path)
         spec: List[str] = format_spec(read_file_lines(
             './test_files/minepump_strong.spectra'))
         trace: List[str] = read_file_lines(
@@ -162,7 +178,8 @@ class TestBacktrackingRepairOrchestrator(TestCase):
         repairer: BacktrackingRepairOrchestrator = BacktrackingRepairOrchestrator(
             SpecLearner(),
             SpecOracle(),
-            HypothesesOnlyHeuristicManager()
+            HypothesesOnlyHeuristicManager(),
+            RepairLogger(transitions_file_path, debug=True)
         )
 
         # Getting all possible repairs

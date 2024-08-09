@@ -1,6 +1,6 @@
 from typing import List
 
-from spec_repair.components.counter_trace import CounterTrace
+from spec_repair.helpers.counter_trace import CounterTrace
 from spec_repair.components.heuristic_managers.heuristic_manager import HeuristicManager
 from spec_repair.heuristics import first_choice, choose_one_with_heuristic
 

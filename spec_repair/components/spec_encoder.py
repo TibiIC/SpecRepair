@@ -1,11 +1,10 @@
-import copy
 import re
-from typing import Set, List
+from typing import List
 
 import pandas as pd
 
 from spec_repair import config
-from spec_repair.components.counter_trace import CounterTrace
+from spec_repair.helpers.counter_trace import CounterTrace
 from spec_repair.enums import Learning, ExpType, When
 from spec_repair.exceptions import LearningException
 from spec_repair.ltl import filter_expressions_of_type, Spec
