@@ -5,8 +5,10 @@ from unittest import TestCase
 
 from scripts.backtracking_repair_orchestrator import BacktrackingRepairOrchestrator
 from spec_repair.builders.spec_recorder import SpecRecorder
-from spec_repair.components.heuristic_managers.hypotheses_only_heuristic_manager import HypothesesOnlyHeuristicManager
-from spec_repair.components.heuristic_managers.no_filter_heuristic_manager import NoFilterHeuristicManager
+from spec_repair.helpers.heuristic_managers.hypotheses_and_counter_traces_heuristic_manager import \
+    HypothesesAndCounterTracesHeuristicManager
+from spec_repair.helpers.heuristic_managers.hypotheses_only_heuristic_manager import HypothesesOnlyHeuristicManager
+from spec_repair.helpers.heuristic_managers.no_filter_heuristic_manager import NoFilterHeuristicManager
 from spec_repair.components.spec_learner import SpecLearner
 from spec_repair.components.spec_oracle import SpecOracle
 from spec_repair.helpers.logger import RepairLogger
@@ -178,7 +180,7 @@ class TestBacktrackingRepairOrchestrator(TestCase):
         repairer: BacktrackingRepairOrchestrator = BacktrackingRepairOrchestrator(
             SpecLearner(),
             SpecOracle(),
-            HypothesesOnlyHeuristicManager(),
+            HypothesesAndCounterTracesHeuristicManager(),
             RepairLogger(transitions_file_path, debug=True)
         )
 

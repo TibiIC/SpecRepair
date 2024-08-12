@@ -7,7 +7,7 @@ from typing import Deque, List
 from spec_repair.helpers.logger import Logger, NoLogger
 from spec_repair.builders.spec_recorder import SpecRecorder
 from spec_repair.helpers.counter_trace import CounterTrace, cts_from_cs
-from spec_repair.components.heuristic_managers.heuristic_manager import HeuristicManager
+from spec_repair.helpers.heuristic_managers.heuristic_manager import HeuristicManager
 from spec_repair.components.spec_learner import SpecLearner
 from spec_repair.components.spec_oracle import SpecOracle
 from spec_repair.enums import Learning
@@ -78,7 +78,6 @@ class BacktrackingRepairOrchestrator:
             node.ct_list = complete_cts
             # TODO: wrap logging logic
             if node not in self._visited_nodes:
-                self._stack.append(node)
                 self._visited_nodes.add(node)
             from_id = self._visited_nodes.get_id(incomplete_node)
             to_id = self._visited_nodes.get_id(node)

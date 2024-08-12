@@ -1,11 +1,11 @@
 from typing import List
 
 from spec_repair.helpers.counter_trace import CounterTrace
-from spec_repair.components.heuristic_managers.heuristic_manager import HeuristicManager
+from spec_repair.helpers.heuristic_managers.heuristic_manager import HeuristicManager
 from spec_repair.heuristics import first_choice, choose_one_with_heuristic
 
 
-class ChooseFirstHeuristicManager(HeuristicManager):
+class HypothesesOnlyHeuristicManager(HeuristicManager):
     def select_counter_traces(self, cts: List[CounterTrace]) -> List[CounterTrace]:
         return [choose_one_with_heuristic(cts, first_choice)]
 
@@ -13,4 +13,4 @@ class ChooseFirstHeuristicManager(HeuristicManager):
         return [choose_one_with_heuristic(ctss, first_choice)]
 
     def select_weakening_hypotheses(self, hypotheses: List[List[str]]) -> List[List[str]]:
-        return [choose_one_with_heuristic(hypotheses, first_choice)]
+        return hypotheses
