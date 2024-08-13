@@ -180,7 +180,7 @@ class TestBacktrackingRepairOrchestrator(TestCase):
         repairer: BacktrackingRepairOrchestrator = BacktrackingRepairOrchestrator(
             SpecLearner(),
             SpecOracle(),
-            HypothesesAndCounterTracesHeuristicManager(),
+            NoFilterHeuristicManager(),
             RepairLogger(transitions_file_path, debug=True)
         )
 
