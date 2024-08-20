@@ -162,6 +162,7 @@ def complete_ct_with_deadlock_assignment(ct: CounterTrace, assignment: list[str]
     asp = ["not_holds_at(" + v[1:] if re.search("!", v) else "holds_at(" + v for v in variables]
     asp = [f"{x},{timepoint}{end}" for x in asp]
     ct._raw_trace = re.sub(r",[^,]*\)\.", end, ct._raw_trace) + '\n'.join(asp)
+    ct._is_deadlock = False
     return ct
 
 
