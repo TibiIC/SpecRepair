@@ -28,12 +28,10 @@ common_weak(next,F,P,S):-
     not next_timepoint_exists(P,S).
 
 holds_at_weak(next,F,P,S):-
-    common_weak(next,F,P,S),
-    not not_holds_at_weak(next,F,P,S).
+    common_weak(next,F,P,S).
 
 not_holds_at_weak(next,F,P,S):-
-    common_weak(next,F,P,S),
-    not holds_at_weak(next,F,P,S).
+    common_weak(next,F,P,S).
 
 holds_at(next,F,P,S):-  % Weak Definition
     holds_at_weak(next,F,P,S).
@@ -115,7 +113,8 @@ eq(T1,T2):-
 	T1 == T2.
 
 :- 	contradiction_holds(current,F,T,S).
-:- 	contradiction_holds(next,F,T,S).
+:- 	contradiction_holds(next,F,T,S),
+    next_timepoint_exists(T,S).
 :-  contradiction_holds(prev,F,T,S),
     not exist_diff_prev_timepoints(T,S).
 
@@ -171,25 +170,11 @@ violation_holds(G,T,S):-
 	timepoint(T,S),
 	not holds(G,T,S).
 
-violated_rule_by_trace(G,S):-
-    violation_holds(G,T,S).
-
-violated_rule_by_ct(G,S):-
-    violated_rule_by_trace(G,S),
-    counter_trace(S).
-
 violated(S):-
 	exp(G),
 	trace(S),
 	timepoint(T,S),
 	violation_holds(G,T,S).
-
-violated_ct(S):-
-    violated(S),
-    counter_trace(S).
-
-trace(S) :-
-    counter_trace(S).
 
 entailed(S):-
 	trace(S),
@@ -202,83 +187,14 @@ exp(E):-
 	assumption(E).
 
 % ---*** Domain dependent Axioms ***---
+%   G(a=true->next(c=true));
 
-%assumption -- initial_assumption
-%	highwater=false&methane=false;
-
-assumption(initial_assumption).
-
-antecedent_holds(initial_assumption,0,S):-
-	trace(S),
-	timepoint(0,S).
-
-consequent_holds(current,initial_assumption,0,S):-
-	trace(S),
-	timepoint(0,S),
-	root_consequent_holds(current,initial_assumption,0,S),
-	not ev_temp_op(initial_assumption).
-
-root_consequent_holds(OP,initial_assumption,0,S):-
-	trace(S),
-	timepoint(0,S),
-	temporal_operator(OP),
-	not_holds_at(OP,highwater,0,S),
-	not_holds_at(OP,methane,0,S).
-
-%assumption -- assumption1_1
-%	G(PREV(pump=true)&pump=true->next(highwater=false));
-
-assumption(assumption1_1).
-
-antecedent_holds(assumption1_1,T,S):-
-	trace(S),
-	timepoint(T,S),
-	holds_at(prev,pump,T,S),
-	holds_at(current,pump,T,S).
-
-consequent_holds(next,assumption1_1,T,S):-
-	trace(S),
-	timepoint(T,S),
-	root_consequent_holds(next,assumption1_1,T,S),
-	not ev_temp_op(assumption1_1).
-
-root_consequent_holds(OP,assumption1_1,T,S):-
-	trace(S),
-	timepoint(T,S),
-	temporal_operator(OP),
-	not_holds_at(OP,highwater,T,S).
-
-%guarantee -- initial_guarantee
-%	pump=false;
-
-guarantee(initial_guarantee).
-
-antecedent_holds(initial_guarantee,0,S):-
-	trace(S),
-	timepoint(0,S).
-
-consequent_holds(current,initial_guarantee,0,S):-
-	trace(S),
-	timepoint(0,S),
-	root_consequent_holds(current,initial_guarantee,0,S),
-	not ev_temp_op(initial_guarantee).
-
-root_consequent_holds(OP,initial_guarantee,0,S):-
-	trace(S),
-	timepoint(0,S),
-	temporal_operator(OP),
-	not_holds_at(OP,pump,0,S).
-
-%guarantee -- guarantee1_1
-%	G(highwater=true->next(pump=true));
-
-% guarantee(guarantee1_1).
-guarantee_name(guarantee1_1).
+guarantee(guarantee1_1).
 
 antecedent_holds(guarantee1_1,T,S):-
 	trace(S),
 	timepoint(T,S),
-	holds_at(current,highwater,T,S).
+	holds_at(current,a,T,S).
 
 consequent_holds(next,guarantee1_1,T,S):-
 	trace(S),
@@ -290,18 +206,17 @@ root_consequent_holds(OP,guarantee1_1,T,S):-
 	trace(S),
 	timepoint(T,S),
 	temporal_operator(OP),
-	holds_at(OP,pump,T,S).
+	holds_at(OP,c,T,S).
 
 %guarantee -- guarantee2_1
-%	G(methane=true->next(pump=false));
+%	G(b=true->next(c=false));
 
-% guarantee(guarantee2_1).
-guarantee_name(guarantee2_1).
+guarantee(guarantee2_1).
 
 antecedent_holds(guarantee2_1,T,S):-
 	trace(S),
 	timepoint(T,S),
-	holds_at(current,methane,T,S).
+	holds_at(current,b,T,S).
 
 consequent_holds(next,guarantee2_1,T,S):-
 	trace(S),
@@ -313,24 +228,13 @@ root_consequent_holds(OP,guarantee2_1,T,S):-
 	trace(S),
 	timepoint(T,S),
 	temporal_operator(OP),
-	not_holds_at(OP,pump,T,S).
-
-%---*** Aggregates  ***---
-guarantees_satisfied(N):-
-    N = #count{E: guarantee(E)}.
-
-{ guarantee(E): guarantee_name(E) }.
-#maximize { N: guarantees_satisfied(N) }.
-
-1 { holds_at(A,2,S); not_holds_at(A,2,S) } 1 :- atom(A), counter_trace(S).
-
+	not_holds_at(OP,c,T,S).
 
 %---*** Signature  ***---
 
-atom(highwater).
-atom(methane).
-atom(pump).
-
+atom(a).
+atom(b).
+atom(c).
 
 %---*** Violation Trace ***---
 
@@ -338,16 +242,15 @@ trace(trace_name_0).
 
 timepoint(0,trace_name_0).
 timepoint(1,trace_name_0).
-timepoint(2,trace_name_0).
 next(1,0,trace_name_0).
-next(2,1,trace_name_0).
 
-not_holds_at(highwater,0,trace_name_0).
-not_holds_at(methane,0,trace_name_0).
-not_holds_at(pump,0,trace_name_0).
-holds_at(highwater,1,trace_name_0).
-holds_at(methane,1,trace_name_0).
-not_holds_at(pump,1,trace_name_0).
+not_holds_at(a,0,trace_name_0).
+not_holds_at(b,0,trace_name_0).
+not_holds_at(c,0,trace_name_0).
+holds_at(a,1,trace_name_0).
+holds_at(b,1,trace_name_0).
+not_holds_at(c,1,trace_name_0).
+
 %---*** Violation Trace ***---
 
 counter_trace(counter_strat_0_0).
@@ -358,24 +261,11 @@ timepoint(2,counter_strat_0_0).
 next(1,0,counter_strat_0_0).
 next(2,1,counter_strat_0_0).
 
-not_holds_at(highwater,0,counter_strat_0_0).
-not_holds_at(methane,0,counter_strat_0_0).
-not_holds_at(pump,0,counter_strat_0_0).
-holds_at(highwater,1,counter_strat_0_0).
-holds_at(methane,1,counter_strat_0_0).
-holds_at(pump,1,counter_strat_0_0).
-not_holds_at(highwater,2,counter_strat_0_0).
-not_holds_at(methane,2,counter_strat_0_0).
-not_holds_at(pump,2,counter_strat_0_0).
+not_holds_at(a,0,counter_strat_0_0).
+not_holds_at(b,0,counter_strat_0_0).
+not_holds_at(c,0,counter_strat_0_0).
+holds_at(a,1,counter_strat_0_0).
+holds_at(b,1,counter_strat_0_0).
+holds_at(c,1,counter_strat_0_0).
 
-% #show violation_holds/3.
-
-% #show assumption/1.
-
-#show guarantee/1.
-% #show guarantee_name/1.
-#show holds_at/3.
-#show not_holds_at/3.
-
-#show guarantees_satisfied/1.
-% #show violated_rule_by_ct/2.
+#show violation_holds/3.

@@ -191,6 +191,10 @@ violated_ct(S):-
 trace(S) :-
     counter_trace(S).
 
+entailed_ct(S) :-
+    entailed(S),
+    counter_trace(S).
+
 entailed(S):-
 	trace(S),
 	not violated(S).
@@ -248,6 +252,34 @@ root_consequent_holds(OP,assumption1_1,T,S):-
 	temporal_operator(OP),
 	not_holds_at(OP,highwater,T,S).
 
+%assumption -- assumption2_1
+%	G(methane=false->highwater=false|methane=false);
+
+assumption(assumption2_1).
+
+antecedent_holds(assumption2_1,T,S):-
+	trace(S),
+	timepoint(T,S),
+	not_holds_at(current,methane,T,S).
+
+consequent_holds(current,assumption2_1,T,S):-
+	trace(S),
+	timepoint(T,S),
+	root_consequent_holds(current,assumption2_1,T,S),
+	not ev_temp_op(assumption2_1).
+
+root_consequent_holds(OP,assumption2_1,T,S):-
+	trace(S),
+	timepoint(T,S),
+	temporal_operator(OP),
+	not_holds_at(OP,highwater,T,S).
+
+root_consequent_holds(OP,assumption2_1,T,S):-
+	trace(S),
+	timepoint(T,S),
+	temporal_operator(OP),
+	not_holds_at(OP,methane,T,S).
+
 %guarantee -- initial_guarantee
 %	pump=false;
 
@@ -272,8 +304,7 @@ root_consequent_holds(OP,initial_guarantee,0,S):-
 %guarantee -- guarantee1_1
 %	G(highwater=true->next(pump=true));
 
-% guarantee(guarantee1_1).
-guarantee_name(guarantee1_1).
+guarantee(guarantee1_1).
 
 antecedent_holds(guarantee1_1,T,S):-
 	trace(S),
@@ -295,8 +326,7 @@ root_consequent_holds(OP,guarantee1_1,T,S):-
 %guarantee -- guarantee2_1
 %	G(methane=true->next(pump=false));
 
-% guarantee(guarantee2_1).
-guarantee_name(guarantee2_1).
+guarantee(guarantee2_1).
 
 antecedent_holds(guarantee2_1,T,S):-
 	trace(S),
@@ -315,16 +345,6 @@ root_consequent_holds(OP,guarantee2_1,T,S):-
 	temporal_operator(OP),
 	not_holds_at(OP,pump,T,S).
 
-%---*** Aggregates  ***---
-guarantees_satisfied(N):-
-    N = #count{E: guarantee(E)}.
-
-{ guarantee(E): guarantee_name(E) }.
-#maximize { N: guarantees_satisfied(N) }.
-
-1 { holds_at(A,2,S); not_holds_at(A,2,S) } 1 :- atom(A), counter_trace(S).
-
-
 %---*** Signature  ***---
 
 atom(highwater).
@@ -338,9 +358,7 @@ trace(trace_name_0).
 
 timepoint(0,trace_name_0).
 timepoint(1,trace_name_0).
-timepoint(2,trace_name_0).
 next(1,0,trace_name_0).
-next(2,1,trace_name_0).
 
 not_holds_at(highwater,0,trace_name_0).
 not_holds_at(methane,0,trace_name_0).
@@ -364,18 +382,23 @@ not_holds_at(pump,0,counter_strat_0_0).
 holds_at(highwater,1,counter_strat_0_0).
 holds_at(methane,1,counter_strat_0_0).
 holds_at(pump,1,counter_strat_0_0).
-not_holds_at(highwater,2,counter_strat_0_0).
-not_holds_at(methane,2,counter_strat_0_0).
-not_holds_at(pump,2,counter_strat_0_0).
 
 % #show violation_holds/3.
 
 % #show assumption/1.
 
-#show guarantee/1.
-% #show guarantee_name/1.
-#show holds_at/3.
-#show not_holds_at/3.
+% #show guarantee/1.
 
-#show guarantees_satisfied/1.
-% #show violated_rule_by_ct/2.
+#show violated_rule_by_ct/2.
+
+%---*** Aggregates  ***---
+guarantees_violated(N):-
+    N = #count{G: violated_rule_by_ct(G,S)}.
+
+#minimize { N: guarantees_violated(N) }.
+
+holds_at_next_1(F) :- holds_at(next,F,1,counter_strat_0_0).
+not_holds_at_next_1(F) :- not_holds_at(next,F,1,counter_strat_0_0).
+1 { holds_at(next,F,1,counter_strat_0_0); not_holds_at(next,F,1,counter_strat_0_0) } 1 :- atom(F).
+#show holds_at_next_1/1.
+#show not_holds_at_next_1/1.
