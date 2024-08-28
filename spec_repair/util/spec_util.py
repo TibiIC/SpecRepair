@@ -601,6 +601,14 @@ def remove_multiple_newlines(text):
     return re.sub("\n+", "\n", '\n'.join(text)).split("\n")
 
 
+def replace_false_true(string):
+    return string.replace("false", "__PLACEHOLDER__").replace("true", "false").replace("__PLACEHOLDER__", "true")
+
+
+def flip_assignments(assignments: list[str]) -> list[str]:
+    return [replace_false_true(assignment) for assignment in assignments]
+
+
 def integrate_rule(arrow, conjunct, learning_type, line):
     conjunct = re.sub("\s", "", conjunct)
     facts = conjunct.split(";")
@@ -608,14 +616,16 @@ def integrate_rule(arrow, conjunct, learning_type, line):
         facts = [x for x in facts if x != ""]
     assignments = extract_assignments_from_facts(facts, learning_type)
 
-    if learning_type == Learning.ASSUMPTION_WEAKENING:
-        return integrate_assumption(assignments, line, facts)
+    is_eventually_consequent = "eventually" not in conjunct and bool(re.match(r"^F\(.+\)", line[-1]))
+    if learning_type == Learning.ASSUMPTION_WEAKENING or is_eventually_consequent:
+        assignments = flip_assignments(assignments) if is_eventually_consequent else assignments
+        return integrate_antecedent(assignments, line, facts)
 
     if learning_type == Learning.GUARANTEE_WEAKENING:
-        return integrate_guarantee(arrow, assignments, facts, line)
+        return integrate_consequent(arrow, assignments, facts, line)
 
 
-def integrate_assumption(assignments, line, facts):
+def integrate_antecedent(assignments, line, facts):
     next_assignments = [x for i, x in enumerate(assignments) if re.search("next", facts[i])]
     cur_assignments = [x for x in assignments if x not in next_assignments]
     orig_ant = re.search(r"(G\(|GF\()(.*)$", line[0])
@@ -653,7 +663,7 @@ def integrate_assumption(assignments, line, facts):
     return '\t' + output + "\n"
 
 
-def integrate_guarantee(arrow, assignments, facts, line):
+def integrate_consequent(arrow, assignments, facts, line):
     antecedent = line[0]
     end_line = line[1]
     next_assignments = [x for i, x in enumerate(assignments) if re.search("next", facts[i])]

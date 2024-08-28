@@ -39,7 +39,7 @@ class BacktrackingRepairOrchestrator:
             trace: list[str]
     ) -> SpecRecorder:
         self._initialise_repair_variables()
-        unique_specs = SpecRecorder()
+        unique_specs = SpecRecorder(debug_folder="./test_files/out/arbiter_test_bfs")
         root_node = CandidateRepairNode(spec, [], None, Learning.ASSUMPTION_WEAKENING)
         self._visited_nodes.add(root_node)
         self._stack.append(root_node)

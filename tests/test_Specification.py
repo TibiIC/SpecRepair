@@ -184,7 +184,7 @@ class Test(TestCase):
         line = ["G(a=true", "F(b=true));"]
         learning_type = Learning.GUARANTEE_WEAKENING
         output = integrate_rule(arrow, conjunct, learning_type, line)
-        self.assertEqual("\tG(a=true->c=true|F(b=true));\n", output)
+        self.assertEqual("\tG(a=true&c=false->F(b=true));\n", output)
 
     def test_integrate_eventually_or_rule_2(self):
         arrow = "->"
@@ -208,7 +208,7 @@ class Test(TestCase):
         line = ["G(a=true", "F(b=true));"]
         learning_type = Learning.GUARANTEE_WEAKENING
         output = integrate_rule(arrow, conjunct, learning_type, line)
-        self.assertEqual("\tG(a=true->next(c=true)|F(b=true));\n", output)
+        self.assertEqual("\tG(a=true&next(c=false)->F(b=true));\n", output)
 
     def test_integrate_eventually_or_next_rule_2(self):
         arrow = "->"
