@@ -4,10 +4,7 @@ from typing import List
 from unittest import TestCase
 
 from scripts.backtracking_repair_orchestrator import BacktrackingRepairOrchestrator
-from spec_repair.builders.spec_recorder import SpecRecorder
-from spec_repair.helpers.heuristic_managers.hypotheses_and_counter_traces_heuristic_manager import \
-    HypothesesAndCounterTracesHeuristicManager
-from spec_repair.helpers.heuristic_managers.hypotheses_only_heuristic_manager import HypothesesOnlyHeuristicManager
+from spec_repair.helpers.spec_recorder import SpecRecorder
 from spec_repair.helpers.heuristic_managers.no_filter_heuristic_manager import NoFilterHeuristicManager
 from spec_repair.components.spec_learner import SpecLearner
 from spec_repair.components.spec_oracle import SpecOracle
@@ -33,14 +30,18 @@ class TestBacktrackingRepairOrchestrator(TestCase):
         # Restore the original working directory
         os.chdir(cls.original_working_directory)
 
+    # To run this on the command line, use the following command:
+    # python -m unittest tests.test_scripts.test_backtracking_repair_orchestrator.TestBacktrackingRepairOrchestrator.test_bfs_repair_spec_lift
     def test_bfs_repair_spec_lift(self):
-        transitions_file_path = "./test_files/out/lift_test_bfs/transitions.csv"
+        out_test_dir_name = "./test_files/out/lift_test_bfs"
+        transitions_file_path = f"{out_test_dir_name}/transitions.csv"
         if os.path.exists(transitions_file_path):
             os.remove(transitions_file_path)
         spec: list[str] = format_spec(read_file_lines(
             '../input-files/examples/lift_FINAL_NEW_strong.spectra'))
         trace: list[str] = read_file_lines(
             "./test_files/lift_strong_auto_violation.txt")
+        new_specs_recorder: SpecRecorder = SpecRecorder()
         repairer: BacktrackingRepairOrchestrator = BacktrackingRepairOrchestrator(
             SpecLearner(),
             SpecOracle(),
@@ -49,10 +50,9 @@ class TestBacktrackingRepairOrchestrator(TestCase):
         )
 
         # Getting all possible repairs
-        new_specs_recorder: SpecRecorder = repairer.repair_spec_bfs(spec, trace)
+        repairer.repair_spec_bfs(spec, trace, new_specs_recorder)
         new_specs: list[str] = new_specs_recorder.get_specs()
         new_specs.sort()
-        out_test_dir_name = "./test_files/out/lift_test_bfs"
         for i, new_spec in enumerate(new_specs):
             write_to_file(f"{out_test_dir_name}/lift_test_fix_{i}.spectra", new_spec)
 
@@ -73,13 +73,15 @@ class TestBacktrackingRepairOrchestrator(TestCase):
 
     # @unittest.skip("Probably takes way too long to finalise")
     def test_bfs_repair_spec_arbiter(self):
-        transitions_file_path = "./test_files/out/arbiter_test_bfs/transitions.csv"
+        out_test_dir_name = "./test_files/out/arbiter_test_bfs"
+        transitions_file_path = f"{out_test_dir_name}/transitions.csv"
         if os.path.exists(transitions_file_path):
             os.remove(transitions_file_path)
         spec: list[str] = format_spec(read_file_lines(
             '../input-files/examples/Arbiter/Arbiter_FINAL_strong.spectra'))
         trace: list[str] = read_file_lines(
             "./test_files/arbiter_strong_auto_violation.txt")
+        new_specs_recorder: SpecRecorder = SpecRecorder(debug_folder=out_test_dir_name)
         repairer: BacktrackingRepairOrchestrator = BacktrackingRepairOrchestrator(
             SpecLearner(),
             SpecOracle(),
@@ -88,40 +90,9 @@ class TestBacktrackingRepairOrchestrator(TestCase):
         )
 
         # Getting all possible repairs
-        new_specs_recorder: SpecRecorder = repairer.repair_spec_bfs(spec, trace)
+        repairer.repair_spec_bfs(spec, trace, new_specs_recorder)
         new_specs: list[str] = new_specs_recorder.get_specs()
         new_specs.sort()
-        out_test_dir_name = "./test_files/out/arbiter_test_bfs"
-        for i, new_spec in enumerate(new_specs):
-            write_to_file(f"{out_test_dir_name}/arbiter_test_fix_{i}.spectra", new_spec)
-
-        # Getting expected repairs
-        expected_specs_recorder: SpecRecorder = SpecRecorder()
-        for spec_file in os.listdir('./test_files/arbiter_weakenings'):
-            expected_specs_recorder.add(
-                Spec(''.join(format_spec(read_file_lines(f'./test_files/arbiter_weakenings/{spec_file}')))))
-        expected_specs: list = expected_specs_recorder.get_specs()
-        expected_specs.sort()
-
-        self.assertEqual(expected_specs, new_specs)
-
-    @unittest.skip("Takes way too long to finalise")
-    def test_bfs_repair_spec_arbiter_all(self):
-        spec: list[str] = format_spec(read_file_lines(
-            '../input-files/examples/Arbiter/Arbiter_FINAL_strong.spectra'))
-        trace: list[str] = read_file_lines(
-            "./test_files/arbiter_strong_auto_violation.txt")
-        repairer: BacktrackingRepairOrchestrator = BacktrackingRepairOrchestrator(
-            SpecLearner(),
-            SpecOracle(),
-            NoFilterHeuristicManager()
-        )
-
-        # Getting all possible repairs
-        new_specs_recorder: SpecRecorder = repairer.repair_spec_bfs(spec, trace)
-        new_specs: list[str] = new_specs_recorder.get_specs()
-        new_specs.sort()
-        out_test_dir_name = "./test_files/out/arbiter_test_bfs"
         for i, new_spec in enumerate(new_specs):
             write_to_file(f"{out_test_dir_name}/arbiter_test_fix_{i}.spectra", new_spec)
 
@@ -136,13 +107,15 @@ class TestBacktrackingRepairOrchestrator(TestCase):
         self.assertEqual(expected_specs, new_specs)
 
     def test_bfs_repair_spec_traffic_updated(self):
-        transitions_file_path = "./test_files/out/traffic_test_bfs/transitions.csv"
+        out_test_dir_name = "./test_files/out/traffic_test_bfs"
+        transitions_file_path = f"{out_test_dir_name}/transitions.csv"
         if os.path.exists(transitions_file_path):
             os.remove(transitions_file_path)
         spec: list[str] = format_spec(read_file_lines(
             './test_files/traffic/traffic_updated_strong.spectra'))
         trace: list[str] = read_file_lines(
             "./test_files/traffic/traffic_updated_auto_violation.txt")
+        new_specs_recorder: SpecRecorder = SpecRecorder()
         repairer: BacktrackingRepairOrchestrator = BacktrackingRepairOrchestrator(
             SpecLearner(),
             SpecOracle(),
@@ -151,10 +124,9 @@ class TestBacktrackingRepairOrchestrator(TestCase):
         )
 
         # Getting all possible repairs
-        new_specs_recorder: SpecRecorder = repairer.repair_spec_bfs(spec, trace)
+        repairer.repair_spec_bfs(spec, trace, new_specs_recorder)
         new_specs: list[str] = new_specs_recorder.get_specs()
         new_specs.sort()
-        out_test_dir_name = "./test_files/out/traffic_test_bfs"
         for i, new_spec in enumerate(new_specs):
             write_to_file(f"{out_test_dir_name}/traffic_test_fix_{i}.spectra", new_spec)
 
@@ -168,15 +140,16 @@ class TestBacktrackingRepairOrchestrator(TestCase):
 
         self.assertEqual(expected_specs, new_specs)
 
-    # @unittest.skip("Probably takes way too long to finalise")
     def test_bfs_repair_spec_minepump(self):
-        transitions_file_path = "./test_files/out/minepump_test_bfs/transitions.csv"
+        out_test_dir_name = "./test_files/out/minepump_test_bfs"
+        transitions_file_path = f"{out_test_dir_name}/transitions.csv"
         if os.path.exists(transitions_file_path):
             os.remove(transitions_file_path)
         spec: List[str] = format_spec(read_file_lines(
             './test_files/minepump_strong.spectra'))
         trace: List[str] = read_file_lines(
             "./test_files/minepump_strong_auto_violation.txt")
+        new_specs_recorder: SpecRecorder = SpecRecorder(debug_folder=out_test_dir_name)
         repairer: BacktrackingRepairOrchestrator = BacktrackingRepairOrchestrator(
             SpecLearner(),
             SpecOracle(),
@@ -185,10 +158,9 @@ class TestBacktrackingRepairOrchestrator(TestCase):
         )
 
         # Getting all possible repairs
-        new_specs_recorder: SpecRecorder = repairer.repair_spec_bfs(spec, trace)
+        repairer.repair_spec_bfs(spec, trace)
         new_specs: list[str] = new_specs_recorder.get_specs()
         new_specs.sort()
-        out_test_dir_name = "./test_files/out/minepump_test_bfs"
         for i, new_spec in enumerate(new_specs):
             write_to_file(f"{out_test_dir_name}/minepump_test_fix_{i}.spectra", new_spec)
 

@@ -10,7 +10,7 @@ from spec_repair.builders.abstract_builder import AbstractBuilder
 from spec_repair.builders.choicesbuilder import ChoicesBuilder
 from spec_repair.builders.enums import RecordingState, ChoiceType
 from spec_repair.builders.rulebuilder import RuleBuilder
-from spec_repair.builders.spec_recorder import SpecRecorder
+from spec_repair.helpers.spec_recorder import SpecRecorder
 from spec_repair.builders.summarybuilder import SummaryBuilder
 from spec_repair.util.file_util import generate_temp_filename
 from spec_repair.wrappers.spec import Spec
@@ -59,7 +59,7 @@ class CSVBuilder(AbstractBuilder):
         self._reset_builder_for_new_row()
 
     def add_ideal_spec(self, ideal_spec: Spec):
-        assert len(self.spec_recorder.storage) == 0
+        assert len(self.spec_recorder.get_all_values()) == 0
         self.spec_recorder.add(ideal_spec)
         self.ideal_spec = ideal_spec
         self.cur_spec = copy.deepcopy(ideal_spec)

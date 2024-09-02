@@ -4,7 +4,7 @@ import shutil
 from typing import Optional, List, Set
 
 from spec_repair.config import PROJECT_PATH
-from spec_repair.builders.spec_recorder import SpecRecorder
+from spec_repair.helpers.spec_recorder import SpecRecorder
 from spec_repair.wrappers.script import Script
 from spec_repair.wrappers.spec import Spec
 from spec_repair.util.file_util import read_file

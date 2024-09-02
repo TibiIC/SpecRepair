@@ -5,7 +5,7 @@ from copy import deepcopy
 from typing import Deque, List
 
 from spec_repair.helpers.logger import Logger, NoLogger
-from spec_repair.builders.spec_recorder import SpecRecorder
+from spec_repair.helpers.spec_recorder import SpecRecorder
 from spec_repair.helpers.counter_trace import CounterTrace, cts_from_cs
 from spec_repair.helpers.heuristic_managers.heuristic_manager import HeuristicManager
 from spec_repair.components.spec_learner import SpecLearner
@@ -36,10 +36,10 @@ class BacktrackingRepairOrchestrator:
     def repair_spec_bfs(
             self,
             spec: list[str],
-            trace: list[str]
-    ) -> SpecRecorder:
+            trace: list[str],
+            spec_recorder: SpecRecorder
+    ) -> None:
         self._initialise_repair_variables()
-        unique_specs = SpecRecorder(debug_folder="./test_files/out/arbiter_test_bfs")
         root_node = CandidateRepairNode(spec, [], None, Learning.ASSUMPTION_WEAKENING)
         self._visited_nodes.add(root_node)
         self._stack.append(root_node)
@@ -53,13 +53,11 @@ class BacktrackingRepairOrchestrator:
                 cs = self._oracle.synthesise_and_check(new_spec)
                 if not cs:
                     node_id = self._visited_nodes.get_id(node)
-                    spec_id = unique_specs.add(Spec(''.join(new_spec)))
+                    spec_id = spec_recorder.add(Spec(''.join(new_spec)))
                     self._logger.log_transition(node_id, f"#{spec_id}", f"End")
                 else:
                     cts = self._selected_cts_from_cs(cs)
                     self._enqueue_unvisited_learning_candidates(node, new_spec, cts)
-
-        return unique_specs
 
     def _find_and_enqueue_weaker_spec_candidates(
             self,
