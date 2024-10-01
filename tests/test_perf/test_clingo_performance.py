@@ -2,7 +2,7 @@ import os
 import pytest
 import time
 
-from spec_repair.old.Specification import run_clingo
+from spec_repair.old_experiments import run_clingo
 
 current_directory = os.path.dirname(os.path.abspath(__file__))
 las_directory_path = os.path.join(current_directory, "lp_files")

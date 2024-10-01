@@ -5,7 +5,6 @@ violation fixer will run to repair the specification, afterwards providing it
 as a file.
 """
 
-from spec_repair.old.Specification import Specification
 from spec_repair.ltl import log_to_asp_trace
 from spec_repair.util.file_util import write_to_file
 from pipeline.components.violation_listener import start_listening_for_violations

@@ -2,11 +2,13 @@ import os
 import random
 import re
 import shutil
+import subprocess
 import time
 from collections import deque
 from datetime import datetime as dt
 from itertools import product
-from typing import Optional
+from statistics import median
+from typing import Optional, List
 
 import numpy as np
 import pandas as pd
@@ -15,24 +17,21 @@ from anytree import AnyNode
 from matplotlib import pyplot as plt
 from sympy import parse_expr
 
-from spec_repair.old.Specification import Specification, results_to_df, save_results_df, semantically_identical, \
-    get_start_files, extract_nth_violation, \
-    get_last_results_csv_filename, recursively_search, run_clingo, \
-    summarize_specs, extract_transitions, gr_one_type, \
-    conjunct_is_false, contains_contradictions, n_trivial_guarantees, shrink_latex_table_width, \
-    reformat_latex_table_rq
+from spec_repair.old.patterns import PRS_REG
 from spec_repair.util.spec_util import format_spec, extract_df_content
 from spec_repair.old.case_study_translator import realizable, delete_files, parenthetic_contents_with_function, negate, \
     translate_case_study, negate_and_simplify
-from spec_repair.config import PROJECT_PATH, FASTLAS, GENERATE_MULTIPLE_TRACES
+from spec_repair.config import PROJECT_PATH, FASTLAS, GENERATE_MULTIPLE_TRACES, PATH_TO_CLI, PRINT_CS
 from spec_repair.enums import SimEnv, Outcome, Learning, When
 from spec_repair.old.latex_translator import spectra_to_latex, violation_to_latex
 from spec_repair.old.specification_helper import strip_vars, get_folders, \
     CASE_STUDY_EXCLUSION_LIST, \
-    dict_to_text, print_dict
-from spec_repair.util.file_util import generate_filename, generate_random_string, read_file_lines, write_file
+    dict_to_text, print_dict, CASE_STUDY_FINALS, run_subprocess
+from spec_repair.util.file_util import generate_filename, generate_random_string, read_file_lines, write_file, \
+    generate_temp_filename
 from spec_repair.old.util_titus import simplify_assignments, generate_trace_asp, write_trace, \
-    semantically_identical_spot
+    semantically_identical_spot, run_clingo_raw, extract_all_expressions, generate_model, extract_expressions_from_file, \
+    extract_all_expressions_spot
 
 
 def traffic_weakening_modified(include_prev, unguided_learning=False):
@@ -1598,3 +1597,686 @@ if __name__ == '__main__':
 
 def none_contain_X(strings):
     return all([x.find("X") < 0 for x in strings])
+
+
+def format_name(spectra_file):
+    return generate_filename(spectra_file, "_formatted.spectra")
+
+
+def check_format(spectra_file):
+    # TODO: ensure input file is well formatted
+    return True
+    # names required for assumptions/guarantees
+    # no nesting of next/prev
+    # no next/prev in liveness
+
+
+def create_signature_from_file(spectra_file):
+    variables = strip_vars(read_file_lines(spectra_file))
+    output = "%---*** Signature  ***---\n\n"
+    for var in variables:
+        output += "atom(" + var + ").\n"
+    output += "\n\n"
+    return output
+
+
+def has_extension(file_path, target_extension) -> bool:
+    _, extension = os.path.splitext(file_path)
+    return extension.lower() == target_extension.lower()
+
+
+def run_clingo(clingo_file, return_violated_traces=False, exp_type="assumption"):
+    assert has_extension(clingo_file, ".lp")
+    if not return_violated_traces:
+        print("Running Clingo to aid debugging")
+    # This assumes my filepath and using WSL
+    output = run_clingo_raw(clingo_file)
+    output = output.split("\n")
+    for i, line in enumerate(output):
+        if len(line) > 100:
+            output[i] = '\n'.join(line.split(" "))
+
+    answer_set = generate_temp_filename(".answer_set")
+    if return_violated_traces:
+        return list(filter(re.compile(rf"violation_holds\(|{exp_type}\(|entailed\(").search, output))
+    else:
+        output = '\n'.join(output)
+        write_file(answer_set, output)
+        print(f"See file for output: {answer_set}")
+
+
+def gr_one_type(formula):
+    '''
+    :param formula:
+    :return: pRespondsToS, when
+    '''
+    formula = re.sub('\s*', '', formula)
+    eventually = re.search(r"^GF", formula)
+    pRespondsToS = PRS_REG.search(formula)
+    initially = not re.search(r"^G", formula)
+    if eventually:
+        when = When.EVENTUALLY
+    elif initially:
+        when = When.INITIALLY
+    elif pRespondsToS:
+        when = When.EVENTUALLY
+    else:
+        when = When.ALWAYS
+    return pRespondsToS, when
+
+
+def drop_all(end_file):
+    if not re.search("normalised", end_file):
+        print("file not normalised!")
+        exit(1)
+    spec = read_file_lines(end_file)
+    poss_violates = [i + 1 for i, line in enumerate(spec) if
+                     re.search("assumption|ass", line) and re.search(r"G", spec[i + 1]) and not re.search(r"F",
+                                                                                                          spec[i + 1])]
+    possible_ass = [i + 1 for i, line in enumerate(spec) if
+                    re.search("assumption|ass", line) and re.search(r"G|GF", spec[i + 1])]
+    possible_gar = [i + 1 for i, line in enumerate(spec) if
+                    re.search("guarantee|gar", line) and re.search(r"G|GF", spec[i + 1])]
+
+    possible_lines = possible_ass + possible_gar
+    possible_lines = [x for x in possible_lines if x not in poss_violates]
+    response = re.compile(r'^\s*G\(([^-]*)->\s*F\((.*)\)\s*\)\s*;')
+    liveness = re.compile(r"GF\s*\((.*)\)\s*;")
+    justice = re.compile(r"G\s*\(([^F]*)\)\s*;")
+    exp = re.compile(r"(G)\s*\(([^F]*)\)\s*;|(GF)\s*\((.*)\)\s*;")
+
+    temporals = [exp.search(spec[n]).group(1) for n in possible_lines if exp.search(spec[n])]
+    poss_drops = [exp.search(spec[n]).group(2).split("|") for n in possible_lines if exp.search(spec[n])]
+    poss_dr_bool = [[bool(not re.search("next|PREV", i)) for i in x] for x in poss_drops]
+    # total_drops = sum([sum(x) for x in poss_dr_bool])
+    # all_variations = list(product(*[[True,False] for i in range(total_drops)]))
+    all_variations = list(product(*[list(product(*[[y, False] if y else [y] for y in x])) for x in poss_dr_bool]))
+    all_rules = [
+        ['|'.join([poss_drops[i][j] for j, bool in enumerate(subtup) if not bool]) for i, subtup in enumerate(tup)] for
+        tup in all_variations]
+    [[temporals[i] + "(" + formula + ");\n" for i, formula in enumerate(x)] for x in all_rules]
+
+
+def summarize_spec(spectra_file):
+    # spectra_file = f"{PROJECT_PATH}/input-files/case-studies/modified-specs/minepump/genuine/minepump_FINAL.spectra"
+    spec = read_file_lines(spectra_file)
+    e_vars = strip_vars(spec, ["env"])
+    s_vars = strip_vars(spec, ["sys"])
+    assumptions = extract_all_expressions("assumption", spec)
+    guarantees = extract_all_expressions("guarantee", spec)
+    live = re.compile(r"^GF")
+    safe = re.compile(r"^G[^F]*$")
+    init = re.compile(r"^[^G]")
+    resp = re.compile(r"^G[^F]*->F")
+    regs = [init, safe, live, resp]
+
+    columns = ["Type", "Variables", "Expressions", "Initial", "Safety", "Liveness", "Response", "Max Length (vars)",
+               "Median Length (vars)"]
+    env = summarize_exps(assumptions, e_vars, s_vars, regs)
+    sys = summarize_exps(guarantees, s_vars, e_vars, regs)
+    tot = summarize_exps(assumptions + guarantees, s_vars + e_vars, [], regs)
+    df = pd.DataFrame([["$\mathcal(E)$"] + env, ["$\mathcal(S)$"] + sys, ["Total"] + tot], columns=columns)
+    df.index = df["Type"]
+    df = df.drop(columns=["Type"]).T
+    return df
+
+
+def summarize_exps(expressions, vars, other_vars, regs):
+    output = [len(vars), len(expressions)]
+    for reg in regs:
+        output.append(count_reg(expressions, reg))
+
+    if len(expressions) == 0:
+        return output + [0, 0]
+
+    exp_lengths = [len(re.findall(r"|".join(vars + other_vars), x)) for x in expressions]
+    output.append(max(exp_lengths))
+    output.append(median(exp_lengths))
+    return output
+
+
+def count_reg(string_list, reg_expr):
+    return sum([bool(reg_expr.search(x)) for x in string_list])
+
+
+def summarize_case_studies():
+    csv_list = [110, 67, 66, 59, 52, 45, 38, 31, 30, 23, 19, 15, 14]
+    outfolder = "output-files/results"
+    df = None
+    for n in csv_list:
+        outfile = outfolder + "/output" + str(n) + ".csv"
+        results = pd.read_csv(outfile, index_col=0)
+        results["run_id"] = n
+        if df is None:
+            df = results
+        else:
+            df = pd.concat([df, results], axis=0)
+    files = CASE_STUDY_FINALS
+    keys = files.keys()
+    df["Specification"] = [list(keys)[list(files.values()).index(file)] for file in df.file]
+    df["Expressions"] = [re.sub(r"\[|\]|'", "", x) for x in df["types"]]
+    df["Result"] = [re.sub(r"SimEnv\.", "", x) for x in df["outcome"]]
+    df.to_csv("output-files/examples/output_summary.csv")
+
+
+def summarize_specs():
+    files = {  # f"{PROJECT_PATH}/input-files/examples/Arbiter/Arbiter_FINAL.spectra",
+        "Lift": f"{PROJECT_PATH}/input-files/examples/lift_FINAL.spectra",
+        "Lift New": f"{PROJECT_PATH}/input-files/examples/lift_FINAL_NEW.spectra",
+        "Minepump": f"{PROJECT_PATH}/input-files/case-studies/modified-specs/minepump/genuine/minepump_FINAL.spectra",
+        # TODO: Find this file
+        "Traffic Single": f"{PROJECT_PATH}/input-files/examples/Traffic/traffic_single_FINAL.spectra",
+        "Traffic": f"{PROJECT_PATH}/input-files/examples/Traffic/traffic_updated_FINAL.spectra"}
+    keys = files.keys()
+    # header = pd.MultiIndex.from_product([list(keys), ["env", "sys", "Total"]], names=["Spec", "Type"])
+    # list_of_df = [summarize_spec(file) for file in files.values()]
+    # df = pd.concat(list_of_df, axis=1)
+    # df.columns = header
+    # write_file(df.to_latex(), "latex/summary.txt")
+
+    result_file, n = get_last_results_csv_filename(shift=0)
+    results = pd.read_csv(result_file, index_col=0)
+
+    results = results[results["outcome"] != "SimEnv.Invalid"]
+
+    results["Specification"] = [list(keys)[list(files.values()).index(file)] for file in results.file]
+    results["Expressions"] = [re.sub(r"\[|\]|'", "", x) for x in results["types"]]
+    results["Result"] = [re.sub(r"SimEnv\.", "", x) for x in results["outcome"]]
+
+    lat = results_to_latex(results, rows=["Specification", "Result", "Expressions"])
+    # lat = re.sub("rrr","|rrr",lat)
+    lat += "\n\n" + results_to_latex(results, rows=["Result"])
+
+    output = "\\usepackage{booktabs}\n\\begin{document}\n\\begin{table}\n\\centering\n" + lat + \
+             "\\caption{my table}\n\\label{tab:my_label}\n\\end{table}\n\\end{document}\n"
+
+    write_file("latex/output" + n + ".tex", output)
+
+
+def results_to_latex(results, rows):
+    final_df = results.pivot_table(index=rows, values=["total_time", "n_dropped"],
+                                   aggfunc="mean", margins=True)
+    count_df = results.pivot_table(index=rows, values=["outcome"],
+                                   aggfunc="count", margins=True)
+    final_df["total_time"] = final_df["total_time"].round(1)
+    final_df["n_dropped"] = final_df["n_dropped"].round(1)
+    lat = pd.concat([count_df, final_df], axis=1).to_latex()
+    # lat = final_df.to_latex()
+    # lat = re.sub(r"(\.\d)\d*\b", r"\1", lat)
+    lat = re.sub(r"NaN", "-", lat)
+    lat = re.sub(r"total\\_time", "Mean Learning", lat)
+    lat = re.sub(r"n\\_dropped", "Mean Number of", lat)
+    lat = re.sub(r"(" + rows[-1] + "\s*)&\s*&\s*&\s*", r"\1&&Strengthenings&Time (s)", lat)
+    lat = re.sub("outcome", "Count", lat)
+    lat = re.sub("& A", r"& $\\phi^\\mathcal{E}$", lat)
+    lat = re.sub(",G", r",$\\phi^\\mathcal{S}$", lat)
+    return lat
+
+
+def formatted_mean(lst):
+    if len(lst) == 0:
+        return "-"
+    av = sum(lst) / len(lst)
+    return str(round(av, 2))
+
+
+def extract_last_unrealizable_dropped():
+    outfile, n = get_last_results_csv_filename(0)
+    df = pd.read_csv(outfile)
+    df["outcome"] == "SimEnv.Unrealizable"
+
+
+def save_results_df(total_df):
+    outfile, n = get_last_results_csv_filename()
+    total_df.to_csv(outfile)
+
+
+def get_last_results_csv_filename(shift=1, outfolder="output-files/results"):
+    # outfolder = "output-files/results"
+    all_files = os.listdir(outfolder)
+    reg = re.compile(r"output(\d*).csv")
+    if len(all_files) == 0:
+        n = '0'
+    else:
+        last_file = max([int(reg.search(x).group(1)) for x in all_files if reg.search(x)])
+        n = str(last_file + shift)
+    outfile = outfolder + "/output" + n + ".csv"
+    return outfile, n
+
+
+def results_to_df(results, spectra_file, types, include_prev):
+    columns = ["file", "run", "types", "prevs", "n_dropped", "outcome", "total_time", "max_time", "median_time",
+               "n_runs"]
+    output = []
+    for key in results.keys():
+        result = results[key]
+        if len(result[1]) == 0:
+            output.append([spectra_file, key, types, include_prev, result[2], result[0], 0, 0, 0, 0])
+        else:
+            output.append([spectra_file, key, types, include_prev, result[2], result[0], sum(result[1]), max(result[1]),
+                           median(result[1]), len(result[1])])
+    df = pd.DataFrame(output, columns=columns)
+    return df
+
+
+def increment_diff(diff, i, line):
+    try:
+        diff[i][line] += 1
+    except KeyError:
+        try:
+            diff[i][line] = 1
+        except KeyError:
+            diff[i] = {}
+            diff[i][line] = 1
+
+
+def print_diff(final_spec, diff):
+    keys = list(diff.keys())
+    for i in keys:
+        for line in diff[i].keys():
+            final_spec[i] += "\t\t" + str(diff[i][line]) + ":" + line + "\n"
+    print(''.join(final_spec))
+
+
+def wrong_order(spec, final_spec):
+    expr = re.compile("assumption -- |guarantee -- ")
+    for i, line in enumerate(final_spec):
+        if spec[i] != line and expr.search(line):
+            return True
+    return False
+
+
+def re_order(spec, final_spec):
+    final_ex = extract_expressions_to_dict(final_spec)
+    start_ex = extract_expressions_to_dict(spec)
+    spec = [x for x in spec if re.search("^sys|^env|^module|^spec", x)]
+    for key in final_ex.keys():
+        spec.append(str(key))
+        spec.append(start_ex[key])
+    return spec
+
+
+def extract_expressions_to_dict(final_spec):
+    expr = re.compile("assumption -- |guarantee -- ")
+    expressions = {}
+    for i, line in enumerate(final_spec):
+        if expr.search(line):
+            expressions[line] = final_spec[i + 1]
+    return expressions
+
+
+def satisfies(expression, state):
+    disjuncts = expression.split("|")
+    for disjunct in disjuncts:
+        conjuncts = disjunct.split("&")
+        if all([conjunct in state for conjunct in conjuncts]):
+            return True
+    return False
+
+
+def transitions(state, state_space, primed_expressions, prevs):
+    primed_expressions = [re.sub(r"PREV\((!*)([^\|]*)\)", r"\1prev_\2", x) for x in primed_expressions]
+    # p_exp = primed_expressions[0]
+    # p_exp.split("|")
+    forced_expressions = [exp for exp in primed_expressions if
+                          not any([variable in state for variable in exp.split("|")])]
+    nexts = [re.search(r"next\((.*)\)", variable).group(1) for sublist in [exp.split("|") for exp in forced_expressions]
+             for variable in sublist if re.search(r"next\((.*)\)", variable)]
+    possible_next_states = [s for s in state_space if all([x in s for x in nexts])]
+    new_states = possible_next_states
+    for prev in prevs:
+        var = re.search(r"prev_(.*)", prev).group(1)
+        if "!" + var in state:
+            new_states = [s for s in possible_next_states if prev not in s]
+        else:
+            new_states = [s for s in possible_next_states if prev in s]
+
+    return [state_space.index(x) for x in new_states]
+
+
+def transitions_jit(state, primed_expressions, unprimed_assignments, prevs):
+    raise NotImplementedError("Transitions JIT is not finished and not implemented")
+
+    primed_expressions = [re.sub(r"PREV\((!*)([^\|]*)\)", r"\1prev_\2", x) for x in primed_expressions]
+    forced_expressions = [exp for exp in primed_expressions if
+                          not any([variable in state for variable in exp.split("|")])]
+    nexts = [re.search(r"next\((.*)\)", variable).group(1) for sublist in
+             [exp.split("|") for exp in forced_expressions]
+             for variable in sublist if re.search(r"next", variable)]
+    possible_next_states = [s for s in state_space if all([x in s for x in nexts])]
+
+    for prev in prevs:
+        var = re.search(r"prev_(.*)", prev).group(1)
+        if "!" + var in state:
+            new_states = [s for s in possible_next_states if prev not in s]
+        else:
+            new_states = [s for s in possible_next_states if prev in s]
+
+    return [state_space.index(x) for x in new_states]
+
+
+def no_next(dis):
+    conjuncts = dis.split("&")
+    for conjunct in conjuncts:
+        if re.search("next", conjunct):
+            return False
+    return True
+
+
+def sub_next_only(dis):
+    conjuncts = dis.split("&")
+    output = '&'.join([re.sub(r"next\(([^\)]*)\)", r"\1", x) for x in conjuncts if re.search("next", x)])
+    return re.sub(r"\(|\)", "", output)
+
+
+def next_only(x, new_state):
+    disjuncts = x.split("|")
+    # TODO: seems to be generating things that violate assumptions.
+    # disjuncts = [dis for dis in disjuncts if not no_next(dis)]
+    # currs = [re.sub(r"next\([^\)]*\)", "", dis) for dis in disjuncts]
+    # currs = [re.sub(r"&(\))|(\()&", r"\1",c) for c in currs]
+    # currs = [re.sub(r"&&","&",c) for c in currs]
+    #
+    # [satisfies(c,new_state) for c in currs]
+
+    disjuncts = [sub_next_only(dis) for dis in disjuncts if not no_next(dis)]
+    return '|'.join(disjuncts)
+
+
+def next_possible_assignments(new_state, primed_expressions_cleaned, primed_expressions_cleaned_s, unprimed_expressions,
+                              unprimed_expressions_s, variables):
+    unsat_next_exp = unsat_nexts(new_state, primed_expressions_cleaned)
+
+    # TODO: VERYFY _s should mean the expressions have to be false in order for the violation to occur
+    unsat_next_exp_s = unsat_nexts(new_state, primed_expressions_cleaned_s)
+
+    if unsat_next_exp + unsat_next_exp_s + unprimed_expressions + unprimed_expressions_s == []:
+        # Pick random assignment
+        vars = [var for var in variables if not re.search("prev_", var)]
+        i = random.choice(range(2 ** len(vars)))
+        # TODO: replace i with 0 for deadlock - in order to make deterministic
+        i = 0
+        n = "{0:b}".format(i)
+        assignments = '0' * (len(vars) - len(n)) + n
+        assignments = [int(x) for x in assignments]
+        state = ["!" + var if assignments[i] else var for i, var in enumerate(vars)]
+        return [state], False
+    return generate_model(unsat_next_exp + unprimed_expressions, unsat_next_exp_s + unprimed_expressions_s, variables,
+                          force=True)
+
+    # violation = unsat_next_exp + [negate(x) for x in unsat_next_exp_s]
+    # parsed = parse_expr(re.sub(r"!", "~", '&'.join(violation)))
+    # sympy.to_cnf(parsed)
+
+    # next_assignments = possible_assignments(unsat_next_exp)
+    # filtered_next = [x for x in next_assignments if
+    #                  not any([satisfies(negate(expression), list(x)) for expression in unprimed_expressions])]
+    #
+    # violations = [x for x in next_assignments if
+    #               any([satisfies(negate(expression), list(x)) for expression in unprimed_expressions_s])]
+    # if len(violations) > 0:
+    #     return violations, True
+    # violations = [x for x in next_assignments if
+    #               any([satisfies(negate(expression), list(x)) for expression in unsat_next_exp_s])]
+    # if len(violations) > 0:
+    #     return violations, True
+    #
+    # return filtered_next, False
+
+
+def unsat_nexts(new_state, primed_expressions_cleaned):
+    if new_state == []:
+        return []
+    unsat_primed_exp = [expression for expression in primed_expressions_cleaned if not satisfies(expression, new_state)]
+    output = [next_only(x, new_state) for x in unsat_primed_exp]
+    output = [x for x in output if x != ""]
+    return output
+
+
+def product_without_dupl(*args, repeat=1):
+    pools = [tuple(pool) for pool in args] * repeat
+    result = [[]]
+    for pool in pools:
+        result = [x + [y] if y not in x else x for x in result for y in pool]  # here we added condition
+    result = set(list(map(lambda x: tuple(sorted(x)), result)))  # to remove symmetric duplicates
+    for prod in result:
+        yield tuple(prod)
+
+
+def split_conjuncts_and_remove_duplicates(tup):
+    output = [item for sublist in [re.sub(r"^\(|\)$", r"", x).split("&") for x in list(tup)] for item in sublist]
+    return tuple(dict.fromkeys(output))
+
+
+def slow_state_space(var_space, unprimed_expressions):
+    # TODO: check this?
+    start = time.time()
+    state_space = []
+    assignment_sets = possible_assignments(unprimed_expressions)
+
+    for i in range(2 ** len(var_space)):
+        n = "{0:b}".format(i)
+        assignments = '0' * (len(var_space) - len(n)) + n
+        assignments = [int(x) for x in assignments]
+        state = set([var[assignments[i]] for i, var in enumerate(var_space)])
+        if any([s.issubset(state) for s in assignment_sets]):
+            state_space.append(tuple(state))
+        # if all([satisfies(expression, state) for expression in unprimed_expressions]):
+        #     state_space.append(tuple(state))
+    elapsed = (time.time() - start)
+    print("Elapsed time: " + str(round(elapsed, 2)) + "s")
+    return state_space
+
+
+def contradiction(x):
+    if len(x) == 0:
+        return True
+    x = list(dict.fromkeys(x))
+    vars = [v.strip("!") for v in x]
+    var = max(vars, key=vars.count)
+    if len([y for y in vars if y == var]) > 1:
+        return True
+    return False
+
+
+def possible_assignments(expressions):
+    expressions = [x.split("|") for x in expressions]
+    required_assignments = list(product_without_dupl(*expressions))
+    required_assignments = [split_conjuncts_and_remove_duplicates(tup) for tup in required_assignments]
+    assignment_sets = [set(x) for x in required_assignments if not contradiction(x)]
+    return assignment_sets
+
+
+def extract_transitions(file, assumptions_only=False):
+    '''
+
+    :param file:
+    :return: state_space, initial_state_space, legal_transitions
+    '''
+    initial_expressions, prevs, primed_expressions, unprimed_expressions, variables = extract_expressions_from_file(file,
+                                                                                                                    assumptions_only)
+
+    var_space = [[x, "!" + x] for x in variables]
+    if len(var_space) < 20:
+        state_space = list(product(*var_space))
+        state_space = [x for x in state_space if all([satisfies(expression, x) for expression in unprimed_expressions])]
+    else:
+        state_space = slow_state_space(var_space, unprimed_expressions)
+
+    # assignment_set_initials = possible_assignments(initial_expressions)
+    # initial_state_space = [x for x in state_space if
+    #                        any([s.issubset(set(x)) for s in assignment_set_initials])]
+
+    initial_state_space = [x for x in state_space if
+                           all([satisfies(expression, x) for expression in initial_expressions])]
+    legal_transitions = [transitions(state, state_space, primed_expressions, prevs) for state in state_space]
+    return state_space, initial_state_space, legal_transitions
+
+
+def semantically_identical(fixed_spec_file, end_file, assumptions_only):
+    start_file = re.sub(r"_patterned", "", fixed_spec_file)
+    state_space, initial_state_space, legal_transitions = extract_transitions(end_file, assumptions_only)
+    state_space_s, initial_state_space_s, legal_transitions_s = extract_transitions(start_file, assumptions_only)
+
+    if state_space == state_space_s and initial_state_space == initial_state_space_s and legal_transitions == legal_transitions_s:
+        return True
+    return False
+
+
+def conjunct_is_false(string, variables):
+    for var in variables:
+        if re.search("!" + var, string) and re.search(r"[^!]" + var + r"|^" + var, string):
+            return True
+    return False
+
+
+def last_state(trace, prevs, offset=0):
+    prevs = ["prev_" + x if not re.search("prev_", x) else x for x in prevs]
+    last_timepoint = max(re.findall(r",(\d*),", trace))
+    if last_timepoint == "0" and offset != 0:
+        return ()
+    last_timepoint = str(int(last_timepoint) - offset)
+    absent = re.findall(r"not_holds_at\((.*)," + last_timepoint, trace)
+    atoms = re.findall(r"holds_at\((.*)," + last_timepoint, trace)
+    assignments = ["!" + x if x in absent else x for x in atoms]
+    if last_timepoint == '0':
+        prev_assign = ["!" + x for x in prevs]
+    else:
+        prev_timepoint = str(int(last_timepoint) - 1)
+        absent = re.findall(r"not_holds_at\((.*)," + prev_timepoint, trace)
+        prev_assign = ["!" + x if x in absent else x for x in prevs]
+    assignments += prev_assign
+    variables = [re.sub(r"!", "", x) for x in assignments]
+    assignments = [i for _, i in sorted(zip(variables, assignments))]
+    return tuple(assignments)
+
+
+def complete_deadlock_with_assignment(assignment, trace, name):
+    end = f",{name})."
+    last_timepoint = max(re.findall(r",(\d*),", trace))
+    timepoint = str(int(last_timepoint) + 1)
+    variables = [s for s in assignment if not re.search("prev_", s)]
+    asp = ["not_holds_at(" + v[1:] if re.search("!", v) else "holds_at(" + v for v in variables]
+    asp = [x + "," + timepoint + end for x in asp]
+    return re.sub(r",[^,]*\)\.", end, trace) + '\n'.join(asp)
+
+
+def to_seconds(t):
+    return time.mktime(time.strptime(t))
+
+
+def recursively_search(case_study, folder, exclusions=["genuine"]):
+    folders = [os.path.join(folder, x) for x in os.listdir(folder) if x not in exclusions]
+    files = [x for x in folders if not os.path.isdir(x)]
+    sub_folders = [folder for folder in folders if folder not in files]
+    for file in files:
+        if file.find(case_study) >= 0:
+            return file
+    if len(sub_folders) == 0:
+        return "file_not_found"
+    for sub_folder in sub_folders:
+        file_out = recursively_search(case_study, sub_folder)
+        if file_out != "file_not_found":
+            return file_out
+
+
+def extract_nth_violation(trace_file, n):
+    traces = read_file_lines(trace_file)
+    trace = [x for x in traces if re.search("trace_name_" + str(n), x)]
+    if len(trace) == 0:
+        return ""
+    temp_file = re.sub("auto_violation", "auto_violation_temp", trace_file)
+    write_file(temp_file, trace)
+    return temp_file
+
+
+def contains_contradictions(start_file, exp_type):
+    start_file = re.sub("_patterned\.spectra", ".spectra", start_file)
+    start_exp = extract_all_expressions_spot(exp_type, start_file)
+    linux_cmd = ["ltlfilt", "-f", f"{start_exp}", "--simplify"]
+    output = subprocess.Popen(linux_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE).communicate()[0]
+    output = output.decode('utf-8')
+    reg = re.search(r"(\d)\n", output)
+    if not reg:
+        return False
+    result = reg.group(1)
+    return result == "0"
+
+
+def get_start_files(name):  # , cap):
+    output = {}
+    for folder in ["temporal"]:
+        long_folder = f"{PROJECT_PATH}/input-files/strengthened/" + folder
+        files = os.listdir(long_folder)
+
+        rel_files = re.findall(name + r"_dropped\d*\.spectra", '\n'.join(files))
+        # if len(rel_files) > cap:
+        #     rel_files = rel_files[:cap]
+        for file in rel_files:
+            output[long_folder + "/" + file] = folder
+    return output
+
+
+def n_trivial_guarantees(file):
+    gar = extract_all_expressions_spot("guarantee|gar", file, True)
+    count = 0
+    for exp in gar:
+        linux_cmd = "ltlfilt -f '" + exp + "' --simplify"
+        output = \
+            subprocess.Popen(["wsl"], stdout=subprocess.PIPE, stdin=subprocess.PIPE,
+                             stderr=subprocess.PIPE).communicate(
+                input=linux_cmd.encode())[0]
+        reg = re.search(r"b'(\d)\\n'", str(output))
+        if reg and reg.group(1) == str(1):
+            count += 1
+    return count
+
+
+def fix_df():
+    df = pd.read_csv("../../output-files/examples/latest_rq_results.csv")
+    np.isnan(df["temporals"])
+    new_set = [np.isnan(x) for x in df["temporals"]]
+    df_upper = df.loc[[not x for x in new_set]]
+    df_lower = df.loc[new_set]
+
+    df_lower = df_lower.drop(columns="Unnamed: 0.1")
+    col_names = list(df_lower.columns)
+    new_cols = col_names[1:] + ["REMOVE"]
+    df_lower.columns = new_cols
+    df_lower = df_lower.drop(columns="REMOVE")
+
+    df_upper = df_upper.drop(columns=["Unnamed: 0.1", "Unnamed: 0"])
+
+    output = pd.concat([df_lower, df_upper], axis=0)
+    output.to_csv("output-files/examples/latest_rq_results.csv")
+
+
+def reformat_latex_table_rq(perf_string, key="Count"):
+    perf_string = re.sub(r"Case-Study[\s&]*\\*\n", "", perf_string)
+    perf_string = re.sub(r"\{\}(\s*&\s*" + key + ")", r"Case-Study\1", perf_string)
+    # perf_string = re.sub(r"\{\}(\s*&\s*Mean)", r"Case-Study\1", perf_string)
+    perf_string = re.sub("REMOVE", " ", perf_string)
+    return perf_string
+
+
+def shrink_latex_table_width(perf_string):
+    perf_string = re.sub(r"\n\\begin\{tabular\}", r"\n\\resizebox{\\textwidth}{!}{%\n\\begin{tabular}", perf_string)
+    perf_string = re.sub(r"\n\\end\{tabular\}", r"\n\\end{tabular}\n}", perf_string)
+    return perf_string
+
+
+def generate_counter_strat(spec_file) -> Optional[List[str]]:
+    cmd = ['java', '-jar', PATH_TO_CLI, '-i', spec_file, '--counter-strategy', '--jtlv']
+    output = run_subprocess(cmd)
+    if re.search("Result: Specification is unrealizable", output):
+        output = str(output).split("\n")
+        counter_strategy = list(filter(re.compile(r"\s*->\s*[^{]*{[^}]*").search, output))
+        if PRINT_CS:
+            print('\n'.join(counter_strategy))
+        return counter_strategy
+    elif re.search("FileNotFoundException", output):
+        raise Exception(f"File {spec_file} doesn't exist!")
+    elif re.search("Error:", output):
+        raise Exception(output)
+
+    return None
