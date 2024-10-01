@@ -1,5 +1,5 @@
 import re
-from typing import List
+from typing import List, Optional
 
 import pandas as pd
 
@@ -12,7 +12,7 @@ from spec_repair.old.patterns import FIRST_PRED, ALL_PREDS
 from spec_repair.special_types import EventuallyConsequentRule
 from spec_repair.util.exp_util import eventualise_consequent
 from spec_repair.util.list_util import re_line_spec
-from spec_repair.util.spec_util import expressions_df_to_str, illegal_assignments, \
+from spec_repair.util.spec_util import illegal_assignments, \
     extract_variables, extract_df_content, trace_list_to_asp_form, \
     trace_list_to_ilasp_form, format_spec, integrate_rule
 from spec_repair.components.spec_generator import SpecGenerator
@@ -257,3 +257,94 @@ def get_expression_names_of_type(asp_text: list[str], exp_type: str):
 
 def get_violated_expression_names(violations: list[str]) -> list[str]:
     return re.findall(r"violation_holds\(\b([^,^)]*)", ''.join(violations))
+
+
+def expressions_df_to_str(expressions: pd.DataFrame, learning_names: Optional[List[str]] = None,
+                          for_clingo=False) -> str:
+    if learning_names is None:
+        learning_names = []
+    expression_string = ""
+    for _, line in expressions.iterrows():
+        # This removes alwEv's unless they are being learned:
+        expression_string += expression_to_str(line, learning_names, for_clingo)
+    return expression_string
+
+
+def expression_to_str(line: pd.Series, learning_names: list[str], for_clingo: bool) -> str:
+    if line.when == When.EVENTUALLY and line['name'] not in learning_names and not for_clingo:
+        return ""
+    expression_string = f"%{line['type']} -- {line['name']}\n"
+    expression_string += f"%\t{line['formula']}\n\n"
+    expression_string += f"{line['type']}({line['name']}).\n\n"
+    is_exception = (line['name'] in learning_names) and not for_clingo
+    ant_exception = is_exception and line['type'] == str(ExpType.ASSUMPTION)
+    gar_exception = is_exception and line['type'] == str(ExpType.GUARANTEE)
+    expression_string += propositionalise_formula(line, "antecedent", ant_exception)
+    expression_string += propositionalise_formula(line, "consequent", gar_exception)
+    return expression_string
+
+
+def get_temp_op(rule: str) -> str:
+    """
+    Extracts the first argument of the "holds_at" expression.
+    On error (generally means string is empty), returns the
+    "current" temporal operator.
+    @param rule:
+    @return:
+    """
+    try:
+        return re.search(r"holds_at\((\w+)(,\w+)*\)", rule).group(1)
+    except AttributeError:
+        return "current"
+
+
+def propositionalise_formula(line, component_type, exception=False):
+    output = ""
+    rules = line[component_type]
+    timepoint = "T" if line['when'] != When.INITIALLY else "0"
+    if len(rules) == 0:
+        rules = [""]
+    rule = rules[0]
+    temp_op = get_temp_op(rule)
+    first_arg = f"{temp_op}," if component_type == "consequent" else ""
+    component_body = f"{component_type}_holds({first_arg}{line['name']},{timepoint},S):-\n" + \
+                     f"\ttrace(S),\n" + \
+                     f"\ttimepoint({timepoint},S)"
+    if component_type == "consequent":
+        output += component_body
+        output += f",\n{component_end_consequent(line, temp_op, timepoint)}.\n\n"
+    for rule in rules:
+        if component_type != "consequent":
+            output += component_body
+        elif component_type == "consequent":
+            output += root_consequent_body(line, timepoint)
+        if rule != "":
+            if component_type == "consequent":
+                op_rule = re.sub(temp_op, r"OP", rule)
+                output += f",\n\t{op_rule}"
+            elif component_type != "consequent":
+                output += f",\n\t{rule}"
+
+        if exception and component_type != "consequent":
+            output += f",\n\tnot antecedent_exception({line['name']},{timepoint},S)"
+        output += ".\n\n"
+        if exception and component_type == "consequent":
+            output += root_consequent_body(line, timepoint)
+            output += f",\n\tconsequent_exception({line['name']},{timepoint},S).\n"
+
+    return output
+
+
+def root_consequent_body(line, timepoint):
+    root_consequent_body = f"root_consequent_holds(OP,{line['name']},{timepoint},S):-\n" + \
+                           f"\ttrace(S),\n" + \
+                           f"\ttimepoint({timepoint},S),\n" + \
+                           f"\ttemporal_operator(OP)"
+    return root_consequent_body
+
+
+def component_end_consequent(line, temp_op, timepoint):
+    out = f"\troot_consequent_holds({temp_op},{line['name']},{timepoint},S)"
+    if temp_op != "eventually":
+        out += f",\n\tnot ev_temp_op({line['name']})"
+    return out
