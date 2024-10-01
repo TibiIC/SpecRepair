@@ -69,7 +69,8 @@ ilasp.stats.print_timings()
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 #modeh(antecedent_exception(const(expression_v), var(time), var(trace))).
-#modeh(consequent_holds(eventually,const(expression_v), var(time), var(trace))).
+#modeh(consequent_holds(const(expression_v), var(time), var(trace))).
+#modeh(ev_temp_op(const(expression_v))).
 #modeb(1,root_consequent_holds(eventually,const(expression_v),const(index),var(time), var(trace)), (positive)).
 #modeb(2,holds_at(const(temp_op_v), const(usable_atom), var(time), var(trace)), (positive)).
 #modeb(2,not_holds_at(const(temp_op_v), const(usable_atom), var(time), var(trace)), (positive)).
@@ -95,9 +96,14 @@ ilasp.stats.print_timings()
 :- head(antecedent_exception(assumption2_1,V1,V2)), body(holds_at(eventually,_,_,_)).
 :- head(antecedent_exception(assumption2_1,V1,V2)), body(not_holds_at(eventually,_,_,_)).
 :- head(antecedent_exception(_,_,_)), body(root_consequent_holds(_,_,_,_,_)).
-:- head(consequent_holds(_,_,_,_)), body(holds_at(_,_,_,_)).
-:- head(consequent_holds(_,_,_,_)), body(not_holds_at(_,_,_,_)).
-:- head(consequent_holds(eventually,E1,V1,V2)), body(root_consequent_holds(eventually,E2,_,V3,V4)), (E1,V1,V2) != (E2,V3,V4).
+:- head(consequent_holds(_,_,_)), body(holds_at(_,_,_,_)).
+:- head(consequent_holds(_,_,_)), body(not_holds_at(_,_,_,_)).
+:- head(consequent_holds(E1,V1,V2)), body(root_consequent_holds(eventually,E2,_,V3,V4)), (E1,V1,V2) != (E2,V3,V4).
+:- head(consequent_holds(E1,_,_)), head(ev_temp_op(E2)), E1 != E2.
+:- head(antecedent_exception(_,_,_)), head(ev_temp_op(_)).
+:- head(ev_temp_op(_)), body(holds_at(_,_,_,_)).
+:- head(ev_temp_op(_)), body(not_holds_at(_,_,_,_)).
+:- head(ev_temp_op(_)), body(root_consequent_holds(_,_,_,_,_)).
 ").
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -236,18 +242,13 @@ exist_diff_prev_timepoints(T,S) :-
 	next(T,T2,S),
 	T1 != T2.
 
-ev_temp_op(E) :-
-    trace(S),
-	timepoint(T,S),
-    consequent_holds(eventually,E,T,S).
-
 holds_non_vacuously(E, T, S):-
 	exp(E),
 	trace(S),
 	timepoint(T,S),
 	temporal_operator(OP),
 	antecedent_holds(E, T, S),
-	consequent_holds(OP, E, T, S).
+	consequent_holds(E, T, S).
 
 holds_vacuously(E, T, S):-
 	exp(E),
@@ -299,7 +300,7 @@ antecedent_holds(initial_assumption,0,S):-
 	trace(S),
 	timepoint(0,S).
 
-consequent_holds(current,initial_assumption,0,S):-
+consequent_holds(initial_assumption,0,S):-
 	trace(S),
 	timepoint(0,S),
 	root_antecedent_holds(current,initial_assumption,0,S),
@@ -335,7 +336,7 @@ root_antecedent_holds(OP,assumption1_1,1,T,S):-
 	temporal_operator(OP),
 	holds_at(OP,pump,T,S).
 
-consequent_holds(next,assumption1_1,T,S):-
+consequent_holds(assumption1_1,T,S):-
 	trace(S),
 	timepoint(T,S),
 	root_consequent_holds(next,assumption1_1,0,T,S),
@@ -363,7 +364,7 @@ root_antecedent_holds(OP,assumption2_1,0,T,S):-
     temporal_operator(OP),
 	not antecedent_exception(assumption2_1,T,S).
 
-consequent_holds(current,assumption2_1,T,S):-
+consequent_holds(assumption2_1,T,S):-
 	trace(S),
 	timepoint(T,S),
 	root_consequent_holds(current,assumption2_1,0,T,S),
@@ -375,7 +376,7 @@ root_consequent_holds(OP,assumption2_1,0,T,S):-
 	temporal_operator(OP),
 	not_holds_at(OP,highwater,T,S).
 
-consequent_holds(current,assumption2_1,T,S):-
+consequent_holds(assumption2_1,T,S):-
 	trace(S),
 	timepoint(T,S),
 	root_consequent_holds(current,assumption2_1,1,T,S),

@@ -134,18 +134,13 @@ exist_diff_prev_timepoints(T,S) :-
 	next(T,T2,S),
 	T1 != T2.
 
-ev_temp_op(E) :-
-    trace(S),
-	timepoint(T,S),
-    consequent_holds(eventually,E,T,S).
-
 holds_non_vacuously(E, T, S):-
 	exp(E),
 	trace(S),
 	timepoint(T,S),
 	temporal_operator(OP),
 	antecedent_holds(E, T, S),
-	consequent_holds(OP, E, T, S).
+	consequent_holds(E, T, S).
 
 holds_vacuously(E, T, S):-
 	exp(E),
@@ -197,7 +192,7 @@ antecedent_holds(initial_assumption,0,S):-
 	trace(S),
 	timepoint(0,S).
 
-consequent_holds(current,initial_assumption,0,S):-
+consequent_holds(initial_assumption,0,S):-
 	trace(S),
 	timepoint(0,S),
 	root_consequent_holds(current,initial_assumption,0,0,S),
@@ -224,7 +219,7 @@ antecedent_holds(assumption1_1,T,S):-
 root_antecedent_holds(OP,assumption1_1,T,0,S):-
 	holds_at(OP,pump,T,S).
 
-consequent_holds(next,assumption1_1,T,S):-
+consequent_holds(assumption1_1,T,S):-
 	trace(S),
 	timepoint(T,S),
 	root_consequent_holds(next,assumption1_1,0,T,S),
@@ -246,7 +241,7 @@ antecedent_holds(assumption2_1,T,S):-
 	timepoint(T,S),
 	not_holds_at(current,methane,T,S).
 
-consequent_holds(current,assumption2_1,T,S):-
+consequent_holds(assumption2_1,T,S):-
 	trace(S),
 	timepoint(T,S),
 	root_consequent_holds(current,assumption2_1,0,T,S),
@@ -273,7 +268,7 @@ antecedent_holds(initial_guarantee,0,S):-
 	trace(S),
 	timepoint(0,S).
 
-consequent_holds(current,initial_guarantee,0,S):-
+consequent_holds(initial_guarantee,0,S):-
 	trace(S),
 	timepoint(0,S),
 	root_consequent_holds(current,initial_guarantee,0,0,S),
@@ -298,7 +293,7 @@ antecedent_holds(guarantee1_1,T,S):-
 root_antecedent_holds(OP,guarantee1_1,0,T,S):-
 	holds_at(OP,highwater,T,S).
 
-consequent_holds(next,guarantee1_1,T,S):-
+consequent_holds(guarantee1_1,T,S):-
 	trace(S),
 	timepoint(T,S),
 	root_consequent_holds(next,guarantee1_1,0,T,S),
@@ -324,7 +319,7 @@ root_antecedent_holds(OP,guarantee2_1,0,T,S):-
     temporal_operator(OP),
 	holds_at(OP,methane,T,S).
 
-consequent_holds(next,guarantee2_1,T,S):-
+consequent_holds(guarantee2_1,T,S):-
 	trace(S),
 	timepoint(T,S),
 	root_consequent_holds(next,guarantee2_1,0,T,S),
