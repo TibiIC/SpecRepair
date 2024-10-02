@@ -302,6 +302,8 @@ def propositionalise_formula(line, component_type, exception=False):
     assert component_type in ["antecedent", "consequent"]
     output = ""
     rules = line[component_type]
+    n_root_antecedents = 0
+    n_root_consequents = 0
     timepoint = "T" if line['when'] != When.INITIALLY else "0"
     if len(rules) == 0 and exception:
         rules = [""]
@@ -315,11 +317,13 @@ def propositionalise_formula(line, component_type, exception=False):
         output += component_body
         temp_op = get_temp_op(rule)
         if component_type == "antecedent":
-            output += f",\n{component_end_antecedent(line, temp_op, timepoint)}.\n\n"
-            output += root_antecedent_body(line, timepoint)
+            output += f",\n{component_end_antecedent(line, temp_op, timepoint, n_root_antecedents)}.\n\n"
+            output += root_antecedent_body(line, timepoint, n_root_antecedents)
+            n_root_antecedents += 1
         elif component_type == "consequent":
-            output += f",\n{component_end_consequent(line, temp_op, timepoint)}.\n\n"
-            output += root_consequent_body(line, timepoint)
+            output += f",\n{component_end_consequent(line, temp_op, timepoint, n_root_consequents)}.\n\n"
+            output += root_consequent_body(line, timepoint, n_root_consequents)
+            n_root_consequents += 1
 
         if rule != "":
             op_rule = re.sub(temp_op, r"OP", rule)
@@ -329,35 +333,37 @@ def propositionalise_formula(line, component_type, exception=False):
             output += f",\n\tnot antecedent_exception({line['name']},{timepoint},S)"
         output += ".\n\n"
         if exception and component_type == "consequent":
-            output += root_consequent_body(line, timepoint)
+            output += root_consequent_body(line, timepoint, n_root_consequents - 1)
             output += f",\n\tconsequent_exception({line['name']},{timepoint},S).\n"
 
     return output
 
 
-def root_antecedent_body(line, timepoint):
-    out = f"root_antecedent_holds(OP,{line['name']},0,{timepoint},S):-\n" + \
-                           f"\ttrace(S),\n" + \
-                           f"\ttimepoint({timepoint},S),\n" + \
-                           f"\ttemporal_operator(OP)"
+def root_antecedent_body(line, timepoint, id: int):
+    out = f"root_antecedent_holds(OP,{line['name']},{id},{timepoint},S):-\n" + \
+          f"\ttrace(S),\n" + \
+          f"\ttimepoint({timepoint},S),\n" + \
+          f"\ttemporal_operator(OP)"
     return out
 
-def component_end_antecedent(line, temp_op, timepoint):
+
+def component_end_antecedent(line, temp_op, timepoint, id: int):
     assert temp_op in ["current", "next", "prev"]
-    out = f"\troot_antecedent_holds({temp_op},{line['name']},0,{timepoint},S)"
-    return out
-
-def root_consequent_body(line, timepoint):
-    out = f"root_consequent_holds(OP,{line['name']},0,{timepoint},S):-\n" + \
-                           f"\ttrace(S),\n" + \
-                           f"\ttimepoint({timepoint},S),\n" + \
-                           f"\ttemporal_operator(OP)"
+    out = f"\troot_antecedent_holds({temp_op},{line['name']},{id},{timepoint},S)"
     return out
 
 
-def component_end_consequent(line, temp_op, timepoint):
+def root_consequent_body(line, timepoint, id: int):
+    out = f"root_consequent_holds(OP,{line['name']},{id},{timepoint},S):-\n" + \
+          f"\ttrace(S),\n" + \
+          f"\ttimepoint({timepoint},S),\n" + \
+          f"\ttemporal_operator(OP)"
+    return out
+
+
+def component_end_consequent(line, temp_op, timepoint, id: int):
     assert temp_op in ["current", "next", "prev", "eventually"]
-    out = f"\troot_consequent_holds({temp_op},{line['name']},0,{timepoint},S)"
+    out = f"\troot_consequent_holds({temp_op},{line['name']},{id},{timepoint},S)"
     if temp_op != "eventually":
         out += f",\n\tnot ev_temp_op({line['name']})"
     return out

@@ -356,8 +356,8 @@ root_antecedent_holds(OP,a_b_c,1,T,S):-
             'type': 'assumption',
             'name': 'a_b_c',
             'formula': 'G(a=true&b=true|c=true&d=true->next(e=true));',
-            'antecedent': ['holds_at(current,a,T,S)\n\tholds_at(current,b,T,S)',
-                           'holds_at(current,c,T,S)\n\tholds_at(current,d,T,S)'],
+            'antecedent': ['holds_at(current,a,T,S),\n\tholds_at(current,b,T,S)',
+                           'holds_at(current,c,T,S),\n\tholds_at(current,d,T,S)'],
             'consequent': ['holds_at(next,e,T,S)'],
             'when': 'When.ALWAYS'
         }
