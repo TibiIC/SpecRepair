@@ -1,4 +1,5 @@
 import re
+from collections import defaultdict
 from typing import List, Optional
 
 import pandas as pd
@@ -279,7 +280,7 @@ def expression_to_str(line: pd.Series, learning_names: list[str], for_clingo: bo
     is_exception = (line['name'] in learning_names) and not for_clingo
     ant_exception = is_exception and line['type'] == str(ExpType.ASSUMPTION)
     gar_exception = is_exception and line['type'] == str(ExpType.GUARANTEE)
-    expression_string += propositionalise_formula(line, "antecedent", ant_exception)
+    expression_string += propositionalise_antecedent(line, ant_exception)
     expression_string += propositionalise_formula(line, "consequent", gar_exception)
     return expression_string
 
@@ -293,9 +294,116 @@ def get_temp_op(rule: str) -> str:
     @return:
     """
     try:
-        return re.search(r"holds_at\((\w+)(,\w+)*\)", rule).group(1)
+        return re.search(r"holds_at\((\w+)(?:,\w+)*\)", rule).group(1)
     except AttributeError:
         return "current"
+
+
+all_temp_ops = ["prev", "current", "next", "eventually"]
+temp_ops_order_map = {string: index for index, string in enumerate(all_temp_ops)}
+
+
+def get_temp_ops(rule: str) -> List[str]:
+    """
+    Extracts the first argument of the "holds_at" expression.
+    On error (generally means string is empty), returns the
+    "current" temporal operator.
+    @param rule:
+    @return:
+    """
+    try:
+        ops = list(set(re.findall(r"holds_at\((\w+)(?:,\w+)*\)", rule)))
+        return sorted(ops, key=lambda x: temp_ops_order_map[x])
+    except AttributeError:
+        return ["current"]
+
+
+def propositionalise_antecedent(line, exception=False):
+    output = ""
+    rules = line["antecedent"]
+    n_root_antecedents = 0
+    timepoint = "T" if line['when'] != When.INITIALLY else "0"
+    if len(rules) == 0 and exception:
+        rules = [""]
+    component_body = f"antecedent_holds({line['name']},{timepoint},S):-\n" + \
+                     f"\ttrace(S),\n" + \
+                     f"\ttimepoint({timepoint},S)"
+    if not rules:
+        output += component_body
+        output += ".\n\n"
+    for rule in rules:
+        temp_ops = get_temp_ops(rule)
+        if not temp_ops:
+            temp_ops = ["current"]
+        output += component_body
+        for i, temp_op in enumerate(temp_ops):
+            output += f",\n{component_end_antecedent(line, temp_op, timepoint, n_root_antecedents + i)}"
+        output += ".\n\n"
+        rules_by_temp_op = store_placeholder_OP_rules_by_replaced_rule(rule)
+        for i, temp_op in enumerate(temp_ops):
+            output += root_antecedent_body(line, timepoint, n_root_antecedents + i)
+            if rule != "":
+                op_rule = rules_by_temp_op[temp_op]
+                output += f",\n\t{op_rule}"
+            if exception:
+                output += f",\n\tnot antecedent_exception({line['name']},{timepoint},S)"
+            output += ".\n\n"
+        n_root_antecedents += len(temp_ops)
+
+    return output
+
+
+def store_placeholder_OP_rules_by_replaced_rule(input_string):
+    # Define a default dictionary to store the functions by their first variable
+    rule_by_temp_op = defaultdict(list)
+
+    # Regular expression to capture holds_at or not_holds_at functions and their first variable
+    pattern = r"(holds_at|not_holds_at)\((\w+),(.*?)\)"
+
+    # Find all functions and group them by their first variable
+    matches = re.findall(pattern, input_string)
+    for func_type, first_var, rest in matches:
+        # Replace the first variable with "OP"
+        new_rule = f"{func_type}(OP,{rest.strip()})"
+        rule_by_temp_op[first_var].append(new_rule)
+
+    # Prepare the output dictionary
+    result = {}
+    for var, functions in rule_by_temp_op.items():
+        # Join the functions by ",\n" and add them to the dictionary
+        result[var] = ",\n\t".join(functions)
+
+    return result
+
+
+def propositionalise_consequent(line, exception=False):
+    output = ""
+    rules = line["consequent"]
+    n_root_consequents = 0
+    timepoint = "T" if line['when'] != When.INITIALLY else "0"
+    if len(rules) == 0 and exception:
+        rules = [""]
+    component_body = f"consequent_holds({line['name']},{timepoint},S):-\n" + \
+                     f"\ttrace(S),\n" + \
+                     f"\ttimepoint({timepoint},S)"
+    if not rules:
+        output += component_body
+        output += ".\n\n"
+    for rule in rules:
+        output += component_body
+        temp_op = get_temp_op(rule)
+        output += f",\n{component_end_consequent(line, temp_op, timepoint, n_root_consequents)}.\n\n"
+        output += root_consequent_body(line, timepoint, n_root_consequents)
+        n_root_consequents += 1
+        if rule != "":
+            op_rule = re.sub(temp_op, r"OP", rule)
+            output += f",\n\t{op_rule}"
+        output += ".\n\n"
+        if exception:
+            output += root_consequent_body(line, timepoint, n_root_consequents - 1)
+            output += f",\n\tconsequent_exception({line['name']},{timepoint},S).\n"
+
+    return output
 
 
 def propositionalise_formula(line, component_type, exception=False):

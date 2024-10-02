@@ -3,7 +3,7 @@ from unittest import TestCase
 
 import pandas as pd
 
-from spec_repair.components.spec_encoder import expression_to_str, propositionalise_formula
+from spec_repair.components.spec_encoder import expression_to_str, propositionalise_formula, propositionalise_antecedent
 
 
 class Test(TestCase):
@@ -86,7 +86,7 @@ root_consequent_holds(OP,a_always,0,T,S):-
         }
 
         line = pd.Series(line_data)
-        out = propositionalise_formula(line, 'antecedent', exception=False)
+        out = propositionalise_antecedent(line, exception=False)
         expected = """
 antecedent_holds(a_always,T,S):-
 \ttrace(S),
@@ -105,7 +105,7 @@ antecedent_holds(a_always,T,S):-
         }
 
         line = pd.Series(line_data)
-        out = propositionalise_formula(line, 'antecedent', exception=True)
+        out = propositionalise_antecedent(line, exception=True)
         expected = """
 antecedent_holds(a_always,T,S):-
 \ttrace(S),
@@ -325,7 +325,7 @@ root_consequent_holds(OP,guarantee4,1,T,S):-
         }
 
         line = pd.Series(line_data)
-        out = propositionalise_formula(line, 'antecedent', exception=False)
+        out = propositionalise_antecedent(line, exception=False)
         expected = """
 antecedent_holds(a_b_c,T,S):-
 \ttrace(S),
@@ -363,7 +363,7 @@ root_antecedent_holds(OP,a_b_c,1,T,S):-
         }
 
         line = pd.Series(line_data)
-        out = propositionalise_formula(line, 'antecedent', exception=False)
+        out = propositionalise_antecedent(line, exception=False)
         expected = """
 antecedent_holds(a_b_c,T,S):-
 \ttrace(S),
@@ -403,7 +403,7 @@ root_antecedent_holds(OP,a_b_c,1,T,S):-
         }
 
         line = pd.Series(line_data)
-        out = propositionalise_formula(line, 'antecedent', exception=False)
+        out = propositionalise_antecedent(line, exception=False)
         expected = """
 antecedent_holds(a_b_c,T,S):-
 \ttrace(S),
