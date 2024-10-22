@@ -112,9 +112,7 @@ ilasp.stats.print_timings()
 :- head(consequent_holds(E1,_,_)), head(ev_temp_op(E2)), E1 != E2.
 :- head(antecedent_exception(_,_,_)), head(ev_temp_op(_)).
 :- head(consequent_exception(_,_,_)), head(ev_temp_op(_)).
-:- head(ev_temp_op(_)), body(holds_at(_,_,_,_)).
-:- head(ev_temp_op(_)), body(not_holds_at(_,_,_,_)).
-:- head(ev_temp_op(_)), body(root_consequent_holds(_,_,_,_,_)).
+:- head(ev_temp_op(_)), body(_).
 ").
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

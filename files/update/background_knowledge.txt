@@ -7,8 +7,14 @@
 % Current timestep definitions
 temporal_operator(current).
 
+holds_at(current,F,P,P,S):-
+    holds_at(current,F,P,S).
+
 holds_at(current,F,P,S):-
     holds_at(F,P,S).
+
+not_holds_at(current,F,P,P,S):-
+    not_holds_at(current,F,P,S).
 
 not_holds_at(current,F,P,S):-
     not_holds_at(F,P,S).
@@ -33,15 +39,29 @@ holds_at_weak(next,F,P,S):-
 not_holds_at_weak(next,F,P,S):-
     common_weak(next,F,P,S).
 
+holds_at(next,F,P,P,S):-  % Weak Definition
+    holds_at_weak(next,F,P,S).
+
 holds_at(next,F,P,S):-  % Weak Definition
     holds_at_weak(next,F,P,S).
+
+not_holds_at(next,F,P,P,S):-  % Weak Definition
+    not_holds_at_weak(next,F,P,S).
 
 not_holds_at(next,F,P,S):-  % Weak Definition
     not_holds_at_weak(next,F,P,S).
 
+holds_at(next,F,P,P2,S):- % Strong Definition
+    next(P2,P,S),
+    holds_at(current,F,P2,S).
+
 holds_at(next,F,P,S):- % Strong Definition
 	next(P2,P,S),
 	holds_at(current,F,P2,S).
+
+not_holds_at(next,F,P,P2,S):- % Strong Definition
+    next(P2,P,S),
+    not_holds_at(current,F,P2,S).
 
 not_holds_at(next,F,P,S):- % Strong Definition
 	next(P2,P,S),
@@ -50,13 +70,21 @@ not_holds_at(next,F,P,S):- % Strong Definition
 % Prev timestep definitions
 temporal_operator(prev).
 
-holds_at(prev,F,P,S):-
-	next(P,P2,S),
-	holds_at(current,F,P2,S).
+holds_at(prev,F,P2,P,S):-
+    next(P2,P,S),
+    holds_at(current,F,P,S).
 
-not_holds_at(prev,F,P,S):-
-	next(P,P2,S),
-	not_holds_at(current,F,P2,S).
+holds_at(prev,F,P2,S):-
+	next(P2,P,S),
+	holds_at(current,F,P,S).
+
+not_holds_at(prev,F,P2,P,S):-
+    next(P2,P,S),
+    not_holds_at(current,F,P,S).
+
+not_holds_at(prev,F,P2,S):-
+	next(P2,P,S),
+	not_holds_at(current,F,P,S).
 
 % Eventually timestep definitions
 temporal_operator(eventually).
@@ -74,13 +102,31 @@ holds_at_weak(eventually,F,P,S):-
     timepoint(P,S),
     not next_timepoint_exists(P,S).
 
-holds_at(eventually,F,P,S):- % Weak Definition
+holds_at(eventually,F,P,P,S):- % Weak Definition
     holds_at_weak(eventually,F,P,S).
 
-not_holds_at(eventually,F,P,S):- % Weak Definition
+not_holds_at(eventually,F,P,P,S):- % Weak Definition
     holds_at_weak(eventually,F,P,S).
 
-holds_at(eventually,F,P,S):- % Base Case (holds now)
+holds_at(eventually,F,T1,T3,S):- % Cascading backwards in time
+    trace(S),
+    atom(F),
+    timepoint(T1,S),
+    timepoint(T2,S),
+    timepoint(T3,S),
+    after(T2,T1,S),
+    holds_at(eventually,F,T2,T3,S).
+
+not_holds_at(eventually,F,T1,T3,S):- % Weak Definition
+    trace(S),
+    atom(F),
+    timepoint(T1,S),
+    timepoint(T2,S),
+    timepoint(T3,S),
+    after(T2,T1,S),
+    holds_at(eventually,F,T2,T3,S).
+
+holds_at(eventually,F,P,P,S):- % Base Case (holds now)
     trace(S),
     atom(F),
     timepoint(P,S),
@@ -138,7 +184,6 @@ holds_non_vacuously(E, T, S):-
 	exp(E),
 	trace(S),
 	timepoint(T,S),
-	temporal_operator(OP),
 	antecedent_holds(E, T, S),
 	consequent_holds(E, T, S).
 
