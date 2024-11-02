@@ -281,7 +281,7 @@ def expression_to_str(line: pd.Series, learning_names: list[str], for_clingo: bo
     ant_exception = is_exception and line['type'] == str(ExpType.ASSUMPTION)
     gar_exception = is_exception and line['type'] == str(ExpType.GUARANTEE)
     expression_string += propositionalise_antecedent(line, ant_exception)
-    expression_string += propositionalise_formula(line, "consequent", gar_exception)
+    expression_string += propositionalise_consequent(line, gar_exception)
     return expression_string
 
 
@@ -316,6 +316,29 @@ def get_temp_ops(rule: str) -> List[str]:
         return sorted(ops, key=lambda x: temp_ops_order_map[x])
     except AttributeError:
         return ["current"]
+
+
+def store_placeholder_OP_rules_by_replaced_rule(input_string):
+    # Define a default dictionary to store the functions by their first variable
+    rule_by_temp_op = defaultdict(list)
+
+    # Regular expression to capture holds_at or not_holds_at functions and their first variable
+    pattern = r"(holds_at|not_holds_at)\((\w+),(.*?)\)"
+
+    # Find all functions and group them by their first variable
+    matches = re.findall(pattern, input_string)
+    for func_type, first_var, rest in matches:
+        # Replace the first variable with "OP"
+        new_rule = f"{func_type}(OP,{rest.strip()})"
+        rule_by_temp_op[first_var].append(new_rule)
+
+    # Prepare the output dictionary
+    result = {}
+    for var, functions in rule_by_temp_op.items():
+        # Join the functions by ",\n" and add them to the dictionary
+        result[var] = ",\n\t".join(functions)
+
+    return result
 
 
 def propositionalise_antecedent(line, exception=False):
@@ -353,29 +376,6 @@ def propositionalise_antecedent(line, exception=False):
     return output
 
 
-def store_placeholder_OP_rules_by_replaced_rule(input_string):
-    # Define a default dictionary to store the functions by their first variable
-    rule_by_temp_op = defaultdict(list)
-
-    # Regular expression to capture holds_at or not_holds_at functions and their first variable
-    pattern = r"(holds_at|not_holds_at)\((\w+),(.*?)\)"
-
-    # Find all functions and group them by their first variable
-    matches = re.findall(pattern, input_string)
-    for func_type, first_var, rest in matches:
-        # Replace the first variable with "OP"
-        new_rule = f"{func_type}(OP,{rest.strip()})"
-        rule_by_temp_op[first_var].append(new_rule)
-
-    # Prepare the output dictionary
-    result = {}
-    for var, functions in rule_by_temp_op.items():
-        # Join the functions by ",\n" and add them to the dictionary
-        result[var] = ",\n\t".join(functions)
-
-    return result
-
-
 def propositionalise_consequent(line, exception=False):
     output = ""
     rules = line["consequent"]
@@ -390,18 +390,27 @@ def propositionalise_consequent(line, exception=False):
         output += component_body
         output += ".\n\n"
     for rule in rules:
+        temp_ops = get_temp_ops(rule)
+        if not temp_ops:
+            temp_ops = ["current"]
         output += component_body
-        temp_op = get_temp_op(rule)
-        output += f",\n{component_end_consequent(line, temp_op, timepoint, n_root_consequents)}.\n\n"
-        output += root_consequent_body(line, timepoint, n_root_consequents)
-        n_root_consequents += 1
-        if rule != "":
-            op_rule = re.sub(temp_op, r"OP", rule)
-            output += f",\n\t{op_rule}"
+        for i, temp_op in enumerate(temp_ops):
+            output += f",\n{component_end_consequent(line, temp_op, timepoint, n_root_consequents + i)}"
+        if "eventually" not in temp_ops:
+            output += f",\n\tnot ev_temp_op({line['name']})"
         output += ".\n\n"
-        if exception:
-            output += root_consequent_body(line, timepoint, n_root_consequents - 1)
-            output += f",\n\tconsequent_exception({line['name']},{timepoint},S).\n"
+        rules_by_temp_op = store_placeholder_OP_rules_by_replaced_rule(rule)
+        for i, temp_op in enumerate(temp_ops):
+            output += root_consequent_body(line, timepoint, n_root_consequents + i)
+            if rule != "":
+                op_rule = rules_by_temp_op[temp_op]
+                output += f",\n\t{op_rule}"
+            if exception:
+                output += ".\n\n"
+                output += root_consequent_body(line, timepoint, n_root_consequents + i)
+                output += f",\n\tconsequent_exception({line['name']},{timepoint},S)"
+            output += ".\n\n"
+        n_root_consequents += len(temp_ops)
 
     return output
 
@@ -472,6 +481,4 @@ def root_consequent_body(line, timepoint, id: int):
 def component_end_consequent(line, temp_op, timepoint, id: int):
     assert temp_op in ["current", "next", "prev", "eventually"]
     out = f"\troot_consequent_holds({temp_op},{line['name']},{id},{timepoint},S)"
-    if temp_op != "eventually":
-        out += f",\n\tnot ev_temp_op({line['name']})"
     return out
