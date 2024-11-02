@@ -174,14 +174,14 @@ consequent_holds(a_always,T,S):-
 	root_consequent_holds(current,a_always,0,T,S),
 	not ev_temp_op(a_always).
 
-root_consequent_holds(OP,a_always,0,T2,S):-
+root_consequent_holds(OP,a_always,0,T1,S):-
 	trace(S),
 	timepoint(T1,S),
 	not weak_timepoint(T1,S),
 	timepoint(T2,S),
 	temporal_operator(OP),
 	timepoint_of_op(OP,T1,T2,S),
-	holds_at(a,T1,S).
+	holds_at(a,T2,S).
 
 %guarantee -- guarantee1_1
 %	G(r1=true->F(g1=true));

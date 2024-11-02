@@ -214,7 +214,14 @@ assumption(assumption2_1).
 
 antecedent_holds(assumption2_1,T,S):-
 	trace(S),
-	timepoint(T,S).
+	timepoint(T,S),
+	not antecedent_exception(assumption2_1,T,S).
+
+antecedent_exception(assumption2_1,T1,S):-
+	timepoint_of_op(current,T1,T2,S),
+	holds_at(highwater,T2,S),
+	holds_at(methane,T2,S),
+	not_holds_at(pump,T2,S).
 
 consequent_holds(assumption2_1,T,S):-
 	trace(S),
@@ -343,6 +350,7 @@ not_holds_at(pump,0,trace_name_0).
 holds_at(highwater,1,trace_name_0).
 holds_at(methane,1,trace_name_0).
 not_holds_at(pump,1,trace_name_0).
+
 
 #show violation_holds/3.
 

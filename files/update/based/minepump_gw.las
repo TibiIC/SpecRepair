@@ -1,6 +1,6 @@
 #ilasp_script
 
-max_solutions = 10
+max_solutions = 100
 
 ilasp.cdilp.initialise()
 solve_result = ilasp.cdilp.solve()
@@ -68,31 +68,45 @@ ilasp.stats.print_timings()
 %% Mode Declaration
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-#modeh(antecedent_exception(const(expression_v), var(time), var(trace))).
+#modeh(consequent_exception(const(expression_v), var(time), var(trace))).
 #modeb(2,timepoint_of_op(const(temp_op_v), var(time), var(time), var(trace)), (positive)).
 #modeb(2,holds_at(const(usable_atom), var(time), var(trace)), (positive)).
 #modeb(2,not_holds_at(const(usable_atom), var(time), var(trace)), (positive)).
+#modeb(1,root_consequent_holds(eventually, const(expression_v), const(index), var(time), var(trace)), (positive)).
 #constant(usable_atom,highwater).
 #constant(usable_atom,methane).
 #constant(usable_atom,pump).
+#constant(index,0).
+#constant(index,1).
 #constant(temp_op_v,current).
 #constant(temp_op_v,next).
 #constant(temp_op_v,prev).
 #constant(temp_op_v,eventually).
-#constant(expression_v, assumption2_1).
+#constant(expression_v, initial_guarantee).
+#constant(expression_v, guarantee1_1).
+#constant(expression_v, guarantee2_1).
 #bias("
 :- constraint.
-:- head(antecedent_exception(_,V1,V2)), body(timepoint_of_op(_,V3,_,V4)), (V3, V4) != (V1, V2).
-:- head(antecedent_exception(_,_,V1)), body(holds_at(_,_,V2)), V1 != V2.
-:- head(antecedent_exception(_,_,V1)), body(not_holds_at(_,_,V2)), V1 != V2.
+:- head(consequent_exception(_,V1,V2)), body(timepoint_of_op(_,V3,_,V4)), (V1,V2) != (V3,V4).
+:- head(consequent_exception(_,_,V1)), body(holds_at(_,_,V2)), V1 != V2.
+:- head(consequent_exception(_,_,V1)), body(not_holds_at(_,_,V2)), V1 != V2.
 :- body(timepoint_of_op(_,_,V1,_)), body(holds_at(_,V2,_)), V1 != V2.
 :- body(timepoint_of_op(_,_,V1,_)), body(not_holds_at(_,V2,_)), V1 != V2.
-:- body(timepoint_of_op(current,V1,V2,_)), V1 != V2.
 :- body(holds_at(_,V1,V2)), not body(timepoint_of_op(_,_,V1,V2)).
 :- body(not_holds_at(_,V1,V2)), not body(timepoint_of_op(_,_,V1,V2)).
-:- head(antecedent_exception(_,_,_)), body(timepoint_of_op(next,_,_,_)).
-:- head(antecedent_exception(_,_,_)), body(timepoint_of_op(prev,_,_,_)).
-:- head(antecedent_exception(_,_,_)), body(timepoint_of_op(eventually,_,_,_)).
+:- body(timepoint_of_op(_,_,_,_)), not body(not_holds_at(_,_,_)), not body(holds_at(_,_,_)).
+:- body(timepoint_of_op(current,V1,V2,_)), V1 != V2.
+:- body(timepoint_of_op(next,V1,V2,_)), V1 == V2.
+:- body(timepoint_of_op(prev,V1,V2,_)), V1 == V2.
+:- body(timepoint_of_op(eventually,V1,V2,_)), V1 == V2.
+:- head(consequent_exception(_,_,_)), body(timepoint_of_op(next,_,_,_)).
+:- head(consequent_exception(_,_,_)), body(timepoint_of_op(prev,_,_,_)).
+:- head(consequent_exception(_,_,_)), body(timepoint_of_op(eventually,_,_,_)).
+
+:- head(consequent_exception(E1,V1,V2)), body(root_consequent_holds(_,E2,_,V3,V4)), (E1,V1,V2) != (E2,V3,V4).
+:- body(root_consequent_holds(_,_,_,_,_)), body(timepoint_of_op(_,_,_,_)).
+:- body(root_consequent_holds(_,_,_,_,_)), body(holds_at(_,_,_)).
+:- body(root_consequent_holds(_,_,_,_,_)), body(not_holds_at(_,_,_)).
 ").
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -312,7 +326,16 @@ assumption(assumption2_1).
 antecedent_holds(assumption2_1,T,S):-
 	trace(S),
 	timepoint(T,S),
-	not antecedent_exception(assumption2_1,T,S).
+	root_antecedent_holds(current,assumption2_1,0,T,S).
+
+root_antecedent_holds(OP,assumption2_1,0,T1,S):-
+	trace(S),
+	timepoint(T1,S),
+	not weak_timepoint(T1,S),
+	timepoint(T2,S),
+	temporal_operator(OP),
+	timepoint_of_op(OP,T1,T2,S),
+	not_holds_at(methane,T2,S).
 
 consequent_holds(assumption2_1,T,S):-
 	trace(S),
@@ -377,6 +400,11 @@ consequent_holds(guarantee1_1,T,S):-
 	root_consequent_holds(next,guarantee1_1,0,T,S),
 	not ev_temp_op(guarantee1_1).
 
+consequent_holds(guarantee1_1,T,S):-
+	trace(S),
+	timepoint(T,S),
+	consequent_exception(guarantee1_1,T,S).
+
 root_consequent_holds(OP,guarantee1_1,0,T1,S):-
 	trace(S),
 	timepoint(T1,S),
@@ -411,6 +439,11 @@ consequent_holds(guarantee2_1,T,S):-
 	root_consequent_holds(next,guarantee2_1,0,T,S),
 	not ev_temp_op(guarantee2_1).
 
+consequent_holds(guarantee2_1,T,S):-
+	trace(S),
+	timepoint(T,S),
+	consequent_exception(guarantee2_1,T,S).
+
 root_consequent_holds(OP,guarantee2_1,0,T1,S):-
 	trace(S),
 	timepoint(T1,S),
@@ -427,7 +460,6 @@ atom(methane).
 atom(pump).
 
 
-
 %---*** Violation Trace ***---
 
 #pos({entailed(trace_name_0)},{},{
@@ -436,7 +468,6 @@ trace(trace_name_0).
 timepoint(0,trace_name_0).
 timepoint(1,trace_name_0).
 next(1,0,trace_name_0).
-
 not_holds_at(highwater,0,trace_name_0).
 not_holds_at(methane,0,trace_name_0).
 not_holds_at(pump,0,trace_name_0).
@@ -446,19 +477,23 @@ not_holds_at(pump,1,trace_name_0).
 }).
 %---*** Violation Trace ***---
 
-#pos({},{entailed(counter_strat_0_0)},{
+#pos({entailed(counter_strat_0_0)},{},{
 
 % CS_Path: ini_S0_DEAD
 
 trace(counter_strat_0_0).
 timepoint(0,counter_strat_0_0).
 timepoint(1,counter_strat_0_0).
+timepoint(2,counter_strat_0_0).
 next(1,0,counter_strat_0_0).
-
+next(2,1,counter_strat_0_0).
 not_holds_at(highwater,0,counter_strat_0_0).
 not_holds_at(methane,0,counter_strat_0_0).
 not_holds_at(pump,0,counter_strat_0_0).
 holds_at(highwater,1,counter_strat_0_0).
 holds_at(methane,1,counter_strat_0_0).
 holds_at(pump,1,counter_strat_0_0).
+holds_at(highwater,2,counter_strat_0_0).
+not_holds_at(methane,2,counter_strat_0_0).
+not_holds_at(pump,2,counter_strat_0_0).
 }).
