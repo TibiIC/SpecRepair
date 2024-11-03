@@ -3,8 +3,8 @@ from unittest import TestCase
 
 import pandas as pd
 
-from spec_repair.components.spec_encoder import expression_to_str, propositionalise_formula, \
-    propositionalise_antecedent, propositionalise_consequent
+from spec_repair.components.spec_encoder import expression_to_str, \
+    propositionalise_antecedent, propositionalise_consequent, parse_formula
 
 
 class Test(TestCase):
@@ -36,13 +36,23 @@ root_consequent_holds(OP,a_always,0,T1,S):-
 \tholds_at(a,T2,S).
 """
 
+    def test_parse_formula(self):
+        # Example usage:
+        formula = "(next(a&b&c)&d&prev(e))|(next(f)&g&F(h&i))"
+        output = parse_formula(formula)
+        expected_output = [
+            {'next': ['a', 'b', 'c'], 'current': ['d'], 'prev': ['e']},  # First conjunct
+            {'next': ['f'], 'current': ['g'], 'F': ['h', 'i']}  # Second conjunct
+        ]
+        self.assertEqual(output, expected_output)
+
     def test_propositionalise_assumption_exception(self):
         line_data = {
             'type': 'assumption',
             'name': 'a_always',
             'formula': 'G(a=true);',
-            'antecedent': [],
-            'consequent': ['holds_at(current,a,T,S)'],
+            'antecedent': "",
+            'consequent': 'a',
             'when': 'When.ALWAYS'
         }
 
