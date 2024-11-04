@@ -76,8 +76,7 @@ ilasp.stats.print_timings()
 #constant(usable_atom,highwater).
 #constant(usable_atom,methane).
 #constant(usable_atom,pump).
-#constant(index,0).
-#constant(index,1).
+#constant(index,0..1).
 #constant(temp_op_v,current).
 #constant(temp_op_v,next).
 #constant(temp_op_v,prev).
