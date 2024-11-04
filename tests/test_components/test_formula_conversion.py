@@ -42,7 +42,7 @@ root_consequent_holds(OP,a_always,0,T1,S):-
         output = parse_formula_str(formula)
         expected_output = [
             {'next': ['a', 'b', 'c'], 'current': ['d'], 'prev': ['e']},  # First conjunct
-            {'next': ['f'], 'current': ['g'], 'F': ['h', 'i']}  # Second conjunct
+            {'next': ['f'], 'current': ['g'], 'eventually': ['h', 'i']}  # Second conjunct
         ]
         self.assertEqual(output, expected_output)
 
@@ -53,7 +53,7 @@ root_consequent_holds(OP,a_always,0,T1,S):-
         output = parse_formula_str(formula)
         expected_output = [
             {'next': ['a=true', 'b=true', 'c=false'], 'current': ['d=false'], 'prev': ['e=true']},  # First conjunct
-            {'next': ['f=false'], 'current': ['g=true'], 'F': ['h=true', 'i=false']}  # Second conjunct
+            {'next': ['f=false'], 'current': ['g=true'], 'eventually': ['h=true', 'i=false']}  # Second conjunct
         ]
         self.assertEqual(output, expected_output)
 
@@ -63,7 +63,7 @@ root_consequent_holds(OP,a_always,0,T1,S):-
             'name': 'a_always',
             'formula': 'G(a=true);',
             'antecedent': "",
-            'consequent': 'a',
+            'consequent': 'a=true',
             'when': 'When.ALWAYS'
         }
 
@@ -200,8 +200,8 @@ root_antecedent_holds(OP,a_arrow_b,0,T1,S):-
             'type': 'assumption',
             'name': 'a_always',
             'formula': 'G(a=true);',
-            'antecedent': [],
-            'consequent': ['holds_at(current,a,T,S)'],
+            'antecedent': "",
+            'consequent': "a=true",
             'when': 'When.ALWAYS'
         }
 
@@ -230,8 +230,8 @@ root_consequent_holds(OP,a_always,0,T1,S):-
             'type': 'assumption',
             'name': 'a_always',
             'formula': 'G(a=true);',
-            'antecedent': [],
-            'consequent': ['holds_at(current,a,T,S)'],
+            'antecedent': "",
+            'consequent': "a=true",
             'when': 'When.ALWAYS'
         }
 
@@ -244,12 +244,6 @@ consequent_holds(a_always,T,S):-
 \troot_consequent_holds(current,a_always,0,T,S),
 \tnot ev_temp_op(a_always).
 
-consequent_holds(a_always,T,S):-
-\ttrace(S),
-\ttimepoint(T,S),
-\troot_consequent_holds(current,a_always,0,T,S),
-\tconsequent_exception(a_always,T,S).
-
 root_consequent_holds(OP,a_always,0,T1,S):-
 \ttrace(S),
 \ttimepoint(T1,S),
@@ -258,6 +252,11 @@ root_consequent_holds(OP,a_always,0,T1,S):-
 \ttemporal_operator(OP),
 \ttimepoint_of_op(OP,T1,T2,S),
 \tholds_at(a,T2,S).
+
+consequent_holds(a_always,T,S):-
+\ttrace(S),
+\ttimepoint(T,S),
+\tconsequent_exception(a_always,T,S).
 """
         self.assertMultiLineEqual(expected.strip(), out.strip())
 
@@ -266,8 +265,8 @@ root_consequent_holds(OP,a_always,0,T1,S):-
             'type': 'guarantee',
             'name': 'guarantee1_1',
             'formula': 'G(r1=true->F(g1=true));',
-            'antecedent': ['holds_at(current,r1,T,S)'],
-            'consequent': ['holds_at(eventually,g1,T,S)'],
+            'antecedent': "r1=true",
+            'consequent': "F(g1=true)",
             'when': 'When.ALWAYS'
         }
 
@@ -314,8 +313,8 @@ root_consequent_holds(OP,guarantee1_1,0,T1,S):-
             'type': 'guarantee',
             'name': 'guarantee3_1',
             'formula': 'G(a=false->g1=false&g2=false);',
-            'antecedent': ['not_holds_at(current,a,T,S)'],
-            'consequent': ['not_holds_at(current,g1,T,S),\n\tnot_holds_at(current,g2,T,S)'],
+            'antecedent': 'a=false',
+            'consequent': 'g1=false&g2=false',
             'when': 'When.ALWAYS'
         }
 
@@ -364,8 +363,8 @@ root_consequent_holds(OP,guarantee3_1,0,T1,S):-
             'type': 'guarantee',
             'name': 'guarantee4',
             'formula': 'G(g1=false|g2=false);',
-            'antecedent': [],
-            'consequent': ['not_holds_at(current,g1,T,S)', 'not_holds_at(current,g2,T,S)'],
+            'antecedent': "",
+            'consequent': 'g1=false|g2=false',
             'when': 'When.ALWAYS'
         }
 
@@ -634,8 +633,8 @@ root_antecedent_holds(OP,a_b_c,3,T1,S):-
             'type': 'assumption',
             'name': 'a_b_c',
             'formula': 'G(PREV(a=true)->b=true|c=true);',
-            'antecedent': ['holds_at(prev,a,T,S)'],
-            'consequent': ['holds_at(current,b,T,S)', 'holds_at(current,c,T,S)'],
+            'antecedent': "prev(a=true)",
+            'consequent': "b=true|c=true",
             'when': 'When.ALWAYS'
         }
 
@@ -679,9 +678,8 @@ root_consequent_holds(OP,a_b_c,1,T1,S):-
             'type': 'assumption',
             'name': 'a_b_c',
             'formula': 'G(PREV(a=true)->b=true&c=true|d=true&e=true);',
-            'antecedent': ['holds_at(prev,a,T,S)'],
-            'consequent': ['holds_at(current,b,T,S),\n\tholds_at(current,c,T,S)',
-                           'holds_at(current,d,T,S),\n\tholds_at(current,e,T,S)'],
+            'antecedent': "prev(a=true)",
+            'consequent': "b=true&c=true|d=true&e=true",
             'when': 'When.ALWAYS'
         }
 
@@ -727,9 +725,8 @@ root_consequent_holds(OP,a_b_c,1,T1,S):-
             'type': 'assumption',
             'name': 'a_b_c',
             'formula': 'G(PREV(a=true)->b=true&c=true|next(d=true)&next(e=true));',
-            'antecedent': ['holds_at(prev,a,T,S)'],
-            'consequent': ['holds_at(current,b,T,S)\n\tholds_at(next,c,T,S)',
-                           'holds_at(current,d,T,S)\n\tholds_at(next,e,T,S)'],
+            'antecedent': "prev(a=true)",
+            'consequent': "(b=true&next(c=true))|(d=true&next(e=true))",
             'when': 'When.ALWAYS'
         }
 
@@ -793,9 +790,8 @@ root_consequent_holds(OP,a_b_c,3,T1,S):-
             'type': 'assumption',
             'name': 'a_b_c',
             'formula': 'G(PREV(a=true)->b=true&c=true|next(d=true)&next(e=true));',
-            'antecedent': ['holds_at(prev,a,T,S)'],
-            'consequent': ['holds_at(current,b,T,S)\n\tholds_at(next,c,T,S)',
-                           'holds_at(current,d,T,S)\n\tholds_at(next,e,T,S)'],
+            'antecedent': "prev(a=true)",
+            'consequent': "(b=true&next(c=true))|(d=true&next(e=true))",
             'when': 'When.ALWAYS'
         }
 
