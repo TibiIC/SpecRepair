@@ -353,12 +353,11 @@ def propositionalise_antecedent(line, exception=False):
                      f"\ttimepoint({timepoint},S)"
     for disjunct in disjunction:
         output += component_body
-        for temp_op, conjuncts in disjunct.items():
-            output += f",\n{component_end_antecedent(line['name'], temp_op, timepoint, n_root_antecedents)}"
+        for i, (temp_op, conjuncts) in enumerate(disjunct.items()):
+            output += f",\n{component_end_antecedent(line['name'], temp_op, timepoint, n_root_antecedents + i)}"
         if exception:
             output += f",\n\tnot antecedent_exception({line['name']},{timepoint},S)"
         output += ".\n\n"
-        # rules_by_temp_op = store_placeholder_OP_rules_by_replaced_rule(disjunct)
         for i, (temp_op, conjuncts) in enumerate(disjunct.items()):
             output += root_antecedent_body(line['name'], n_root_antecedents)
             for conjunct in conjuncts:

@@ -418,8 +418,8 @@ root_consequent_holds(OP,guarantee4,1,T1,S):-
             'type': 'assumption',
             'name': 'a_b_c',
             'formula': 'G(a=true|b=true->next(c=true));',
-            'antecedent': ['holds_at(current,a,T,S)', 'holds_at(current,b,T,S)'],
-            'consequent': ['holds_at(next,c,T,S)'],
+            'antecedent': "a=true|b=true",
+            'consequent': "c=true",
             'when': 'When.ALWAYS'
         }
 
@@ -461,9 +461,8 @@ root_antecedent_holds(OP,a_b_c,1,T1,S):-
             'type': 'assumption',
             'name': 'a_b_c',
             'formula': 'G(a=true&b=true|c=true&d=true->next(e=true));',
-            'antecedent': ['holds_at(current,a,T,S),\n\tholds_at(current,b,T,S)',
-                           'holds_at(current,c,T,S),\n\tholds_at(current,d,T,S)'],
-            'consequent': ['holds_at(next,e,T,S)'],
+            'antecedent': "(a=true&b=true)|(c=true&d=true)",
+            'consequent': "e=true",
             'when': 'When.ALWAYS'
         }
 
@@ -507,9 +506,8 @@ root_antecedent_holds(OP,a_b_c,1,T1,S):-
             'type': 'assumption',
             'name': 'a_b_c',
             'formula': 'G(PREV(a=true)&b=true|PREV(c=true)&d=true->next(e=true));',
-            'antecedent': ['holds_at(prev,a,T,S)\n\tholds_at(current,b,T,S)',
-                           'holds_at(prev,c,T,S)\n\tholds_at(current,d,T,S)'],
-            'consequent': ['holds_at(next,e,T,S)'],
+            'antecedent': "(prev(a=true)&b=true)|(prev(c=true)&d=true)",
+            'consequent': "e=true",
             'when': 'When.ALWAYS'
         }
 
@@ -571,16 +569,15 @@ root_antecedent_holds(OP,a_b_c,3,T1,S):-
             'type': 'assumption',
             'name': 'a_b_c',
             'formula': 'G(PREV(a=true)&b=true|PREV(c=true)&d=true->next(e=true));',
-            'antecedent': ['holds_at(prev,a,T,S)\n\tholds_at(current,b,T,S)',
-                           'holds_at(prev,c,T,S)\n\tholds_at(current,d,T,S)'],
-            'consequent': ['holds_at(next,e,T,S)'],
+            'antecedent': "(prev(a=true)&b=true)|(prev(c=true)&d=true)",
+            'consequent': "e=true",
             'when': 'When.ALWAYS'
         }
 
         line = pd.Series(line_data)
         out = propositionalise_antecedent(line, exception=True)
         expected = """
-antecedent_holds(a_b_c,0,T,S):-
+antecedent_holds(a_b_c,T,S):-
 \ttrace(S),
 \ttimepoint(T,S),
 \troot_antecedent_holds(prev,a_b_c,0,T,S),
@@ -605,7 +602,7 @@ root_antecedent_holds(OP,a_b_c,1,T1,S):-
 \ttimepoint_of_op(OP,T1,T2,S),
 \tholds_at(b,T2,S).
 
-antecedent_holds(a_b_c,1,T,S):-
+antecedent_holds(a_b_c,T,S):-
 \ttrace(S),
 \ttimepoint(T,S),
 \troot_antecedent_holds(prev,a_b_c,2,T,S),
