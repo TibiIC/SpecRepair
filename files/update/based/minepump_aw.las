@@ -68,13 +68,15 @@ ilasp.stats.print_timings()
 %% Mode Declaration
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-#modeh(antecedent_exception(const(expression_v), var(time), var(trace))).
+#modeh(antecedent_exception(const(expression_v), const(index), var(time), var(trace))).
 #modeb(2,timepoint_of_op(const(temp_op_v), var(time), var(time), var(trace)), (positive)).
 #modeb(2,holds_at(const(usable_atom), var(time), var(trace)), (positive)).
 #modeb(2,not_holds_at(const(usable_atom), var(time), var(trace)), (positive)).
 #constant(usable_atom,highwater).
 #constant(usable_atom,methane).
 #constant(usable_atom,pump).
+#constant(index,0).
+#constant(index,1).
 #constant(temp_op_v,current).
 #constant(temp_op_v,next).
 #constant(temp_op_v,prev).
@@ -82,17 +84,17 @@ ilasp.stats.print_timings()
 #constant(expression_v, assumption2_1).
 #bias("
 :- constraint.
-:- head(antecedent_exception(_,V1,V2)), body(timepoint_of_op(_,V3,_,V4)), (V3, V4) != (V1, V2).
-:- head(antecedent_exception(_,_,V1)), body(holds_at(_,_,V2)), V1 != V2.
-:- head(antecedent_exception(_,_,V1)), body(not_holds_at(_,_,V2)), V1 != V2.
+:- head(antecedent_exception(_,_,V1,V2)), body(timepoint_of_op(_,V3,_,V4)), (V3, V4) != (V1, V2).
+:- head(antecedent_exception(_,_,_,V1)), body(holds_at(_,_,V2)), V1 != V2.
+:- head(antecedent_exception(_,_,_,V1)), body(not_holds_at(_,_,V2)), V1 != V2.
 :- body(timepoint_of_op(_,_,V1,_)), body(holds_at(_,V2,_)), V1 != V2.
 :- body(timepoint_of_op(_,_,V1,_)), body(not_holds_at(_,V2,_)), V1 != V2.
 :- body(timepoint_of_op(current,V1,V2,_)), V1 != V2.
 :- body(holds_at(_,V1,V2)), not body(timepoint_of_op(_,_,V1,V2)).
 :- body(not_holds_at(_,V1,V2)), not body(timepoint_of_op(_,_,V1,V2)).
-:- head(antecedent_exception(_,_,_)), body(timepoint_of_op(next,_,_,_)).
-:- head(antecedent_exception(_,_,_)), body(timepoint_of_op(prev,_,_,_)).
-:- head(antecedent_exception(_,_,_)), body(timepoint_of_op(eventually,_,_,_)).
+:- head(antecedent_exception(_,_,_,_)), body(timepoint_of_op(next,_,_,_)).
+:- head(antecedent_exception(_,_,_,_)), body(timepoint_of_op(prev,_,_,_)).
+:- head(antecedent_exception(_,_,_,_)), body(timepoint_of_op(eventually,_,_,_)).
 ").
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -312,7 +314,7 @@ assumption(assumption2_1).
 antecedent_holds(assumption2_1,T,S):-
 	trace(S),
 	timepoint(T,S),
-	not antecedent_exception(assumption2_1,T,S).
+	not antecedent_exception(assumption2_1,0,T,S).
 
 consequent_holds(assumption2_1,T,S):-
 	trace(S),

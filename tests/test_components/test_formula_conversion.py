@@ -18,7 +18,7 @@ assumption(a_always).
 antecedent_holds(a_always,T,S):-
 \ttrace(S),
 \ttimepoint(T,S),
-\tnot antecedent_exception(a_always,T,S).
+\tnot antecedent_exception(a_always,0,T,S).
 
 consequent_holds(current,a_always,T,S):-
 \ttrace(S),
@@ -78,7 +78,7 @@ assumption(a_always).
 antecedent_holds(a_always,T,S):-
 \ttrace(S),
 \ttimepoint(T,S),
-\tnot antecedent_exception(a_always,T,S).
+\tnot antecedent_exception(a_always,0,T,S).
 
 consequent_holds(a_always,T,S):-
 \ttrace(S),
@@ -161,7 +161,7 @@ root_antecedent_holds(OP,a_arrow_b,0,T1,S):-
 antecedent_holds(a_always,T,S):-
 \ttrace(S),
 \ttimepoint(T,S),
-\tnot antecedent_exception(a_always,T,S).
+\tnot antecedent_exception(a_always,0,T,S).
 """
         self.assertMultiLineEqual(expected.strip(), out.strip())
 
@@ -182,7 +182,7 @@ antecedent_holds(a_arrow_b,T,S):-
 \ttrace(S),
 \ttimepoint(T,S),
 \troot_antecedent_holds(current,a_arrow_b,0,T,S),
-\tnot antecedent_exception(a_arrow_b,T,S).
+\tnot antecedent_exception(a_arrow_b,0,T,S).
 
 root_antecedent_holds(OP,a_arrow_b,0,T1,S):-
 \ttrace(S),
