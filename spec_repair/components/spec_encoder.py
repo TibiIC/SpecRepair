@@ -1,6 +1,6 @@
 import re
 from collections import defaultdict
-from typing import List, Optional, Dict
+from typing import List, Optional
 
 import pandas as pd
 
@@ -8,7 +8,7 @@ from spec_repair import config
 from spec_repair.helpers.counter_trace import CounterTrace
 from spec_repair.enums import Learning, ExpType, When
 from spec_repair.exceptions import LearningException
-from spec_repair.ltl import filter_expressions_of_type, Spec
+from spec_repair.ltl import filter_expressions_of_type, Spec, parse_formula_str
 from spec_repair.old.patterns import FIRST_PRED, ALL_PREDS
 from spec_repair.special_types import EventuallyConsequentRule
 from spec_repair.util.exp_util import eventualise_consequent
@@ -266,7 +266,6 @@ def expressions_df_to_str(expressions: pd.DataFrame, learning_names: Optional[Li
         learning_names = []
     expression_string = ""
     for _, line in expressions.iterrows():
-        # This removes alwEv's unless they are being learned:
         expression_string += expression_to_str(line, learning_names, for_clingo)
     return expression_string
 
@@ -385,7 +384,7 @@ def propositionalise_consequent(line, exception=False):
         output += component_body
         for i, (temp_op, conjuncts) in enumerate(disjunct.items()):
             output += f",\n{component_end_consequent(line['name'], temp_op, timepoint, n_root_consequents + i)}"
-        if "eventually" not in disjunct.keys():
+        if "eventually" not in disjunct.keys() and exception and timepoint == "T":
             output += f",\n\tnot ev_temp_op({line['name']})"
         output += ".\n\n"
         for temp_op, conjuncts in disjunct.items():
@@ -403,77 +402,6 @@ def propositionalise_consequent(line, exception=False):
         output += f",\n\tconsequent_exception({line['name']},{timepoint},S).\n\n"
 
     return output
-
-
-def parse_formula_str(formula: str) -> List[Dict[str, List[str]]]:
-    """
-    Parse a formula consisting of disjunctions and conjunctions of temporal operators.
-
-    Args:
-        formula (str): The input formula to parse.
-
-    Returns:
-        List[Dict[str, List[str]]]: A list of dictionaries containing operators and their associated literals.
-    """
-    # Remove any whitespace for easier processing
-    formula = formula.replace(" ", "")
-
-    # Split the formula by disjunction (e.g., '|' or '∨')
-    disjunctions = formula.split('|')
-    parsed_conjunctions = []
-
-    for conjunct in disjunctions:
-        conjunct = remove_outer_parentheses(conjunct)
-        conjunct_dict = defaultdict(list)
-
-        # Split each conjunct by conjunctions (e.g., '&')
-        parts = split_with_outer_parentheses(conjunct)
-
-        for part in parts:
-            # Regex to capture "operator(content)"
-            match = re.match(r'^(next|prev|G|F)\((.+)\)', part)
-
-            if match:
-                operator = match.group(1)
-                operator = "eventually" if operator == "F" else operator
-                content = match.group(2)
-                # Split content by '&' and add to corresponding operator
-                literals = re.split(r'\s*&\s*', content)
-                conjunct_dict[operator].extend(literals)
-            else:
-                # No temporal operator, assume 'current' (no operation)
-                literals = re.split(r'\s*&\s*', part.strip("()"))
-                conjunct_dict["current"].extend(literals)
-
-        parsed_conjunctions.append(dict(conjunct_dict))
-
-    return parsed_conjunctions
-
-
-def split_with_outer_parentheses(input_str: str) -> List[str]:
-    """
-    Split the input string based on operators while considering outer parentheses.
-
-    Args:
-        input_str (str): The input string to split.
-
-    Returns:
-        List[str]: A list of segments split based on the defined logic.
-    """
-    # This regex captures '&' not enclosed within parentheses
-    pattern = r'\b(next|prev|F|G)\(([^()]*|[^&]*)*\)|[^()&\s]+'
-    segments = [match.group(0) for match in re.finditer(pattern, input_str)]
-
-    # Clean up the segments and filter out empty strings
-    return [segment.strip() for segment in segments if segment.strip()]
-
-
-def remove_outer_parentheses(s):
-    s = s.strip()
-    # Check if the string starts and ends with parentheses
-    if s.startswith('(') and s.endswith(')'):
-        return s[1:-1]  # Remove the first and last character
-    return s  # Return the original string if conditions are not met
 
 
 def root_antecedent_body(name, id: int):

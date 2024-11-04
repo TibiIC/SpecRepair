@@ -2,8 +2,8 @@
 # * Extension of spot.formula/similar class
 # * Complete OOP redesign
 import re
-from collections import OrderedDict
-from typing import List, Set
+from collections import OrderedDict, defaultdict
+from typing import List, Set, Dict
 
 import pandas as pd
 
@@ -19,6 +19,7 @@ class LTLFormula:
     antecedent: set[str]
     consequent: set[str]
     when: When
+
     # <<<<< NOT YET IN USE <<<<<
 
     def __init__(self, formula: str):
@@ -134,14 +135,8 @@ def spectra_to_df(spec: List[str]) -> pd.DataFrame:
         if line.find('--') >= 0:
             name = re.sub(r":|\s", "", words[2])
             formula = re.sub('\s*', '', spec[i + 1])
-            ant_list = []
-            cons_list = []
 
             pRespondsToS, when = gr1_type_of(formula)
-
-            ant_when = when
-            if pRespondsToS:
-                ant_when = When.ALWAYS
 
             formula_parts = formula.replace(");", "").split("->")
             if len(formula_parts) == 1:
@@ -152,18 +147,11 @@ def spectra_to_df(spec: List[str]) -> pd.DataFrame:
                 consequent = formula_parts[1]
             if pRespondsToS:
                 consequent = re.sub(r"^F\(", "", consequent)
-            consequent_disjuncts = consequent.split("|")
-            antecedent_disjuncts = antecedent.split("|")
-            for antecedent in antecedent_disjuncts:
-                if antecedent != "":
-                    ant_list.append(convert_assignments(antecedent, ant_when, consequent=False))
-            for consequent in consequent_disjuncts:
-                cons_list.append(convert_assignments(consequent, when, consequent=True))
 
             formula_list.append(
                 [words[0], name, formula,
-                 ant_list,
-                 cons_list, when]
+                 antecedent,
+                 consequent, when]
             )
     columns_and_types = OrderedDict([
         ('type', str),
@@ -201,31 +189,77 @@ def gr1_type_of(formula):
     return pRespondsToS, when
 
 
-def convert_assignments(expression, when, consequent):
-    expression_list = []
-    exp_parts = expression.split("&")
-    for part in exp_parts:
-        # TODO: assuming no nesting of next/prev
-        temp_op = "current"
-        for theta in ["next", "prev", "PREV"]:
-            if theta in part:
-                temp_op = theta.lower()
-                part = part.replace(theta + "(", "")
-        if when == When.EVENTUALLY:
-            temp_op = "eventually"
-        prefix = ""
-        if part.find("=false") >= 0:
-            prefix = "not_"
-        atom = re.sub(r"\(|\)", "", part.split("=")[0])
-        part_string = f"{prefix}holds_at({temp_op},{atom},T,S)"
-        if when == When.INITIALLY:
-            part_string = part_string.replace(",T,", ",0,")
-        expression_list.append(part_string)
-    trivial_exp = re.compile(r"^holds_at\((.*),true|^not_holds_at\((.*),false")
-    expression_list = [x for x in expression_list if not trivial_exp.search(x)]
-    output = ',\n\t'.join(expression_list)
-    return output
-
-
 def filter_expressions_of_type(formula_df: pd.DataFrame, expression: ExpType) -> pd.DataFrame:
     return formula_df.loc[formula_df['type'] == str(expression)]
+
+
+def parse_formula_str(formula: str) -> List[Dict[str, List[str]]]:
+    """
+    Parse a formula consisting of disjunctions and conjunctions of temporal operators.
+
+    Args:
+        formula (str): The input formula to parse.
+
+    Returns:
+        List[Dict[str, List[str]]]: A list of dictionaries containing operators and their associated literals.
+    """
+    # Remove any whitespace for easier processing
+    formula = formula.replace(" ", "")
+
+    # Split the formula by disjunction (e.g., '|' or '∨')
+    disjunctions = formula.split('|')
+    parsed_conjunctions = []
+
+    for conjunct in disjunctions:
+        conjunct = remove_outer_parentheses(conjunct)
+        conjunct_dict = defaultdict(list)
+
+        # Split each conjunct by conjunctions (e.g., '&')
+        parts = split_with_outer_parentheses(conjunct)
+
+        for part in parts:
+            # Regex to capture "operator(content)"
+            match = re.match(r'^(next|prev|PREV|G|F)\((.+)\)', part)
+
+            if match:
+                operator = match.group(1)
+                operator = "eventually" if operator == "F" else operator
+                operator = "prev" if operator == "PREV" else operator
+                content = match.group(2)
+                # Split content by '&' and add to corresponding operator
+                literals = re.split(r'\s*&\s*', content)
+                conjunct_dict[operator].extend(literals)
+            else:
+                # No temporal operator, assume 'current' (no operation)
+                literals = re.split(r'\s*&\s*', part.strip("()"))
+                conjunct_dict["current"].extend(literals)
+
+        parsed_conjunctions.append(dict(conjunct_dict))
+
+    return parsed_conjunctions
+
+
+def split_with_outer_parentheses(input_str: str) -> List[str]:
+    """
+    Split the input string based on operators while considering outer parentheses.
+
+    Args:
+        input_str (str): The input string to split.
+
+    Returns:
+        List[str]: A list of segments split based on the defined logic.
+    """
+    # This regex captures '&' not enclosed within parentheses
+    pattern = r'\b(next|prev|PREV|F|G)\(([^()]*|[^&]*)*\)|[^()&\s]+'
+    segments = [match.group(0) for match in re.finditer(pattern, input_str)]
+
+    # Clean up the segments and filter out empty strings
+    return [segment.strip() for segment in segments if segment.strip()]
+
+
+def remove_outer_parentheses(s):
+    s = s.strip()
+    # Check if the string starts and ends with parentheses
+    if s.startswith('(') and s.endswith(')'):
+        return s[1:-1]  # Remove the first and last character
+    return s  # Return the original string if conditions are not met

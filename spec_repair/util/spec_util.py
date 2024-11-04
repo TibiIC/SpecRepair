@@ -8,7 +8,7 @@ import pandas as pd
 
 from spec_repair.enums import Learning
 from spec_repair.heuristics import choose_one_with_heuristic, manual_choice, HeuristicType
-from spec_repair.ltl import CounterStrategy, spectra_to_df
+from spec_repair.ltl import CounterStrategy, spectra_to_df, parse_formula_str
 from spec_repair.old.patterns import PRS_REG, FIRST_PRED, ALL_PREDS
 from spec_repair.config import PROJECT_PATH, FASTLAS
 from spec_repair.old.specification_helper import strip_vars, assign_equalities
@@ -51,13 +51,17 @@ def create_signature(spec_df: pd.DataFrame):
 
 
 def extract_variables(spec_df: pd.DataFrame) -> List[str]:
-    antecedents: list[list[str]] = spec_df['antecedent'].tolist()
-    consequents: list[list[str]] = spec_df['consequent'].tolist()
+    variables = set()
+    for _, row in spec_df.iterrows():
+        antecedents: List[Dict[str, List[str]]] = parse_formula_str(row['antecedent'])
+        consequents: List[Dict[str, List[str]]] = parse_formula_str(row['consequent'])
 
-    elems: list[str] = reduce(operator.concat, antecedents + consequents, [])
-    all_elems = "|".join(elems)
-    variables = re.findall(r"\([^,]*,([^,]*)", all_elems)
-    return list(dict.fromkeys(variables))
+        for conjunction in antecedents + consequents:
+            for assignments in conjunction.values():
+                for assignment in assignments:
+                    variables.add(assignment.split("=")[0].strip())
+
+    return list(variables)
 
 
 class CSTraces:

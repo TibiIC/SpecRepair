@@ -2,7 +2,7 @@ import os
 import unittest
 from unittest import TestCase
 
-from spec_repair.ltl import convert_assignments
+from spec_repair.ltl import parse_formula_str
 from spec_repair.old_experiments import contains_contradictions
 from spec_repair.util.spec_util import integrate_rule
 from spec_repair.util.exp_util import split_expression_to_raw_components, eventualise_consequent
@@ -267,22 +267,6 @@ class Test(TestCase):
         exp = "G(a=true);"
         output = split_expression_to_raw_components(exp)
         self.assertEqual(["G(true", "a=true);"], output)
-
-    def test_convert_assignments(self):
-        formula = 'PREV(p=true)&p=true'
-        when = When.ALWAYS
-        output = convert_assignments(formula, when, consequent=False)
-        self.assertEqual(output, 'holds_at(prev,p,T,S),\n\tholds_at(current,p,T,S)')
-
-        formula = "(next(f1=true)&b2=false&b3=false)"
-        when = When.ALWAYS
-        output = convert_assignments(formula, when, consequent=False)
-        self.assertEqual(output,
-                         'holds_at(next,f1,T,S),\n\tnot_holds_at(current,b2,T,S),\n\tnot_holds_at(current,b3,T,S)')
-
-        output = convert_assignments(formula, when, consequent=True)
-        self.assertEqual(output,
-                         'holds_at(next,f1,T,S),\n\tnot_holds_at(current,b2,T,S),\n\tnot_holds_at(current,b3,T,S)')
 
     def test_semantical_identical_spot(self):
         fixed = "test_files/semantically_identical/minepump_fixed0_fixed.spectra"

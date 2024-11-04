@@ -3,7 +3,8 @@ from unittest import TestCase
 import pandas as pd
 
 from spec_repair.components.spec_encoder import expression_to_str, \
-    propositionalise_antecedent, propositionalise_consequent, parse_formula_str
+    propositionalise_antecedent, propositionalise_consequent
+from spec_repair.ltl import parse_formula_str
 
 
 class Test(TestCase):
@@ -82,8 +83,7 @@ antecedent_holds(a_always,T,S):-
 consequent_holds(a_always,T,S):-
 \ttrace(S),
 \ttimepoint(T,S),
-\troot_consequent_holds(current,a_always,0,T,S),
-\tnot ev_temp_op(a_always).
+\troot_consequent_holds(current,a_always,0,T,S).
 
 root_consequent_holds(OP,a_always,0,T1,S):-
 \ttrace(S),
@@ -210,8 +210,7 @@ root_antecedent_holds(OP,a_arrow_b,0,T1,S):-
 consequent_holds(a_always,T,S):-
 \ttrace(S),
 \ttimepoint(T,S),
-\troot_consequent_holds(current,a_always,0,T,S),
-\tnot ev_temp_op(a_always).
+\troot_consequent_holds(current,a_always,0,T,S).
 
 root_consequent_holds(OP,a_always,0,T1,S):-
 \ttrace(S),
@@ -342,8 +341,7 @@ root_antecedent_holds(OP,guarantee3_1,0,T1,S):-
 consequent_holds(guarantee3_1,T,S):-
 \ttrace(S),
 \ttimepoint(T,S),
-\troot_consequent_holds(current,guarantee3_1,0,T,S),
-\tnot ev_temp_op(guarantee3_1).
+\troot_consequent_holds(current,guarantee3_1,0,T,S).
 
 root_consequent_holds(OP,guarantee3_1,0,T1,S):-
 \ttrace(S),
@@ -382,8 +380,7 @@ antecedent_holds(guarantee4,T,S):-
 consequent_holds(guarantee4,T,S):-
 \ttrace(S),
 \ttimepoint(T,S),
-\troot_consequent_holds(current,guarantee4,0,T,S),
-\tnot ev_temp_op(guarantee4).
+\troot_consequent_holds(current,guarantee4,0,T,S).
 
 root_consequent_holds(OP,guarantee4,0,T1,S):-
 \ttrace(S),
@@ -397,8 +394,7 @@ root_consequent_holds(OP,guarantee4,0,T1,S):-
 consequent_holds(guarantee4,T,S):-
 \ttrace(S),
 \ttimepoint(T,S),
-\troot_consequent_holds(current,guarantee4,1,T,S),
-\tnot ev_temp_op(guarantee4).
+\troot_consequent_holds(current,guarantee4,1,T,S).
 
 root_consequent_holds(OP,guarantee4,1,T1,S):-
 \ttrace(S),
@@ -643,8 +639,7 @@ root_antecedent_holds(OP,a_b_c,3,T1,S):-
 consequent_holds(a_b_c,T,S):-
 \ttrace(S),
 \ttimepoint(T,S),
-\troot_consequent_holds(current,a_b_c,0,T,S),
-\tnot ev_temp_op(a_b_c).
+\troot_consequent_holds(current,a_b_c,0,T,S).
 
 root_consequent_holds(OP,a_b_c,0,T1,S):-
 \ttrace(S),
@@ -658,8 +653,7 @@ root_consequent_holds(OP,a_b_c,0,T1,S):-
 consequent_holds(a_b_c,T,S):-
 \ttrace(S),
 \ttimepoint(T,S),
-\troot_consequent_holds(current,a_b_c,1,T,S),
-\tnot ev_temp_op(a_b_c).
+\troot_consequent_holds(current,a_b_c,1,T,S).
 
 root_consequent_holds(OP,a_b_c,1,T1,S):-
 \ttrace(S),
@@ -688,8 +682,7 @@ root_consequent_holds(OP,a_b_c,1,T1,S):-
 consequent_holds(a_b_c,T,S):-
 \ttrace(S),
 \ttimepoint(T,S),
-\troot_consequent_holds(current,a_b_c,0,T,S),
-\tnot ev_temp_op(a_b_c).
+\troot_consequent_holds(current,a_b_c,0,T,S).
 
 root_consequent_holds(OP,a_b_c,0,T1,S):-
 \ttrace(S),
@@ -704,8 +697,7 @@ root_consequent_holds(OP,a_b_c,0,T1,S):-
 consequent_holds(a_b_c,T,S):-
 \ttrace(S),
 \ttimepoint(T,S),
-\troot_consequent_holds(current,a_b_c,1,T,S),
-\tnot ev_temp_op(a_b_c).
+\troot_consequent_holds(current,a_b_c,1,T,S).
 
 root_consequent_holds(OP,a_b_c,1,T1,S):-
 \ttrace(S),
@@ -736,8 +728,7 @@ consequent_holds(a_b_c,T,S):-
 \ttrace(S),
 \ttimepoint(T,S),
 \troot_consequent_holds(current,a_b_c,0,T,S),
-\troot_consequent_holds(next,a_b_c,1,T,S),
-\tnot ev_temp_op(a_b_c).
+\troot_consequent_holds(next,a_b_c,1,T,S).
 
 root_consequent_holds(OP,a_b_c,0,T1,S):-
 \ttrace(S),
@@ -761,8 +752,7 @@ consequent_holds(a_b_c,T,S):-
 \ttrace(S),
 \ttimepoint(T,S),
 \troot_consequent_holds(current,a_b_c,2,T,S),
-\troot_consequent_holds(next,a_b_c,3,T,S),
-\tnot ev_temp_op(a_b_c).
+\troot_consequent_holds(next,a_b_c,3,T,S).
 
 root_consequent_holds(OP,a_b_c,2,T1,S):-
 \ttrace(S),
