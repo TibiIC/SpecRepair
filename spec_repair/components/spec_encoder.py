@@ -343,35 +343,31 @@ def store_placeholder_OP_rules_by_replaced_rule(input_string):
 
 def propositionalise_antecedent(line, exception=False):
     output = ""
-    rules = line["antecedent"]
+    disjunction = parse_formula_str(line["antecedent"])
     n_root_antecedents = 0
     timepoint = "T" if line['when'] != When.INITIALLY else "0"
-    if len(rules) == 0 and exception:
-        rules = [""]
+    if len(disjunction) == 0 and exception:
+        disjunction = [defaultdict(list)]
     component_body = f"antecedent_holds({line['name']},{timepoint},S):-\n" + \
                      f"\ttrace(S),\n" + \
                      f"\ttimepoint({timepoint},S)"
-    if not rules:
+    for disjunct in disjunction:
         output += component_body
+        for temp_op, conjuncts in disjunct.items():
+            output += f",\n{component_end_antecedent(line['name'], temp_op, timepoint, n_root_antecedents)}"
+        if exception:
+            output += f",\n\tnot antecedent_exception({line['name']},{timepoint},S)"
         output += ".\n\n"
-    for rule in rules:
-        temp_ops = get_temp_ops(rule)
-        if not temp_ops:
-            temp_ops = ["current"]
-        output += component_body
-        for i, temp_op in enumerate(temp_ops):
-            output += f",\n{component_end_antecedent(line, temp_op, timepoint, n_root_antecedents + i)}"
-        output += ".\n\n"
-        rules_by_temp_op = store_placeholder_OP_rules_by_replaced_rule(rule)
-        for i, temp_op in enumerate(temp_ops):
-            output += root_antecedent_body(line, timepoint, n_root_antecedents + i)
-            if rule != "":
-                op_rule = rules_by_temp_op[temp_op]
-                output += f",\n\t{op_rule}"
-            if exception:
-                output += f",\n\tnot antecedent_exception({line['name']},{timepoint},S)"
+        # rules_by_temp_op = store_placeholder_OP_rules_by_replaced_rule(disjunct)
+        for i, (temp_op, conjuncts) in enumerate(disjunct.items()):
+            output += root_antecedent_body(line['name'], n_root_antecedents)
+            for conjunct in conjuncts:
+                conjunct_and_value = conjunct.split("=")
+                c = conjunct_and_value[0]
+                v = conjunct_and_value[1] == "true"
+                output += f",\n\t{'' if v else 'not_'}holds_at({c},T2,S)"
             output += ".\n\n"
-        n_root_antecedents += len(temp_ops)
+            n_root_antecedents += 1
 
     return output
 
@@ -415,7 +411,7 @@ def propositionalise_consequent(line, exception=False):
     return output
 
 
-def parse_formula(formula: str) -> List[Dict[str, List[str]]]:
+def parse_formula_str(formula: str) -> List[Dict[str, List[str]]]:
     """
     Parse a formula consisting of disjunctions and conjunctions of temporal operators.
 
@@ -485,17 +481,20 @@ def remove_outer_parentheses(s):
     return s  # Return the original string if conditions are not met
 
 
-def root_antecedent_body(line, timepoint, id: int):
-    out = f"root_antecedent_holds(OP,{line['name']},{id},{timepoint},S):-\n" + \
+def root_antecedent_body(name, id: int):
+    out = f"root_antecedent_holds(OP,{name},{id},T1,S):-\n" + \
           f"\ttrace(S),\n" + \
-          f"\ttimepoint({timepoint},S),\n" + \
-          f"\ttemporal_operator(OP)"
+          f"\ttimepoint(T1,S),\n" + \
+          f"\tnot weak_timepoint(T1,S),\n" + \
+          f"\ttimepoint(T2,S),\n" + \
+          f"\ttemporal_operator(OP),\n" + \
+          f"\ttimepoint_of_op(OP,T1,T2,S)"
     return out
 
 
-def component_end_antecedent(line, temp_op, timepoint, id: int):
+def component_end_antecedent(name, temp_op, timepoint, id: int):
     assert temp_op in ["current", "next", "prev"]
-    out = f"\troot_antecedent_holds({temp_op},{line['name']},{id},{timepoint},S)"
+    out = f"\troot_antecedent_holds({temp_op},{name},{id},{timepoint},S)"
     return out
 
 

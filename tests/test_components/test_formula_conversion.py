@@ -4,7 +4,7 @@ from unittest import TestCase
 import pandas as pd
 
 from spec_repair.components.spec_encoder import expression_to_str, \
-    propositionalise_antecedent, propositionalise_consequent, parse_formula
+    propositionalise_antecedent, propositionalise_consequent, parse_formula_str
 
 
 class Test(TestCase):
@@ -39,10 +39,21 @@ root_consequent_holds(OP,a_always,0,T1,S):-
     def test_parse_formula(self):
         # Example usage:
         formula = "(next(a&b&c)&d&prev(e))|(next(f)&g&F(h&i))"
-        output = parse_formula(formula)
+        output = parse_formula_str(formula)
         expected_output = [
             {'next': ['a', 'b', 'c'], 'current': ['d'], 'prev': ['e']},  # First conjunct
             {'next': ['f'], 'current': ['g'], 'F': ['h', 'i']}  # Second conjunct
+        ]
+        self.assertEqual(output, expected_output)
+
+
+    def test_parse_formula_2(self):
+        # Example usage:
+        formula = "(next(a=true&b=true&c=false)&d=false&prev(e=true))|(next(f=false)&g=true&F(h=true&i=false))"
+        output = parse_formula_str(formula)
+        expected_output = [
+            {'next': ['a=true', 'b=true', 'c=false'], 'current': ['d=false'], 'prev': ['e=true']},  # First conjunct
+            {'next': ['f=false'], 'current': ['g=true'], 'F': ['h=true', 'i=false']}  # Second conjunct
         ]
         self.assertEqual(output, expected_output)
 
@@ -91,8 +102,8 @@ root_consequent_holds(OP,a_always,0,T1,S):-
             'type': 'assumption',
             'name': 'a_always',
             'formula': 'G(a=true);',
-            'antecedent': [],
-            'consequent': ['holds_at(current,a,T,S)'],
+            'antecedent': "",
+            'consequent': "a=true",
             'when': 'When.ALWAYS'
         }
 
@@ -105,13 +116,42 @@ antecedent_holds(a_always,T,S):-
 """
         self.assertMultiLineEqual(expected.strip(), out.strip())
 
+    def test_propositionalise_formula_antecedent_2(self):
+        line_data = {
+            'type': 'assumption',
+            'name': 'a_arrow_b',
+            'formula': 'G(a=true->b=true);',
+            'antecedent': "a=true",
+            'consequent': "b=true",
+            'when': 'When.ALWAYS'
+        }
+
+        line = pd.Series(line_data)
+        out = propositionalise_antecedent(line, exception=False)
+        expected = """
+antecedent_holds(a_arrow_b,T,S):-
+\ttrace(S),
+\ttimepoint(T,S),
+\troot_antecedent_holds(current,a_arrow_b,0,T,S).
+
+root_antecedent_holds(OP,a_arrow_b,0,T1,S):-
+\ttrace(S),
+\ttimepoint(T1,S),
+\tnot weak_timepoint(T1,S),
+\ttimepoint(T2,S),
+\ttemporal_operator(OP),
+\ttimepoint_of_op(OP,T1,T2,S),
+\tholds_at(a,T2,S).
+"""
+        self.assertMultiLineEqual(expected.strip(), out.strip())
+
     def test_propositionalise_formula_antecedent_exception(self):
         line_data = {
             'type': 'assumption',
             'name': 'a_always',
             'formula': 'G(a=true);',
-            'antecedent': [],
-            'consequent': ['holds_at(current,a,T,S)'],
+            'antecedent': "",
+            'consequent': "a=false",
             'when': 'When.ALWAYS'
         }
 
@@ -122,6 +162,36 @@ antecedent_holds(a_always,T,S):-
 \ttrace(S),
 \ttimepoint(T,S),
 \tnot antecedent_exception(a_always,T,S).
+"""
+        self.assertMultiLineEqual(expected.strip(), out.strip())
+
+    def test_propositionalise_formula_antecedent_exception_2(self):
+        line_data = {
+            'type': 'assumption',
+            'name': 'a_arrow_b',
+            'formula': 'G(a=true->b=true);',
+            'antecedent': "a=false",
+            'consequent': "b=false",
+            'when': 'When.ALWAYS'
+        }
+
+        line = pd.Series(line_data)
+        out = propositionalise_antecedent(line, exception=True)
+        expected = """
+antecedent_holds(a_arrow_b,T,S):-
+\ttrace(S),
+\ttimepoint(T,S),
+\troot_antecedent_holds(current,a_arrow_b,0,T,S),
+\tnot antecedent_exception(a_arrow_b,T,S).
+
+root_antecedent_holds(OP,a_arrow_b,0,T1,S):-
+\ttrace(S),
+\ttimepoint(T1,S),
+\tnot weak_timepoint(T1,S),
+\ttimepoint(T2,S),
+\ttemporal_operator(OP),
+\ttimepoint_of_op(OP,T1,T2,S),
+\tnot_holds_at(a,T2,S).
 """
         self.assertMultiLineEqual(expected.strip(), out.strip())
 
@@ -539,7 +609,8 @@ antecedent_holds(a_b_c,1,T,S):-
 \ttrace(S),
 \ttimepoint(T,S),
 \troot_antecedent_holds(prev,a_b_c,2,T,S),
-\troot_antecedent_holds(current,a_b_c,3,T,S).
+\troot_antecedent_holds(current,a_b_c,3,T,S),
+\tnot antecedent_exception(a_b_c,1,T,S).
 
 root_antecedent_holds(OP,a_b_c,2,T1,S):-
 \ttrace(S),
