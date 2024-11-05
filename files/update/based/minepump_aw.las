@@ -88,7 +88,11 @@ ilasp.stats.print_timings()
 :- head(antecedent_exception(_,_,_,V1)), body(not_holds_at(_,_,V2)), V1 != V2.
 :- body(timepoint_of_op(_,_,V1,_)), body(holds_at(_,V2,_)), V1 != V2.
 :- body(timepoint_of_op(_,_,V1,_)), body(not_holds_at(_,V2,_)), V1 != V2.
+:- body(timepoint_of_op(_,_,_,_)), not body(not_holds_at(_,_,_)), not body(holds_at(_,_,_)).
 :- body(timepoint_of_op(current,V1,V2,_)), V1 != V2.
+:- body(timepoint_of_op(next,V1,V2,_)), V1 == V2.
+:- body(timepoint_of_op(prev,V1,V2,_)), V1 == V2.
+:- body(timepoint_of_op(eventually,V1,V2,_)), V1 == V2.
 :- body(holds_at(_,V1,V2)), not body(timepoint_of_op(_,_,V1,V2)).
 :- body(not_holds_at(_,V1,V2)), not body(timepoint_of_op(_,_,V1,V2)).
 :- head(antecedent_exception(_,_,_,_)), body(timepoint_of_op(next,_,_,_)).

@@ -60,108 +60,76 @@ class SpecEncoder:
         return las
 
     def _create_mode_bias(self, spec_df: Spec, violations: list[str], learning_type):
-        head = "antecedent_exception"
-        next_type = ""
-        in_bias = ""
+        head = "antecedent"
+        extra_args = "_,_"
 
         if learning_type == Learning.GUARANTEE_WEAKENING:
-            head = "consequent_exception"
-            next_type = "_weak"
+            head = "consequent"
+            extra_args = "_"
 
         output = "%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%\n" \
                  "%% Mode Declaration\n" \
-                 "%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%\n\n" \
-                 f"#modeh({head}(const(expression_v), var(time), var(trace))).\n"
+                 "%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%\n\n"
 
-        # Learning rule for weakening to justice rule
-        if config.WEAKENING_TO_JUSTICE:
-            output += f"#modeh(consequent_holds(eventually,const(expression_v), var(time), var(trace))).\n"
+        if learning_type == Learning.ASSUMPTION_WEAKENING:
+            output += f"#modeh({head}_exception(const(expression_v), const(index), var(time), var(trace))).\n"
+        else:
+            output += f"#modeh({head}_exception(const(expression_v), var(time), var(trace))).\n"
 
         restriction = ", (positive)"
-        if config.WEAKENING_TO_JUSTICE:
-            output += f"#modeb(1,root_consequent_holds(eventually, const(expression_v), var(time), var(trace)){restriction}).\n"
-        output += f"#modeb(2,holds_at(const(temp_op_v), const(usable_atom), var(time), var(trace)){restriction}).\n"
-        output += f"#modeb(2,not_holds_at(const(temp_op_v), const(usable_atom), var(time), var(trace)){restriction}).\n"
+        output += f"#modeb(2,timepoint_of_op(const(temp_op_v), var(time), var(time), var(trace)){restriction}).\n"
+        output += f"#modeb(2,holds_at(const(usable_atom), var(time), var(trace)){restriction}).\n"
+        output += f"#modeb(2,not_holds_at(const(usable_atom), var(time), var(trace)){restriction}).\n"
+        # Learning rule for weakening to justice rule
+        if learning_type == Learning.GUARANTEE_WEAKENING and config.WEAKENING_TO_JUSTICE:
+            output += f"#modeh(ev_temp_op(const(expression_v))).\n"
+            output += f"#modeb(1,root_consequent_holds(eventually, const(expression_v), const(index), var(time), var(trace)){restriction}).\n"
 
-        for variable in extract_variables(spec_df):
-            output += "#constant(usable_atom," + variable + ").\n"
-
+        for variable in sorted(extract_variables(spec_df)):
+            output += f"#constant(usable_atom,{variable}).\n"
+        # TODO: find a way to provide the correct end index value
+        output += f"#constant(index,0..1).\n"
         for temp_op in ["current", "next", "prev", "eventually"]:
-            output += "#constant(temp_op_v," + temp_op + ").\n"
+            output += f"#constant(temp_op_v,{temp_op}).\n"
 
         # This determines which rules can be weakened.
-        if not violations:
+        if learning_type == Learning.GUARANTEE_WEAKENING:
+            expression_names = spec_df.loc[spec_df["type"] == "guarantee"]["name"]
+        elif not violations:
             expression_names = spec_df.loc[spec_df["type"] == "assumption"]["name"]
         else:
             expression_names = get_violated_expression_names_of_type(violations, learning_type.exp_type_str())
-
-        if learning_type == Learning.GUARANTEE_WEAKENING:
-            expression_names = spec_df.loc[spec_df["type"] == "guarantee"]["name"]
 
         for name in expression_names:
             output += f"#constant(expression_v, {name}).\n"
 
         output += f"#bias(\"\n"
         output += f":- constraint.\n"
-        output += f":- {in_bias}head({head}(_,V1,V2)), {in_bias}body(holds_at(_,_,V3,V4)), (V3, V4) != (V1, V2).\n"
-        output += f":- {in_bias}head({head}(_,V1,V2)), {in_bias}body(not_holds_at(_,_,V3,V4)), (V3, V4) != (V1, V2).\n"
-
-        # The below would be true when learning a rule like A :- B,C. , but not A :- B;C. Not sure how to
-        # distinguish, but the rules we learn seem to be disjunct bodies mostly.
-        # Added back in because the ';' actually means and, it turns out
-        output += f":- {in_bias}body(holds_at(eventually,_,V1,_)), {in_bias}body(holds_at(eventually,_,V2,_)), V1 != V2.\n"
+        output += f":- head({head}_exception({extra_args},V1,V2)), body(timepoint_of_op(_,V3,_,V4)), (V1, V2) != (V3, V4).\n"
+        output += f":- head({head}_exception({extra_args},_,V1)), body(holds_at(_,_,V2)), V1 != V2.\n"
+        output += f":- head({head}_exception({extra_args},_,V1)), body(not_holds_at(_,_,V2)), V1 != V2.\n"
+        output += f":- body(timepoint_of_op(_,_,V1,_)), body(holds_at(_,V2,_)), V1 != V2.\n"
+        output += f":- body(timepoint_of_op(_,_,V1,_)), body(not_holds_at(_,V2,_)), V1 != V2.\n"
+        output += f":- body(timepoint_of_op(_,_,_,_)), not body(not_holds_at(_,_,_)), not body(holds_at(_,_,_)).\n"
+        output += f":- body(timepoint_of_op(current,V1,V2,_)), V1 != V2.\n"
+        output += f":- body(timepoint_of_op(next,V1,V2,_)), V1 == V2.\n"
+        output += f":- body(timepoint_of_op(prev,V1,V2,_)), V1 == V2.\n"
+        output += f":- body(timepoint_of_op(eventually,V1,V2,_)), V1 == V2.\n"
+        output += f":- body(holds_at(_,V1,V2)), not body(timepoint_of_op(_,_,V1,V2)).\n"
+        output += f":- body(not_holds_at(_,V1,V2)), not body(timepoint_of_op(_,_,V1,V2)).\n"
 
         if not self.include_next:
-            output += f":- {in_bias}head({head}(_,V1,V2)), {in_bias}body(holds_at(next,_,_,_)).\n"
-            output += f":- {in_bias}head({head}(_,V1,V2)), {in_bias}body(not_holds_at(next,_,_,_)).\n"
+            output += f":- head({head}_exception({extra_args},_,_)), body(timepoint_of_op(next,_,_,_)).\n"
         if not self.include_prev:
-            output += f":- {in_bias}head({head}(_,V1,V2)), {in_bias}body(holds_at(prev,_,_,_)).\n"
-            output += f":- {in_bias}head({head}(_,V1,V2)), {in_bias}body(not_holds_at(prev,_,_,_)).\n"
-
-        ill_assign: dict = illegal_assignments(spec_df, violations, "")
-        for name in expression_names:
-            when = extract_df_content(spec_df, name, extract_col="when")
-            if name in ill_assign.keys():
-                restricted_assignments = ill_assign[name]
-                restricted_assignments = [re.sub("_next", next_type + "_next", x) for x in restricted_assignments]
-            else:
-                restricted_assignments = []
-
-            if when != When.EVENTUALLY:
-                output += f":- {in_bias}head({head}({name},V1,V2)), {in_bias}body(holds_at(eventually,_,_,_)).\n"
-                output += f":- {in_bias}head({head}({name},V1,V2)), {in_bias}body(not_holds_at(eventually,_,_,_)).\n"
-                for assignment in restricted_assignments:
-                    output += f":- {in_bias}head({head}({name},V1,V2)), {in_bias}body({assignment}).\n"
-
-            if when == When.EVENTUALLY:
-                output += f":- {in_bias}head({head}({name},V1,V2)), {in_bias}body(holds_at(current,_,_,_)).\n"
-                output += f":- {in_bias}head({head}({name},V1,V2)), {in_bias}body(not_holds_at(current_,_,_,_)).\n"
-                restricted_assignments = [re.sub("V1,V2", "_,_,_", x) for x in restricted_assignments]
-                for assignment in restricted_assignments:
-                    output += f":- {in_bias}head({head}({name},V1,V2)), {in_bias}body({assignment}).\n"
-                if self.include_prev:
-                    output += f":- {in_bias}head({head}({name},V1,V2)), {in_bias}body(holds_at(prev,_,_,_)).\n"
-                    output += f":- {in_bias}head({head}({name},V1,V2)), {in_bias}body(not_holds_at(prev,_,_,_)).\n"
-                if self.include_next:
-                    output += f":- {in_bias}head({head}({name},V1,V2)), {in_bias}body(holds_at(next,_,_,_)).\n"
-                    output += f":- {in_bias}head({head}({name},V1,V2)), {in_bias}body(not_holds_at(next,_,_,_)).\n"
-
-        # This is making sure we don't learn a body that is already in our rule.
-        for name in expression_names:
-            antecedent_list = extract_df_content(spec_df, name, extract_col=re.sub(r"_exception", "", head))
-            for antecedents in antecedent_list:
-                if antecedents != "":
-                    antecedents = antecedents.split(",\n\t")
-                    for fact in antecedents:
-                        fact = fact.replace("T,S)", "V1,V2)")
-                        output += f":- {in_bias}head({head}({name},V1,V2)), {in_bias}body({fact}).\n"
-
-        if config.WEAKENING_TO_JUSTICE:
-            output += f":- {in_bias}head({head}(_,_,_)), {in_bias}body(root_consequent_holds(_,_,_,_)).\n"
-            output += f":- {in_bias}head(consequent_holds(_,_,_,_)), {in_bias}body(holds_at(_,_,_,_)).\n"
-            output += f":- {in_bias}head(consequent_holds(_,_,_,_)), {in_bias}body(not_holds_at(_,_,_,_)).\n"
-            output += f":- {in_bias}head(consequent_holds(eventually,E1,V1,V2)), {in_bias}body(root_consequent_holds(eventually,E2,V3,V4)), (E1,V1,V2) != (E2,V3,V4).\n"
-
+            output += f":- head({head}_exception({extra_args},_,_)), body(timepoint_of_op(prev,_,_,_)).\n"
+        if learning_type == Learning.ASSUMPTION_WEAKENING or not config.WEAKENING_TO_JUSTICE:
+            # Learning eventually expressions doesn't make sense within the antecedent of a formula
+            output += f":- head({head}_exception({extra_args},_,_)), body(timepoint_of_op(eventually,_,_,_)).\n"
+        if learning_type == Learning.GUARANTEE_WEAKENING and config.WEAKENING_TO_JUSTICE:
+            output += f":- head(consequent_exception(E1,V1,V2)), body(root_consequent_holds(_,E2,_,V3,V4)), (E1,V1,V2) != (E2,V3,V4).\n"
+            output += f":- body(root_consequent_holds(_,_,_,_,_)), body(timepoint_of_op(_,_,_,_)).\n"
+            output += f":- body(root_consequent_holds(_,_,_,_,_)), body(holds_at(_,_,_)).\n"
+            output += f":- body(root_consequent_holds(_,_,_,_,_)), body(not_holds_at(_,_,_)).\n"
         output += "\").\n\n"
         return output
 

@@ -3,13 +3,15 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 #modeh(consequent_exception(const(expression_v), var(time), var(trace))).
-#modeh(consequent_holds(eventually,const(expression_v), var(time), var(trace))).
-#modeb(1,root_consequent_holds(eventually, const(expression_v), var(time), var(trace)), (positive)).
-#modeb(2,holds_at(const(temp_op_v), const(usable_atom), var(time), var(trace)), (positive)).
-#modeb(2,not_holds_at(const(temp_op_v), const(usable_atom), var(time), var(trace)), (positive)).
+#modeb(2,timepoint_of_op(const(temp_op_v), var(time), var(time), var(trace)), (positive)).
+#modeb(2,holds_at(const(usable_atom), var(time), var(trace)), (positive)).
+#modeb(2,not_holds_at(const(usable_atom), var(time), var(trace)), (positive)).
+#modeh(ev_temp_op(const(expression_v))).
+#modeb(1,root_consequent_holds(eventually, const(expression_v), const(index), var(time), var(trace)), (positive)).
 #constant(usable_atom,highwater).
 #constant(usable_atom,methane).
 #constant(usable_atom,pump).
+#constant(index,0..1).
 #constant(temp_op_v,current).
 #constant(temp_op_v,next).
 #constant(temp_op_v,prev).
@@ -19,25 +21,23 @@
 #constant(expression_v, guarantee2_1).
 #bias("
 :- constraint.
-:- head(consequent_exception(_,V1,V2)), body(holds_at(_,_,V3,V4)), (V3, V4) != (V1, V2).
-:- head(consequent_exception(_,V1,V2)), body(not_holds_at(_,_,V3,V4)), (V3, V4) != (V1, V2).
-:- body(holds_at(eventually,_,V1,_)), body(holds_at(eventually,_,V2,_)), V1 != V2.
-:- head(consequent_exception(_,V1,V2)), body(holds_at(next,_,_,_)).
-:- head(consequent_exception(_,V1,V2)), body(not_holds_at(next,_,_,_)).
-:- head(consequent_exception(_,V1,V2)), body(holds_at(prev,_,_,_)).
-:- head(consequent_exception(_,V1,V2)), body(not_holds_at(prev,_,_,_)).
-:- head(consequent_exception(initial_guarantee,V1,V2)), body(holds_at(eventually,_,_,_)).
-:- head(consequent_exception(initial_guarantee,V1,V2)), body(not_holds_at(eventually,_,_,_)).
-:- head(consequent_exception(guarantee1_1,V1,V2)), body(holds_at(eventually,_,_,_)).
-:- head(consequent_exception(guarantee1_1,V1,V2)), body(not_holds_at(eventually,_,_,_)).
-:- head(consequent_exception(guarantee2_1,V1,V2)), body(holds_at(eventually,_,_,_)).
-:- head(consequent_exception(guarantee2_1,V1,V2)), body(not_holds_at(eventually,_,_,_)).
-:- head(consequent_exception(initial_guarantee,V1,V2)), body(not_holds_at(current,pump,0,S)).
-:- head(consequent_exception(guarantee1_1,V1,V2)), body(holds_at(next,pump,V1,V2)).
-:- head(consequent_exception(guarantee2_1,V1,V2)), body(not_holds_at(next,pump,V1,V2)).
-:- head(consequent_exception(_,_,_)), body(root_consequent_holds(_,_,_,_)).
-:- head(consequent_holds(_,_,_,_)), body(holds_at(_,_,_,_)).
-:- head(consequent_holds(_,_,_,_)), body(not_holds_at(_,_,_,_)).
-:- head(consequent_holds(eventually,E1,V1,V2)), body(root_consequent_holds(eventually,E2,V3,V4)), (E1,V1,V2) != (E2,V3,V4).
+:- head(consequent_exception(_,V1,V2)), body(timepoint_of_op(_,V3,_,V4)), (V1, V2) != (V3, V4).
+:- head(consequent_exception(_,_,V1)), body(holds_at(_,_,V2)), V1 != V2.
+:- head(consequent_exception(_,_,V1)), body(not_holds_at(_,_,V2)), V1 != V2.
+:- body(timepoint_of_op(_,_,V1,_)), body(holds_at(_,V2,_)), V1 != V2.
+:- body(timepoint_of_op(_,_,V1,_)), body(not_holds_at(_,V2,_)), V1 != V2.
+:- body(timepoint_of_op(_,_,_,_)), not body(not_holds_at(_,_,_)), not body(holds_at(_,_,_)).
+:- body(timepoint_of_op(current,V1,V2,_)), V1 != V2.
+:- body(timepoint_of_op(next,V1,V2,_)), V1 == V2.
+:- body(timepoint_of_op(prev,V1,V2,_)), V1 == V2.
+:- body(timepoint_of_op(eventually,V1,V2,_)), V1 == V2.
+:- body(holds_at(_,V1,V2)), not body(timepoint_of_op(_,_,V1,V2)).
+:- body(not_holds_at(_,V1,V2)), not body(timepoint_of_op(_,_,V1,V2)).
+:- head(consequent_exception(_,_,_)), body(timepoint_of_op(next,_,_,_)).
+:- head(consequent_exception(_,_,_)), body(timepoint_of_op(prev,_,_,_)).
+:- head(consequent_exception(E1,V1,V2)), body(root_consequent_holds(_,E2,_,V3,V4)), (E1,V1,V2) != (E2,V3,V4).
+:- body(root_consequent_holds(_,_,_,_,_)), body(timepoint_of_op(_,_,_,_)).
+:- body(root_consequent_holds(_,_,_,_,_)), body(holds_at(_,_,_)).
+:- body(root_consequent_holds(_,_,_,_,_)), body(not_holds_at(_,_,_)).
 ").
 

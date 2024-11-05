@@ -72,6 +72,7 @@ ilasp.stats.print_timings()
 #modeb(2,timepoint_of_op(const(temp_op_v), var(time), var(time), var(trace)), (positive)).
 #modeb(2,holds_at(const(usable_atom), var(time), var(trace)), (positive)).
 #modeb(2,not_holds_at(const(usable_atom), var(time), var(trace)), (positive)).
+#modeh(ev_temp_op(const(expression_v))).
 #modeb(1,root_consequent_holds(eventually, const(expression_v), const(index), var(time), var(trace)), (positive)).
 #constant(usable_atom,highwater).
 #constant(usable_atom,methane).
@@ -91,17 +92,16 @@ ilasp.stats.print_timings()
 :- head(consequent_exception(_,_,V1)), body(not_holds_at(_,_,V2)), V1 != V2.
 :- body(timepoint_of_op(_,_,V1,_)), body(holds_at(_,V2,_)), V1 != V2.
 :- body(timepoint_of_op(_,_,V1,_)), body(not_holds_at(_,V2,_)), V1 != V2.
-:- body(holds_at(_,V1,V2)), not body(timepoint_of_op(_,_,V1,V2)).
-:- body(not_holds_at(_,V1,V2)), not body(timepoint_of_op(_,_,V1,V2)).
 :- body(timepoint_of_op(_,_,_,_)), not body(not_holds_at(_,_,_)), not body(holds_at(_,_,_)).
 :- body(timepoint_of_op(current,V1,V2,_)), V1 != V2.
 :- body(timepoint_of_op(next,V1,V2,_)), V1 == V2.
 :- body(timepoint_of_op(prev,V1,V2,_)), V1 == V2.
 :- body(timepoint_of_op(eventually,V1,V2,_)), V1 == V2.
+:- body(holds_at(_,V1,V2)), not body(timepoint_of_op(_,_,V1,V2)).
+:- body(not_holds_at(_,V1,V2)), not body(timepoint_of_op(_,_,V1,V2)).
 :- head(consequent_exception(_,_,_)), body(timepoint_of_op(next,_,_,_)).
 :- head(consequent_exception(_,_,_)), body(timepoint_of_op(prev,_,_,_)).
 :- head(consequent_exception(_,_,_)), body(timepoint_of_op(eventually,_,_,_)).
-
 :- head(consequent_exception(E1,V1,V2)), body(root_consequent_holds(_,E2,_,V3,V4)), (E1,V1,V2) != (E2,V3,V4).
 :- body(root_consequent_holds(_,_,_,_,_)), body(timepoint_of_op(_,_,_,_)).
 :- body(root_consequent_holds(_,_,_,_,_)), body(holds_at(_,_,_)).
