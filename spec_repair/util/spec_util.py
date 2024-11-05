@@ -527,10 +527,12 @@ def integrate_rule(arrow, conjunct, learning_type, line):
     facts = conjunct.split(";")
     if FASTLAS:
         facts = [x for x in facts if x != ""]
+    # TODO: Assignment flip already done here for assumption weakening
     assignments = extract_assignments_from_facts(facts, learning_type)
 
     is_eventually_consequent = "eventually" not in conjunct and bool(re.match(r"^F\(.+\)", line[-1]))
     if learning_type == Learning.ASSUMPTION_WEAKENING or is_eventually_consequent:
+        # TODO: Also here for assumption weakening
         assignments = flip_assignments(assignments) if is_eventually_consequent else assignments
         return integrate_antecedent(assignments, line, facts)
 
@@ -611,12 +613,13 @@ def integrate_consequent(arrow, assignments, facts, line):
     return output + "\n"
 
 
+# TODO: clean up
 def extract_assignments_from_facts(facts, learning_type):
     assignments = []
     for fact in facts:
-        temp_op = FIRST_PRED.search(fact).group(1)
         all_atoms = ALL_PREDS.search(fact).group(1)
-        atom = all_atoms.split(',')[1].strip()
+        # TODO: make use of regex groups to extract exact atom inside "holds_at" and "not_holds_at"
+        atom = all_atoms.split(',')[0].strip()
         # Don't flip if it is consequent_exception
         make_true = fact[0:4] == "not_"
         if learning_type == Learning.GUARANTEE_WEAKENING:

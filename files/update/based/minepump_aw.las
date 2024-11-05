@@ -83,7 +83,7 @@ ilasp.stats.print_timings()
 #constant(expression_v, assumption2_1).
 #bias("
 :- constraint.
-:- head(antecedent_exception(_,_,V1,V2)), body(timepoint_of_op(_,V3,_,V4)), (V3, V4) != (V1, V2).
+:- head(antecedent_exception(_,_,V1,V2)), body(timepoint_of_op(_,V3,_,V4)), (V1, V2) != (V3, V4).
 :- head(antecedent_exception(_,_,_,V1)), body(holds_at(_,_,V2)), V1 != V2.
 :- head(antecedent_exception(_,_,_,V1)), body(not_holds_at(_,_,V2)), V1 != V2.
 :- body(timepoint_of_op(_,_,V1,_)), body(holds_at(_,V2,_)), V1 != V2.
@@ -271,8 +271,17 @@ antecedent_holds(initial_assumption,0,S):-
 consequent_holds(initial_assumption,0,S):-
 	trace(S),
 	timepoint(0,S),
-	not_holds_at(highwater,0,S),
-	not_holds_at(methane,0,S).
+	root_consequent_holds(current,initial_assumption,0,0,S).
+
+root_consequent_holds(OP,initial_assumption,0,T1,S):-
+	trace(S),
+	timepoint(T1,S),
+	not weak_timepoint(T1,S),
+	timepoint(T2,S),
+	temporal_operator(OP),
+	timepoint_of_op(OP,T1,T2,S),
+	not_holds_at(highwater,T2,S),
+	not_holds_at(methane,T2,S).
 
 %assumption -- assumption1_1
 %	G(PREV(pump=true)&pump=true->next(highwater=false));
@@ -283,9 +292,18 @@ antecedent_holds(assumption1_1,T,S):-
 	trace(S),
 	timepoint(T,S),
 	root_antecedent_holds(prev,assumption1_1,0,T,S),
-	root_antecedent_holds(current,assumption1_1,0,T,S).
+	root_antecedent_holds(current,assumption1_1,1,T,S).
 
 root_antecedent_holds(OP,assumption1_1,0,T1,S):-
+	trace(S),
+	timepoint(T1,S),
+	not weak_timepoint(T1,S),
+	timepoint(T2,S),
+	temporal_operator(OP),
+	timepoint_of_op(OP,T1,T2,S),
+	holds_at(pump,T2,S).
+
+root_antecedent_holds(OP,assumption1_1,1,T1,S):-
 	trace(S),
 	timepoint(T1,S),
 	not weak_timepoint(T1,S),
@@ -297,8 +315,7 @@ root_antecedent_holds(OP,assumption1_1,0,T1,S):-
 consequent_holds(assumption1_1,T,S):-
 	trace(S),
 	timepoint(T,S),
-	root_consequent_holds(next,assumption1_1,0,T,S),
-	not ev_temp_op(assumption1_1).
+	root_consequent_holds(next,assumption1_1,0,T,S).
 
 root_consequent_holds(OP,assumption1_1,0,T1,S):-
 	trace(S),
@@ -322,8 +339,7 @@ antecedent_holds(assumption2_1,T,S):-
 consequent_holds(assumption2_1,T,S):-
 	trace(S),
 	timepoint(T,S),
-	root_consequent_holds(current,assumption2_1,0,T,S),
-	not ev_temp_op(assumption2_1).
+	root_consequent_holds(current,assumption2_1,0,T,S).
 
 root_consequent_holds(OP,assumption2_1,0,T1,S):-
 	trace(S),
@@ -334,7 +350,12 @@ root_consequent_holds(OP,assumption2_1,0,T1,S):-
 	timepoint_of_op(OP,T1,T2,S),
 	not_holds_at(highwater,T2,S).
 
-root_consequent_holds(OP,assumption2_1,0,T1,S):-
+consequent_holds(assumption2_1,T,S):-
+	trace(S),
+	timepoint(T,S),
+	root_consequent_holds(current,assumption2_1,1,T,S).
+
+root_consequent_holds(OP,assumption2_1,1,T1,S):-
 	trace(S),
 	timepoint(T1,S),
 	not weak_timepoint(T1,S),
@@ -342,88 +363,6 @@ root_consequent_holds(OP,assumption2_1,0,T1,S):-
 	temporal_operator(OP),
 	timepoint_of_op(OP,T1,T2,S),
 	not_holds_at(methane,T2,S).
-
-%guarantee -- initial_guarantee
-%	pump=false;
-
-guarantee(initial_guarantee).
-
-antecedent_holds(initial_guarantee,0,S):-
-	trace(S),
-	timepoint(0,S).
-
-consequent_holds(initial_guarantee,0,S):-
-	trace(S),
-	timepoint(0,S),
-	not_holds_at(pump,0,S).
-
-%guarantee -- guarantee1_1
-%	G(highwater=true->next(pump=true));
-
-guarantee(guarantee1_1).
-
-antecedent_holds(guarantee1_1,T,S):-
-	trace(S),
-	timepoint(T,S),
-	root_antecedent_holds(current,guarantee1_1,0,T,S).
-
-root_antecedent_holds(OP,guarantee1_1,0,T1,S):-
-	trace(S),
-	timepoint(T1,S),
-	not weak_timepoint(T1,S),
-	timepoint(T2,S),
-	temporal_operator(OP),
-	timepoint_of_op(OP,T1,T2,S),
-	holds_at(highwater,T2,S).
-
-consequent_holds(guarantee1_1,T,S):-
-	trace(S),
-	timepoint(T,S),
-	root_consequent_holds(next,guarantee1_1,0,T,S),
-	not ev_temp_op(guarantee1_1).
-
-root_consequent_holds(OP,guarantee1_1,0,T1,S):-
-	trace(S),
-	timepoint(T1,S),
-	not weak_timepoint(T1,S),
-	timepoint(T2,S),
-	temporal_operator(OP),
-	timepoint_of_op(OP,T1,T2,S),
-	holds_at(pump,T2,S).
-
-%guarantee -- guarantee2_1
-%	G(methane=true->next(pump=false));
-
-guarantee(guarantee2_1).
-
-antecedent_holds(guarantee2_1,T,S):-
-	trace(S),
-	timepoint(T,S),
-	root_antecedent_holds(current,guarantee2_1,0,T,S).
-
-root_antecedent_holds(OP,guarantee2_1,0,T1,S):-
-	trace(S),
-	timepoint(T1,S),
-	not weak_timepoint(T1,S),
-	timepoint(T2,S),
-	temporal_operator(OP),
-	timepoint_of_op(OP,T1,T2,S),
-	holds_at(methane,T2,S).
-
-consequent_holds(guarantee2_1,T,S):-
-	trace(S),
-	timepoint(T,S),
-	root_consequent_holds(next,guarantee2_1,0,T,S),
-	not ev_temp_op(guarantee2_1).
-
-root_consequent_holds(OP,guarantee2_1,0,T1,S):-
-	trace(S),
-	timepoint(T1,S),
-	not weak_timepoint(T1,S),
-	timepoint(T2,S),
-	temporal_operator(OP),
-	timepoint_of_op(OP,T1,T2,S),
-	not_holds_at(pump,T2,S).
 
 %---*** Signature  ***---
 

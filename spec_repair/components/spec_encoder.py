@@ -157,11 +157,7 @@ class SpecEncoder:
     def process_new_rule_exception(self, learning_type, line_list, output_list, rule, rule_list, spec):
         name = FIRST_PRED.search(rule).group(1)
         rule_split = rule.replace("\n", "").split(":-")
-        if learning_type == Learning.ASSUMPTION_WEAKENING:
-            body = rule_split[1].split("; ")
-        else:
-            body = [rule_split[1]]
-        # body = rule_split[1].split("; ")
+        body = rule_split[1].split("; ")
         for i, line in enumerate(spec):
             if re.search(name + r"\b", line):
                 j = i + 1
@@ -181,7 +177,8 @@ class SpecEncoder:
                 line = line.split("->")
         else:
             arrow = "->"
-        for i, conjunct in enumerate(body):
+        # TODO: extract the components of the rule integration more cleanly (i.e. timepoint_of_op associated with each respective holds_at, etc.)
+        for i, conjunct in enumerate(body[1:]):
             output = integrate_rule(arrow, conjunct, learning_type, line)
             if i == 0:
                 spec[j] = output

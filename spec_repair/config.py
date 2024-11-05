@@ -31,4 +31,4 @@ STATISTICS: bool = True
 MANUAL: bool = True
 
 # Configuration of Learning
-WEAKENING_TO_JUSTICE = True
+WEAKENING_TO_JUSTICE = False

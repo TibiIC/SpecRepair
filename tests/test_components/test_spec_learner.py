@@ -14,14 +14,14 @@ from spec_repair.util.spec_util import format_spec
 
 def methane_choice_asm(options_list: List[T]) -> T:
     options_list.sort()
-    assert len(options_list) == 4
+    assert len(options_list) == 3
     return options_list[1]
 
 
 def methane_choice_gar(options_list: List[T]) -> T:
     options_list.sort()
     print(options_list)
-    assert len(options_list) == 4
+    assert len(options_list) == 3
     return options_list[1]
 
 
