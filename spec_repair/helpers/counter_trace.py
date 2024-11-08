@@ -3,15 +3,14 @@ from __future__ import annotations
 import random
 import re
 from collections import defaultdict
-from copy import copy, deepcopy
+from copy import deepcopy
 from typing import Optional
 
 from spec_repair.enums import Learning
 from spec_repair.heuristics import choose_one_with_heuristic, HeuristicType, random_choice
-from spec_repair.ltl import CounterStrategy
-from spec_repair.old.util_titus import extract_expressions_from_spec, generate_model
+from spec_repair.ltl_types import CounterStrategy
 from spec_repair.util.spec_util import cs_to_named_cs_traces, trace_replace_name, trace_list_to_asp_form, \
-    trace_list_to_ilasp_form
+    trace_list_to_ilasp_form, extract_expressions_from_spec, generate_model
 
 
 class CounterTrace:

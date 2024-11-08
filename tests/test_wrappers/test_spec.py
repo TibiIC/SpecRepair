@@ -1,7 +1,8 @@
 import copy
 from unittest import TestCase
 
-from spec_repair.wrappers.spec import Spec, GR1ExpType
+from spec_repair.wrappers.spec import Spec
+from spec_repair.ltl_types import GR1ExpType
 from tests.test_common_utility_strings.specs import *
 
 

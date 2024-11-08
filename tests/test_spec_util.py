@@ -1,6 +1,6 @@
 from unittest import TestCase
 
-from spec_repair.ltl import CounterStrategy
+from spec_repair.ltl_types import CounterStrategy
 from spec_repair.util.spec_util import cs_to_named_cs_traces
 
 

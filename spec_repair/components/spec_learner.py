@@ -12,7 +12,7 @@ from spec_repair.exceptions import NoViolationException, NoWeakeningException, D
     NoAssumptionWeakeningException
 from spec_repair.heuristics import choose_one_with_heuristic, HeuristicType, first_choice
 
-from spec_repair.ltl import spectra_to_df
+from spec_repair.util.spec_util import spectra_to_df
 from spec_repair.components.spec_generator import SpecGenerator
 from spec_repair.wrappers.asp_wrappers import get_violations, run_ILASP
 

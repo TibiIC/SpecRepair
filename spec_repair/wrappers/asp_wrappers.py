@@ -3,7 +3,7 @@ import re
 from spec_repair.config import FASTLAS, MAX_ASP_HYPOTHESES, PROJECT_PATH
 from spec_repair.enums import ExpType
 from spec_repair.old.specification_helper import run_subprocess, create_cmd
-from spec_repair.old.util_titus import run_clingo_raw
+from spec_repair.util.spec_util import run_clingo_raw
 from spec_repair.util.file_util import generate_filename, generate_temp_filename, write_to_file, read_file_lines, \
     write_file
 

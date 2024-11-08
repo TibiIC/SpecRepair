@@ -8,7 +8,7 @@ from spec_repair.helpers.spec_recorder import SpecRecorder
 from spec_repair.wrappers.script import Script
 from spec_repair.wrappers.spec import Spec
 from spec_repair.util.file_util import read_file
-from spec_repair.old.util_titus import semantically_identical_spot
+from spec_repair.util.spec_util import semantically_identical_spot
 
 ideal_spec_file_path = f"{PROJECT_PATH}/input-files/examples/Minepump/minepump_FINAL.spectra"
 saved_specs_folder_path = f"{PROJECT_PATH}/scripts/saved_specs/minepump_test"

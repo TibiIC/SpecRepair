@@ -2,11 +2,9 @@ import os
 import unittest
 from unittest import TestCase
 
-from spec_repair.ltl import parse_formula_str
 from spec_repair.old_experiments import contains_contradictions
-from spec_repair.util.spec_util import integrate_rule
+from spec_repair.util.spec_util import integrate_rule, parse_formula_str, semantically_identical_spot
 from spec_repair.util.exp_util import split_expression_to_raw_components, eventualise_consequent
-from spec_repair.old.util_titus import semantically_identical_spot
 from spec_repair.enums import When, Learning, SimEnv
 
 

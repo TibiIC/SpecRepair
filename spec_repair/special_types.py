@@ -23,10 +23,16 @@ class EventuallyConsequentRule(ExceptionRule):
         r"^consequent_exception\(([^,]+,){2}[^,]+\)\s*:-\s*root_consequent_holds\(([^,]+,){4}[^,]+\).$")
 
 
-class HoldsAtAtom(ExceptionRule):
+class HoldsAtAtom:
     NEG_PREFIX = 1
     ATOM = 2
     pattern = re.compile(r"^(not_)?holds_at\(([^,]+),([^,]+),[^,]+\).?$")
+
+
+class GR1Formula:
+    TEMP_OP = 1
+    FORMULA = 2
+    pattern = re.compile(r"\s*(G|GF)?\((.*)\);?$")
 
 
 # StopHeuristicType = Callable[[List[str], List[CounterTrace]], bool]

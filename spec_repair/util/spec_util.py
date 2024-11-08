@@ -1,18 +1,19 @@
 import copy
-import operator
 import re
-from functools import reduce
+import subprocess
+from collections import OrderedDict, defaultdict
 from typing import Set, Dict, Union, List, Optional
 
 import pandas as pd
 
-from spec_repair.enums import Learning
+from spec_repair.enums import Learning, When, ExpType, SimEnv
+from spec_repair.helpers.spectra_formula import SpectraFormula
 from spec_repair.heuristics import choose_one_with_heuristic, manual_choice, HeuristicType
-from spec_repair.ltl import CounterStrategy, spectra_to_df, parse_formula_str
-from spec_repair.old.patterns import PRS_REG, FIRST_PRED, ALL_PREDS
-from spec_repair.config import PROJECT_PATH, FASTLAS
-from spec_repair.old.specification_helper import strip_vars, assign_equalities
-from spec_repair.special_types import HoldsAtAtom
+from spec_repair.ltl_types import CounterStrategy, GR1TemporalType
+from spec_repair.old.patterns import PRS_REG
+from spec_repair.config import PROJECT_PATH, FASTLAS, PATH_TO_CLI
+from spec_repair.old.specification_helper import strip_vars, assign_equalities, create_cmd, run_subprocess
+from spec_repair.special_types import HoldsAtAtom, GR1Formula
 from spec_repair.util.file_util import read_file_lines, write_file
 
 
@@ -540,11 +541,13 @@ def integrate_rule(temp_op, conjunct, learning_type, line: str):
     if learning_type == Learning.GUARANTEE_WEAKENING:
         return integrate_consequent(temp_op, assignments, antecedent, consequent)
 
+
 def extract_content_of_invariant(line: str) -> str:
     match = re.search(r'G\((.*)\);?', line)
     assert match
     content_inside = match.group(1).strip()
     return content_inside
+
 
 def extract_antecedent_and_consequent(line: str) -> tuple[Optional[str], str]:
     match = re.match(r'^(.*?)\s*->\s*(.*)$', line)
@@ -555,6 +558,7 @@ def extract_antecedent_and_consequent(line: str) -> tuple[Optional[str], str]:
     else:
         # If there's no "->", we assume content is just the consequent
         return None, line
+
 
 def integrate_antecedent(temp_op, assignments, antecedent, consequent):
     # next_assignments = [x for i, x in enumerate(assignments) if re.search("next", facts[i])]
@@ -633,7 +637,6 @@ def integrate_consequent(temp_op: str, assignments: list[str], antecedent: Optio
     return f"{output}\n"
 
 
-# TODO: clean up
 def extract_assignments_from_facts(facts, flip: bool):
     assignments = []
     for fact in facts:
@@ -666,3 +669,764 @@ def disjunct_assignments(assignments):
     assignments = [assignment for assignment in assignments if assignment != ""]
     output = '|'.join(assignments)
     return output
+
+
+def log_to_asp_trace(lines: str, trace_name: str = "trace_name_0") -> str:
+    """
+    Converts a runtime log into a workable trace string
+    i.e.
+    ->
+    :param lines: Lines from log file
+    :param trace_name: Name of Log
+    :return: Trace string
+    """
+    ret = ""
+    for i, line in enumerate(lines.split("\n")):
+        ret += log_line_to_asp_trace(line, i, trace_name)
+        ret += "\n"
+    return ret
+
+
+def log_line_to_asp_trace(line: str, idx: int = 0, trace_name: str = "trace_name_0") -> str:
+    """
+    Converts one line from a runtime log into a workable trace string
+    i.e.
+    ->
+    :param line: <highwater:false, methane:false, pump:false, PREV_aux_0:false, Zn:0>
+    :param idx: index where log line resides
+    :param trace_name:
+    :return:     not_holds_at(current,highwater,idx,trace_name).
+                 not_holds_at(current,methane,idx,trace_name).
+                 not_holds_at(current,pump,idx0,trace_name).
+    """
+    pairs = extract_string_boolean_pairs(line)
+    filtered_pairs = [(key, value == 'true') for key, value in pairs if not key.startswith(('PREV', 'NEXT', 'Zn'))]
+    ret = ""
+    for env_var, is_true in filtered_pairs:
+        ret += f"{'' if is_true else 'not_'}holds_at(current,{env_var},{idx},{trace_name}).\n"
+
+    return ret
+
+
+def extract_string_boolean_pairs(line):
+    """
+    Get all pairs of strings and booleans of form 'name:val'
+    :param line:
+    :return:
+    """
+    pattern = r"\b([a-zA-Z_][\w]*):(\btrue\b|\bfalse\b)"
+    pairs = re.findall(pattern, line)
+    return pairs
+
+
+def spectra_to_df(spec: List[str]) -> pd.DataFrame:
+    """
+    Converts formatted Spectra file into Pandas DataFrame for manipulation into ASP.
+
+    :param spec: Spectra specification as List of Strings.
+    :return: Pandas DataFrame containing GR(1) expressions converted into antecedent/consequent.
+    """
+    formula_list = []
+    for i, line in enumerate(spec):
+        words = line.split(" ")
+        if line.find('--') >= 0:
+            name = re.sub(r":|\s", "", words[2])
+            formula = re.sub('\s*', '', spec[i + 1])
+
+            pRespondsToS, when = gr1_type_of(formula)
+
+            formula_parts = formula.replace(");", "").split("->")
+            if len(formula_parts) == 1:
+                antecedent = ""
+                consequent = re.sub(r"[^\(]*\(", "", formula_parts[0], 1)
+            else:
+                antecedent = re.sub(r"[^\(]*\(", "", formula_parts[0], 1)
+                consequent = formula_parts[1]
+            if pRespondsToS:
+                consequent = re.sub(r"^F\(", "", consequent)
+
+            formula_list.append(
+                [words[0], name, formula,
+                 antecedent,
+                 consequent, when]
+            )
+    columns_and_types = OrderedDict([
+        ('type', str),
+        ('name', str),
+        ('formula', str),
+        ('antecedent', object),  # list[str]
+        ('consequent', object),  # list[str]
+        ('when', object)  # When
+    ])
+    spec_df = pd.DataFrame(formula_list, columns=list(columns_and_types.keys()))
+    # Set the data types for each column
+    for col, dtype in columns_and_types.items():
+        spec_df[col] = spec_df[col].astype(dtype)
+
+    return spec_df
+
+
+def gr1_type_of(formula):
+    '''
+    :param formula:
+    :return: pRespondsToS, when
+    '''
+    formula = re.sub('\s*', '', formula)
+    eventually = re.search(r"^GF", formula)
+    pRespondsToS = PRS_REG.search(formula)
+    initially = not re.search(r"^G", formula)
+    if eventually:
+        when = When.EVENTUALLY
+    elif initially:
+        when = When.INITIALLY
+    elif pRespondsToS:
+        when = When.EVENTUALLY
+    else:
+        when = When.ALWAYS
+    return pRespondsToS, when
+
+
+def filter_expressions_of_type(formula_df: pd.DataFrame, expression: ExpType) -> pd.DataFrame:
+    return formula_df.loc[formula_df['type'] == str(expression)]
+
+
+def parse_formula_spectra(formula: str) -> SpectraFormula:
+    """
+    Parse a formula from a Spectra file into a SpectraFormula object.
+
+    Args:
+        formula (str): The input formula to parse.
+
+    Returns:
+        SpectraFormula: A SpectraFormula object containing the parsed formula.
+    """
+
+    temp_op_str = GR1Formula.pattern.match(formula).group(GR1Formula.TEMP_OP)
+    match temp_op_str:
+        case "G":
+            temp_op = GR1TemporalType.INVARIANT
+        case "GF":
+            temp_op = GR1TemporalType.JUSTICE
+        case _:
+            temp_op = GR1TemporalType.INITIAL
+
+    formula = GR1Formula.pattern.match(formula).group(GR1Formula.FORMULA)
+    # Split the formula by '->'
+    parts = formula.split('->')
+
+    if len(parts) == 1:
+        antecedent = []
+        consequent = parse_formula_str(parts[0])
+    else:
+        antecedent = parse_formula_str(parts[0])
+        consequent = parse_formula_str(parts[1])
+
+    return SpectraFormula(temp_op, antecedent, consequent)
+
+
+def parse_formula_str(formula: str) -> List[Dict[str, List[str]]]:
+    """
+    Parse a formula consisting of disjunctions and conjunctions of temporal operators.
+
+    Args:
+        formula (str): The input formula to parse.
+
+    Returns:
+        List[Dict[str, List[str]]]: A list of dictionaries containing operators and their associated literals.
+    """
+    # Remove any whitespace for easier processing
+    formula = formula.replace(" ", "")
+
+    # Split the formula by disjunction (e.g., '|' or '∨')
+    disjunctions = formula.split('|')
+    parsed_conjunctions = []
+
+    for conjunct in disjunctions:
+        conjunct = remove_outer_parentheses(conjunct)
+        conjunct_dict = defaultdict(list)
+
+        # Split each conjunct by conjunctions (e.g., '&')
+        parts = split_with_outer_parentheses(conjunct)
+
+        for part in parts:
+            # Regex to capture "operator(content)"
+            match = re.match(r'^(next|prev|PREV|G|F)\((.+)\)', part)
+
+            if match:
+                operator = match.group(1)
+                operator = "eventually" if operator == "F" else operator
+                operator = "prev" if operator == "PREV" else operator
+                content = match.group(2)
+                # Split content by '&' and add to corresponding operator
+                literals = re.split(r'\s*&\s*', content)
+                conjunct_dict[operator].extend(literals)
+            else:
+                # No temporal operator, assume 'current' (no operation)
+                literals = re.split(r'\s*&\s*', part.strip("()"))
+                conjunct_dict["current"].extend(literals)
+
+        parsed_conjunctions.append(dict(conjunct_dict))
+
+    return parsed_conjunctions
+
+
+def encode_parsed_formula_str(parsed_formula: List[Dict[str, List[str]]]) -> str:
+    """
+    Encode a parsed formula into a string representation.
+    NOTE: encoding will be Spectra-compatible
+
+    Args:
+        parsed_formula (List[Dict[str, List[str]]]): The parsed formula to encode.
+
+    Returns:
+        str: The encoded formula as a string.
+    """
+    encoded_formula = []
+
+    for conjunct in parsed_formula:
+        encoded_conjunct = []
+
+        for operator, literals in conjunct.items():
+            # Encode the operator and literals
+            encoded_operator = operator
+            encoded_literals = "&".join(literals)
+            match encoded_operator:
+                case "eventually":
+                    encoded_conjunct.append(f"F({encoded_literals})")
+                case "prev":
+                    encoded_conjunct.append(f"PREV({encoded_literals})")
+                case "current":
+                    encoded_conjunct.append(encoded_literals)
+                case _:
+                    encoded_conjunct.append(f"{encoded_operator}({encoded_literals})")
+
+        # Join the encoded conjunctions by 'or' and add to the list
+        encoded_formula.append("&".join(encoded_conjunct))
+
+    return f"({')|('.join(encoded_formula)})"
+
+
+def split_with_outer_parentheses(input_str: str) -> List[str]:
+    """
+    Split the input string based on operators while considering outer parentheses.
+
+    Args:
+        input_str (str): The input string to split.
+
+    Returns:
+        List[str]: A list of segments split based on the defined logic.
+    """
+    # This regex captures '&' not enclosed within parentheses
+    pattern = r'\b(next|prev|PREV|F|G)\(([^()]*|[^&]*)*\)|[^()&\s]+'
+    segments = [match.group(0) for match in re.finditer(pattern, input_str)]
+
+    # Clean up the segments and filter out empty strings
+    return [segment.strip() for segment in segments if segment.strip()]
+
+
+def remove_outer_parentheses(s):
+    s = s.strip()
+    # Check if the string starts and ends with parentheses
+    if s.startswith('(') and s.endswith(')'):
+        return s[1:-1]  # Remove the first and last character
+    return s  # Return the original string if conditions are not met
+
+
+def generate_trace_asp(start_file, end_file, trace_file):
+    try:
+        old_trace = read_file_lines(trace_file)
+    except FileNotFoundError:
+        old_trace = []
+    asp_restrictions = compose_old_traces(old_trace)
+
+    trace = {}
+
+    initial_expressions, prevs, primed_expressions, unprimed_expressions, variables \
+        = extract_expressions_from_file(end_file, counter_strat=True)
+    initial_expressions_s, prevs_s, primed_expressions_s, unprimed_expressions_s, variables_s \
+        = extract_expressions_from_file(start_file, counter_strat=True)
+
+    # To include starting guarantees:
+    ie_g, prevs_g, pe_g, upe_g, v_g = extract_expressions_from_file(start_file, guarantee_only=True)
+    initial_expressions += ie_g
+    primed_expressions += pe_g
+    unprimed_expressions += upe_g
+
+    # initial_expressions_sa, prevs_sa, primed_expressions_sa, unprimed_expressions_sa, variables_sa = extract_expressions(
+    #     start_file, counter_strat=True)
+
+    # This adds starting guarantees to final assumptions
+    # initial_expressions += [x for x in initial_expressions_s if x not in initial_expressions_sa]
+    # primed_expressions += [x for x in primed_expressions_s if x not in primed_expressions_sa]
+    # unprimed_expressions += [x for x in unprimed_expressions_s if x not in unprimed_expressions_sa]
+
+    expressions = primed_expressions + unprimed_expressions
+    neg_expressions = primed_expressions_s + unprimed_expressions_s
+
+    variables = [var for var in variables if not re.search("prev|next", var)]
+
+    # Lowercasing PREV in expressions
+    expressions = [re.sub(r"PREV\((!*)([^\|^\(]*)\)", r"\1prev_\2", x) for x in expressions]
+    neg_expressions = [re.sub(r"PREV\((!*)([^\|^\(]*)\)", r"\1prev_\2", x) for x in neg_expressions]
+    # Removing braces around next function args (`next(sth)` -> `next_sth`)
+    expressions = [re.sub(r"next\((!*)([^\|^\(]*)\)", r"\1next_\2", x) for x in expressions]
+    neg_expressions = [re.sub(r"next\((!*)([^\|^\(]*)\)", r"\1next_\2", x) for x in neg_expressions]
+
+    one_point_exp = [re.sub(r"(" + '|'.join(variables) + r")", r"prev_\1", x) for x in
+                     unprimed_expressions + initial_expressions]
+    expressions += one_point_exp
+    expressions += [re.sub(r"(" + '|'.join(variables) + r")", r"next_\1", x) for x in unprimed_expressions]
+    neg_one_point_exp = [re.sub(r"(" + '|'.join(variables) + r")", r"prev_\1", x) for x in
+                         unprimed_expressions_s + initial_expressions_s]
+    neg_expressions += neg_one_point_exp
+    neg_expressions += [re.sub(r"(" + '|'.join(variables) + r")", r"next_\1", x) for x in unprimed_expressions_s]
+
+    expressions += two_period_primed_expressions(primed_expressions, variables)
+    neg_expressions += two_period_primed_expressions(primed_expressions_s, variables)
+
+    # Can it be done with one time point?
+    state, violation = generate_model(one_point_exp,
+                                      neg_one_point_exp,
+                                      variables, scratch=True,
+                                      asp_restrictions=asp_restrictions)
+    if state is not None and len(neg_one_point_exp) > 0:
+        trace[0] = [re.sub(r"prev_", "", var) for var in state[0] if re.search("prev_", var)]
+        write_trace(trace, trace_file)
+        return trace_file, violation
+
+    # Can it be done with two time points?
+    two_point_exp = [x for x in expressions if not re.search("next", x)]
+    two_point_neg_exp = [x for x in neg_expressions if not re.search("next", x)]
+    state, violation = generate_model(two_point_exp,
+                                      two_point_neg_exp, variables, scratch=True,
+                                      asp_restrictions=asp_restrictions)
+    if state is not None and len(two_point_neg_exp) > 0:
+        trace[0] = [re.sub(r"prev_", "", var) for var in state[0] if re.search("prev_", var)]
+        trace[1] = [var for var in state[0] if not re.search("prev_|next_", var)]
+        write_trace(trace, trace_file)
+        return trace_file, violation
+
+    # Can it be done with three time points?
+    state, violation = generate_model(expressions, neg_expressions, variables, scratch=True,
+                                      asp_restrictions=asp_restrictions)
+    if state is None or len(neg_expressions) == 0:
+        return None, None
+    trace[0] = [re.sub(r"prev_", "", var) for var in state[0] if re.search("prev_", var)]
+    trace[1] = [var for var in state[0] if not re.search("prev_|next_", var)]
+    trace[2] = [re.sub(r"next_", "", var) for var in state[0] if re.search("next_", var)]
+    write_trace(trace, trace_file)
+    return trace_file, violation
+
+
+def write_trace(trace, filename):
+    try:
+        prev = read_file_lines(filename)
+        timepoint = int(max(re.findall(r"trace_name_(\d*)", ''.join(prev)))) + 1
+    except FileNotFoundError:
+        timepoint = 0
+    trace_name = "trace_name_" + str(timepoint)
+    output = ""
+    for timepoint in trace.keys():
+        variables = list(trace[timepoint])
+        for var in variables:
+            if not re.search(r"prev_", var):
+                prefix = ""
+                if var[0] == "!":
+                    prefix = "not_"
+                    var = var[1:]
+                output += prefix + "holds_at(" + var + "," + str(timepoint) + "," + trace_name + ").\n"
+        output += "\n"
+    with open(filename, 'a', newline='\n') as file:
+        file.write(output)
+
+
+def compose_old_traces(old_trace):
+    if old_trace == []:
+        return ""
+    string = ''.join(old_trace)
+    traces = re.findall(r"trace_name_\d*", string)
+    traces = list(dict.fromkeys(traces))
+    output = "\n"
+    for i, name in enumerate(traces):
+        assignments = []
+        for n in range(3):
+            as_name = "as" + str(i) + "_" + str(n)
+            assignments += asp_trace_to_spectra(name, string, n)
+            output += as_name + " :- " + ','.join(assignments) + ".\n"
+            output += ":- " + as_name + ".\n"
+    return output
+
+
+def two_period_primed_expressions(primed_expressions, variables):
+    nexts = [x for x in primed_expressions if not re.search("PREV|prev", x)]
+    prevs = [x for x in primed_expressions if not re.search("next", x)]
+    next2_3 = [re.sub(r"next\((!*)([^\|^\(]*)\)", r"\1next_\2", x) for x in nexts]
+    next1_2 = [re.sub("(" + "|".join(variables) + ")", r"prev_\1", x) for x in nexts]
+    next1_2 = [re.sub(r"next\((!*)([^\|^\(]*)\)", r"\1next_\2", x) for x in next1_2]
+    next1_2 = [re.sub(r"next_prev_", "", x) for x in next1_2]
+
+    prev1_2 = [re.sub(r"PREV\((!*)([^\|^\(]*)\)", r"\1prev_\2", x) for x in prevs]
+    prev2_3 = [re.sub("(" + "|".join(variables) + ")", r"next_\1", x) for x in prevs]
+    prev2_3 = [re.sub(r"PREV\((!*)([^\|^\(]*)\)", r"\1prev_\2", x) for x in prev2_3]
+    prev2_3 = [re.sub(r"prev_next_", "", x) for x in prev2_3]
+    return next1_2 + next2_3 + prev1_2 + prev2_3
+
+
+def extract_expressions_from_file(file, counter_strat=False, guarantee_only=False):
+    spec = read_file_lines(file)
+    return extract_expressions_from_spec(spec, counter_strat, guarantee_only)
+
+
+def extract_expressions_from_spec(spec: list[str], counter_strat=False, guarantee_only=False):
+    variables = strip_vars(spec)
+    spec = simplify_assignments(spec, variables)
+    assumptions = extract_non_liveness(spec, "assumption")
+    guarantees = extract_non_liveness(spec, "guarantee")
+    if counter_strat:
+        guarantees = []
+    if guarantee_only:
+        assumptions = []
+    prev_expressions = [re.search(r"G\((.*)\);", x).group(1) for x in assumptions + guarantees if
+                        re.search(r"PREV", x) and re.search("G", x)]
+    list_of_prevs = [f"PREV\\({s}\\)" for s in variables + [f"!{x}" for x in variables]]
+    prev_occurances = [re.findall('|'.join(list_of_prevs), exp) for exp in prev_expressions]
+    prevs = [item for sublist in prev_occurances for item in sublist]
+    prevs = [re.sub(r"PREV\(!*(.*)\)", r"prev_\1", x) for x in prevs]
+    prevs = list(dict.fromkeys(prevs))
+    variables += prevs
+    variables.sort()
+
+    unprimed_expressions = [re.search(r"G\(([^F]*)\);", x).group(1) for x in assumptions + guarantees if
+                            not re.search(r"PREV|next", x) and re.search(r"G\s*\(", x)]
+    primed_expressions = [re.search(r"G\(([^F]*)\);", x).group(1) for x in assumptions + guarantees if
+                          re.search(r"PREV|next", x) and re.search("G", x)]
+    initial_expressions = [x.strip(";") for x in assumptions + guarantees if not re.search(r"G\(|GF\(", x)]
+    return initial_expressions, prevs, primed_expressions, unprimed_expressions, variables
+
+
+def extract_non_liveness(spec, exp_type):
+    output = extract_all_expressions(exp_type, spec)
+    return [spectra_to_DNF(x) for x in output if not re.search("F", x)]
+
+
+def generate_model(expressions, neg_expressions, variables, scratch=False, asp_restrictions="", force=False):
+    if scratch:
+        prevs = ["prev_" + var for var in variables]
+        nexts = ["next_" + var for var in variables]
+        if any([re.search("next", x) for x in expressions + neg_expressions]):
+            variables = variables + prevs + nexts
+        # TODO: double check regex, ensure it's correct
+        elif any([re.search(r"\b" + r"|\b".join(variables), x) for x in expressions + neg_expressions]):
+            variables = variables + prevs
+        else:
+            variables = prevs
+        output = asp_restrictions + "\n"
+    else:
+        output = ""
+    expressions = aspify(expressions)
+    for i, rule in enumerate(expressions):
+        name = f"t{i}"
+        disjuncts = [x.strip() for x in rule.split(";")]
+        for disjunct in disjuncts:
+            output += f"{name} :- {disjunct}.\n"
+        output += f"s{name} :- not {name}.\n"
+        output += f":- s{name}.\n"
+
+    for variable in variables:
+        output += f"{{{variable}}}.\n"
+
+    neg_expressions = aspify(neg_expressions)
+    rules = []
+    for i, rule in enumerate(neg_expressions):
+        name = f"rule{i}"
+        disjuncts = [x.strip() for x in rule.split(";")]
+        for disjunct in disjuncts:
+            output += f"{name} :- {disjunct}.\n"
+        rules.append(name)
+
+    if len(rules) > 0:
+        output += f":- {','.join(rules)}.\n"
+    for var in variables:
+        output += f"#show {var}/0.\n"
+
+    file = "/tmp/temp_asp.lp"
+    write_file(file, output)
+    clingo_out = run_clingo_raw(file, n_models=0)
+    violation = True
+
+    matches = re.findall(r'Answer: \d+\n([^\n]*)', clingo_out)
+
+    if not matches:
+        # print(clingo_out)
+        # print("Something not right with model generation")
+        return None, None
+    states = [match.split() for match in matches]
+    for state in states:
+        [state.append(f"!{x}") for x in variables if x not in state]
+    return states, violation
+
+
+def asp_trace_to_spectra(name, string, n):
+    tups = re.findall(r"\b(.*)holds_at\((.*)," + str(n) + "," + name + r"\)", string)
+    prefix = ""
+    if n == 2:
+        prefix = "next_"
+    if n == 0:
+        prefix = "prev_"
+    output = ["not " + prefix + tup[1] if tup[0] == "not_" else prefix + tup[1] for tup in tups]
+    return output
+
+
+def simplify_assignments(spec, variables):
+    vars = "|".join(variables)
+    spec = [re.sub(rf"({vars})=true", r"\1", line) for line in spec]
+    spec = [re.sub(rf"({vars})=false", r"!\1", line) for line in spec]
+    return spec
+
+
+def extract_all_expressions(exp_type, spec):
+    search_type = exp_type
+    if exp_type in ["asm", "assumption"]:
+        search_type = "asm|assumption"
+    if exp_type in ["gar", "guarantee"]:
+        search_type = "gar|guarantee"
+    output = [re.sub(r"\s", "", spec[i + 1]) for i, line in enumerate(spec) if re.search(search_type, line)]
+    return output
+
+
+def spectra_to_DNF(formula):
+    prefix = ""
+    suffix = ";"
+    justice = re.search(r"G\((.*)\);", formula)
+    liveness = re.search(r"GF\((.*)\);", formula)
+    if justice:
+        prefix = "G("
+        suffix = ");"
+        pattern = justice
+    if liveness:
+        prefix = "GF("
+        suffix = ");"
+        pattern = liveness
+    if not justice and not liveness:
+        non_temporal_formula = formula
+    else:
+        non_temporal_formula = pattern.group(1)
+    parts = non_temporal_formula.split("->")
+    if len(parts) == 1:
+        return prefix + non_temporal_formula + suffix
+    return prefix + '|'.join([negate(parts[0]), parts[1]]) + suffix
+
+
+def aspify(expressions):
+    # is this first one ok?
+    expressions = [re.sub(r"\(|\)", "", x) for x in expressions]
+    expressions = [re.sub(r"\|", ";", x) for x in expressions]
+    expressions = [re.sub(r"!", " not ", x) for x in expressions]
+    expressions = [re.sub(r"&", ",", x) for x in expressions]
+    return expressions
+
+
+def run_clingo_raw(filename, n_models: int = 1) -> str:
+    filepath = f"{filename}"
+    cmd = create_cmd(['clingo', f'--models={n_models}', filepath])
+    output = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE).communicate()[0]
+    return output.decode('utf-8')
+
+
+def shift_prev_to_next(formula, variables):
+    # Assumes no nesting of next/prev
+    # filt = r'PREV\(' + r'|PREV\('.join(variables) + r'|PREV\(!'.join(variables)
+    filt = "PREV"
+    if not re.search(filt, formula):
+        return re.sub("next", "X", formula)
+    formula = re.sub("next", "XX", formula)
+
+    all_vars = '|'.join(["!" + var + "|" + var for var in variables])
+    # formula = re.sub(r"([^\(^!])(" + all_vars + r")|([^V^X])\((" + all_vars + ")", r"\1X(\2)", formula)
+    formula = re.sub(f"([^V^X])\(({all_vars})", r"\1(X(\2)", formula)
+    formula = re.sub(f"([^\(^!])({all_vars})", r"\1X(\2)", formula)
+
+    formula = re.sub(r"PREV\((" + all_vars + r")\)", r"\1", formula)
+    return formula
+    # save this as explanation of above:
+    # re.sub(r"([^\(^!])(!highwater|highwater|!pump|pump)|([^V^X])\((!highwater|highwater|!pump|pump)", r"\1X(\2)", formula)
+    # use this to test:
+    # temp_formula ='G(PREV(pump)&PREV(!methane)&!highwater&methane&!methane&pump->XX(!highwater)&XX(methane));'
+
+    # re.sub(r"([^V^X])\((!pump)", r"\1(X(\2))", formula)
+
+
+def semantically_identical_spot(to_cmp_file, baseline_file):
+    to_cmp_file = re.sub("_patterned\.spectra", ".spectra", to_cmp_file)
+    assumption = equivalent_expressions("assumption|asm", to_cmp_file, baseline_file)
+    if assumption is None:
+        return SimEnv.Invalid
+    if not assumption:
+        if realizable(to_cmp_file):
+            return SimEnv.Realizable
+        else:
+            # This should never happen:
+            return SimEnv.Unrealizable
+    guarantee = equivalent_expressions("guarantee|gar", to_cmp_file, baseline_file)
+    if guarantee is None:
+        print("Guarantees Not Working in Spot:\n" + to_cmp_file)
+    if not guarantee:
+        return SimEnv.IncorrectGuarantees
+    return SimEnv.Success
+
+
+def equivalent_expressions(exp_type, start_file, end_file):
+    start_exp = extract_all_expressions_spot(exp_type, start_file)
+    end_exp = extract_all_expressions_spot(exp_type, end_file)
+    linux_cmd = ["ltlfilt", "-c", "-f", f"{start_exp}", "--equivalent-to", f"{end_exp}"]
+    p = subprocess.Popen(linux_cmd, stdout=subprocess.PIPE, stdin=subprocess.PIPE, stderr=subprocess.PIPE)
+    output = p.communicate()[0]
+    close_file_descriptors_of_subprocess(p)
+    output = output.decode('utf-8')
+    reg = re.search(r"(\d)\n", output)
+    if not reg:
+        return None
+    result = reg.group(1)
+    if result == "0":
+        return False
+    if result == "1":
+        return True
+    return None
+
+
+def close_file_descriptors_of_subprocess(p):
+    if p.stdin:
+        p.stdin.close()
+    if p.stdout:
+        p.stdout.close()
+    if p.stderr:
+        p.stderr.close()
+
+
+def extract_all_expressions_spot(exp_type, file, return_list=False):
+    spec = read_file_lines(file)
+    variables = strip_vars(spec)
+    spec = simplify_assignments(spec, variables)
+    expressions = [re.sub(r"\s", "", spec[i + 1]) for i, line in enumerate(spec) if re.search("^" + exp_type, line)]
+    expressions = [shift_prev_to_next(formula, variables) for formula in expressions]
+    if any([re.search("PREV", x) for x in expressions]):
+        raise Exception("There are still PREVs in the expressions!")
+    if return_list:
+        return [re.sub(";", "", x) for x in expressions]
+    exp_conj = re.sub(";", "", '&'.join(expressions))
+    return exp_conj
+
+
+def violations_in_initial_conditions(file):
+    '''
+    This is because the Spectra CLI is inconsistent in throwing errors relating to initial conditions. Initial
+    conditions cannot refer to primed (next) variables. Initial assumptions cannot refer to system variables.
+    :param file:
+    :return:
+    '''
+    spec = read_file_lines(file)
+    sys_vars = strip_vars(spec, "sys")
+    inits = [(line, spec[i + 1]) for i, line in enumerate(spec) if
+             line.find("--") >= 0 and not re.search(r"G|F|pRespondsToS", spec[i + 1])]
+    if any([bool(re.search(r"next|X", tup[1])) for tup in inits]):
+        print("Initial expression contains primed (next) variables.")
+        return True
+    sys_vars = [re.escape(var) for var in sys_vars]
+    init_ass = [tup[1] for tup in inits if re.search(r"assumption", tup[0])]
+    if any([re.search(r'|'.join(sys_vars), ass) for ass in init_ass]):
+        print("Initial assumption refers to system variables.")
+        return True
+    return False
+
+
+def realizable(file, suppress=False):
+    if violations_in_initial_conditions(file):
+        print("Spectra file in wrong format for CLI realizability check: (initial conditions)")
+        print(file)
+        return None
+    file = pRespondsToS_substitution(file)
+    cmd = ['java', '-jar', PATH_TO_CLI, '-i', file, '--jtlv']
+    output = run_subprocess(cmd, suppress=suppress)
+    if re.search("Result: Specification is unrealizable", output):
+        return False
+    elif re.search("Result: Specification is realizable", output):
+        return True
+    if not suppress:
+        print(output)
+    print("Spectra file in wrong format for CLI realizability check:")
+    print(file)
+    return None
+
+
+def remove_double_outer_brackets(string):
+    if string[0:2] == "((" and string[-3:-1] == "))":
+        return string[1:-1]
+    return string
+
+
+def negate(string):
+    '''
+    Assumes precedence of AND (DNF)
+    :param string:
+    :return:
+    '''
+    # examples:
+    # string1 = 'F(level_1_nest_0)|F(level_1_nest_1)|F(level_1_nest_2)'
+    # string2 = "A|B&C"
+    # string = "(level_1)W(level_2)"
+    if string == "":
+        return string
+    disjuncts = re.sub(r"\s", "", string).split("|")
+    for i, sub_string in enumerate(disjuncts):
+        conjuncts = sub_string.split("&")
+        conjuncts = ["!" + x for x in conjuncts]
+        conjuncts = push_negations(conjuncts)
+        # This way we push F's out if they are common
+        conjunct = check_first_chars(conjuncts, "conjuncts")
+        # conjunct = "|".join(conjuncts)
+        if len(conjuncts) > 1 and len(disjuncts) > 1:
+            conjunct = "(" + conjunct + ")"
+        conjunct = remove_double_outer_brackets(conjunct)
+        disjuncts[i] = conjunct
+    disjuncts = push_negations(disjuncts)
+    # This is if we want to push G's out, which i've decided we don't
+    # disjuncts = check_first_chars(disjuncts, "disjuncts")
+    # return disjuncts
+    output = '&'.join(disjuncts)
+    output = remove_trivial_outer_brackets(output)
+    return output
+
+
+def check_first_chars(list, type):
+    if len(list) == 1:
+        return list[0]
+    if type == "conjuncts":
+        dist_char = "F"
+        join_char = "|"
+    if type == "disjuncts":
+        dist_char = "G"
+        join_char = "&"
+
+    first_chars = [chars[0:2] for chars in list]
+    character = first_chars[0]
+    if all(character == char for char in first_chars):
+        if character in ["X(", dist_char + "("]:
+            list = [chars[2:-1] for chars in list]
+            output = character[0] + "(" + join_char.join(list) + ")"
+            return output
+    output = join_char.join(list)
+    return output
+
+
+def push_negations(disjuncts):
+    disjuncts = [re.sub(r"!\((.*)\)W\((.*)\)", r"(!\2)U((!\2)&(!\1))", x) for x in disjuncts]
+    disjuncts = [re.sub(r"!\((.*)\)U\((.*)\)", r"(!\2)W((!\2)&(!\1))", x) for x in disjuncts]
+    disjuncts = [re.sub(r"!!", r"", x) for x in disjuncts]
+    disjuncts = [re.sub(r"!F\(", r"G(!", x) for x in disjuncts]
+    disjuncts = [re.sub(r"!G\(", r"F(!", x) for x in disjuncts]
+    disjuncts = [re.sub(r"!X\(", r"X(!", x) for x in disjuncts]
+    disjuncts = [re.sub(r"!next\(", r"next(!", x) for x in disjuncts]
+    disjuncts = [re.sub(r"!PREV\(", r"PREV(!", x) for x in disjuncts]
+    disjuncts = [re.sub(r"!\(", r"(!", x) for x in disjuncts]
+    disjuncts = [re.sub(r"!!", r"", x) for x in disjuncts]
+    return disjuncts

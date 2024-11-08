@@ -3,7 +3,7 @@ from typing import Optional, Tuple
 
 from spec_repair import config
 import argparse
-from spec_repair.ltl import log_to_asp_trace
+from spec_repair.util.spec_util import log_to_asp_trace
 from spec_repair.util.file_util import write_to_file, Log, ASPTrace, FilePath, read_file
 
 description = """

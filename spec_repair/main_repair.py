@@ -2,10 +2,9 @@ from spec_repair.components.repair_orchestrator import RepairOrchestrator
 from spec_repair.components.spec_learner import SpecLearner
 from spec_repair.components.spec_oracle import SpecOracle
 from spec_repair.config import PROJECT_PATH
-from spec_repair.ltl import Trace
-from spec_repair.old.util_titus import generate_trace_asp
+from spec_repair.ltl_types import Trace
 from spec_repair.util.file_util import generate_temp_filename
-from spec_repair.util.spec_util import get_assumptions_and_guarantees_from
+from spec_repair.util.spec_util import get_assumptions_and_guarantees_from, generate_trace_asp
 
 
 # TODO: use this file as replacement for Specification.py logic

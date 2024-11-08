@@ -5,7 +5,7 @@ from unittest import TestCase
 from spec_repair.helpers.counter_trace import CounterTrace, ct_from_cs, complete_cts_from_ct
 from spec_repair.enums import Learning
 from spec_repair.heuristics import first_choice, last_choice, nth_choice
-from spec_repair.ltl import CounterStrategy
+from spec_repair.ltl_types import CounterStrategy
 from spec_repair.util.file_util import read_file_lines
 from spec_repair.util.spec_util import format_spec
 

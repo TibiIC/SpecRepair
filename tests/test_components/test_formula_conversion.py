@@ -4,7 +4,9 @@ import pandas as pd
 
 from spec_repair.components.spec_encoder import expression_to_str, \
     propositionalise_antecedent, propositionalise_consequent
-from spec_repair.ltl import parse_formula_str
+from spec_repair.helpers.spectra_formula import SpectraFormula
+from spec_repair.util.spec_util import parse_formula_spectra, parse_formula_str, encode_parsed_formula_str
+from spec_repair.ltl_types import GR1ExpType, GR1TemporalType
 
 
 class Test(TestCase):
@@ -37,7 +39,6 @@ root_consequent_holds(OP,a_always,0,T1,S):-
 """
 
     def test_parse_formula(self):
-        # Example usage:
         formula = "(next(a&b&c)&d&prev(e))|(next(f)&g&F(h&i))"
         output = parse_formula_str(formula)
         expected_output = [
@@ -46,9 +47,7 @@ root_consequent_holds(OP,a_always,0,T1,S):-
         ]
         self.assertEqual(output, expected_output)
 
-
     def test_parse_formula_2(self):
-        # Example usage:
         formula = "(next(a=true&b=true&c=false)&d=false&prev(e=true))|(next(f=false)&g=true&F(h=true&i=false))"
         output = parse_formula_str(formula)
         expected_output = [
@@ -56,6 +55,67 @@ root_consequent_holds(OP,a_always,0,T1,S):-
             {'next': ['f=false'], 'current': ['g=true'], 'eventually': ['h=true', 'i=false']}  # Second conjunct
         ]
         self.assertEqual(output, expected_output)
+
+    def test_parse_formula_3(self):
+        formula = "F(a=true&b=true)"
+        output = parse_formula_str(formula)
+        expected_output = [
+            {'eventually': ['a=true', 'b=true']}
+        ]
+        self.assertEqual(output, expected_output)
+
+    def test_parse_formula_4_edge_case(self):
+        # NOTE: this means we need to handle the case when a justice rule has a disjunction inside it
+        formula = "F(a=true&b=true)|F(c=true&d=false)"
+        output = parse_formula_str(formula)
+        expected_output = [
+            {'eventually': ['a=true', 'b=true']},
+            {'eventually': ['c=true', 'd=false']}
+        ]
+        self.assertEqual(output, expected_output)
+
+    def test_encode_parsed_formula_to_str(self):
+        parsed_formula = [
+            {'next': ['a=true', 'b=true', 'c=false'], 'current': ['d=false'], 'prev': ['e=true']},  # First conjunct
+            {'next': ['f=false'], 'current': ['g=true'], 'eventually': ['h=true', 'i=false']}  # Second conjunct
+        ]
+        output = encode_parsed_formula_str(parsed_formula)
+        expected_output = "(next(a=true&b=true&c=false)&d=false&PREV(e=true))|(next(f=false)&g=true&F(h=true&i=false))"
+        self.assertEqual(expected_output, output)
+
+    def test_encode_parsed_formula_to_str_2(self):
+        parsed_formula = [
+            {'eventually': ['a=true', 'b=true']},
+            {'eventually': ['c=true', 'd=false']}
+        ]
+        output = encode_parsed_formula_str(parsed_formula)
+        expected_output = "(F(a=true&b=true))|(F(c=true&d=false))"
+        self.assertEqual(expected_output, output)
+
+    def test_parse_spectra_formula_to_DNF(self):
+        formula = "\tG(highwater=false|methane=false);"
+        output = parse_formula_spectra(formula)
+        expected_output = SpectraFormula(
+            temp_type=GR1TemporalType.INVARIANT,
+            antecedent=[],
+            consequent=[{'current': ['highwater=false']},
+                        {'current': ['methane=false']}]
+        )
+        self.assertEqual(expected_output.temp_type, output.temp_type)
+        self.assertEqual(expected_output.antecedent, output.antecedent)
+        self.assertEqual(expected_output.consequent, output.consequent)
+
+    def test_parse_spectra_formula_to_DNF_2(self):
+        formula = "\tG(PREV(pump=true)&pump=true->highwater=false);"
+        output = parse_formula_spectra(formula)
+        expected_output = SpectraFormula(
+            temp_type=GR1TemporalType.INVARIANT,
+            antecedent=[{'prev': ['pump=true'], 'current': ['pump=true']}],
+            consequent=[{'current': ['highwater=false']}]
+        )
+        self.assertEqual(expected_output.temp_type, output.temp_type)
+        self.assertEqual(expected_output.antecedent, output.antecedent)
+        self.assertEqual(expected_output.consequent, output.consequent)
 
     def test_propositionalise_assumption_exception(self):
         line_data = {

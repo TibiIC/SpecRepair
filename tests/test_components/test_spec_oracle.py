@@ -3,7 +3,7 @@ from typing import Optional
 from unittest import TestCase
 
 from spec_repair.components.spec_oracle import SpecOracle
-from spec_repair.ltl import CounterStrategy
+from spec_repair.ltl_types import CounterStrategy
 from spec_repair.util.file_util import read_file_lines
 from spec_repair.util.spec_util import format_spec
 

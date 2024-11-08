@@ -4,7 +4,7 @@ import pandas as pd
 from pandas.util.testing import assert_frame_equal
 
 from spec_repair.enums import When
-from spec_repair.ltl import spectra_to_df, log_line_to_asp_trace
+from spec_repair.util.spec_util import log_line_to_asp_trace, spectra_to_df
 
 
 class TestLTL(TestCase):

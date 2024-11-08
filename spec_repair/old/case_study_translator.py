@@ -3,10 +3,9 @@ import os
 import copy
 import re
 
-from spec_repair.config import PATH_TO_CLI
-from spec_repair.util.spec_util import pRespondsToS_substitution, remove_trivial_outer_brackets, parenthetic_contents
-from spec_repair.old.specification_helper import run_subprocess, get_name, \
-    strip_vars
+from spec_repair.util.spec_util import pRespondsToS_substitution, parenthetic_contents, \
+    realizable, negate, push_negations
+from spec_repair.old.specification_helper import get_name
 from spec_repair.util.file_util import read_file_lines, write_file
 
 
@@ -248,47 +247,6 @@ def extract_variables(elements, keyword, type, output_vars):
     return output
 
 
-def violations_in_initial_conditions(file):
-    '''
-    This is because the Spectra CLI is inconsistent in throwing errors relating to initial conditions. Initial
-    conditions cannot refer to primed (next) variables. Initial assumptions cannot refer to system variables.
-    :param file:
-    :return:
-    '''
-    spec = read_file_lines(file)
-    sys_vars = strip_vars(spec, "sys")
-    inits = [(line, spec[i + 1]) for i, line in enumerate(spec) if
-             line.find("--") >= 0 and not re.search(r"G|F|pRespondsToS", spec[i + 1])]
-    if any([bool(re.search(r"next|X", tup[1])) for tup in inits]):
-        print("Initial expression contains primed (next) variables.")
-        return True
-    sys_vars = [re.escape(var) for var in sys_vars]
-    init_ass = [tup[1] for tup in inits if re.search(r"assumption", tup[0])]
-    if any([re.search(r'|'.join(sys_vars), ass) for ass in init_ass]):
-        print("Initial assumption refers to system variables.")
-        return True
-    return False
-
-
-def realizable(file, suppress=False):
-    if violations_in_initial_conditions(file):
-        print("Spectra file in wrong format for CLI realizability check: (initial conditions)")
-        print(file)
-        return None
-    file = pRespondsToS_substitution(file)
-    cmd = ['java', '-jar', PATH_TO_CLI, '-i', file, '--jtlv']
-    output = run_subprocess(cmd, suppress=suppress)
-    if re.search("Result: Specification is unrealizable", output):
-        return False
-    elif re.search("Result: Specification is realizable", output):
-        return True
-    if not suppress:
-        print(output)
-    print("Spectra file in wrong format for CLI realizability check:")
-    print(file)
-    return None
-
-
 def read_BCs(folder):
     filename = folder.replace("specifications", "BCs") + "/BCs"
     return read_file_lines(filename)
@@ -424,80 +382,6 @@ def gr1_compliant(text, broad=False):
     if broad:
         return True
     return not re.compile(r"M|R|U|W").search(text)
-
-
-def remove_double_outer_brackets(string):
-    if string[0:2] == "((" and string[-3:-1] == "))":
-        return string[1:-1]
-    return string
-
-
-def negate(string):
-    '''
-    Assumes precedence of AND (DNF)
-    :param string:
-    :return:
-    '''
-    # examples:
-    # string1 = 'F(level_1_nest_0)|F(level_1_nest_1)|F(level_1_nest_2)'
-    # string2 = "A|B&C"
-    # string = "(level_1)W(level_2)"
-    if string == "":
-        return string
-    disjuncts = re.sub(r"\s", "", string).split("|")
-    for i, sub_string in enumerate(disjuncts):
-        conjuncts = sub_string.split("&")
-        conjuncts = ["!" + x for x in conjuncts]
-        conjuncts = push_negations(conjuncts)
-        # This way we push F's out if they are common
-        conjunct = check_first_chars(conjuncts, "conjuncts")
-        # conjunct = "|".join(conjuncts)
-        if len(conjuncts) > 1 and len(disjuncts) > 1:
-            conjunct = "(" + conjunct + ")"
-        conjunct = remove_double_outer_brackets(conjunct)
-        disjuncts[i] = conjunct
-    disjuncts = push_negations(disjuncts)
-    # This is if we want to push G's out, which i've decided we don't
-    # disjuncts = check_first_chars(disjuncts, "disjuncts")
-    # return disjuncts
-    output = '&'.join(disjuncts)
-    output = remove_trivial_outer_brackets(output)
-    return output
-
-
-def check_first_chars(list, type):
-    if len(list) == 1:
-        return list[0]
-    if type == "conjuncts":
-        dist_char = "F"
-        join_char = "|"
-    if type == "disjuncts":
-        dist_char = "G"
-        join_char = "&"
-
-    first_chars = [chars[0:2] for chars in list]
-    character = first_chars[0]
-    if all(character == char for char in first_chars):
-        if character in ["X(", dist_char + "("]:
-            list = [chars[2:-1] for chars in list]
-            output = character[0] + "(" + join_char.join(list) + ")"
-            return output
-    output = join_char.join(list)
-    return output
-
-
-def push_negations(disjuncts):
-    disjuncts = [re.sub(r"!\((.*)\)W\((.*)\)", r"(!\2)U((!\2)&(!\1))", x) for x in disjuncts]
-    disjuncts = [re.sub(r"!\((.*)\)U\((.*)\)", r"(!\2)W((!\2)&(!\1))", x) for x in disjuncts]
-    disjuncts = [re.sub(r"!!", r"", x) for x in disjuncts]
-    disjuncts = [re.sub(r"!F\(", r"G(!", x) for x in disjuncts]
-    disjuncts = [re.sub(r"!G\(", r"F(!", x) for x in disjuncts]
-    disjuncts = [re.sub(r"!X\(", r"X(!", x) for x in disjuncts]
-    disjuncts = [re.sub(r"!next\(", r"next(!", x) for x in disjuncts]
-    disjuncts = [re.sub(r"!PREV\(", r"PREV(!", x) for x in disjuncts]
-    disjuncts = [re.sub(r"!\(", r"(!", x) for x in disjuncts]
-    disjuncts = [re.sub(r"!!", r"", x) for x in disjuncts]
-    return disjuncts
 
 
 def unravel(formula, variables, formula_mapping, negated_formula_mapping):

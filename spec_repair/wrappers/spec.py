@@ -1,31 +1,10 @@
 import re
 import subprocess
-from enum import Enum
 from typing import Optional
 
+from spec_repair.ltl_types import GR1ExpType, LTLFiltOperation
 from spec_repair.old.specification_helper import strip_vars
-from spec_repair.old.util_titus import simplify_assignments, shift_prev_to_next
-
-
-# TODO: ensure this file is compiled, to avoid multiple calls to outer script
-
-class GR1ExpType(Enum):
-    ASM = "assumption|asm"
-    GAR = "guarantee|gar"
-
-    def __str__(self) -> str:
-        return f"{self.value}"
-
-
-class LTLFiltOperation(Enum):
-    IMPLIES = "imply"
-    EQUIVALENT = "equivalent-to"
-
-    def __str__(self) -> str:
-        return f"--{self.value}"
-
-    def flag(self) -> str:
-        return f"--{self.value}"
+from spec_repair.util.spec_util import simplify_assignments, shift_prev_to_next
 
 
 class Spec:

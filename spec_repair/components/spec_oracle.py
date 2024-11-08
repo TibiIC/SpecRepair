@@ -3,7 +3,7 @@ import re
 from typing import Optional
 
 from spec_repair.config import PATH_TO_CLI
-from spec_repair.ltl import CounterStrategy
+from spec_repair.ltl_types import CounterStrategy
 from spec_repair.old.patterns import PRS_REG
 from spec_repair.old.specification_helper import run_subprocess
 from spec_repair.util.file_util import generate_temp_filename, write_to_file

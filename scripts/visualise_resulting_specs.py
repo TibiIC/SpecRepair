@@ -8,7 +8,8 @@ import networkx as nx
 from typing import Dict, Optional
 
 from spec_repair.util.file_util import read_file
-from spec_repair.wrappers.spec import Spec, GR1ExpType
+from spec_repair.wrappers.spec import Spec
+from spec_repair.ltl_types import GR1ExpType
 from spec_repair.util.graph_util import remove_reflexive_relations, merge_on_bidirectional_edges, \
     remove_transitive_relations
 
