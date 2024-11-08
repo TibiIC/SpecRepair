@@ -117,6 +117,18 @@ root_consequent_holds(OP,a_always,0,T1,S):-
         self.assertEqual(expected_output.antecedent, output.antecedent)
         self.assertEqual(expected_output.consequent, output.consequent)
 
+    def test_parse_spectra_formula_to_DNF_3(self):
+        formula = "\tGF(pump=true);"
+        output = parse_formula_spectra(formula)
+        expected_output = SpectraFormula(
+            temp_type=GR1TemporalType.JUSTICE,
+            antecedent=[],
+            consequent=[{'current': ['pump=true']}]
+        )
+        self.assertEqual(expected_output.temp_type, output.temp_type)
+        self.assertEqual(expected_output.antecedent, output.antecedent)
+        self.assertEqual(expected_output.consequent, output.consequent)
+
     def test_propositionalise_assumption_exception(self):
         line_data = {
             'type': 'assumption',
