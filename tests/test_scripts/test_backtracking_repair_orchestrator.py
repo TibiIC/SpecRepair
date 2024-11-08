@@ -158,7 +158,7 @@ class TestBacktrackingRepairOrchestrator(TestCase):
         )
 
         # Getting all possible repairs
-        repairer.repair_spec_bfs(spec, trace)
+        repairer.repair_spec_bfs(spec, trace, new_specs_recorder)
         new_specs: list[str] = new_specs_recorder.get_specs()
         new_specs.sort()
         for i, new_spec in enumerate(new_specs):

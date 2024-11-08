@@ -1,8 +1,9 @@
 import re
 from abc import ABC
-from typing import Callable, List
+from typing import Callable, List, Any
 
-from spec_repair.helpers.counter_trace import CounterTrace
+
+# from spec_repair.helpers.counter_trace import CounterTrace
 
 
 class ExceptionRule(ABC):
@@ -18,7 +19,15 @@ class ConsequentExceptionRule(ExceptionRule):
 
 
 class EventuallyConsequentRule(ExceptionRule):
-    pattern = re.compile(r"^consequent_exception\(([^,]+,){2}[^,]+\)\s*:-\s*root_consequent_holds\(([^,]+,){4}[^,]+\).$")
+    pattern = re.compile(
+        r"^consequent_exception\(([^,]+,){2}[^,]+\)\s*:-\s*root_consequent_holds\(([^,]+,){4}[^,]+\).$")
 
 
-StopHeuristicType = Callable[[List[str], List[CounterTrace]], bool]
+class HoldsAtAtom(ExceptionRule):
+    NEG_PREFIX = 1
+    ATOM = 2
+    pattern = re.compile(r"^(not_)?holds_at\(([^,]+),([^,]+),[^,]+\).?$")
+
+
+# StopHeuristicType = Callable[[List[str], List[CounterTrace]], bool]
+StopHeuristicType = Callable[[List[str], List[Any]], bool]

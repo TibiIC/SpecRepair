@@ -12,6 +12,7 @@ from spec_repair.ltl import CounterStrategy, spectra_to_df, parse_formula_str
 from spec_repair.old.patterns import PRS_REG, FIRST_PRED, ALL_PREDS
 from spec_repair.config import PROJECT_PATH, FASTLAS
 from spec_repair.old.specification_helper import strip_vars, assign_equalities
+from spec_repair.special_types import HoldsAtAtom
 from spec_repair.util.file_util import read_file_lines, write_file
 
 
@@ -522,52 +523,69 @@ def flip_assignments(assignments: list[str]) -> list[str]:
     return [replace_false_true(assignment) for assignment in assignments]
 
 
-def integrate_rule(arrow, conjunct, learning_type, line):
+def integrate_rule(temp_op, conjunct, learning_type, line: str):
+    expression = extract_content_of_invariant(line)
+    antecedent, consequent = extract_antecedent_and_consequent(expression)
     conjunct = re.sub("\s", "", conjunct)
     facts = conjunct.split(";")
     if FASTLAS:
         facts = [x for x in facts if x != ""]
-    # TODO: Assignment flip already done here for assumption weakening
-    assignments = extract_assignments_from_facts(facts, learning_type)
+    is_eventually_consequent = bool(re.match(r"^F\(.+\)", consequent))
+    flip = learning_type == Learning.ASSUMPTION_WEAKENING or is_eventually_consequent
+    assignments = extract_assignments_from_facts(facts, flip)
 
-    is_eventually_consequent = "eventually" not in conjunct and bool(re.match(r"^F\(.+\)", line[-1]))
     if learning_type == Learning.ASSUMPTION_WEAKENING or is_eventually_consequent:
-        # TODO: Also here for assumption weakening
-        assignments = flip_assignments(assignments) if is_eventually_consequent else assignments
-        return integrate_antecedent(assignments, line, facts)
+        return integrate_antecedent(temp_op, assignments, antecedent, consequent)
 
     if learning_type == Learning.GUARANTEE_WEAKENING:
-        return integrate_consequent(arrow, assignments, facts, line)
+        return integrate_consequent(temp_op, assignments, antecedent, consequent)
 
+def extract_content_of_invariant(line: str) -> str:
+    match = re.search(r'G\((.*)\);?', line)
+    assert match
+    content_inside = match.group(1).strip()
+    return content_inside
 
-def integrate_antecedent(assignments, line, facts):
-    next_assignments = [x for i, x in enumerate(assignments) if re.search("next", facts[i])]
-    cur_assignments = [x for x in assignments if x not in next_assignments]
-    orig_ant = re.search(r"(G\(|GF\()(.*)$", line[0])
-    if orig_ant:
-        op = orig_ant.group(1)
-        head = orig_ant.group(2)
+def extract_antecedent_and_consequent(line: str) -> tuple[Optional[str], str]:
+    match = re.match(r'^(.*?)\s*->\s*(.*)$', line)
+    if match:
+        antecedent = match.group(1)
+        consequent = match.group(2)
+        return antecedent, consequent
     else:
-        op = ""
-        head = line[0]
+        # If there's no "->", we assume content is just the consequent
+        return None, line
+
+def integrate_antecedent(temp_op, assignments, antecedent, consequent):
+    # next_assignments = [x for i, x in enumerate(assignments) if re.search("next", facts[i])]
+    # cur_assignments = [x for x in assignments if x not in next_assignments]
+    cur_assignments = assignments
+    if antecedent:
+        op = "G"
+        head = antecedent
+    else:
+        op = "G"
+        head = ""
     disjuncts = get_disjuncts(head)
     amended_disjuncts = []
     for disjunct in disjuncts:
         conjuncts = get_conjuncts(disjunct)
-        next_conjuncts = [x for x in conjuncts if re.search("next", x)] + next_assignments
-        cur_conjuncts = [x for x in conjuncts if x not in next_conjuncts] + cur_assignments
+        # next_conjuncts = [x for x in conjuncts if re.search("next", x)] + next_assignments
+        # cur_conjuncts = [x for x in conjuncts if x not in next_conjuncts] + cur_assignments
+        cur_conjuncts = conjuncts + cur_assignments
 
         antecedent = ""
         if cur_conjuncts:
             antecedent += conjunct_assignments(cur_conjuncts)
+        """
         if cur_conjuncts and next_conjuncts:
             antecedent += "&"
         if next_conjuncts:
             antecedent += f"next({conjunct_assignments(next_conjuncts)})"
+        """
         amended_disjuncts.append(antecedent)
-    antecedent_total = op + disjunct_assignments(amended_disjuncts)
-    consequent = line[1]
-    output = antecedent_total + "->" + consequent
+    antecedent_total = disjunct_assignments(amended_disjuncts)
+    output = f"{antecedent_total}->{consequent}"
     # This is in case there was no antecedent to start with:
     output = re.sub(r"\(\s*&", "(", output)
     output = re.sub(r"\(\s*\|", "(", output)
@@ -575,61 +593,56 @@ def integrate_antecedent(assignments, line, facts):
     output = re.sub(r"->\s*\|", "->", output)
     if assignments == [] and FASTLAS:
         return '\n'
-    return '\t' + output + "\n"
+    return f"\t{op}({output});\n"
 
 
-def integrate_consequent(arrow, assignments, facts, line):
-    antecedent = line[0]
-    end_line = line[1]
-    next_assignments = [x for i, x in enumerate(assignments) if re.search("next", facts[i])]
-    ev_assignments = [x for i, x in enumerate(assignments) if re.search("eventually", facts[i])]
-    cur_assignments = [x for x in assignments if x not in ev_assignments and x not in next_assignments]
-    cur = conjunct_assignments(cur_assignments)
-    next = conjunct_assignments(next_assignments)
-    ev = conjunct_assignments(ev_assignments)
+def integrate_consequent(temp_op: str, assignments: list[str], antecedent: Optional[str], consequent: str):
+    # next_assignments = [x for i, x in enumerate(assignments) if re.search("next", facts[i])]
+    # ev_assignments = [x for i, x in enumerate(assignments) if re.search("eventually", facts[i])]
+    # cur_assignments = [x for x in assignments if x not in ev_assignments and x not in next_assignments]
+    cur = conjunct_assignments(assignments)
+    # next = conjunct_assignments(next_assignments)
+    # ev = conjunct_assignments(ev_assignments)
+    """
     # This is for pRespondsToS patterns:
-    respond = re.search(r"F\(([^)]*)\)", end_line)
+    respond = re.search(r"F\(([^)]*)\)", consequent)
     if respond:
         ev = f"F({disjunct_assignments([ev, respond.group(1)])})"
-        end_line = end_line.replace(f"F({respond.group(1)})", '', 1)
+        consequent = consequent.replace(f"F({respond.group(1)})", '', 1)
     elif re.search(r"GF\(", antecedent):
-        ev_old = end_line.replace(");", "")
+        ev_old = consequent.replace(");", "")
         ev = disjunct_assignments([ev, ev_old])
-        end_line = end_line.replace(ev_old, '', 1)
+        consequent = consequent.replace(ev_old, '', 1)
     # This is for next patterns:
-    respond = re.search(r"next\(([^)]*)\)", end_line)
+    respond = re.search(r"next\(([^)]*)\)", consequent)
     if respond:
         next = f"next({disjunct_assignments([next, respond.group(1)])})"
-        end_line = end_line.replace(f"next({respond.group(1)})", '', 1)
+        consequent = consequent.replace(f"next({respond.group(1)})", '', 1)
     elif next:
         next = f"next({next})"
-    end_line = end_line.replace("\n", "", 1)
-    end_line = end_line.replace(");", "", 1)
-    cur = disjunct_assignments([cur] + get_disjuncts(end_line))
-    consequent = disjunct_assignments([cur, next, ev])
-    output = f"\t{antecedent}{arrow}{consequent});"
+    """
+    cur = disjunct_assignments([cur] + get_disjuncts(consequent))
+    # consequent = disjunct_assignments([cur, next, ev])
+    consequent = disjunct_assignments([cur])
+    if antecedent:
+        output = f"\tG({antecedent}->{consequent});"
+    else:
+        output = f"\tG({consequent});"
     if assignments == [] and FASTLAS:
         return '\n'
-    return output + "\n"
+    return f"{output}\n"
 
 
 # TODO: clean up
-def extract_assignments_from_facts(facts, learning_type):
+def extract_assignments_from_facts(facts, flip: bool):
     assignments = []
     for fact in facts:
-        all_atoms = ALL_PREDS.search(fact).group(1)
-        # TODO: make use of regex groups to extract exact atom inside "holds_at" and "not_holds_at"
-        atom = all_atoms.split(',')[0].strip()
-        # Don't flip if it is consequent_exception
-        make_true = fact[0:4] == "not_"
-        if learning_type == Learning.GUARANTEE_WEAKENING:
-            make_true = not make_true
-        # The reason it is this way around is that we need to negate whatever is learned
-        if make_true:
-            value = "true"
-        else:
-            value = "false"
-        atom_assignment = atom + "=" + value
+        fact = fact.strip()
+        is_negation = HoldsAtAtom.pattern.match(fact).group(HoldsAtAtom.NEG_PREFIX)
+        atom = HoldsAtAtom.pattern.match(fact).group(HoldsAtAtom.ATOM).strip()
+        value: bool = not bool(is_negation)
+        value = not value if flip else value
+        atom_assignment = f"{atom}={str(value).lower()}"
 
         assignments.append(atom_assignment)
     return assignments
