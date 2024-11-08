@@ -6,9 +6,8 @@ from spec_repair.components.spec_encoder import SpecEncoder
 from spec_repair.components.spec_generator import SpecGenerator
 from spec_repair.enums import Learning
 from spec_repair.helpers.adaptation_learned import AdaptationLearned
-from spec_repair.util.exp_util import extract_adaptation_from_rule
 from spec_repair.util.file_util import read_file
-from spec_repair.util.spec_util import get_assumptions_and_guarantees_from
+from spec_repair.util.spec_util import get_assumptions_and_guarantees_from, extract_adaptation_from_rule
 
 
 class TestSpecEncoder(TestCase):

@@ -11,11 +11,10 @@ from spec_repair.exceptions import LearningException
 from spec_repair.ltl_types import Spec
 from spec_repair.old.patterns import FIRST_PRED, ALL_PREDS
 from spec_repair.special_types import EventuallyConsequentRule
-from spec_repair.util.exp_util import eventualise_consequent
-from spec_repair.util.list_util import re_line_spec
 from spec_repair.util.spec_util import illegal_assignments, \
     extract_variables, extract_df_content, trace_list_to_asp_form, \
-    trace_list_to_ilasp_form, format_spec, integrate_rule, filter_expressions_of_type, parse_formula_str
+    trace_list_to_ilasp_form, format_spec, integrate_rule, filter_expressions_of_type, parse_formula_str, \
+    eventualise_consequent, re_line_spec
 from spec_repair.components.spec_generator import SpecGenerator
 
 
