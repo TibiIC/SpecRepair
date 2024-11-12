@@ -1,5 +1,5 @@
 import re
-from typing import TypeVar
+from typing import TypeVar, Optional
 
 Self = TypeVar('T', bound='AdaptationLearned')
 
@@ -17,9 +17,9 @@ class AdaptationLearned:
         :param disjunction_index: The index of the disjunction that will be adapted within the expression.
         :param atom_temporal_operators: The atoms and their respective temporal operators used in the adaptation.
         """
-        self.type = type
-        self.name_expression = name_expression
-        self.disjunction_index = disjunction_index
+        self.type: str = type
+        self.name_expression: str = name_expression
+        self.disjunction_index: Optional[int] = disjunction_index
         self.atom_temporal_operators = atom_temporal_operators
 
     @staticmethod
@@ -29,12 +29,12 @@ class AdaptationLearned:
         function_name = function_name.group(1) if function_name else None
 
         # 2. Extract the first argument of the function ("assumption2_1")
-        first_argument = re.search(r'^\w+\((\w+)', rule)
-        first_argument = first_argument.group(1) if first_argument else None
+        name_expression = re.search(r'^\w+\((\w+)', rule)
+        name_expression = name_expression.group(1) if name_expression else None
 
         # 3. Extract the number in the second argument (0 in this case)
-        second_argument_number = re.search(r'^\w+\(\w+,\s*(\d+)', rule)
-        second_argument_number = int(second_argument_number.group(1)) if second_argument_number else None
+        disjunction_index = re.search(r'^\w+\(\w+,\s*(\d+)', rule)
+        disjunction_index = int(disjunction_index.group(1)) if disjunction_index else None
 
         # 4. Extract the first and third arguments of each "timepoint_of_op" function
         timepoint_op_args = re.findall(r'timepoint_of_op\((\w+),[^,]*,(\w+)', rule)
@@ -55,7 +55,7 @@ class AdaptationLearned:
 
         return AdaptationLearned(
             type=function_name,
-            name_expression=first_argument,
-            disjunction_index=second_argument_number,
+            name_expression=name_expression,
+            disjunction_index=disjunction_index,
             atom_temporal_operators=replaced_holds_at_args
         )

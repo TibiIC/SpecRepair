@@ -36,7 +36,7 @@ class SpectraRule:
                 new_disjunct = defaultdict(list)
                 for op, atom in adaptation.atom_temporal_operators:
                     new_disjunct[op].append(atom)
-                self.consequent.append(new_disjunct)
+                self.consequent.insert(0, new_disjunct)
             case _:
                 raise ValueError(f"Unsupported temporal type: {self.temp_type}")
 

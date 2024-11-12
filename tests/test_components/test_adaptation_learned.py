@@ -55,3 +55,19 @@ class TestAdaptationLearned(TestCase):
         self.assertEquals(expected_adaptation.name_expression, adaptation.name_expression)
         self.assertEquals(expected_adaptation.disjunction_index, adaptation.disjunction_index)
         self.assertEquals(expected_adaptation.atom_temporal_operators, adaptation.atom_temporal_operators)
+
+    def test_guarantee_weakening_learned(self):
+        rule = 'consequent_exception(guarantee1_1,V1,V2) :- timepoint_of_op(current,V1,V1,V2); holds_at(highwater,V1,V2).'
+        adaptation = AdaptationLearned.from_str(rule)
+        expected_adaptation = AdaptationLearned(
+            type="consequent_exception",
+            name_expression="guarantee1_1",
+            disjunction_index=None,
+            atom_temporal_operators=[("current", "highwater=true")]
+        )
+
+        self.assertEquals(expected_adaptation.type, adaptation.type)
+        self.assertEquals(expected_adaptation.name_expression, adaptation.name_expression)
+        self.assertEquals(expected_adaptation.disjunction_index, adaptation.disjunction_index)
+        self.assertEquals(expected_adaptation.atom_temporal_operators, adaptation.atom_temporal_operators)
+
