@@ -8,13 +8,12 @@ import pandas as pd
 
 from spec_repair.enums import Learning, When, ExpType, SimEnv
 from spec_repair.helpers.adaptation_learned import AdaptationLearned
-from spec_repair.helpers.spectra_formula import SpectraFormula
 from spec_repair.heuristics import choose_one_with_heuristic, manual_choice, HeuristicType
-from spec_repair.ltl_types import CounterStrategy, GR1TemporalType
+from spec_repair.ltl_types import CounterStrategy
 from spec_repair.old.patterns import PRS_REG
 from spec_repair.config import PROJECT_PATH, FASTLAS, PATH_TO_CLI
 from spec_repair.old.specification_helper import strip_vars, assign_equalities, create_cmd, run_subprocess
-from spec_repair.special_types import HoldsAtAtom, GR1Formula
+from spec_repair.special_types import HoldsAtAtom
 from spec_repair.util.file_util import read_file_lines, write_file
 
 
@@ -791,40 +790,6 @@ def filter_expressions_of_type(formula_df: pd.DataFrame, expression: ExpType) ->
     return formula_df.loc[formula_df['type'] == str(expression)]
 
 
-def parse_formula_spectra(formula: str) -> SpectraFormula:
-    """
-    Parse a formula from a Spectra file into a SpectraFormula object.
-
-    Args:
-        formula (str): The input formula to parse.
-
-    Returns:
-        SpectraFormula: A SpectraFormula object containing the parsed formula.
-    """
-
-    temp_op_str = GR1Formula.pattern.match(formula).group(GR1Formula.TEMP_OP)
-    match temp_op_str:
-        case "G":
-            temp_op = GR1TemporalType.INVARIANT
-        case "GF":
-            temp_op = GR1TemporalType.JUSTICE
-        case _:
-            temp_op = GR1TemporalType.INITIAL
-
-    formula = GR1Formula.pattern.match(formula).group(GR1Formula.FORMULA)
-    # Split the formula by '->'
-    parts = formula.split('->')
-
-    if len(parts) == 1:
-        antecedent = []
-        consequent = parse_formula_str(parts[0])
-    else:
-        antecedent = parse_formula_str(parts[0])
-        consequent = parse_formula_str(parts[1])
-
-    return SpectraFormula(temp_op, antecedent, consequent)
-
-
 def parse_formula_str(formula: str) -> List[Dict[str, List[str]]]:
     """
     Parse a formula consisting of disjunctions and conjunctions of temporal operators.
@@ -869,42 +834,6 @@ def parse_formula_str(formula: str) -> List[Dict[str, List[str]]]:
         parsed_conjunctions.append(dict(conjunct_dict))
 
     return parsed_conjunctions
-
-
-def encode_parsed_formula_str(parsed_formula: List[Dict[str, List[str]]]) -> str:
-    """
-    Encode a parsed formula into a string representation.
-    NOTE: encoding will be Spectra-compatible
-
-    Args:
-        parsed_formula (List[Dict[str, List[str]]]): The parsed formula to encode.
-
-    Returns:
-        str: The encoded formula as a string.
-    """
-    encoded_formula = []
-
-    for conjunct in parsed_formula:
-        encoded_conjunct = []
-
-        for operator, literals in conjunct.items():
-            # Encode the operator and literals
-            encoded_operator = operator
-            encoded_literals = "&".join(literals)
-            match encoded_operator:
-                case "eventually":
-                    encoded_conjunct.append(f"F({encoded_literals})")
-                case "prev":
-                    encoded_conjunct.append(f"PREV({encoded_literals})")
-                case "current":
-                    encoded_conjunct.append(encoded_literals)
-                case _:
-                    encoded_conjunct.append(f"{encoded_operator}({encoded_literals})")
-
-        # Join the encoded conjunctions by 'or' and add to the list
-        encoded_formula.append("&".join(encoded_conjunct))
-
-    return f"({')|('.join(encoded_formula)})"
 
 
 def split_with_outer_parentheses(input_str: str) -> List[str]:
