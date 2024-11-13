@@ -348,6 +348,11 @@ def propositionalise_consequent(line, exception=False):
         if "eventually" not in disjunct.keys() and exception and timepoint == "T":
             output += f",\n\tnot ev_temp_op({line['name']})"
         output += ".\n\n"
+        if exception:
+            output += component_body
+            for i in range(len(disjunct)):
+                output += f",\n{component_end_consequent(line['name'], 'eventually', timepoint, n_root_consequents + i)}"
+            output += f",\n\tev_temp_op({line['name']}).\n\n"
         for temp_op, conjuncts in disjunct.items():
             output += root_consequent_body(line['name'], n_root_consequents)
             for conjunct in conjuncts:
@@ -358,9 +363,10 @@ def propositionalise_consequent(line, exception=False):
             output += ".\n\n"
             n_root_consequents += 1
 
-    if exception:
+    if exception and line['type'] == "guarantee":
         output += component_body
-        output += f",\n\tconsequent_exception({line['name']},{timepoint},S).\n\n"
+        output += f",\n\tconsequent_exception({line['name']},{timepoint},S)"
+        output += f",\n\tnot ev_temp_op({line['name']}).\n\n"
 
     return output
 

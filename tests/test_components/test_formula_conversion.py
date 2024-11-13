@@ -10,32 +10,6 @@ from spec_repair.util.spec_util import parse_formula_str
 
 class Test(TestCase):
     maxDiff = None
-    expected = """
-%assumption -- a_always
-%\tG(a=true);
-
-assumption(a_always).
-
-antecedent_holds(a_always,T,S):-
-\ttrace(S),
-\ttimepoint(T,S),
-\tnot antecedent_exception(a_always,0,T,S).
-
-consequent_holds(current,a_always,T,S):-
-\ttrace(S),
-\ttimepoint(T,S),
-\troot_consequent_holds(current,a_always,0,T,S),
-\tnot ev_temp_op(a_always).
-
-root_consequent_holds(OP,a_always,0,T1,S):-
-\ttrace(S),
-\ttimepoint(T1,S),
-\tnot weak_timepoint(T1,S),
-\ttimepoint(T2,S),
-\ttemporal_operator(OP),
-\ttimepoint_of_op(OP,T1,T2,S),
-\tholds_at(a,T2,S).
-"""
 
     def test_parse_formula(self):
         formula = "(next(a&b&c)&d&prev(e))|(next(f)&g&F(h&i))"
@@ -239,7 +213,7 @@ root_consequent_holds(OP,a_always,0,T1,S):-
 """
         self.assertMultiLineEqual(expected.strip(), out.strip())
 
-    def test_propositionalise_formula_consequent_exception(self):
+    def test_propositionalise_formula_assumption_consequent_exception(self):
         line_data = {
             'type': 'assumption',
             'name': 'a_always',
@@ -258,6 +232,12 @@ consequent_holds(a_always,T,S):-
 \troot_consequent_holds(current,a_always,0,T,S),
 \tnot ev_temp_op(a_always).
 
+consequent_holds(a_always,T,S):-
+\ttrace(S),
+\ttimepoint(T,S),
+\troot_consequent_holds(eventually,a_always,0,T,S),
+\tev_temp_op(a_always).
+
 root_consequent_holds(OP,a_always,0,T1,S):-
 \ttrace(S),
 \ttimepoint(T1,S),
@@ -266,11 +246,6 @@ root_consequent_holds(OP,a_always,0,T1,S):-
 \ttemporal_operator(OP),
 \ttimepoint_of_op(OP,T1,T2,S),
 \tholds_at(a,T2,S).
-
-consequent_holds(a_always,T,S):-
-\ttrace(S),
-\ttimepoint(T,S),
-\tconsequent_exception(a_always,T,S).
 """
         self.assertMultiLineEqual(expected.strip(), out.strip())
 
@@ -790,11 +765,11 @@ root_consequent_holds(OP,a_b_c,3,T1,S):-
 """
         self.assertMultiLineEqual(expected.strip(), out.strip())
 
-    def test_propositionalise_formula_consequent_disjunction_of_conjunctions_multi_op_exception(self):
+    def test_propositionalise_formula_assumption_disjunction_of_conjunctions_multi_op_exception(self):
         line_data = {
             'type': 'assumption',
             'name': 'a_b_c',
-            'formula': 'G(PREV(a=true)->b=true&c=true|next(d=true)&next(e=true));',
+            'formula': 'G(PREV(a=true)->b=true&next(c=true)|d=true&next(e=true));',
             'antecedent': "prev(a=true)",
             'consequent': "(b=true&next(c=true))|(d=true&next(e=true))",
             'when': 'When.ALWAYS'
@@ -809,6 +784,13 @@ consequent_holds(a_b_c,T,S):-
 \troot_consequent_holds(current,a_b_c,0,T,S),
 \troot_consequent_holds(next,a_b_c,1,T,S),
 \tnot ev_temp_op(a_b_c).
+
+consequent_holds(a_b_c,T,S):-
+\ttrace(S),
+\ttimepoint(T,S),
+\troot_consequent_holds(eventually,a_b_c,0,T,S),
+\troot_consequent_holds(eventually,a_b_c,1,T,S),
+\tev_temp_op(a_b_c).
 
 root_consequent_holds(OP,a_b_c,0,T1,S):-
 \ttrace(S),
@@ -835,6 +817,92 @@ consequent_holds(a_b_c,T,S):-
 \troot_consequent_holds(next,a_b_c,3,T,S),
 \tnot ev_temp_op(a_b_c).
 
+consequent_holds(a_b_c,T,S):-
+\ttrace(S),
+\ttimepoint(T,S),
+\troot_consequent_holds(eventually,a_b_c,2,T,S),
+\troot_consequent_holds(eventually,a_b_c,3,T,S),
+\tev_temp_op(a_b_c).
+
+root_consequent_holds(OP,a_b_c,2,T1,S):-
+\ttrace(S),
+\ttimepoint(T1,S),
+\tnot weak_timepoint(T1,S),
+\ttimepoint(T2,S),
+\ttemporal_operator(OP),
+\ttimepoint_of_op(OP,T1,T2,S),
+\tholds_at(d,T2,S).
+
+root_consequent_holds(OP,a_b_c,3,T1,S):-
+\ttrace(S),
+\ttimepoint(T1,S),
+\tnot weak_timepoint(T1,S),
+\ttimepoint(T2,S),
+\ttemporal_operator(OP),
+\ttimepoint_of_op(OP,T1,T2,S),
+\tholds_at(e,T2,S).
+"""
+        self.assertMultiLineEqual(expected.strip(), out.strip())
+
+    def test_propositionalise_formula_guarantee_disjunction_of_conjunctions_multi_op_exception(self):
+        line_data = {
+            'type': 'guarantee',
+            'name': 'a_b_c',
+            'formula': 'G(PREV(a=true)->b=true&next(c=true)|d=true&next(e=true));',
+            'antecedent': "prev(a=true)",
+            'consequent': "(b=true&next(c=true))|(d=true&next(e=true))",
+            'when': 'When.ALWAYS'
+        }
+
+        line = pd.Series(line_data)
+        out = propositionalise_consequent(line, exception=True)
+        expected = """
+consequent_holds(a_b_c,T,S):-
+\ttrace(S),
+\ttimepoint(T,S),
+\troot_consequent_holds(current,a_b_c,0,T,S),
+\troot_consequent_holds(next,a_b_c,1,T,S),
+\tnot ev_temp_op(a_b_c).
+
+consequent_holds(a_b_c,T,S):-
+\ttrace(S),
+\ttimepoint(T,S),
+\troot_consequent_holds(eventually,a_b_c,0,T,S),
+\troot_consequent_holds(eventually,a_b_c,1,T,S),
+\tev_temp_op(a_b_c).
+
+root_consequent_holds(OP,a_b_c,0,T1,S):-
+\ttrace(S),
+\ttimepoint(T1,S),
+\tnot weak_timepoint(T1,S),
+\ttimepoint(T2,S),
+\ttemporal_operator(OP),
+\ttimepoint_of_op(OP,T1,T2,S),
+\tholds_at(b,T2,S).
+
+root_consequent_holds(OP,a_b_c,1,T1,S):-
+\ttrace(S),
+\ttimepoint(T1,S),
+\tnot weak_timepoint(T1,S),
+\ttimepoint(T2,S),
+\ttemporal_operator(OP),
+\ttimepoint_of_op(OP,T1,T2,S),
+\tholds_at(c,T2,S).
+
+consequent_holds(a_b_c,T,S):-
+\ttrace(S),
+\ttimepoint(T,S),
+\troot_consequent_holds(current,a_b_c,2,T,S),
+\troot_consequent_holds(next,a_b_c,3,T,S),
+\tnot ev_temp_op(a_b_c).
+
+consequent_holds(a_b_c,T,S):-
+\ttrace(S),
+\ttimepoint(T,S),
+\troot_consequent_holds(eventually,a_b_c,2,T,S),
+\troot_consequent_holds(eventually,a_b_c,3,T,S),
+\tev_temp_op(a_b_c).
+
 root_consequent_holds(OP,a_b_c,2,T1,S):-
 \ttrace(S),
 \ttimepoint(T1,S),
@@ -856,6 +924,7 @@ root_consequent_holds(OP,a_b_c,3,T1,S):-
 consequent_holds(a_b_c,T,S):-
 \ttrace(S),
 \ttimepoint(T,S),
-\tconsequent_exception(a_b_c,T,S).
+\tconsequent_exception(a_b_c,T,S),
+\tnot ev_temp_op(a_b_c).
 """
         self.assertMultiLineEqual(expected.strip(), out.strip())
