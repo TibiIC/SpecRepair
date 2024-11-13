@@ -37,7 +37,7 @@ while solution_count < max_solutions and solve_result is not None:
         prop_egs = ilasp.cdilp.propagate_constraint(constraint, c_eg_ids, {'select-examples': ['brave-order'],    'strategy': 'cdoe-implies-constraint'})
       else:
         prop_egs = [ce['id']]
-  
+
       ilasp.cdilp.add_coverage_constraint(constraint, prop_egs)
   
     else:
@@ -192,6 +192,9 @@ not_holds_at(A,T,S):-
     weak_timepoint(T,S),
     trace(S).
 
+root_consequent_holds(OP,E,T,S):-
+    root_consequent_holds(OP,E,I,T,S).
+
 % GR(1) Rules
 
 :- 	contradiction_holds(A,T,S).
@@ -339,7 +342,8 @@ antecedent_holds(assumption2_1,T,S):-
 consequent_holds(assumption2_1,T,S):-
 	trace(S),
 	timepoint(T,S),
-	root_consequent_holds(current,assumption2_1,0,T,S).
+	root_consequent_holds(current,assumption2_1,0,T,S),
+	not ev_temp_op(assumption2_1).
 
 root_consequent_holds(OP,assumption2_1,0,T1,S):-
 	trace(S),
@@ -353,7 +357,8 @@ root_consequent_holds(OP,assumption2_1,0,T1,S):-
 consequent_holds(assumption2_1,T,S):-
 	trace(S),
 	timepoint(T,S),
-	root_consequent_holds(current,assumption2_1,1,T,S).
+	root_consequent_holds(current,assumption2_1,1,T,S),
+	not ev_temp_op(assumption2_1).
 
 root_consequent_holds(OP,assumption2_1,1,T1,S):-
 	trace(S),
@@ -387,22 +392,4 @@ not_holds_at(pump,0,trace_name_0).
 holds_at(highwater,1,trace_name_0).
 holds_at(methane,1,trace_name_0).
 not_holds_at(pump,1,trace_name_0).
-}).
-%---*** Violation Trace ***---
-
-#pos({},{entailed(counter_strat_0_0)},{
-
-% CS_Path: ini_S0_DEAD
-
-trace(counter_strat_0_0).
-timepoint(0,counter_strat_0_0).
-timepoint(1,counter_strat_0_0).
-next(1,0,counter_strat_0_0).
-
-not_holds_at(highwater,0,counter_strat_0_0).
-not_holds_at(methane,0,counter_strat_0_0).
-not_holds_at(pump,0,counter_strat_0_0).
-holds_at(highwater,1,counter_strat_0_0).
-holds_at(methane,1,counter_strat_0_0).
-holds_at(pump,1,counter_strat_0_0).
 }).

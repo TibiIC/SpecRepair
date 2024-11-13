@@ -68,16 +68,53 @@ ilasp.stats.print_timings()
 %% Mode Declaration
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
+#modeh(antecedent_exception(const(expression_v), const(index), var(time), var(trace))).
+#modeb(2,timepoint_of_op(const(temp_op_v), var(time), var(time), var(trace)), (positive)).
+#modeb(2,holds_at(const(usable_atom), var(time), var(trace)), (positive)).
+#modeb(2,not_holds_at(const(usable_atom), var(time), var(trace)), (positive)).
+
 #modeh(consequent_holds(const(expression_v), var(time), var(trace))).
 #modeh(ev_temp_op(const(expression_v))).
 #modeb(1,root_consequent_holds(eventually, const(expression_v), var(time), var(trace)), (positive)).
+
+#constant(usable_atom,highwater).
+#constant(usable_atom,methane).
+#constant(usable_atom,pump).
 #constant(index,0..1).
+#constant(temp_op_v,current).
+#constant(temp_op_v,next).
+#constant(temp_op_v,prev).
+#constant(temp_op_v,eventually).
 #constant(expression_v, assumption2_1).
 #bias("
     :- constraint.
+    :- head(antecedent_exception(_,_,V1,V2)), body(timepoint_of_op(_,V3,_,V4)), (V1, V2) != (V3, V4).
+    :- head(antecedent_exception(_,_,_,V1)), body(holds_at(_,_,V2)), V1 != V2.
+    :- head(antecedent_exception(_,_,_,V1)), body(not_holds_at(_,_,V2)), V1 != V2.
+    :- body(timepoint_of_op(_,_,V1,_)), body(holds_at(_,V2,_)), V1 != V2.
+    :- body(timepoint_of_op(_,_,V1,_)), body(not_holds_at(_,V2,_)), V1 != V2.
+    :- body(timepoint_of_op(_,_,_,_)), not body(not_holds_at(_,_,_)), not body(holds_at(_,_,_)).
+    :- body(timepoint_of_op(current,V1,V2,_)), V1 != V2.
+    :- body(timepoint_of_op(next,V1,V2,_)), V1 == V2.
+    :- body(timepoint_of_op(prev,V1,V2,_)), V1 == V2.
+    :- body(timepoint_of_op(eventually,V1,V2,_)), V1 == V2.
+    :- body(holds_at(_,V1,V2)), not body(timepoint_of_op(_,_,V1,V2)).
+    :- body(not_holds_at(_,V1,V2)), not body(timepoint_of_op(_,_,V1,V2)).
+    :- head(antecedent_exception(_,_,_,_)), body(timepoint_of_op(next,_,_,_)).
+    :- head(antecedent_exception(_,_,_,_)), body(timepoint_of_op(prev,_,_,_)).
+    :- head(antecedent_exception(_,_,_,_)), body(timepoint_of_op(eventually,_,_,_)).
+
     :- head(consequent_holds(E1,V1,V2)), body(root_consequent_holds(_,E2,V3,V4)), (E1,V1,V2) != (E2,V3,V4).
     :- head(ev_temp_op(_)), body(root_consequent_holds(_,_,_,_)).
     attribute(in_head(X)) :- head(X).
+
+    :- head(antecedent_exception(_,_,_,_)), body(root_consequent_holds(_,_,_,_)).
+    :- head(consequent_holds(_,_,_)), body(timepoint_of_op(_,_,_,_)).
+    :- head(consequent_holds(_,_,_)), body(holds_at(_,_,_)).
+    :- head(consequent_holds(_,_,_)), body(not_holds_at(_,_,_)).
+    :- head(ev_temp_op(_)), body(timepoint_of_op(_,_,_,_)).
+    :- head(ev_temp_op(_)), body(holds_at(_,_,_)).
+    :- head(ev_temp_op(_)), body(not_holds_at(_,_,_)).
 ").
 #inject("
   all_active.
