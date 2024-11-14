@@ -2,7 +2,7 @@ import re
 
 
 PRS_REG = re.compile(r"^\s*G[^-]*->\s*F")
-FIRST_PRED = re.compile(r"\(([^,]*)")
+FIRST_PRED = re.compile(r"\(([^,)]*)")
 ALL_PREDS = re.compile(r"\(([^)]*)\)")
 aImplies_bUntil_c = re.compile(r"G\s*\(([^-]*)->\(*([^U]*)U\(*(.*)\)")
 aImpliesNext_bUntil_c = re.compile(r"G\s*\(([^-]*)->next\(([^U]*)U(.*)\)")

@@ -67,13 +67,11 @@ ilasp.stats.print_timings()
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% Mode Declaration
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
 #modeh(consequent_exception(const(expression_v), var(time), var(trace))).
 #modeb(2,timepoint_of_op(const(temp_op_v), var(time), var(time), var(trace)), (positive)).
 #modeb(2,holds_at(const(usable_atom), var(time), var(trace)), (positive)).
 #modeb(2,not_holds_at(const(usable_atom), var(time), var(trace)), (positive)).
 #modeh(ev_temp_op(const(expression_v))).
-#modeb(1,root_consequent_holds(eventually, const(expression_v), const(index), var(time), var(trace)), (positive)).
 #constant(usable_atom,highwater).
 #constant(usable_atom,methane).
 #constant(usable_atom,pump).
@@ -87,7 +85,7 @@ ilasp.stats.print_timings()
 #constant(expression_v, guarantee2_1).
 #bias("
 :- constraint.
-:- head(consequent_exception(_,V1,V2)), body(timepoint_of_op(_,V3,_,V4)), (V1,V2) != (V3,V4).
+:- head(consequent_exception(_,V1,V2)), body(timepoint_of_op(_,V3,_,V4)), (V1, V2) != (V3, V4).
 :- head(consequent_exception(_,_,V1)), body(holds_at(_,_,V2)), V1 != V2.
 :- head(consequent_exception(_,_,V1)), body(not_holds_at(_,_,V2)), V1 != V2.
 :- body(timepoint_of_op(_,_,V1,_)), body(holds_at(_,V2,_)), V1 != V2.
@@ -102,10 +100,9 @@ ilasp.stats.print_timings()
 :- head(consequent_exception(_,_,_)), body(timepoint_of_op(next,_,_,_)).
 :- head(consequent_exception(_,_,_)), body(timepoint_of_op(prev,_,_,_)).
 :- head(consequent_exception(_,_,_)), body(timepoint_of_op(eventually,_,_,_)).
-:- head(consequent_exception(E1,V1,V2)), body(root_consequent_holds(_,E2,_,V3,V4)), (E1,V1,V2) != (E2,V3,V4).
-:- body(root_consequent_holds(_,_,_,_,_)), body(timepoint_of_op(_,_,_,_)).
-:- body(root_consequent_holds(_,_,_,_,_)), body(holds_at(_,_,_)).
-:- body(root_consequent_holds(_,_,_,_,_)), body(not_holds_at(_,_,_)).
+:- head(ev_temp_op(_)), body(timepoint_of_op(_,_,_,_)).
+:- head(ev_temp_op(_)), body(holds_at(_,_,_)).
+:- head(ev_temp_op(_)), body(not_holds_at(_,_,_)).
 ").
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -164,41 +161,36 @@ timepoint_of_op(eventually,T1,T2,S) :-
     not weak_timepoint(T1,S),
     timepoint(T2,S),
     after(T2,T1,S).
-
 % Weak Timepoint Definitions
-
 weak_timepoint_atom(weak_t).
-
 next_timepoint_exists(T1,S):-
     timepoint(T1,S),
     timepoint(T2,S),
     not weak_timepoint(T2,S),
     next(T2,T1,S).
-
 weak_timepoint(X,S):-
     weak_timepoint_atom(X),
     timepoint(T,S),
     not next_timepoint_exists(T,S).
-
 timepoint(T,S):-
     trace(S),
     weak_timepoint(T,S).
-
 next(X,T,S):-
     weak_timepoint(X,S),
     timepoint(T,S),
     not weak_timepoint(T,S),
     not next_timepoint_exists(T,S).
-
 holds_at(A,T,S):-
     atom(A),
     weak_timepoint(T,S),
     trace(S).
-
 not_holds_at(A,T,S):-
     atom(A),
     weak_timepoint(T,S),
     trace(S).
+
+root_consequent_holds(OP,E,T,S):-
+    root_consequent_holds(OP,E,I,T,S).
 
 % GR(1) Rules
 
@@ -266,124 +258,41 @@ exp(E):-
 	assumption(E).
 
 % ---*** Domain dependent Axioms ***---
-
-%assumption -- initial_assumption
-%	highwater=false&methane=false;
-
-assumption(initial_assumption).
-
-antecedent_holds(initial_assumption,0,S):-
-	trace(S),
-	timepoint(0,S).
-
-consequent_holds(initial_assumption,0,S):-
-	trace(S),
-	timepoint(0,S),
-	not_holds_at(highwater,0,S),
-	not_holds_at(methane,0,S).
-
-%assumption -- assumption1_1
-%	G(PREV(pump=true)&pump=true->next(highwater=false));
-
-assumption(assumption1_1).
-
-antecedent_holds(assumption1_1,T,S):-
-	trace(S),
-	timepoint(T,S),
-	root_antecedent_holds(prev,assumption1_1,0,T,S),
-	root_antecedent_holds(current,assumption1_1,0,T,S).
-
-root_antecedent_holds(OP,assumption1_1,0,T1,S):-
-	trace(S),
-	timepoint(T1,S),
-	not weak_timepoint(T1,S),
-	timepoint(T2,S),
-	temporal_operator(OP),
-	timepoint_of_op(OP,T1,T2,S),
-	holds_at(pump,T2,S).
-
-consequent_holds(assumption1_1,T,S):-
-	trace(S),
-	timepoint(T,S),
-	root_consequent_holds(next,assumption1_1,0,T,S),
-	not ev_temp_op(assumption1_1).
-
-root_consequent_holds(OP,assumption1_1,0,T1,S):-
-	trace(S),
-	timepoint(T1,S),
-	not weak_timepoint(T1,S),
-	timepoint(T2,S),
-	temporal_operator(OP),
-	timepoint_of_op(OP,T1,T2,S),
-	not_holds_at(highwater,T2,S).
-
-%assumption -- assumption2_1
-%	G(highwater=false|methane=false);
-
-assumption(assumption2_1).
-
-antecedent_holds(assumption2_1,T,S):-
-	trace(S),
-	timepoint(T,S),
-	root_antecedent_holds(current,assumption2_1,0,T,S).
-
-root_antecedent_holds(OP,assumption2_1,0,T1,S):-
-	trace(S),
-	timepoint(T1,S),
-	not weak_timepoint(T1,S),
-	timepoint(T2,S),
-	temporal_operator(OP),
-	timepoint_of_op(OP,T1,T2,S),
-	not_holds_at(methane,T2,S).
-
-consequent_holds(assumption2_1,T,S):-
-	trace(S),
-	timepoint(T,S),
-	root_consequent_holds(current,assumption2_1,0,T,S),
-	not ev_temp_op(assumption2_1).
-
-root_consequent_holds(OP,assumption2_1,0,T1,S):-
-	trace(S),
-	timepoint(T1,S),
-	not weak_timepoint(T1,S),
-	timepoint(T2,S),
-	temporal_operator(OP),
-	timepoint_of_op(OP,T1,T2,S),
-	not_holds_at(highwater,T2,S).
-
-root_consequent_holds(OP,assumption2_1,0,T1,S):-
-	trace(S),
-	timepoint(T1,S),
-	not weak_timepoint(T1,S),
-	timepoint(T2,S),
-	temporal_operator(OP),
-	timepoint_of_op(OP,T1,T2,S),
-	not_holds_at(methane,T2,S).
-
 %guarantee -- initial_guarantee
 %	pump=false;
-
 guarantee(initial_guarantee).
-
 antecedent_holds(initial_guarantee,0,S):-
 	trace(S),
 	timepoint(0,S).
-
 consequent_holds(initial_guarantee,0,S):-
 	trace(S),
 	timepoint(0,S),
-	not_holds_at(pump,0,S).
-
+	root_consequent_holds(current,initial_guarantee,0,0,S).
+consequent_holds(initial_guarantee,0,S):-
+	trace(S),
+	timepoint(0,S),
+	root_consequent_holds(eventually,initial_guarantee,0,0,S),
+	ev_temp_op(initial_guarantee).
+root_consequent_holds(OP,initial_guarantee,0,T1,S):-
+	trace(S),
+	timepoint(T1,S),
+	not weak_timepoint(T1,S),
+	timepoint(T2,S),
+	temporal_operator(OP),
+	timepoint_of_op(OP,T1,T2,S),
+	not_holds_at(pump,T2,S).
+consequent_holds(initial_guarantee,0,S):-
+	trace(S),
+	timepoint(0,S),
+	consequent_exception(initial_guarantee,0,S),
+	not ev_temp_op(initial_guarantee).
 %guarantee -- guarantee1_1
 %	G(highwater=true->next(pump=true));
-
 guarantee(guarantee1_1).
-
 antecedent_holds(guarantee1_1,T,S):-
 	trace(S),
 	timepoint(T,S),
 	root_antecedent_holds(current,guarantee1_1,0,T,S).
-
 root_antecedent_holds(OP,guarantee1_1,0,T1,S):-
 	trace(S),
 	timepoint(T1,S),
@@ -392,18 +301,16 @@ root_antecedent_holds(OP,guarantee1_1,0,T1,S):-
 	temporal_operator(OP),
 	timepoint_of_op(OP,T1,T2,S),
 	holds_at(highwater,T2,S).
-
 consequent_holds(guarantee1_1,T,S):-
 	trace(S),
 	timepoint(T,S),
 	root_consequent_holds(next,guarantee1_1,0,T,S),
 	not ev_temp_op(guarantee1_1).
-
 consequent_holds(guarantee1_1,T,S):-
 	trace(S),
 	timepoint(T,S),
-	consequent_exception(guarantee1_1,T,S).
-
+	root_consequent_holds(eventually,guarantee1_1,0,T,S),
+	ev_temp_op(guarantee1_1).
 root_consequent_holds(OP,guarantee1_1,0,T1,S):-
 	trace(S),
 	timepoint(T1,S),
@@ -412,17 +319,18 @@ root_consequent_holds(OP,guarantee1_1,0,T1,S):-
 	temporal_operator(OP),
 	timepoint_of_op(OP,T1,T2,S),
 	holds_at(pump,T2,S).
-
+consequent_holds(guarantee1_1,T,S):-
+	trace(S),
+	timepoint(T,S),
+	consequent_exception(guarantee1_1,T,S),
+	not ev_temp_op(guarantee1_1).
 %guarantee -- guarantee2_1
 %	G(methane=true->next(pump=false));
-
 guarantee(guarantee2_1).
-
 antecedent_holds(guarantee2_1,T,S):-
 	trace(S),
 	timepoint(T,S),
 	root_antecedent_holds(current,guarantee2_1,0,T,S).
-
 root_antecedent_holds(OP,guarantee2_1,0,T1,S):-
 	trace(S),
 	timepoint(T1,S),
@@ -431,18 +339,16 @@ root_antecedent_holds(OP,guarantee2_1,0,T1,S):-
 	temporal_operator(OP),
 	timepoint_of_op(OP,T1,T2,S),
 	holds_at(methane,T2,S).
-
 consequent_holds(guarantee2_1,T,S):-
 	trace(S),
 	timepoint(T,S),
 	root_consequent_holds(next,guarantee2_1,0,T,S),
 	not ev_temp_op(guarantee2_1).
-
 consequent_holds(guarantee2_1,T,S):-
 	trace(S),
 	timepoint(T,S),
-	consequent_exception(guarantee2_1,T,S).
-
+	root_consequent_holds(eventually,guarantee2_1,0,T,S),
+	ev_temp_op(guarantee2_1).
 root_consequent_holds(OP,guarantee2_1,0,T1,S):-
 	trace(S),
 	timepoint(T1,S),
@@ -451,7 +357,11 @@ root_consequent_holds(OP,guarantee2_1,0,T1,S):-
 	temporal_operator(OP),
 	timepoint_of_op(OP,T1,T2,S),
 	not_holds_at(pump,T2,S).
-
+consequent_holds(guarantee2_1,T,S):-
+	trace(S),
+	timepoint(T,S),
+	consequent_exception(guarantee2_1,T,S),
+	not ev_temp_op(guarantee2_1).
 %---*** Signature  ***---
 
 atom(highwater).

@@ -37,6 +37,19 @@ class SpectraRule:
                 for op, atom in adaptation.atom_temporal_operators:
                     new_disjunct[op].append(atom)
                 self.consequent.insert(0, new_disjunct)
+            case "ev_temp_op":
+                new_consequent = []
+                op = "eventually"
+                if not self.antecedent or self.antecedent == [defaultdict(list)]:
+                    self.temp_type = GR1TemporalType.JUSTICE
+                    op = "current"
+                for disjunct in self.consequent:
+                    all_conjuncts = [conjunct for conjuncts in disjunct.values() for conjunct in conjuncts]
+                    new_disjunct = defaultdict(list)
+                    new_disjunct[op] = all_conjuncts
+                    new_consequent.append(new_disjunct)
+                self.consequent = new_consequent
+
             case _:
                 raise ValueError(f"Unsupported temporal type: {self.temp_type}")
 

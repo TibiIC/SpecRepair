@@ -26,7 +26,7 @@ class TestRepairOrchestrator(TestCase):
         # Restore the original working directory
         os.chdir(cls.original_working_directory)
 
-    @patch('sys.stdin', io.StringIO('1\n0\n0\n0\n1\n1\n'))
+    # @patch('sys.stdin', io.StringIO('1\n0\n0\n0\n1\n1\n'))
     def test_repair_spec_minepump(self):
         spec: list[str] = format_spec(read_file_lines(
             '../input-files/examples/Minepump/minepump_strong.spectra'))

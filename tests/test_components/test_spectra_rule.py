@@ -62,6 +62,18 @@ class TestSpectraRule(TestCase):
         self.assertEqual(expected_output.antecedent, output.antecedent)
         self.assertEqual(expected_output.consequent, output.consequent)
 
+    def test_parse_justice_rule(self):
+        rule = SpectraRule(
+            temp_type=GR1TemporalType.JUSTICE,
+            antecedent=[defaultdict(list)],
+            consequent=[{'current': ['highwater=false']},
+                        {'current': ['methane=false']}]
+        )
+        output = rule.to_str()
+        expected_output = "GF(highwater=false|methane=false);"
+        self.assertEqual(expected_output, output)
+
+
     def test_integrate_adaptation_to_formula(self):
         formula = SpectraRule(
             temp_type=GR1TemporalType.INVARIANT,
@@ -78,4 +90,22 @@ class TestSpectraRule(TestCase):
         formula.integrate(adaptation)
         output = formula.to_str()
         expected_output = "G(methane=false->highwater=false|methane=false);"
+        self.assertEqual(expected_output, output)
+
+    def test_integrate_eventualisation_adaptation_to_formula(self):
+        formula = SpectraRule(
+            temp_type=GR1TemporalType.INVARIANT,
+            antecedent=[defaultdict(list)],
+            consequent=[{'current': ['highwater=false']},
+                        {'current': ['methane=false']}]
+        )
+        adaptation = AdaptationLearned(
+            type="ev_temp_op",
+            name_expression="assumption2_1",
+            disjunction_index=None,
+            atom_temporal_operators=[]
+        )
+        formula.integrate(adaptation)
+        output = formula.to_str()
+        expected_output = "GF(highwater=false|methane=false);"
         self.assertEqual(expected_output, output)

@@ -71,3 +71,18 @@ class TestAdaptationLearned(TestCase):
         self.assertEquals(expected_adaptation.disjunction_index, adaptation.disjunction_index)
         self.assertEquals(expected_adaptation.atom_temporal_operators, adaptation.atom_temporal_operators)
 
+
+    def test_eventualisation_weakening_learned(self):
+        rule = 'ev_temp_op(assumption2_1).'
+        adaptation = AdaptationLearned.from_str(rule)
+        expected_adaptation = AdaptationLearned(
+            type="ev_temp_op",
+            name_expression="assumption2_1",
+            disjunction_index=None,
+            atom_temporal_operators=[]
+        )
+
+        self.assertEquals(expected_adaptation.type, adaptation.type)
+        self.assertEquals(expected_adaptation.name_expression, adaptation.name_expression)
+        self.assertEquals(expected_adaptation.disjunction_index, adaptation.disjunction_index)
+        self.assertEquals(expected_adaptation.atom_temporal_operators, adaptation.atom_temporal_operators)

@@ -135,7 +135,7 @@ class SpecEncoder:
 
     def integrate_learned_hypothesis(self, spec: list[str], learning_hypothesis, learning_type) -> list[str]:
         adaptations_strings: list[str] = list(
-            filter(re.compile("_exception|root_consequent_").search, learning_hypothesis))
+            filter(re.compile("_exception|ev_temp_op").search, learning_hypothesis))
         if len(adaptations_strings) == 0:
             raise LearningException("Nothing learned")
         else:
@@ -159,8 +159,6 @@ class SpecEncoder:
     def process_new_rule_exception(self, learning_type, line_list, output_list, adaptation_str: str, adaptation_list,
                                    spec):
         name = FIRST_PRED.search(adaptation_str).group(1)
-        rule_split = adaptation_str.replace("\n", "").split(":-")
-        body = rule_split[1].split("; ")
         for i, line in enumerate(spec):
             if re.search(name + r"\b", line):
                 j = i + 1
