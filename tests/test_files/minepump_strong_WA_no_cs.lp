@@ -90,6 +90,9 @@ not_holds_at(A,T,S):-
     weak_timepoint(T,S),
     trace(S).
 
+root_consequent_holds(OP,E,T,S):-
+    root_consequent_holds(OP,E,I,T,S).
+
 % GR(1) Rules
 
 :- 	contradiction_holds(A,T,S).

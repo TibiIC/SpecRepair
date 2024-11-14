@@ -80,10 +80,7 @@ class SpecEncoder:
         output += f"#modeb(2,timepoint_of_op(const(temp_op_v), var(time), var(time), var(trace)){restriction}).\n"
         output += f"#modeb(2,holds_at(const(usable_atom), var(time), var(trace)){restriction}).\n"
         output += f"#modeb(2,not_holds_at(const(usable_atom), var(time), var(trace)){restriction}).\n"
-        # Learning rule for weakening to justice rule
-        if learning_type == Learning.GUARANTEE_WEAKENING and config.WEAKENING_TO_JUSTICE:
-            output += f"#modeh(ev_temp_op(const(expression_v))).\n"
-            output += f"#modeb(1,root_consequent_holds(eventually, const(expression_v), const(index), var(time), var(trace)){restriction}).\n"
+        output += f"#modeh(ev_temp_op(const(expression_v))).\n"
 
         for variable in sorted(extract_variables(spec_df)):
             output += f"#constant(usable_atom,{variable}).\n"
@@ -130,6 +127,9 @@ class SpecEncoder:
             output += f":- body(root_consequent_holds(_,_,_,_,_)), body(timepoint_of_op(_,_,_,_)).\n"
             output += f":- body(root_consequent_holds(_,_,_,_,_)), body(holds_at(_,_,_)).\n"
             output += f":- body(root_consequent_holds(_,_,_,_,_)), body(not_holds_at(_,_,_)).\n"
+        output += f":- head(ev_temp_op(_)), body(timepoint_of_op(_,_,_,_)).\n"
+        output += f":- head(ev_temp_op(_)), body(holds_at(_,_,_)).\n"
+        output += f":- head(ev_temp_op(_)), body(not_holds_at(_,_,_)).\n"
         output += "\").\n\n"
         return output
 
@@ -239,7 +239,7 @@ def expression_to_str(line: pd.Series, learning_names: list[str], for_clingo: bo
     expression_string += f"{line['type']}({line['name']}).\n\n"
     is_exception = (line['name'] in learning_names) and not for_clingo
     ant_exception = is_exception and line['type'] == str(ExpType.ASSUMPTION)
-    gar_exception = is_exception and line['type'] == str(ExpType.GUARANTEE)
+    gar_exception = is_exception
     expression_string += propositionalise_antecedent(line, ant_exception)
     expression_string += propositionalise_consequent(line, gar_exception)
     return expression_string

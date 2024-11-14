@@ -6,6 +6,7 @@
 #modeb(2,timepoint_of_op(const(temp_op_v), var(time), var(time), var(trace)), (positive)).
 #modeb(2,holds_at(const(usable_atom), var(time), var(trace)), (positive)).
 #modeb(2,not_holds_at(const(usable_atom), var(time), var(trace)), (positive)).
+#modeh(ev_temp_op(const(expression_v))).
 #constant(usable_atom,highwater).
 #constant(usable_atom,methane).
 #constant(usable_atom,pump).
@@ -32,5 +33,8 @@
 :- head(antecedent_exception(_,_,_,_)), body(timepoint_of_op(next,_,_,_)).
 :- head(antecedent_exception(_,_,_,_)), body(timepoint_of_op(prev,_,_,_)).
 :- head(antecedent_exception(_,_,_,_)), body(timepoint_of_op(eventually,_,_,_)).
+:- head(ev_temp_op(_)), body(timepoint_of_op(_,_,_,_)).
+:- head(ev_temp_op(_)), body(holds_at(_,_,_)).
+:- head(ev_temp_op(_)), body(not_holds_at(_,_,_)).
 ").
 
