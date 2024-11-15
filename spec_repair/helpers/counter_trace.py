@@ -31,7 +31,10 @@ class CounterTrace:
         return self._raw_trace
 
     def get_asp_form(self, is_named=True):
-        return trace_list_to_asp_form([self.get_raw_trace(is_named=is_named)])
+        raw_asp_form = trace_list_to_asp_form([self.get_raw_trace(is_named=False)])
+        if is_named:
+            return trace_replace_name(raw_asp_form, self._path, self._name)
+        return raw_asp_form
 
     def get_ilasp_form(self, learning: Learning, is_named=True):
         # TODO: remove "trace_replace_name" as a method for adding the "CS_PATH: self._path" comment to the trace

@@ -1,11 +1,11 @@
 from typing import Optional
 
 from spec_repair.helpers.counter_trace import CounterTrace, ct_from_cs
-from spec_repair.components.spec_learner import SpecLearner
+from spec_repair.components.spec_learner import SpecLearner, select_learning_hypothesis
 from spec_repair.components.spec_oracle import SpecOracle
 from spec_repair.enums import Learning
 from spec_repair.exceptions import NoWeakeningException
-from spec_repair.heuristics import manual_choice
+from spec_repair.heuristics import manual_choice, choose_one_with_heuristic
 from spec_repair.ltl_types import CounterStrategy
 from spec_repair.special_types import StopHeuristicType
 
@@ -59,15 +59,22 @@ class RepairOrchestrator:
         spec = weak_spec_history[0]
         ct_gar.append(ct_asm[0])
         while cs:
-            spec: list[str] = self._learner.learn_weaker_spec(
-                spec, trace, ct_gar,
-                learning_type=Learning.GUARANTEE_WEAKENING,
-                heuristic=manual_choice)
+            ct_gar = self.complete_counter_traces(spec, trace, ct_gar)
+            hypotheses = self._learner.find_weakening_hypotheses(spec, trace, ct_gar, Learning.GUARANTEE_WEAKENING)
+            learning_hypothesis = select_learning_hypothesis(hypotheses, manual_choice)
+            spec: list[str] = self._learner.integrate_learning_hypothesis(spec, learning_hypothesis, Learning.GUARANTEE_WEAKENING)
             cs = self._oracle.synthesise_and_check(spec)
             if cs:
                 ct_gar.append(self.ct_from_cs(cs))
 
         return spec
+
+    def complete_counter_traces(self, spec: list[str], trace: list[str], ct_gar: list[CounterTrace]) -> list[CounterTrace]:
+        complete_cts = self._learner.get_all_complete_counter_trace_lists(
+            spec, trace, ct_gar, Learning.GUARANTEE_WEAKENING)
+        if not complete_cts:
+            raise NoWeakeningException("No weakening found")
+        return choose_one_with_heuristic(complete_cts, manual_choice)
 
     def ct_from_cs(self, cs: list[str]) -> CounterTrace:
         ct = ct_from_cs(cs, heuristic=manual_choice, cs_id=self._ct_cnt)

@@ -257,7 +257,7 @@ def trace_single_to_asp_form(trace: List[str]) -> str:
     output += create_time_fact(max_timepoint + 1, "timepoint", [0, violation_name])
     output += create_time_fact(max_timepoint, "next", [1, 0, violation_name])
 
-    output += complete_loop_if_necessary(violation_name)
+    output += complete_loop_if_necessary(violation_name, max_timepoint)
     output += '\n' + '\n'.join(trace) + '\n'
     return output
 
@@ -278,12 +278,16 @@ def trace_single_asp_to_ilasp_form(trace: List[str], learning: Learning) -> str:
     return output
 
 
-def complete_loop_if_necessary(violation_name) -> str:
+def complete_loop_if_necessary(violation_name, max_timepoint) -> str:
     states = get_state_numbers(violation_name)
+    if not states:
+        return ""
+    max_state = max(states)
+    state_timepoint_diff = max_timepoint - max_state
     match states[-2:]:
         case [s1, s2]:
             if s1 >= s2:
-                return f"next({s2},{s1},{violation_name}).\n"
+                return f"next({s2 + state_timepoint_diff},{s1 + state_timepoint_diff},{violation_name}).\n"
     return ""
 
 

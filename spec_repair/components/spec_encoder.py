@@ -342,6 +342,8 @@ def propositionalise_consequent(line, exception=False):
     for disjunct in disjunction_of_conjunctions:
         output += component_body
         for i, (temp_op, conjuncts) in enumerate(disjunct.items()):
+            if line['when'] == When.EVENTUALLY:
+                temp_op = "eventually"
             output += f",\n{component_end_consequent(line['name'], temp_op, timepoint, n_root_consequents + i)}"
         if "eventually" not in disjunct.keys() and exception and timepoint == "T":
             output += f",\n\tnot ev_temp_op({line['name']})"

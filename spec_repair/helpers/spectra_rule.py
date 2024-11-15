@@ -33,10 +33,16 @@ class SpectraRule:
                 for op, atom in adaptation.atom_temporal_operators:
                     self.antecedent[adaptation.disjunction_index][op].append(replace_false_true(atom))
             case "consequent_exception":
-                new_disjunct = defaultdict(list)
-                for op, atom in adaptation.atom_temporal_operators:
-                    new_disjunct[op].append(atom)
-                self.consequent.insert(0, new_disjunct)
+                ops_in_consequent = {op for disjunct in self.consequent for op in disjunct}
+                if "eventually" in ops_in_consequent:
+                    for op, atom in adaptation.atom_temporal_operators:
+                        for i in range(len(self.antecedent)):
+                            self.antecedent[i][op].append(replace_false_true(atom))
+                else:
+                    new_disjunct = defaultdict(list)
+                    for op, atom in adaptation.atom_temporal_operators:
+                        new_disjunct[op].append(atom)
+                    self.consequent.insert(0, new_disjunct)
             case "ev_temp_op":
                 new_consequent = []
                 op = "eventually"

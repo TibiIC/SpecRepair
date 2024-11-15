@@ -5,6 +5,7 @@ import pandas as pd
 
 from spec_repair.components.spec_encoder import expression_to_str, \
     propositionalise_antecedent, propositionalise_consequent
+from spec_repair.enums import When
 from spec_repair.util.spec_util import parse_formula_str
 
 
@@ -928,3 +929,49 @@ consequent_holds(a_b_c,T,S):-
 \tnot ev_temp_op(a_b_c).
 """
         self.assertMultiLineEqual(expected.strip(), out.strip())
+
+    def test_propositionalise_formula_justice_assumption(self):
+        line_data = {
+            'type': 'assumption',
+            'name': 'a_b_c',
+            'formula': 'GF(b=true&c=true|d=true&e=true));',
+            'antecedent': "",
+            'consequent': "(b=true&c=true)|(d=true&e=true)",
+            'when': When.EVENTUALLY
+        }
+
+        line = pd.Series(line_data)
+        out = propositionalise_consequent(line, exception=False)
+        expected = """
+consequent_holds(a_b_c,T,S):-
+\ttrace(S),
+\ttimepoint(T,S),
+\troot_consequent_holds(eventually,a_b_c,0,T,S).
+
+root_consequent_holds(OP,a_b_c,0,T1,S):-
+\ttrace(S),
+\ttimepoint(T1,S),
+\tnot weak_timepoint(T1,S),
+\ttimepoint(T2,S),
+\ttemporal_operator(OP),
+\ttimepoint_of_op(OP,T1,T2,S),
+\tholds_at(b,T2,S),
+\tholds_at(c,T2,S).
+
+consequent_holds(a_b_c,T,S):-
+\ttrace(S),
+\ttimepoint(T,S),
+\troot_consequent_holds(eventually,a_b_c,1,T,S).
+
+root_consequent_holds(OP,a_b_c,1,T1,S):-
+\ttrace(S),
+\ttimepoint(T1,S),
+\tnot weak_timepoint(T1,S),
+\ttimepoint(T2,S),
+\ttemporal_operator(OP),
+\ttimepoint_of_op(OP,T1,T2,S),
+\tholds_at(d,T2,S),
+\tholds_at(e,T2,S).
+"""
+        self.assertMultiLineEqual(expected.strip(), out.strip())
+

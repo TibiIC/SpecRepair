@@ -58,8 +58,9 @@ class SpecLearner:
                                 new_set_cts.remove(ct)
                                 ctss |= set([tuple(new_set_cts | {complete_ct}) for complete_ct in
                                              complete_cts_from_ct(ct, spec, deadlock_required)])
-                        ctss.remove(cts)
-                        unchanged = False
+                                unchanged = False
+                        if not unchanged:
+                            ctss.remove(cts)
             return [list(cts) for cts in ctss]
         return [init_cts]
 
@@ -71,7 +72,8 @@ class SpecLearner:
             raise NoViolationException("Violation trace is not violating!")
         if learning_type == Learning.GUARANTEE_WEAKENING:
             deadlock_required = re.findall(r"entailed\((counter_strat_\d*_\d*)\)", ''.join(violations))
-            if deadlock_required:
+            violation_ct = re.findall(r"violation_holds\([^,]*,[^,]*,\s*(counter_strat_\d+_\d+)", ''.join(violations))
+            if deadlock_required and not violation_ct:
                 raise DeadlockRequiredException("Violation trace is not violating! Deadlock completion is required.")
         ilasp: str = self.spec_encoder.encode_ILASP(spec_df, trace, cts, violations, learning_type)
         output: str = run_ILASP(ilasp)

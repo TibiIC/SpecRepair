@@ -89,8 +89,10 @@ not_holds_at(A,T,S):-
     atom(A),
     weak_timepoint(T,S),
     trace(S).
+
 root_consequent_holds(OP,E,T,S):-
     root_consequent_holds(OP,E,I,T,S).
+
 % GR(1) Rules
 
 :- 	contradiction_holds(A,T,S).
@@ -183,6 +185,7 @@ root_consequent_holds(OP,initial_assumption,0,T1,S):-
 	not_holds_at(methane,T2,S).
 
 %assumption -- assumption1_1
+
 %	G(PREV(pump=true)&pump=true->next(highwater=false));
 
 assumption(assumption1_1).
@@ -226,6 +229,7 @@ root_consequent_holds(OP,assumption1_1,0,T1,S):-
 	not_holds_at(highwater,T2,S).
 
 %assumption -- assumption2_1
+
 %	GF(highwater=false|methane=false);
 
 assumption(assumption2_1).
@@ -263,6 +267,7 @@ root_consequent_holds(OP,assumption2_1,1,T1,S):-
 	not_holds_at(methane,T2,S).
 
 %guarantee -- initial_guarantee
+
 %	pump=false;
 
 guarantee(initial_guarantee).
@@ -286,7 +291,8 @@ root_consequent_holds(OP,initial_guarantee,0,T1,S):-
 	not_holds_at(pump,T2,S).
 
 %guarantee -- guarantee1_1
-%	G(highwater=true->next(pump=true));
+
+%	G(highwater=true->F(pump=true));
 
 guarantee(guarantee1_1).
 
@@ -307,7 +313,7 @@ root_antecedent_holds(OP,guarantee1_1,0,T1,S):-
 consequent_holds(guarantee1_1,T,S):-
 	trace(S),
 	timepoint(T,S),
-	root_consequent_holds(next,guarantee1_1,0,T,S).
+	root_consequent_holds(eventually,guarantee1_1,0,T,S).
 
 root_consequent_holds(OP,guarantee1_1,0,T1,S):-
 	trace(S),
@@ -319,6 +325,7 @@ root_consequent_holds(OP,guarantee1_1,0,T1,S):-
 	holds_at(pump,T2,S).
 
 %guarantee -- guarantee2_1
+
 %	G(methane=true->next(pump=false));
 
 guarantee(guarantee2_1).
@@ -352,7 +359,6 @@ root_consequent_holds(OP,guarantee2_1,0,T1,S):-
 	not_holds_at(pump,T2,S).
 
 %---*** Signature  ***---
-
 atom(highwater).
 atom(methane).
 atom(pump).
@@ -363,33 +369,74 @@ trace(trace_name_0).
 
 timepoint(0,trace_name_0).
 timepoint(1,trace_name_0).
+
 next(1,0,trace_name_0).
 
 not_holds_at(highwater,0,trace_name_0).
 not_holds_at(methane,0,trace_name_0).
 not_holds_at(pump,0,trace_name_0).
+
 holds_at(highwater,1,trace_name_0).
 holds_at(methane,1,trace_name_0).
 not_holds_at(pump,1,trace_name_0).
+
 %---*** Violation Trace ***---
 
-trace(counter_strat_0_0).
+% CS_Path: ini_S0_DEAD
 
-timepoint(0,counter_strat_0_0).
-timepoint(1,counter_strat_0_0).
-timepoint(2,counter_strat_0_0).
-next(1,0,counter_strat_0_0).
-next(2,1,counter_strat_0_0).
+trace(counter_strat_0_1).
 
-not_holds_at(highwater,0,counter_strat_0_0).
-not_holds_at(methane,0,counter_strat_0_0).
-not_holds_at(pump,0,counter_strat_0_0).
-holds_at(highwater,1,counter_strat_0_0).
-holds_at(methane,1,counter_strat_0_0).
-holds_at(pump,1,counter_strat_0_0).
-not_holds_at(highwater,2,counter_strat_0_0).
-not_holds_at(methane,2,counter_strat_0_0).
-not_holds_at(pump,2,counter_strat_0_0).
+timepoint(0,counter_strat_0_1).
+timepoint(1,counter_strat_0_1).
+timepoint(2,counter_strat_0_1).
+
+next(1,0,counter_strat_0_1).
+next(2,1,counter_strat_0_1).
+
+not_holds_at(highwater,0,counter_strat_0_1).
+not_holds_at(methane,0,counter_strat_0_1).
+not_holds_at(pump,0,counter_strat_0_1).
+
+holds_at(highwater,1,counter_strat_0_1).
+holds_at(methane,1,counter_strat_0_1).
+not_holds_at(pump,1,counter_strat_0_1).
+
+holds_at(highwater,2,counter_strat_0_1).
+not_holds_at(methane,2,counter_strat_0_1).
+not_holds_at(pump,2,counter_strat_0_1).
+
+%---*** Violation Trace ***---
+
+% CS_Path: ini_S0_S1_S2_S2
+
+trace(counter_strat_1_0).
+
+timepoint(0,counter_strat_1_0).
+timepoint(1,counter_strat_1_0).
+timepoint(2,counter_strat_1_0).
+timepoint(3,counter_strat_1_0).
+
+next(1,0,counter_strat_1_0).
+next(2,1,counter_strat_1_0).
+next(3,2,counter_strat_1_0).
+next(3,3,counter_strat_1_0).
+
+not_holds_at(highwater,0,counter_strat_1_0).
+not_holds_at(methane,0,counter_strat_1_0).
+not_holds_at(pump,0,counter_strat_1_0).
+
+not_holds_at(highwater,1,counter_strat_1_0).
+holds_at(methane,1,counter_strat_1_0).
+holds_at(pump,1,counter_strat_1_0).
+
+holds_at(highwater,2,counter_strat_1_0).
+holds_at(methane,2,counter_strat_1_0).
+not_holds_at(pump,2,counter_strat_1_0).
+
+not_holds_at(highwater,3,counter_strat_1_0).
+holds_at(methane,3,counter_strat_1_0).
+not_holds_at(pump,3,counter_strat_1_0).
+
 
 #show violation_holds/3.
 

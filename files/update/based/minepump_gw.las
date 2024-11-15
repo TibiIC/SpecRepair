@@ -402,7 +402,7 @@ not_holds_at(pump,0,counter_strat_0_0).
 holds_at(highwater,1,counter_strat_0_0).
 holds_at(methane,1,counter_strat_0_0).
 holds_at(pump,1,counter_strat_0_0).
-holds_at(highwater,2,counter_strat_0_0).
+not_holds_at(highwater,2,counter_strat_0_0).
 not_holds_at(methane,2,counter_strat_0_0).
 not_holds_at(pump,2,counter_strat_0_0).
 }).
