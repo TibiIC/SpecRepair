@@ -101,9 +101,11 @@ def select_learning_hypothesis(hypotheses: List[List[str]], heuristic: Heuristic
 
 def filter_useful_learning_hypotheses(hypotheses):
     all_hyp = hypotheses[1:]
-    scores = [int(re.search(r"score (\d*)", hyp[0]).group(1)) for hyp in all_hyp if
+    ev_hyp = [hyp[1:] for hyp in all_hyp if "ev_temp_op" in hyp[1]]
+    all_other_hyp = [hyp for hyp in all_hyp if "ev_temp_op" not in hyp[1]]
+    scores = [int(re.search(r"score (\d*)", hyp[0]).group(1)) for hyp in all_other_hyp if
               re.search(r"score (\d*)", hyp[0])]
-    top_hyp = [hyp[1:] for i, hyp in enumerate(all_hyp) if scores[i] == min(scores)]
+    top_hyp = [hyp[1:] for i, hyp in enumerate(all_other_hyp) if scores[i] == min(scores)] + ev_hyp
     return top_hyp
 
 

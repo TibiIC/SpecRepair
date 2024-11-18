@@ -11,7 +11,7 @@ guarantee -- initial_guarantee
     pump=false;
 
 guarantee -- guarantee1_1
-		G(highwater=true->methane=true|next(pump=true));
+	G(highwater=true->methane=true|next(pump=true));
 
 guarantee -- guarantee2_1
 	G(methane=true->next(pump=false));
@@ -20,7 +20,7 @@ assumption -- assumption1_1
 	G(PREV(pump=true)&pump=true->next(highwater=false));
 
 assumption -- assumption2_1
-	G(true->F(highwater=false|methane=false));
+	GF(highwater=false|methane=false);
 
 
 

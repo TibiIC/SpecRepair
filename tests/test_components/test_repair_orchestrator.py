@@ -26,8 +26,7 @@ class TestRepairOrchestrator(TestCase):
         # Restore the original working directory
         os.chdir(cls.original_working_directory)
 
-    # @patch('sys.stdin', io.StringIO('1\n0\n0\n0\n1\n1\n'))
-    @patch('sys.stdin', io.StringIO('0\n1\n0\n0\n0\n0\n0\n0\n'))
+    @patch('sys.stdin', io.StringIO('1\n0\n0\n0\n1\n1\n'))
     def test_repair_spec_minepump(self):
         spec: list[str] = format_spec(read_file_lines(
             '../input-files/examples/Minepump/minepump_strong.spectra'))
@@ -41,7 +40,7 @@ class TestRepairOrchestrator(TestCase):
         write_file("./test_files/out/minepump_test_fix.spectra", new_spec)
         self.assertEqual(expected_spec, new_spec)
 
-    @patch('sys.stdin', io.StringIO('3\n1\n1\n'))
+    @patch('sys.stdin', io.StringIO('3\n1\n1\n1\n'))
     def test_repair_spec_minepump_aw_ev_gw_methane(self):
         spec: list[str] = format_spec(read_file_lines(
             '../input-files/examples/Minepump/minepump_strong.spectra'))
@@ -85,8 +84,22 @@ class TestRepairOrchestrator(TestCase):
         write_file("./test_files/out/arbiter_test_fix.spectra", new_spec)
         self.assertEqual(expected_spec, new_spec)
 
-    @patch('sys.stdin', io.StringIO('0\n5\n1\n1\n2\n12\n9\n'))
+    #@patch('sys.stdin', io.StringIO('0\n5\n1\n1\n2\n12\n9\n'))
     def test_repair_spec_arbiter_edge_case(self):
+        spec: list[str] = format_spec(read_file_lines(
+            '../input-files/examples/Arbiter/Arbiter_FINAL_strong.spectra'))
+        trace: list[str] = read_file_lines(
+            "./test_files/arbiter_strong_auto_violation.txt")
+        expected_spec: list[str] = format_spec(read_file_lines(
+            './test_files/arbiter_edge_case.spectra'))
+
+        repairer: RepairOrchestrator = RepairOrchestrator(SpecLearner(), SpecOracle())
+        new_spec = repairer.repair_spec(spec, trace)
+        write_file("./test_files/out/arbiter_test_fix.spectra", new_spec)
+        self.assertEqual(expected_spec, new_spec)
+
+    #@patch('sys.stdin', io.StringIO('0\n5\n1\n1\n2\n6\n1\n6\n1\n6\n1\n6\n1\n6\n1\n6\n1\n6\n1\n6\n1\n6\n1\n6\n1\n....'))
+    def test_repair_spec_arbiter_infinite_loop_bug(self):
         spec: list[str] = format_spec(read_file_lines(
             '../input-files/examples/Arbiter/Arbiter_FINAL_strong.spectra'))
         trace: list[str] = read_file_lines(

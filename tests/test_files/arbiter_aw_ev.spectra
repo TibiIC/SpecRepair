@@ -19,6 +19,6 @@ guarantee -- guarantee4
     G(g1=false | g2=false);
 
 assumption -- a_always
-	G(true->F(a=true));
+	GF(a=true);
 
 
