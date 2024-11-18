@@ -92,6 +92,24 @@ class TestSpectraRule(TestCase):
         expected_output = "G(methane=false->highwater=false|methane=false);"
         self.assertEqual(expected_output, output)
 
+    def test_integrate_adaptation_to_formula_2(self):
+        formula = SpectraRule(
+            temp_type=GR1TemporalType.INVARIANT,
+            antecedent=[defaultdict(list)],
+            consequent=[{'current': ['a=true']}]
+        )
+        adaptation = AdaptationLearned(
+            type='antecedent_exception',
+            name_expression='a_always',
+            disjunction_index=0,
+            atom_temporal_operators=[('current', 'r1=false'),
+                                     ('current', 'r2=false')]
+        )
+        formula.integrate(adaptation)
+        output = formula.to_str()
+        expected_output = "G(r1=true|r2=true->a=true);"
+        self.assertEqual(expected_output, output)
+
     def test_integrate_eventualisation_adaptation_to_formula(self):
         formula = SpectraRule(
             temp_type=GR1TemporalType.INVARIANT,

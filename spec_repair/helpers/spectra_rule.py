@@ -1,4 +1,5 @@
 from collections import defaultdict
+from copy import deepcopy
 from typing import List, Dict, TypeVar
 
 from spec_repair.helpers.adaptation_learned import AdaptationLearned
@@ -30,14 +31,21 @@ class SpectraRule:
     def integrate(self, adaptation: AdaptationLearned):
         match adaptation.type:
             case "antecedent_exception":
+                disjunct = self.antecedent[adaptation.disjunction_index]
+                self.antecedent.remove(disjunct)
                 for op, atom in adaptation.atom_temporal_operators:
-                    self.antecedent[adaptation.disjunction_index][op].append(replace_false_true(atom))
+                    new_disjunct = deepcopy(disjunct)
+                    new_disjunct[op].append(replace_false_true(atom))
+                    self.antecedent.append(new_disjunct)
             case "consequent_exception":
                 ops_in_consequent = {op for disjunct in self.consequent for op in disjunct}
                 if "eventually" in ops_in_consequent:
-                    for op, atom in adaptation.atom_temporal_operators:
-                        for i in range(len(self.antecedent)):
-                            self.antecedent[i][op].append(replace_false_true(atom))
+                    for disjunct in deepcopy(self.antecedent):
+                        self.antecedent.remove(disjunct)
+                        for op, atom in adaptation.atom_temporal_operators:
+                            new_disjunct = deepcopy(disjunct)
+                            new_disjunct[op].append(replace_false_true(atom))
+                            self.antecedent.append(new_disjunct)
                 else:
                     new_disjunct = defaultdict(list)
                     for op, atom in adaptation.atom_temporal_operators:
