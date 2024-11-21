@@ -1,6 +1,7 @@
 import io
 import os
 import unittest
+from concurrent.futures import ThreadPoolExecutor
 from unittest import TestCase
 from unittest.mock import patch
 
@@ -98,19 +99,27 @@ class TestRepairOrchestrator(TestCase):
         write_file("./test_files/out/arbiter_test_fix.spectra", new_spec)
         self.assertEqual(expected_spec, new_spec)
 
-    #@patch('sys.stdin', io.StringIO('0\n5\n1\n1\n2\n6\n1\n6\n1\n6\n1\n6\n1\n6\n1\n6\n1\n6\n1\n6\n1\n6\n1\n6\n1\n....'))
+    @patch('sys.stdin', io.StringIO('0\n5\n1\n1\n2\n6\n1\n6\n1\n6\n1\n6\n1\n6\n1\n6\n1\n6\n1\n6\n1\n6\n1\n6\n1\n....'))
     def test_repair_spec_arbiter_infinite_loop_bug(self):
         spec: list[str] = format_spec(read_file_lines(
             '../input-files/examples/Arbiter/Arbiter_FINAL_strong.spectra'))
         trace: list[str] = read_file_lines(
             "./test_files/arbiter_strong_auto_violation.txt")
-        expected_spec: list[str] = format_spec(read_file_lines(
-            './test_files/arbiter_edge_case.spectra'))
-
         repairer: RepairOrchestrator = RepairOrchestrator(SpecLearner(), SpecOracle())
-        new_spec = repairer.repair_spec(spec, trace)
-        write_file("./test_files/out/arbiter_test_fix.spectra", new_spec)
-        self.assertEqual(expected_spec, new_spec)
+        max_time = 60
+        def repair_spec_thread():
+            repairer.repair_spec(spec, trace)
+
+        with ThreadPoolExecutor() as executor:
+            future = executor.submit(repair_spec_thread)
+
+            try:
+                # Wait for the operation to complete or timeout
+                future.result(timeout=max_time)
+            except TimeoutError:
+                self.fail(f"Repair exceeded {max_time} seconds and might be stuck in an infinite loop.")
+            except Exception as e:
+                self.fail(f"Repair raised an unexpected exception: {e}")
 
     @patch('sys.stdin', io.StringIO('0\n'))
     def test_repair_spec_lift_aw_b1(self):

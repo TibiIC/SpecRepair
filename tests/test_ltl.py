@@ -73,6 +73,18 @@ class TestLTL(TestCase):
         empty_df: pd.DataFrame = pd.DataFrame(formula_list, columns=self.columns)
         assert_frame_equal(spec_df, empty_df)
 
+    def test_assumptions_eventually(self):
+        spec = [
+            'assumption -- assumption2_1\n',
+            '\tpRespondsToS(pump=true,highwater=false|methane=false);\n',
+            '\n'
+        ]
+
+        spec_df: pd.DataFrame = spectra_to_df(spec)
+        formula_list: list = [formula for formula in self.formula_list if formula[0] == "assumption"]
+        empty_df: pd.DataFrame = pd.DataFrame(formula_list, columns=self.columns)
+        assert_frame_equal(spec_df, empty_df)
+
     def test_guarantees(self):
         spec = ['guarantee -- initial_guarantee\n',
                 '    pump=false;\n',

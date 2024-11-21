@@ -1,6 +1,7 @@
 import argparse
 import os
 import glob
+import re
 from enum import Enum
 
 import networkx as nx
@@ -52,6 +53,13 @@ def generate_tree_from_root(root_spec: Spec, all_other_specs: Dict[int, Spec], g
 
     return tree
 
+def extract_id(file_name: str) -> int:
+    match = re.search(r'\d+', file_name)
+    if match:
+        first_number = match.group()
+        return int(first_number)
+    else:
+        assert False, f"Could not extract id from file name {file_name}"
 
 def visualise_implication_graph_from_specs_at_path(spec_directory_path: str, output_file: str,
                                                    graph_type: Optional[GR1ExpType]):
@@ -61,7 +69,7 @@ def visualise_implication_graph_from_specs_at_path(spec_directory_path: str, out
 
     all_specs: Dict[int, Spec] = {}
     for spec_abs_path in spec_abs_paths:
-        spec_id: int = int(os.path.splitext(os.path.basename(spec_abs_path))[0])
+        spec_id: int = extract_id(os.path.splitext(os.path.basename(spec_abs_path))[0])
         spec_txt: str = read_file(spec_abs_path)
         spec: Spec = Spec(spec_txt)
         all_specs[spec_id] = spec

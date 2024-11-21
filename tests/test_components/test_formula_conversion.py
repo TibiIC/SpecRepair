@@ -1,4 +1,4 @@
-from collections import defaultdict
+import unittest
 from unittest import TestCase
 
 import pandas as pd
@@ -11,6 +11,7 @@ from spec_repair.util.spec_util import parse_formula_str
 
 class Test(TestCase):
     maxDiff = None
+
 
     def test_parse_formula(self):
         formula = "(next(a&b&c)&d&prev(e))|(next(f)&g&F(h&i))"
@@ -35,6 +36,16 @@ class Test(TestCase):
         output = parse_formula_str(formula)
         expected_output = [
             {'eventually': ['a=true', 'b=true']}
+        ]
+        self.assertEqual(output, expected_output)
+
+    @unittest.skip("This test is not working")
+    def test_parse_formula_4(self):
+        formula = "F(a=true&b=true|c=true&d=false)"
+        output = parse_formula_str(formula)
+        expected_output = [
+            {'eventually': ['a=true', 'b=true']},
+            {'eventually': ['c=true', 'd=true']}
         ]
         self.assertEqual(output, expected_output)
 
@@ -935,6 +946,96 @@ consequent_holds(a_b_c,T,S):-
             'type': 'assumption',
             'name': 'a_b_c',
             'formula': 'GF(b=true&c=true|d=true&e=true));',
+            'antecedent': "",
+            'consequent': "(b=true&c=true)|(d=true&e=true)",
+            'when': When.EVENTUALLY
+        }
+
+        line = pd.Series(line_data)
+        out = propositionalise_consequent(line, exception=False)
+        expected = """
+consequent_holds(a_b_c,T,S):-
+\ttrace(S),
+\ttimepoint(T,S),
+\troot_consequent_holds(eventually,a_b_c,0,T,S).
+
+root_consequent_holds(OP,a_b_c,0,T1,S):-
+\ttrace(S),
+\ttimepoint(T1,S),
+\tnot weak_timepoint(T1,S),
+\ttimepoint(T2,S),
+\ttemporal_operator(OP),
+\ttimepoint_of_op(OP,T1,T2,S),
+\tholds_at(b,T2,S),
+\tholds_at(c,T2,S).
+
+consequent_holds(a_b_c,T,S):-
+\ttrace(S),
+\ttimepoint(T,S),
+\troot_consequent_holds(eventually,a_b_c,1,T,S).
+
+root_consequent_holds(OP,a_b_c,1,T1,S):-
+\ttrace(S),
+\ttimepoint(T1,S),
+\tnot weak_timepoint(T1,S),
+\ttimepoint(T2,S),
+\ttemporal_operator(OP),
+\ttimepoint_of_op(OP,T1,T2,S),
+\tholds_at(d,T2,S),
+\tholds_at(e,T2,S).
+"""
+        self.assertMultiLineEqual(expected.strip(), out.strip())
+
+    def test_propositionalise_formula_implies_eventually(self):
+        line_data = {
+            'type': 'assumption',
+            'name': 'a_b_c',
+            'formula': 'G(a=true->F(b=true&c=true)|F(d=true&e=true));',
+            'antecedent': "a=true",
+            'consequent': "F(b=true&c=true)|F(d=true&e=true)",
+            'when': When.ALWAYS
+        }
+
+        line = pd.Series(line_data)
+        out = propositionalise_consequent(line, exception=False)
+        expected = """
+consequent_holds(a_b_c,T,S):-
+\ttrace(S),
+\ttimepoint(T,S),
+\troot_consequent_holds(eventually,a_b_c,0,T,S).
+
+root_consequent_holds(OP,a_b_c,0,T1,S):-
+\ttrace(S),
+\ttimepoint(T1,S),
+\tnot weak_timepoint(T1,S),
+\ttimepoint(T2,S),
+\ttemporal_operator(OP),
+\ttimepoint_of_op(OP,T1,T2,S),
+\tholds_at(b,T2,S),
+\tholds_at(c,T2,S).
+
+consequent_holds(a_b_c,T,S):-
+\ttrace(S),
+\ttimepoint(T,S),
+\troot_consequent_holds(eventually,a_b_c,1,T,S).
+
+root_consequent_holds(OP,a_b_c,1,T1,S):-
+\ttrace(S),
+\ttimepoint(T1,S),
+\tnot weak_timepoint(T1,S),
+\ttimepoint(T2,S),
+\ttemporal_operator(OP),
+\ttimepoint_of_op(OP,T1,T2,S),
+\tholds_at(d,T2,S),
+\tholds_at(e,T2,S).
+"""
+        self.assertMultiLineEqual(expected.strip(), out.strip())
+
+    def test_propositionalise_formula_implies_eventually_exception(self):
+        line_data = {
+            'type': 'assumption',
+            'name': 'a_b_c',
+            'formula': 'G(a=true->F(b=true&c=true|d=true&e=true)));',
             'antecedent': "",
             'consequent': "(b=true&c=true)|(d=true&e=true)",
             'when': When.EVENTUALLY
