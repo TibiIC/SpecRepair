@@ -58,9 +58,9 @@ pattern pRespondsToS(s, p) {
             if PRS_REG.search(line):
                 is_necessary = True
                 s = re.search(r"G\(([^-]*)", line).group(1)
-                p = re.search(r"F\((.*)", line).group(1)
-                if p[-2:] == "))":
-                    p = p[0:-2]
+                p_matches = re.findall(r"F\((.*?)\)", line)
+                if p_matches:
+                    p = "|".join(p_matches)
                 else:
                     raise ValueError(f"Trouble extracting p from: {line}")
                 spec[i] = f"\tpRespondsToS({s},{p});\n"

@@ -85,7 +85,7 @@ class TestRepairOrchestrator(TestCase):
         write_file("./test_files/out/arbiter_test_fix.spectra", new_spec)
         self.assertEqual(expected_spec, new_spec)
 
-    #@patch('sys.stdin', io.StringIO('0\n5\n1\n1\n2\n12\n9\n'))
+    @patch('sys.stdin', io.StringIO('0\n3\n2\n6\n2\n12\n0\n8\n0\n4\n4\n'))
     def test_repair_spec_arbiter_edge_case(self):
         spec: list[str] = format_spec(read_file_lines(
             '../input-files/examples/Arbiter/Arbiter_FINAL_strong.spectra'))
