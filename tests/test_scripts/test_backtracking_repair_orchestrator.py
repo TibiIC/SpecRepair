@@ -209,3 +209,71 @@ class TestBacktrackingRepairOrchestrator(TestCase):
         expected_specs.sort()
 
         self.assertEqual(expected_specs, new_specs)
+
+    def test_bfs_repair_spec_traffic_updated_no_eventually(self):
+        out_test_dir_name = "./test_files/out/traffic_test_bfs_no_eventually"
+        transitions_file_path = f"{out_test_dir_name}/transitions.csv"
+        if os.path.exists(transitions_file_path):
+            os.remove(transitions_file_path)
+        spec: list[str] = format_spec(read_file_lines(
+            './test_files/traffic/traffic_updated_strong.spectra'))
+        trace: list[str] = read_file_lines(
+            "./test_files/traffic/traffic_updated_auto_violation.txt")
+        new_specs_recorder: SpecRecorder = SpecRecorder()
+        repairer: BacktrackingRepairOrchestrator = BacktrackingRepairOrchestrator(
+            SpecLearner(),
+            SpecOracle(),
+            NoEventuallyHypothesisHeuristicManager(),
+            RepairLogger(transitions_file_path, debug=True)
+        )
+
+        # Getting all possible repairs
+        repairer.repair_spec_bfs(spec, trace, new_specs_recorder)
+        new_specs: list[str] = new_specs_recorder.get_specs()
+        new_specs.sort()
+        for i, new_spec in enumerate(new_specs):
+            write_to_file(f"{out_test_dir_name}/traffic_test_fix_{i}.spectra", new_spec)
+
+        # Getting expected repairs
+        expected_specs_recorder: SpecRecorder = SpecRecorder()
+        for spec_file in os.listdir('./test_files/traffic_weakenings'):
+            expected_specs_recorder.add(
+                Spec(''.join(format_spec(read_file_lines(f'./test_files/traffic_weakenings/{spec_file}')))))
+        expected_specs: list = expected_specs_recorder.get_specs()
+        expected_specs.sort()
+
+        self.assertEqual(expected_specs, new_specs)
+
+    def test_bfs_repair_spec_arbiter_no_eventually(self):
+        out_test_dir_name = "./test_files/out/arbiter_test_bfs_no_eventually"
+        transitions_file_path = f"{out_test_dir_name}/transitions.csv"
+        if os.path.exists(transitions_file_path):
+            os.remove(transitions_file_path)
+        spec: list[str] = format_spec(read_file_lines(
+            '../input-files/examples/Arbiter/Arbiter_FINAL_strong.spectra'))
+        trace: list[str] = read_file_lines(
+            "./test_files/arbiter_strong_auto_violation.txt")
+        new_specs_recorder: SpecRecorder = SpecRecorder(debug_folder=out_test_dir_name)
+        repairer: BacktrackingRepairOrchestrator = BacktrackingRepairOrchestrator(
+            SpecLearner(),
+            SpecOracle(),
+            NoEventuallyHypothesisHeuristicManager(),
+            RepairLogger(transitions_file_path, debug=True)
+        )
+
+        # Getting all possible repairs
+        repairer.repair_spec_bfs(spec, trace, new_specs_recorder)
+        new_specs: list[str] = new_specs_recorder.get_specs()
+        new_specs.sort()
+        for i, new_spec in enumerate(new_specs):
+            write_to_file(f"{out_test_dir_name}/arbiter_test_fix_{i}.spectra", new_spec)
+
+        # Getting expected repairs
+        expected_specs_recorder: SpecRecorder = SpecRecorder()
+        for spec_file in os.listdir('./test_files/arbiter_weakenings'):
+            expected_specs_recorder.add(
+                Spec(''.join(format_spec(read_file_lines(f'./test_files/arbiter_weakenings/{spec_file}')))))
+        expected_specs: list = expected_specs_recorder.get_specs()
+        expected_specs.sort()
+
+        self.assertEqual(expected_specs, new_specs)

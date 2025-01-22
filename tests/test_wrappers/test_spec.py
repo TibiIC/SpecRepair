@@ -2,7 +2,7 @@ import copy
 from unittest import TestCase
 
 from spec_repair.wrappers.spec import Spec
-from spec_repair.ltl_types import GR1ExpType
+from spec_repair.ltl_types import GR1FormulaType
 from tests.test_common_utility_strings.specs import *
 
 
@@ -39,11 +39,11 @@ class TestSpec(TestCase):
     def test_asm_eq_gar_weaker(self):
         spec_1 = Spec(copy.deepcopy(spec_perf))
         spec_2 = Spec(copy.deepcopy(spec_asm_eq_gar_weaker))
-        self.assertTrue(spec_1.equivalent_to(spec_2, GR1ExpType.ASM))
-        self.assertTrue(spec_1.implies(spec_2, GR1ExpType.GAR))
+        self.assertTrue(spec_1.equivalent_to(spec_2, GR1FormulaType.ASM))
+        self.assertTrue(spec_1.implies(spec_2, GR1FormulaType.GAR))
 
     def test_asm_stronger_gar_same(self):
         spec_1 = Spec(copy.deepcopy(spec_perf))
         spec_2 = Spec(copy.deepcopy(spec_asm_stronger_gar_eq))
-        self.assertTrue(spec_1.implied_by(spec_2, GR1ExpType.ASM))
-        self.assertTrue(spec_1.equivalent_to(spec_2, GR1ExpType.GAR))
+        self.assertTrue(spec_1.implied_by(spec_2, GR1FormulaType.ASM))
+        self.assertTrue(spec_1.equivalent_to(spec_2, GR1FormulaType.GAR))

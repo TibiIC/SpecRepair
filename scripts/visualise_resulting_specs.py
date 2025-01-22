@@ -10,7 +10,7 @@ from typing import Dict, Optional
 
 from spec_repair.util.file_util import read_file
 from spec_repair.wrappers.spec import Spec
-from spec_repair.ltl_types import GR1ExpType
+from spec_repair.ltl_types import GR1FormulaType
 from spec_repair.util.graph_util import remove_reflexive_relations, merge_on_bidirectional_edges, \
     remove_transitive_relations
 
@@ -25,7 +25,7 @@ def extract_graph_without_transitivity_relations(graph: nx.DiGraph):
     return graph
 
 
-def generate_graph(all_specs: Dict[int, Spec], graph_type: Optional[GR1ExpType] = None):
+def generate_graph(all_specs: Dict[int, Spec], graph_type: Optional[GR1FormulaType] = None):
     # Create a directed graph (graph) using networkx
     graph = nx.DiGraph()
 
@@ -40,7 +40,7 @@ def generate_graph(all_specs: Dict[int, Spec], graph_type: Optional[GR1ExpType] 
     return extract_graph_without_transitivity_relations(graph)
 
 
-def generate_tree_from_root(root_spec: Spec, all_other_specs: Dict[int, Spec], graph_type: Optional[GR1ExpType] = None):
+def generate_tree_from_root(root_spec: Spec, all_other_specs: Dict[int, Spec], graph_type: Optional[GR1FormulaType] = None):
     # Create a directed graph (tree) using networkx
     tree = nx.DiGraph()
 
@@ -62,7 +62,7 @@ def extract_id(file_name: str) -> int:
         assert False, f"Could not extract id from file name {file_name}"
 
 def visualise_implication_graph_from_specs_at_path(spec_directory_path: str, output_file: str,
-                                                   graph_type: Optional[GR1ExpType]):
+                                                   graph_type: Optional[GR1FormulaType]):
     # Use the glob module to find all .spectra files in the specified directory
     spec_abs_paths = glob.glob(os.path.join(spec_directory_path, '*.spectra'))
     spec_abs_paths = [os.path.abspath(file_path) for file_path in spec_abs_paths]
@@ -149,12 +149,12 @@ class CompareType(Enum):
     def __str__(self) -> str:
         return f"{self.value}"
 
-    def to_GR1ExpType(self) -> Optional[GR1ExpType]:
+    def to_GR1ExpType(self) -> Optional[GR1FormulaType]:
         match self:
             case CompareType.ASM:
-                return GR1ExpType.ASM
+                return GR1FormulaType.ASM
             case CompareType.GAR:
-                return GR1ExpType.GAR
+                return GR1FormulaType.GAR
             case CompareType.GR1:
                 return None
 
@@ -178,6 +178,6 @@ if __name__ == '__main__':
     current_directory = os.getcwd()
     spec_directory_path = os.path.join(current_directory, args.spec_dir)
     output_file_path = os.path.join(current_directory, args.output)
-    graph_type: Optional[GR1ExpType] = args.graph_type.to_GR1ExpType()
+    graph_type: Optional[GR1FormulaType] = args.graph_type.to_GR1ExpType()
     visualise_implication_graph_from_specs_at_path(spec_directory_path, output_file_path, graph_type)
     # visualise_tree_from_ideal_from_specs_at_path(spec_directory_path, output_file, graph_type)

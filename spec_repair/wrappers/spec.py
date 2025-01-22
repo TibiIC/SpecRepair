@@ -2,7 +2,7 @@ import re
 import subprocess
 from typing import Optional
 
-from spec_repair.ltl_types import GR1ExpType, LTLFiltOperation
+from spec_repair.ltl_types import GR1FormulaType, LTLFiltOperation
 from spec_repair.old.specification_helper import strip_vars
 from spec_repair.util.spec_util import simplify_assignments, shift_prev_to_next
 
@@ -25,10 +25,10 @@ class Spec:
         self.text = re.sub(regex_pattern, replace_line, self.text)
 
     def __eq__(self, other):
-        asm_eq = self.equivalent_to(other, GR1ExpType.ASM)
+        asm_eq = self.equivalent_to(other, GR1FormulaType.ASM)
         if not asm_eq:
             return False
-        gar_eq = self.equivalent_to(other, GR1ExpType.GAR)
+        gar_eq = self.equivalent_to(other, GR1FormulaType.GAR)
         return asm_eq and gar_eq
 
     def __ne__(self, other):
@@ -38,33 +38,33 @@ class Spec:
     def __hash__(self) -> int:
         return self.text.__hash__()
 
-    def to_spot(self, exp_type: Optional[GR1ExpType] = None) -> str:
+    def to_spot(self, exp_type: Optional[GR1FormulaType] = None) -> str:
         """
         Returns spec as string that can be operated on by SPOT
         """
-        exps_asm = extract_GR1_expressions_of_type_spot(str(GR1ExpType.ASM), self.text.split("\n"))
-        exps_gar = extract_GR1_expressions_of_type_spot(str(GR1ExpType.GAR), self.text.split("\n"))
+        exps_asm = extract_GR1_expressions_of_type_spot(str(GR1FormulaType.ASM), self.text.split("\n"))
+        exps_gar = extract_GR1_expressions_of_type_spot(str(GR1FormulaType.GAR), self.text.split("\n"))
         match exp_type:
-            case GR1ExpType.ASM:
+            case GR1FormulaType.ASM:
                 return exps_asm
-            case GR1ExpType.GAR:
+            case GR1FormulaType.GAR:
                 return exps_gar
             case _:
                 exps = f"({exps_asm})->({exps_gar})"
                 return exps
 
-    def implied_by(self, other, exp_type: Optional[GR1ExpType] = None):
+    def implied_by(self, other, exp_type: Optional[GR1FormulaType] = None):
         return other.implies(self, exp_type)
 
-    def implies(self, other, exp_type: Optional[GR1ExpType] = None):
+    def implies(self, other, exp_type: Optional[GR1FormulaType] = None):
         ltl_op = LTLFiltOperation.IMPLIES
         return self.compare_to(other, exp_type, ltl_op)
 
-    def equivalent_to(self, other, exp_type: GR1ExpType):
+    def equivalent_to(self, other, exp_type: GR1FormulaType):
         ltl_op = LTLFiltOperation.EQUIVALENT
         return self.compare_to(other, exp_type, ltl_op)
 
-    def compare_to(self, other, exp_type: GR1ExpType, ltl_op: LTLFiltOperation):
+    def compare_to(self, other, exp_type: GR1FormulaType, ltl_op: LTLFiltOperation):
         this_exps = self.to_spot(exp_type)
         other_exps = other.to_spot(exp_type)
         return is_left_cmp_right(this_exps, ltl_op, other_exps)

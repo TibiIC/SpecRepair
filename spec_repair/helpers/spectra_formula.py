@@ -10,7 +10,7 @@ from spec_repair.util.spec_util import parse_formula_str, replace_false_true
 Self = TypeVar('T', bound='SpectraRule')
 
 
-class SpectraRule:
+class SpectraFormula:
     def __init__(
             self,
             temp_type: GR1TemporalType,
@@ -76,7 +76,7 @@ class SpectraRule:
             formula (str): The input formula to parse.
 
         Returns:
-            SpectraRule: A SpectraFormula object containing the parsed formula.
+            SpectraFormula: A SpectraFormula object containing the parsed formula.
         """
 
         temp_op_str = GR1Formula.pattern.match(formula).group(GR1Formula.TEMP_OP)
@@ -99,7 +99,7 @@ class SpectraRule:
             antecedent = parse_formula_str(parts[0])
             consequent = parse_formula_str(parts[1])
 
-        return SpectraRule(temp_op, antecedent, consequent)
+        return SpectraFormula(temp_op, antecedent, consequent)
 
     @staticmethod
     def formula_DNF_to_str(parsed_formula: List[Dict[str, List[str]]], optimise_parantheses: bool = False) -> str:

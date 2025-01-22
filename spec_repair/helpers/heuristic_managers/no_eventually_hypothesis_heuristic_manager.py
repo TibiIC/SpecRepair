@@ -7,4 +7,4 @@ class NoEventuallyHypothesisHeuristicManager(NoFilterHeuristicManager):
 
     def select_weakening_hypotheses(self, hypotheses: List[List[str]]) -> List[List[str]]:
         hypotheses = super().select_weakening_hypotheses(hypotheses)
-        return [h for h in hypotheses if 'ev_temp_op' not in h]
+        return [h for h in hypotheses if 'ev_temp_op' not in "".join(h)]

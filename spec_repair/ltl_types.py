@@ -67,12 +67,20 @@ CounterStrategy = List[str]
 Spec = pd.DataFrame
 
 
-class GR1ExpType(Enum):
+class GR1FormulaType(Enum):
     ASM = "assumption|asm"
     GAR = "guarantee|gar"
 
     def __str__(self) -> str:
         return f"{self.value}"
+
+    @staticmethod
+    def from_str(value: str) -> "GR1FormulaType":
+        if value in ["assumption", "asm"]:
+            return GR1FormulaType.ASM
+        elif value in ["guarantee", "gar"]:
+            return GR1FormulaType.GAR
+        raise ValueError(f"Unsupported value: {value}")
 
 
 class GR1TemporalType(Enum):
