@@ -10,7 +10,7 @@ from spec_repair.builders.abstract_builder import AbstractBuilder
 from spec_repair.builders.choicesbuilder import ChoicesBuilder
 from spec_repair.builders.enums import RecordingState, ChoiceType
 from spec_repair.builders.rulebuilder import RuleBuilder
-from spec_repair.helpers.spec_recorder import SpecRecorder
+from spec_repair.helpers.recorders.unique_spec_recorder import UniqueSpecRecorder
 from spec_repair.builders.summarybuilder import SummaryBuilder
 from spec_repair.util.file_util import generate_temp_filename
 from spec_repair.wrappers.spec import Spec
@@ -54,7 +54,7 @@ class CSVBuilder(AbstractBuilder):
         self.rule_builder = RuleBuilder()
         self.choices_builder = ChoicesBuilder()
         self.summary_builder = SummaryBuilder()
-        self.spec_recorder = SpecRecorder()
+        self.spec_recorder = UniqueSpecRecorder()
         self.ideal_spec = None
         self._reset_builder_for_new_row()
 

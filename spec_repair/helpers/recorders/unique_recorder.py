@@ -1,9 +1,10 @@
-from typing import Generic, Optional, List
+from typing import Optional, List
 
+from spec_repair.helpers.recorders.recorder import Recorder
 from spec_repair.heuristics import T
 
 
-class Recorder(Generic[T]):
+class UniqueRecorder(Recorder[T]):
     def __init__(self):
         self._set: set[T] = set()
         self._value_to_id: dict[T, int] = {}
@@ -47,13 +48,6 @@ class Recorder(Generic[T]):
         :return: A list of all unique elements stored in the set.
         """
         return list(self._set)
-
-    def get_all_ids(self) -> List[int]:
-        """
-        Returns a list of all unique IDs currently in use.
-        :return: A list of all unique IDs currently in use.
-        """
-        return list(self._value_to_id.values())
 
     def __contains__(self, element: T) -> bool:
         """

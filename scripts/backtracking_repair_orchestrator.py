@@ -5,14 +5,15 @@ from copy import deepcopy
 from typing import Deque, List
 
 from spec_repair.helpers.logger import Logger, NoLogger
-from spec_repair.helpers.spec_recorder import SpecRecorder
+from spec_repair.helpers.recorders.recorder import Recorder
+from spec_repair.helpers.recorders.unique_spec_recorder import UniqueSpecRecorder
 from spec_repair.helpers.counter_trace import CounterTrace, cts_from_cs
 from spec_repair.helpers.heuristic_managers.heuristic_manager import HeuristicManager
 from spec_repair.components.spec_learner import SpecLearner
 from spec_repair.components.spec_oracle import SpecOracle
 from spec_repair.enums import Learning
 from spec_repair.exceptions import NoAssumptionWeakeningException
-from spec_repair.helpers.recorder import Recorder
+from spec_repair.helpers.recorders.unique_recorder import UniqueRecorder
 from spec_repair.helpers.repair_nodes.candidate_repair_node import CandidateRepairNode
 from spec_repair.wrappers.spec import Spec
 
@@ -37,7 +38,7 @@ class BacktrackingRepairOrchestrator:
             self,
             spec: list[str],
             trace: list[str],
-            spec_recorder: SpecRecorder
+            spec_recorder: Recorder[Spec]
     ) -> None:
         self._initialise_repair_variables()
         root_node = CandidateRepairNode(spec, [], None, Learning.ASSUMPTION_WEAKENING)
@@ -140,7 +141,7 @@ class BacktrackingRepairOrchestrator:
         self._ct_cnt = 0
         self._hm.reset()
         self._stack: Deque[CandidateRepairNode] = deque()
-        self._visited_nodes: Recorder[CandidateRepairNode] = Recorder()
+        self._visited_nodes: UniqueRecorder[CandidateRepairNode] = UniqueRecorder()
 
     def _initialise_guarantee_weakening(self, node):
         assert node.learning_type == Learning.ASSUMPTION_WEAKENING

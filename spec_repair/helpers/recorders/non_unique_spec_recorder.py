@@ -1,11 +1,11 @@
 from typing import Optional
 
-from spec_repair.helpers.recorder import Recorder
+from spec_repair.helpers.recorders.non_unique_recorder import NonUniqueRecorder
 from spec_repair.util.file_util import write_to_file
 from spec_repair.wrappers.spec import Spec
 
 
-class SpecRecorder(Recorder[Spec]):
+class NonUniqueSpecRecorder(NonUniqueRecorder[Spec]):
     def __init__(self, debug_folder: Optional[str] = None):
         super().__init__()
         self.debug_folder = debug_folder
@@ -17,4 +17,4 @@ class SpecRecorder(Recorder[Spec]):
         return index
 
     def get_specs(self) -> list[str]:
-        return [spec.get_spec() for spec in self._value_to_id.keys()]
+        return [spec.get_spec() for spec in self._list]

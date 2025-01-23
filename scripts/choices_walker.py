@@ -4,7 +4,7 @@ import shutil
 from typing import Optional, List, Set
 
 from spec_repair.config import PROJECT_PATH
-from spec_repair.helpers.spec_recorder import SpecRecorder
+from spec_repair.helpers.recorders.unique_spec_recorder import UniqueSpecRecorder
 from spec_repair.wrappers.script import Script
 from spec_repair.wrappers.spec import Spec
 from spec_repair.util.file_util import read_file
@@ -28,7 +28,7 @@ class ChoicesWalker:
 
     def run_script_with_choices(self):
         run_parameters: list[int] = [0]
-        spec_recorder: SpecRecorder = SpecRecorder()
+        spec_recorder: UniqueSpecRecorder = UniqueSpecRecorder()
         spec_path_recorder: Set[Optional[str]] = {None}
         ideal_spec = Spec(read_file(ideal_spec_file_path))
         spec_recorder.add(ideal_spec)
