@@ -79,16 +79,20 @@ class SpectraFormula:
             SpectraFormula: A SpectraFormula object containing the parsed formula.
         """
 
-        temp_op_str = GR1Formula.pattern.match(formula).group(GR1Formula.TEMP_OP)
-        match temp_op_str:
-            case "G":
-                temp_op = GR1TemporalType.INVARIANT
-            case "GF":
-                temp_op = GR1TemporalType.JUSTICE
-            case _:
-                temp_op = GR1TemporalType.INITIAL
+        try:
+            temp_op_str = GR1Formula.pattern.match(formula).group(GR1Formula.TEMP_OP)
+            match temp_op_str:
+                case "G":
+                    temp_op = GR1TemporalType.INVARIANT
+                case "GF":
+                    temp_op = GR1TemporalType.JUSTICE
+                case _:
+                    temp_op = GR1TemporalType.INITIAL
+            formula = GR1Formula.pattern.match(formula).group(GR1Formula.FORMULA)
+        except AttributeError:
+            temp_op = GR1TemporalType.INITIAL
+            formula = formula.strip(";")
 
-        formula = GR1Formula.pattern.match(formula).group(GR1Formula.FORMULA)
         # Split the formula by '->'
         parts = formula.split('->')
 

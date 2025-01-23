@@ -25,6 +25,19 @@ class TestSpectraFormula(TestCase):
         expected_output = "(F(a=true&b=true))|(F(c=true&d=false))"
         self.assertEqual(expected_output, output)
 
+    def test_parse_spectra_formula_ini_to_DNF(self):
+        formula = "\thighwater=false&methane=false;"
+        output = SpectraFormula.from_str(formula)
+        expected_output = SpectraFormula(
+            temp_type=GR1TemporalType.INITIAL,
+            antecedent=[defaultdict(list)],
+            consequent=[{'current': ['highwater=false','methane=false']}]
+        )
+        self.assertEqual(expected_output.temp_type, output.temp_type)
+        self.assertEqual(expected_output.antecedent, output.antecedent)
+        self.assertEqual(expected_output.consequent, output.consequent)
+
+
     def test_parse_spectra_formula_to_DNF(self):
         formula = "\tG(highwater=false|methane=false);"
         output = SpectraFormula.from_str(formula)

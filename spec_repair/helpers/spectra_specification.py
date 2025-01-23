@@ -1,10 +1,18 @@
 import re
 from collections import OrderedDict
+from typing import TypedDict
 
 import pandas as pd
 
 from spec_repair.helpers.spectra_formula import SpectraFormula
 from spec_repair.ltl_types import GR1FormulaType, GR1TemporalType
+
+
+class DataPoint(TypedDict):
+    name: str
+    type: GR1FormulaType
+    when: GR1TemporalType
+    formula: "SpectraFormula"  # Use the class name as a string for forward declaration
 
 
 class SpectraSpecification:
@@ -16,7 +24,7 @@ class SpectraSpecification:
         try:
             for i, line in enumerate(spec_lines):
                 if line.find("--") >= 0:
-                    name: str = re.search(r'--(\S+)', line).group(1)
+                    name: str = re.search(r'--\s*(\S+)', line).group(1)
                     type_txt: str = re.search(r'\s*(asm|assumption|gar|guarantee)\s*--', line).group(1)
                     type: GR1FormulaType = GR1FormulaType.from_str(type_txt)
                     formula_txt: str = re.sub('\s*', '', spec_lines[i + 1])
@@ -26,18 +34,4 @@ class SpectraSpecification:
         except AttributeError as e:
             raise e
 
-        columns_and_types = OrderedDict([
-            ('name', str),
-            ('type', GR1FormulaType),
-            ('when', GR1TemporalType),  # When
-            ('formula', str),
-        ])
-
-        self.formulas_df = pd.DataFrame(formula_list, columns=list(columns_and_types.keys()))
-
-        # Set the data types for each column
-        for col, dtype in columns_and_types.items():
-            self.formulas_df[col] = self.formulas_df[col].astype(dtype)
-
-
-
+        self.formulas_df = pd.DataFrame(formula_list, columns=["name", "type", "when", "formula"])

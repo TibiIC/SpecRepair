@@ -32,7 +32,7 @@ class HoldsAtAtom:
 class GR1Formula:
     TEMP_OP = 1
     FORMULA = 2
-    pattern = re.compile(r"\s*(G|GF)?\((.*)\);?$")
+    pattern = re.compile(r"\s*(inv|alw|alwEv|G|GF)?\((.*)\);?$")
 
 
 # StopHeuristicType = Callable[[List[str], List[CounterTrace]], bool]
