@@ -2,7 +2,8 @@ import os
 from unittest import TestCase
 
 from spec_repair.helpers.spectra_formula import SpectraFormula
-from spec_repair.helpers.spectra_specification import SpectraSpecification, Atom
+from spec_repair.helpers.spectra_specification import SpectraSpecification
+from spec_repair.helpers.spectra_atom import SpectraAtom
 from spec_repair.util.file_util import read_file_lines
 from spec_repair.util.spec_util import format_spec
 
@@ -48,9 +49,9 @@ class TestSpectraSpecification(TestCase):
 
         print(spec.atoms)
         expected_atoms_str: set[str] = {
-            str(Atom.from_str("env boolean highwater;")),
-            str(Atom.from_str("env boolean methane;")),
-            str(Atom.from_str("sys boolean pump;")),
+            str(SpectraAtom.from_str("env boolean highwater;")),
+            str(SpectraAtom.from_str("env boolean methane;")),
+            str(SpectraAtom.from_str("sys boolean pump;")),
         }
         for atom in spec.atoms:
             self.assertIn(str(atom), expected_atoms_str)
