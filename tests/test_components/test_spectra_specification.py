@@ -2,7 +2,7 @@ import os
 from unittest import TestCase
 
 from spec_repair.helpers.spectra_formula import SpectraFormula
-from spec_repair.helpers.spectra_specification import SpectraSpecification
+from spec_repair.helpers.spectra_specification import SpectraSpecification, Atom
 from spec_repair.util.file_util import read_file_lines
 from spec_repair.util.spec_util import format_spec
 
@@ -27,6 +27,7 @@ class TestSpectraSpecification(TestCase):
         # spec = SpectraSpecification.from_file(spec_file)
         spec = SpectraSpecification(spec_txt)
         # get all entries at column "formula" in the DataFrame
+        print(spec.formulas_df.columns)
         formulas = spec.formulas_df["formula"]
         expected_formulas: set[str] = {
             SpectraFormula.from_str("\thighwater=false&methane=false;").to_str(),
@@ -38,3 +39,18 @@ class TestSpectraSpecification(TestCase):
         }
         for formula in formulas:
             self.assertIn(formula.to_str(), expected_formulas)
+
+    def test_file_to_specification_records_all_atoms(self):
+        spec_file = "./test_files/minepump_strong.spectra"
+        spec_txt: str = "".join(format_spec(read_file_lines(spec_file)))
+        # spec = SpectraSpecification.from_file(spec_file)
+        spec = SpectraSpecification(spec_txt)
+
+        print(spec.atoms)
+        expected_atoms_str: set[str] = {
+            str(Atom.from_str("env boolean highwater;")),
+            str(Atom.from_str("env boolean methane;")),
+            str(Atom.from_str("sys boolean pump;")),
+        }
+        for atom in spec.atoms:
+            self.assertIn(str(atom), expected_atoms_str)

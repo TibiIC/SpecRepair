@@ -34,6 +34,11 @@ class GR1Formula:
     FORMULA = 2
     pattern = re.compile(r"\s*(inv|alw|alwEv|G|GF)?\((.*)\);?$")
 
+class GR1Atom:
+    ATOM_TYPE = 1
+    VALUE_TYPE = 2
+    NAME = 3
+    pattern = re.compile(r'^\s*(env|sys)\s+([a-zA-Z0-9_-]+)\s+([a-zA-Z0-9_-]+);?\s*$')
 
 # StopHeuristicType = Callable[[List[str], List[CounterTrace]], bool]
 StopHeuristicType = Callable[[List[str], List[Any]], bool]

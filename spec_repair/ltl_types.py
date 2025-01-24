@@ -82,6 +82,20 @@ class GR1FormulaType(Enum):
             return GR1FormulaType.GAR
         raise ValueError(f"Unsupported value: {value}")
 
+class GR1AtomType(Enum):
+    SYS = "sys"
+    ENV = "env"
+
+    def __str__(self) -> str:
+        return f"{self.value}"
+
+    @staticmethod
+    def from_str(value: str) -> "GR1AtomType":
+        if value == "sys":
+            return GR1AtomType.SYS
+        elif value == "env":
+            return GR1AtomType.ENV
+        raise ValueError(f"Unsupported value: {value}")
 
 class GR1TemporalType(Enum):
     INITIAL = "ini"
