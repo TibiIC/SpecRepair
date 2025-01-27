@@ -62,6 +62,8 @@ def error_check_ILASP_output(output):
         raise TimeoutError(f"{asp_tool_name} timed out during run!")
     if output == "b''":
         raise ValueError(f"{asp_tool_name} Error! No output returned!")
+    if "error" in output.lower():
+        raise ModuleNotFoundError(output)
 
 
 # TODO: Make it throw the error it returns on bad returns (i.e. syntax errors)

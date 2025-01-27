@@ -6,7 +6,6 @@ from typing import Deque, List
 
 from spec_repair.helpers.logger import Logger, NoLogger
 from spec_repair.helpers.recorders.recorder import Recorder
-from spec_repair.helpers.recorders.unique_spec_recorder import UniqueSpecRecorder
 from spec_repair.helpers.counter_trace import CounterTrace, cts_from_cs
 from spec_repair.helpers.heuristic_managers.heuristic_manager import HeuristicManager
 from spec_repair.components.spec_learner import SpecLearner
