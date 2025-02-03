@@ -1,0 +1,10 @@
+holds_at(car,0,trace_name_0).
+holds_at(green,0,trace_name_0).
+holds_at(police,0,trace_name_0).
+not_holds_at(emergency,0,trace_name_0).
+
+holds_at(car,1,trace_name_0).
+not_holds_at(emergency,1,trace_name_0).
+not_holds_at(green,1,trace_name_0).
+not_holds_at(police,1,trace_name_0).
+

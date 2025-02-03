@@ -1,0 +1,243 @@
+module genbuf_05
+	env boolean StoB_REQ0;
+	env boolean StoB_REQ1;
+	env boolean StoB_REQ2;
+	env boolean StoB_REQ3;
+	env boolean StoB_REQ4;
+	env boolean RtoB_ACK0;
+	env boolean RtoB_ACK1;
+	env boolean FULL;
+	env boolean EMPTY;
+	sys boolean BtoS_ACK0;
+	sys boolean BtoS_ACK1;
+	sys boolean BtoS_ACK2;
+	sys boolean BtoS_ACK3;
+	sys boolean BtoS_ACK4;
+	sys boolean BtoR_REQ0;
+	sys boolean BtoR_REQ1;
+	sys boolean stateG7_0;
+	sys boolean stateG7_1;
+	sys boolean ENQ;
+	sys boolean DEQ;
+	sys boolean stateG12;
+	sys boolean SLC0;
+	sys boolean SLC1;
+	sys boolean SLC2;
+assumption
+	StoB_REQ0=false;
+assumption
+	StoB_REQ1=false;
+assumption
+	StoB_REQ2=false;
+assumption
+	StoB_REQ3=false;
+assumption
+	StoB_REQ4=false;
+assumption
+	RtoB_ACK0=false;
+assumption
+	RtoB_ACK1=false;
+assumption
+	FULL=false;
+assumption
+	EMPTY=true;
+assumption
+	G(((StoB_REQ0=true & BtoS_ACK0=false) -> next(StoB_REQ0=true)));
+assumption
+	G((BtoS_ACK0=true -> next(StoB_REQ0=false)));
+assumption
+	G(((StoB_REQ1=true & BtoS_ACK1=false) -> next(StoB_REQ1=true)));
+assumption
+	G((BtoS_ACK1=true -> next(StoB_REQ1=false)));
+assumption
+	G(((StoB_REQ2=true & BtoS_ACK2=false) -> next(StoB_REQ2=true)));
+assumption
+	G((BtoS_ACK2=true -> next(StoB_REQ2=false)));
+assumption
+	G(((StoB_REQ3=true & BtoS_ACK3=false) -> next(StoB_REQ3=true)));
+assumption
+	G((BtoS_ACK3=true -> next(StoB_REQ3=false)));
+assumption
+	G(((StoB_REQ4=true & BtoS_ACK4=false) -> next(StoB_REQ4=true)));
+assumption
+	G((BtoS_ACK4=true -> next(StoB_REQ4=false)));
+assumption
+	G((BtoR_REQ0=false -> next(RtoB_ACK0=false)));
+assumption
+	G(((BtoR_REQ0=true & RtoB_ACK0=true) -> next(RtoB_ACK0=true)));
+assumption
+	G((BtoR_REQ1=false -> next(RtoB_ACK1=false)));
+assumption
+	G(((BtoR_REQ1=true & RtoB_ACK1=true) -> next(RtoB_ACK1=true)));
+assumption
+	G(((ENQ=true & DEQ=false) -> next(EMPTY=false)));
+assumption
+	G(((DEQ=true & ENQ=false) -> next(FULL=false)));
+assumption
+	G(((ENQ=true <-> DEQ=true) -> ((FULL=true <-> next(FULL=true)) &(EMPTY=true <-> next(EMPTY=true)))));
+assumption
+	GF((BtoR_REQ0=true <-> RtoB_ACK0=true));
+assumption
+	GF((BtoR_REQ1=true <-> RtoB_ACK1=true));
+guarantee
+	BtoS_ACK0=false;
+guarantee
+	BtoS_ACK1=false;
+guarantee
+	BtoS_ACK2=false;
+guarantee
+	BtoS_ACK3=false;
+guarantee
+	BtoS_ACK4=false;
+guarantee
+	BtoR_REQ0=false;
+guarantee
+	BtoR_REQ1=false;
+guarantee
+	stateG7_0=false;
+guarantee
+	stateG7_1=true;
+guarantee
+	ENQ=false;
+guarantee
+	DEQ=false;
+guarantee
+	stateG12=false;
+guarantee
+	SLC0=false;
+guarantee
+	SLC1=false;
+guarantee
+	SLC2=false;
+guarantee
+	G(((StoB_REQ0=false & next(StoB_REQ0=true)) -> next(BtoS_ACK0=false)));
+guarantee
+	G(((BtoS_ACK0=false & StoB_REQ0=false) -> next(BtoS_ACK0=false)));
+guarantee
+	G(((BtoS_ACK0=true & StoB_REQ0=true) -> next(BtoS_ACK0=true)));
+guarantee
+	G(((BtoS_ACK0=false) | (BtoS_ACK1=false)));
+guarantee
+	G(((BtoS_ACK0=false) | (BtoS_ACK2=false)));
+guarantee
+	G(((BtoS_ACK0=false) | (BtoS_ACK3=false)));
+guarantee
+	G(((BtoS_ACK0=false) | (BtoS_ACK4=false)));
+guarantee
+	G(((StoB_REQ1=false & next(StoB_REQ1=true)) -> next(BtoS_ACK1=false)));
+guarantee
+	G(((BtoS_ACK1=false & StoB_REQ1=false) -> next(BtoS_ACK1=false)));
+guarantee
+	G(((BtoS_ACK1=true & StoB_REQ1=true) -> next(BtoS_ACK1=true)));
+guarantee
+	G(((BtoS_ACK1=false) | (BtoS_ACK2=false)));
+guarantee
+	G(((BtoS_ACK1=false) | (BtoS_ACK3=false)));
+guarantee
+	G(((BtoS_ACK1=false) | (BtoS_ACK4=false)));
+guarantee
+	G(((StoB_REQ2=false & next(StoB_REQ2=true)) -> next(BtoS_ACK2=false)));
+guarantee
+	G(((BtoS_ACK2=false & StoB_REQ2=false) -> next(BtoS_ACK2=false)));
+guarantee
+	G(((BtoS_ACK2=true & StoB_REQ2=true) -> next(BtoS_ACK2=true)));
+guarantee
+	G(((BtoS_ACK2=false) | (BtoS_ACK3=false)));
+guarantee
+	G(((BtoS_ACK2=false) | (BtoS_ACK4=false)));
+guarantee
+	G(((StoB_REQ3=false & next(StoB_REQ3=true)) -> next(BtoS_ACK3=false)));
+guarantee
+	G(((BtoS_ACK3=false & StoB_REQ3=false) -> next(BtoS_ACK3=false)));
+guarantee
+	G(((BtoS_ACK3=true & StoB_REQ3=true) -> next(BtoS_ACK3=true)));
+guarantee
+	G(((BtoS_ACK3=false) | (BtoS_ACK4=false)));
+guarantee
+	G(((StoB_REQ4=false & next(StoB_REQ4=true)) -> next(BtoS_ACK4=false)));
+guarantee
+	G(((BtoS_ACK4=false & StoB_REQ4=false) -> next(BtoS_ACK4=false)));
+guarantee
+	G(((BtoS_ACK4=true & StoB_REQ4=true) -> next(BtoS_ACK4=true)));
+guarantee
+	G(((BtoR_REQ0=true & RtoB_ACK0=false) -> next(BtoR_REQ0=true)));
+guarantee
+	G(((BtoR_REQ0=false) | (BtoR_REQ1=false)));
+guarantee
+	G((RtoB_ACK0=true -> next(BtoR_REQ0=false)));
+guarantee
+	G(((BtoR_REQ1=true & RtoB_ACK1=false) -> next(BtoR_REQ1=true)));
+guarantee
+	G((RtoB_ACK1=true -> next(BtoR_REQ1=false)));
+guarantee
+	G((!(BtoR_REQ0=true & BtoR_REQ1=true)));
+guarantee
+	G(((stateG7_1=false & BtoR_REQ0=false & BtoR_REQ1=true) -> next(stateG7_1=true & stateG7_0=false)));
+guarantee
+	G(((stateG7_1=true & BtoR_REQ0=true & BtoR_REQ1=false) -> next(stateG7_1=false & stateG7_0=false)));
+guarantee
+	G(((stateG7_1=false & BtoR_REQ0=false & BtoR_REQ1=false) -> next(stateG7_1=false & stateG7_0=true)));
+guarantee
+	G(((stateG7_1=true & BtoR_REQ0=false & BtoR_REQ1=false) -> next(stateG7_1=true & stateG7_0=true)));
+guarantee
+	G(((stateG7_1=false & stateG7_0=false & BtoR_REQ0=true & BtoR_REQ1=false) ->next(stateG7_1=false & stateG7_0=false)));
+guarantee
+	G(((stateG7_1=true & stateG7_0=false & BtoR_REQ0=false & BtoR_REQ1=true) ->next(stateG7_1=true & stateG7_0=false)));
+guarantee
+	G((!(stateG7_1=false & stateG7_0=true & BtoR_REQ0=true)));
+guarantee
+	G((!(stateG7_1=true & stateG7_0=true & BtoR_REQ1=true)));
+guarantee
+	G(((BtoS_ACK0=false & next(BtoS_ACK0=true)) -> next(ENQ=true)));
+guarantee
+	G(((BtoS_ACK0=false & next(BtoS_ACK0=true))  -> next(SLC0=false & SLC1=false & SLC2=false)));
+guarantee
+	G(((BtoS_ACK1=false & next(BtoS_ACK1=true)) -> next(ENQ=true)));
+guarantee
+	G(((BtoS_ACK1=false & next(BtoS_ACK1=true)) <-> next(SLC0=true & SLC1=false & SLC2=false)));
+guarantee
+	G(((BtoS_ACK2=false & next(BtoS_ACK2=true)) -> next(ENQ=true)));
+guarantee
+	G(((BtoS_ACK2=false & next(BtoS_ACK2=true)) <-> next(SLC0=false & SLC1=true & SLC2=false)));
+guarantee
+	G(((BtoS_ACK3=false & next(BtoS_ACK3=true)) -> next(ENQ=true)));
+guarantee
+	G(((BtoS_ACK3=false & next(BtoS_ACK3=true)) <-> next(SLC0=true & SLC1=true & SLC2=false)));
+guarantee
+	G(((BtoS_ACK4=false & next(BtoS_ACK4=true)) -> next(ENQ=true)));
+guarantee
+	G(((BtoS_ACK4=false & next(BtoS_ACK4=true)) <-> next(SLC0=false & SLC1=false & SLC2=true)));
+guarantee
+	G((((BtoS_ACK0=true | next(BtoS_ACK0=false)) &(BtoS_ACK1=true | next(BtoS_ACK1=false)) &(BtoS_ACK2=true | next(BtoS_ACK2=false)) &(BtoS_ACK3=true | next(BtoS_ACK3=false)) &(BtoS_ACK4=true | next(BtoS_ACK4=false))) -> next(ENQ=false)));
+guarantee
+	G(((RtoB_ACK0=true & next(RtoB_ACK0=false)) -> next(DEQ=true)));
+guarantee
+	G(((RtoB_ACK1=true & next(RtoB_ACK1=false)) -> next(DEQ=true)));
+guarantee
+	G((((RtoB_ACK0=false | next(RtoB_ACK0=true)) &(RtoB_ACK1=false | next(RtoB_ACK1=true))) -> next(DEQ=false)));
+guarantee
+	G(((FULL=true & DEQ=false) -> ENQ=false));
+guarantee
+	G((EMPTY=true -> DEQ=false));
+guarantee
+	G(((stateG12=false & EMPTY=true) -> next(stateG12=false)));
+guarantee
+	G(((stateG12=false & DEQ=true  ) -> next(stateG12=false)));
+guarantee
+	G(((stateG12=false & EMPTY=false & DEQ=false) -> next(stateG12=true)));
+guarantee
+	G(((stateG12=true & DEQ=false  ) -> next(stateG12=true)));
+guarantee
+	G(((stateG12=true & DEQ=true  ) -> next(stateG12=false)));
+guarantee
+	GF((StoB_REQ0=true <-> BtoS_ACK0=true));
+guarantee
+	GF((StoB_REQ1=true <-> BtoS_ACK1=true));
+guarantee
+	GF((StoB_REQ2=true <-> BtoS_ACK2=true));
+guarantee
+	GF((StoB_REQ3=true <-> BtoS_ACK3=true));
+guarantee
+	GF((StoB_REQ4=true <-> BtoS_ACK4=true));
+guarantee
+	GF((stateG12=false));
