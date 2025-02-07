@@ -353,7 +353,7 @@ class TestBacktrackingRepairOrchestrator(TestCase):
     def test_bfs_repair_spec_arbiter_non_unique(self):
         # Run this from the terminal using the following command
         # python -m unittest tests.test_scripts.test_backtracking_repair_orchestrator.TestBacktrackingRepairOrchestrator.test_bfs_repair_spec_arbiter_non_unique
-        out_test_dir_name = "./test_files/out/arbiter_test_bfs_non_unique_no_eventually"
+        out_test_dir_name = "./test_files/out/arbiter_test_bfs_non_unique"
         transitions_file_path = f"{out_test_dir_name}/transitions.csv"
         if os.path.exists(transitions_file_path):
             os.remove(transitions_file_path)
@@ -425,3 +425,231 @@ class TestBacktrackingRepairOrchestrator(TestCase):
         expected_specs.sort()
 
         self.assertEqual(expected_specs, new_specs)
+
+    def test_bfs_repair_spec_traffic_updated_non_unique_no_eventually(self):
+        out_test_dir_name = "./test_files/out/traffic_non_unique_no_eventually"
+        transitions_file_path = f"{out_test_dir_name}/transitions.csv"
+        if os.path.exists(transitions_file_path):
+            os.remove(transitions_file_path)
+        else:
+            os.makedirs(out_test_dir_name)
+        spec: list[str] = format_spec(read_file_lines(
+            './test_files/traffic/traffic_updated_strong.spectra'))
+        trace: list[str] = read_file_lines(
+            "./test_files/traffic/traffic_updated_auto_violation.txt")
+        new_specs_recorder: NonUniqueSpecRecorder = NonUniqueSpecRecorder()
+        repairer: BacktrackingRepairOrchestrator = BacktrackingRepairOrchestrator(
+            SpecLearner(),
+            SpecOracle(),
+            NoEventuallyHypothesisHeuristicManager(),
+            RepairLogger(transitions_file_path, debug=True)
+        )
+
+        # Getting all possible repairs
+        repairer.repair_spec_bfs(spec, trace, new_specs_recorder)
+        new_specs: list[str] = new_specs_recorder.get_specs()
+        new_specs.sort()
+        for i, new_spec in enumerate(new_specs):
+            write_to_file(f"{out_test_dir_name}/traffic_test_fix_{i}.spectra", new_spec)
+
+        self.fail()
+
+
+    def test_bfs_repair_spec_traffic_updated_non_unique_eventually(self):
+        out_test_dir_name = "./test_files/out/traffic_non_unique_eventually"
+        transitions_file_path = f"{out_test_dir_name}/transitions.csv"
+        if os.path.exists(transitions_file_path):
+            os.remove(transitions_file_path)
+        else:
+            os.makedirs(out_test_dir_name)
+        spec: list[str] = format_spec(read_file_lines(
+            './test_files/traffic/traffic_updated_strong.spectra'))
+        trace: list[str] = read_file_lines(
+            "./test_files/traffic/traffic_updated_auto_violation.txt")
+        new_specs_recorder: NonUniqueSpecRecorder = NonUniqueSpecRecorder()
+        repairer: BacktrackingRepairOrchestrator = BacktrackingRepairOrchestrator(
+            SpecLearner(),
+            SpecOracle(),
+            NoFilterHeuristicManager(),
+            RepairLogger(transitions_file_path, debug=True)
+        )
+
+        # Getting all possible repairs
+        repairer.repair_spec_bfs(spec, trace, new_specs_recorder)
+        new_specs: list[str] = new_specs_recorder.get_specs()
+        new_specs.sort()
+        for i, new_spec in enumerate(new_specs):
+            write_to_file(f"{out_test_dir_name}/traffic_test_fix_{i}.spectra", new_spec)
+
+        self.fail()
+
+    def test_bfs_repair_spec_traffic_single_non_unique_no_eventually(self):
+        out_test_dir_name = "./test_files/out/traffic_single_non_unique_no_eventually"
+        transitions_file_path = f"{out_test_dir_name}/transitions.csv"
+        if os.path.exists(transitions_file_path):
+            os.remove(transitions_file_path)
+        else:
+            os.makedirs(out_test_dir_name)
+        spec: list[str] = format_spec(read_file_lines(
+            './test_files/traffic/traffic_single_strong.spectra'))
+        trace: list[str] = read_file_lines(
+            "./test_files/traffic/traffic_single_auto_violation.txt")
+        new_specs_recorder: NonUniqueSpecRecorder = NonUniqueSpecRecorder()
+        repairer: BacktrackingRepairOrchestrator = BacktrackingRepairOrchestrator(
+            SpecLearner(),
+            SpecOracle(),
+            NoEventuallyHypothesisHeuristicManager(),
+            RepairLogger(transitions_file_path, debug=True)
+        )
+
+        # Getting all possible repairs
+        repairer.repair_spec_bfs(spec, trace, new_specs_recorder)
+        new_specs: list[str] = new_specs_recorder.get_specs()
+        new_specs.sort()
+        for i, new_spec in enumerate(new_specs):
+            write_to_file(f"{out_test_dir_name}/traffic_test_fix_{i}.spectra", new_spec)
+
+        self.fail()
+
+
+    def test_bfs_repair_spec_traffic_single_non_unique_eventually(self):
+        out_test_dir_name = "./test_files/out/traffic_single_non_unique_eventually"
+        transitions_file_path = f"{out_test_dir_name}/transitions.csv"
+        if os.path.exists(transitions_file_path):
+            os.remove(transitions_file_path)
+        else:
+            os.makedirs(out_test_dir_name)
+        spec: list[str] = format_spec(read_file_lines(
+            './test_files/traffic/traffic_single_strong.spectra'))
+        trace: list[str] = read_file_lines(
+            "./test_files/traffic/traffic_single_auto_violation.txt")
+        new_specs_recorder: NonUniqueSpecRecorder = NonUniqueSpecRecorder()
+        repairer: BacktrackingRepairOrchestrator = BacktrackingRepairOrchestrator(
+            SpecLearner(),
+            SpecOracle(),
+            NoFilterHeuristicManager(),
+            RepairLogger(transitions_file_path, debug=True)
+        )
+
+        # Getting all possible repairs
+        repairer.repair_spec_bfs(spec, trace, new_specs_recorder)
+        new_specs: list[str] = new_specs_recorder.get_specs()
+        new_specs.sort()
+        for i, new_spec in enumerate(new_specs):
+            write_to_file(f"{out_test_dir_name}/traffic_test_fix_{i}.spectra", new_spec)
+
+        self.fail()
+
+    def test_bfs_repair_spec_lift_non_unique_no_eventually(self):
+        out_test_dir_name = "./test_files/out/lift_non_unique_no_eventually"
+        transitions_file_path = f"{out_test_dir_name}/transitions.csv"
+        if os.path.exists(transitions_file_path):
+            os.remove(transitions_file_path)
+        else:
+            os.makedirs(out_test_dir_name)
+        spec: list[str] = format_spec(read_file_lines(
+            '../input-files/examples/lift_FINAL_NEW_strong.spectra'))
+        trace: list[str] = read_file_lines(
+            "./test_files/lift_strong_auto_violation.txt")
+        new_specs_recorder: NonUniqueSpecRecorder = NonUniqueSpecRecorder()
+        repairer: BacktrackingRepairOrchestrator = BacktrackingRepairOrchestrator(
+            SpecLearner(),
+            SpecOracle(),
+            NoEventuallyHypothesisHeuristicManager(),
+            RepairLogger(transitions_file_path, debug=True)
+        )
+
+        # Getting all possible repairs
+        repairer.repair_spec_bfs(spec, trace, new_specs_recorder)
+        new_specs: list[str] = new_specs_recorder.get_specs()
+        new_specs.sort()
+        for i, new_spec in enumerate(new_specs):
+            write_to_file(f"{out_test_dir_name}/traffic_test_fix_{i}.spectra", new_spec)
+
+        self.fail()
+
+
+    def test_bfs_repair_spec_lift_non_unique_eventually(self):
+        out_test_dir_name = "./test_files/out/lift_non_unique_eventually"
+        transitions_file_path = f"{out_test_dir_name}/transitions.csv"
+        if os.path.exists(transitions_file_path):
+            os.remove(transitions_file_path)
+        else:
+            os.makedirs(out_test_dir_name)
+        spec: list[str] = format_spec(read_file_lines(
+            '../input-files/examples/lift_FINAL_NEW_strong.spectra'))
+        trace: list[str] = read_file_lines(
+            "./test_files/lift_strong_auto_violation.txt")
+        new_specs_recorder: NonUniqueSpecRecorder = NonUniqueSpecRecorder()
+        repairer: BacktrackingRepairOrchestrator = BacktrackingRepairOrchestrator(
+            SpecLearner(),
+            SpecOracle(),
+            NoFilterHeuristicManager(),
+            RepairLogger(transitions_file_path, debug=True)
+        )
+
+        # Getting all possible repairs
+        repairer.repair_spec_bfs(spec, trace, new_specs_recorder)
+        new_specs: list[str] = new_specs_recorder.get_specs()
+        new_specs.sort()
+        for i, new_spec in enumerate(new_specs):
+            write_to_file(f"{out_test_dir_name}/traffic_test_fix_{i}.spectra", new_spec)
+
+        self.fail()
+
+    def test_bfs_repair_spec_genbuf_non_unique_no_eventually(self):
+        out_test_dir_name = "./test_files/out/genbuf_non_unique_no_eventually_2"
+        transitions_file_path = f"{out_test_dir_name}/transitions.csv"
+        if os.path.exists(transitions_file_path):
+            os.remove(transitions_file_path)
+        else:
+            os.makedirs(out_test_dir_name)
+        spec: list[str] = format_spec(read_file_lines(
+            '../input-files/case-studies/spectra/genbuf/strong.spectra'))
+        trace: list[str] = read_file_lines(
+            './test_files/genbuf_auto_violation.txt')
+        new_specs_recorder: NonUniqueSpecRecorder = NonUniqueSpecRecorder()
+        repairer: BacktrackingRepairOrchestrator = BacktrackingRepairOrchestrator(
+            SpecLearner(),
+            SpecOracle(),
+            NoEventuallyHypothesisHeuristicManager(),
+            RepairLogger(transitions_file_path, debug=True)
+        )
+
+        # Getting all possible repairs
+        repairer.repair_spec_bfs(spec, trace, new_specs_recorder)
+        new_specs: list[str] = new_specs_recorder.get_specs()
+        new_specs.sort()
+        for i, new_spec in enumerate(new_specs):
+            write_to_file(f"{out_test_dir_name}/traffic_test_fix_{i}.spectra", new_spec)
+
+        self.fail()
+
+
+    def test_bfs_repair_spec_genbuf_non_unique_eventually(self):
+        out_test_dir_name = "./test_files/out/genbuf_non_unique_eventually"
+        transitions_file_path = f"{out_test_dir_name}/transitions.csv"
+        if os.path.exists(transitions_file_path):
+            os.remove(transitions_file_path)
+        else:
+            os.makedirs(out_test_dir_name)
+        spec: list[str] = format_spec(read_file_lines(
+            '../input-files/examples/genbuf_05_normalised_dropped.spectra'))
+        trace: list[str] = read_file_lines(
+            './test_files/genbuf_auto_violation.txt')
+        new_specs_recorder: NonUniqueSpecRecorder = NonUniqueSpecRecorder()
+        repairer: BacktrackingRepairOrchestrator = BacktrackingRepairOrchestrator(
+            SpecLearner(),
+            SpecOracle(),
+            NoFilterHeuristicManager(),
+            RepairLogger(transitions_file_path, debug=True)
+        )
+
+        # Getting all possible repairs
+        repairer.repair_spec_bfs(spec, trace, new_specs_recorder)
+        new_specs: list[str] = new_specs_recorder.get_specs()
+        new_specs.sort()
+        for i, new_spec in enumerate(new_specs):
+            write_to_file(f"{out_test_dir_name}/traffic_test_fix_{i}.spectra", new_spec)
+
+        self.fail()

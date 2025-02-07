@@ -2,6 +2,8 @@ import re
 import subprocess
 from typing import Optional
 
+from spot import formula
+
 from spec_repair.ltl_types import GR1FormulaType, LTLFiltOperation
 from spec_repair.old.specification_helper import strip_vars
 from spec_repair.util.spec_util import simplify_assignments, shift_prev_to_next
@@ -53,20 +55,20 @@ class Spec:
                 exps = f"({exps_asm})->({exps_gar})"
                 return exps
 
-    def implied_by(self, other, exp_type: Optional[GR1FormulaType] = None):
-        return other.implies(self, exp_type)
+    def implied_by(self, other, formula_type: Optional[GR1FormulaType] = None):
+        return other.implies(self, formula_type)
 
-    def implies(self, other, exp_type: Optional[GR1FormulaType] = None):
+    def implies(self, other, formula_type: Optional[GR1FormulaType] = None):
         ltl_op = LTLFiltOperation.IMPLIES
-        return self.compare_to(other, exp_type, ltl_op)
+        return self.compare_to(other, formula_type, ltl_op)
 
-    def equivalent_to(self, other, exp_type: GR1FormulaType):
+    def equivalent_to(self, other, formula_type: GR1FormulaType):
         ltl_op = LTLFiltOperation.EQUIVALENT
-        return self.compare_to(other, exp_type, ltl_op)
+        return self.compare_to(other, formula_type, ltl_op)
 
-    def compare_to(self, other, exp_type: GR1FormulaType, ltl_op: LTLFiltOperation):
-        this_exps = self.to_spot(exp_type)
-        other_exps = other.to_spot(exp_type)
+    def compare_to(self, other, formula_type: GR1FormulaType, ltl_op: LTLFiltOperation):
+        this_exps = self.to_spot(formula_type)
+        other_exps = other.to_spot(formula_type)
         return is_left_cmp_right(this_exps, ltl_op, other_exps)
 
     def get_spec(self):

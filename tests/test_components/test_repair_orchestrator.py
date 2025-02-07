@@ -268,8 +268,8 @@ class TestRepairOrchestrator(TestCase):
     @patch('sys.stdin', io.StringIO('2\n'))
     def test_repair_spec_genbuf(self):
         spec_file = '../input-files/examples/genbuf_05_normalised_dropped.spectra'
-        expected_file = './test_files/genbuf_FINAL.spectra'
         trace_file = './test_files/genbuf_auto_violation.txt'
+        expected_file = './test_files/genbuf_FINAL.spectra'
 
         spec: list[str] = format_spec(read_file_lines(spec_file))
         expected_spec: list[str] = format_spec(read_file_lines(expected_file))

@@ -1,8 +1,11 @@
 import argparse
 import glob
 import os
-from typing import Dict
+from typing import Dict, Optional
 
+from spot import formula, formulaiterator
+
+from spec_repair.ltl_types import GR1FormulaType
 from spec_repair.util.file_util import read_file
 
 from spec_repair.wrappers.spec import Spec
@@ -30,9 +33,10 @@ def print_comparison_results(ideal_spec_path: str, spec_directory_path: str):
     identical_specs = []
     stronger_specs = []
     logically_unrelated_specs = []
+    formula_type: Optional[GR1FormulaType] = GR1FormulaType.GAR
     for spec_name, spec in specs.items():
-        weaker = ideal_spec.implies(spec, None)
-        stronger = spec.implies(ideal_spec, None)
+        weaker = ideal_spec.implies(spec, formula_type)
+        stronger = spec.implies(ideal_spec, formula_type)
         if weaker and stronger:
             identical_specs.append(spec_name)
         elif weaker:
@@ -42,10 +46,18 @@ def print_comparison_results(ideal_spec_path: str, spec_directory_path: str):
         else:
             logically_unrelated_specs.append(spec_name)
 
-    print(f"Identical specifications: {sorted(identical_specs)}")
-    print(f"Specifications weaker than the ideal specification: {sorted(weaker_specs)}")
-    print(f"Specifications stronger than the ideal specification: {sorted(stronger_specs)}")
-    print(f"Specifications logically unrelated to the ideal specification: {sorted(logically_unrelated_specs)}")
+    print(f"Identical specifications: {len(identical_specs)}")
+    for identical_spec in sorted(identical_specs):
+        print(f"\t* {identical_spec}")
+    print(f"Specifications weaker than the ideal specification: {len(weaker_specs)}")
+    for weaker_spec in sorted(weaker_specs):
+        print(f"\t* {weaker_spec}")
+    print(f"Specifications stronger than the ideal specification: {len(stronger_specs)}")
+    for stronger_spec in sorted(stronger_specs):
+        print(f"\t* {stronger_spec}")
+    print(f"Specifications logically unrelated to the ideal specification: {len(logically_unrelated_specs)}")
+    for unrelated_spec in sorted(logically_unrelated_specs):
+        print(f"\t* {unrelated_spec}")
 
 
 if __name__ == '__main__':

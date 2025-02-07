@@ -3,6 +3,7 @@ from typing import TypedDict, Optional
 
 import pandas as pd
 
+from spec_repair.helpers.adaptation_learned import AdaptationLearned
 from spec_repair.helpers.spectra_atom import SpectraAtom
 from spec_repair.helpers.spectra_formula import SpectraFormula
 from spec_repair.ltl_types import GR1FormulaType, GR1TemporalType
@@ -41,3 +42,25 @@ class SpectraSpecification:
             raise e
 
         self.formulas_df = pd.DataFrame(formula_list, columns=["name", "type", "when", "formula"])
+
+    def integrate_learning_rule(self, formula_name: str, learning_rule: list[str]):
+        # Get formula by name
+        formula = self.formulas_df.loc[self.formulas_df["name"] == formula_name, "formula"]
+        print(formula.to_str())
+        print("Hypothesis:")
+        print(f'\t{formula_name}')
+
+        # Generate data structures from line strings
+        adaptation_learned = AdaptationLearned.from_str(formula_name)
+
+        # Integrate the learned adaptation into the spectra rule
+        formula.integrate(adaptation_learned)
+
+        # Replace the old rule with the new one
+        self.formulas_df.loc[self.formulas_df["name"] == formula_name, "formula"] = formula
+        # TODO: deal with generation of multiple lines of assumptions/guarantees from current
+
+        print("New Rule:")
+        print(new_spectra_rule_str)
+        output_list.append(new_spectra_rule_str)
+        pass
