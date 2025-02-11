@@ -40,12 +40,12 @@ class Spec:
     def __hash__(self) -> int:
         return self.text.__hash__()
 
-    def to_spot(self, exp_type: Optional[GR1FormulaType] = None) -> str:
+    def to_spot(self, exp_type: Optional[GR1FormulaType] = None, ignore_initial: bool=False) -> str:
         """
         Returns spec as string that can be operated on by SPOT
         """
-        exps_asm = extract_GR1_expressions_of_type_spot(str(GR1FormulaType.ASM), self.text.split("\n"))
-        exps_gar = extract_GR1_expressions_of_type_spot(str(GR1FormulaType.GAR), self.text.split("\n"))
+        exps_asm = extract_GR1_expressions_of_type_spot(str(GR1FormulaType.ASM), self.text.split("\n"), ignore_initial)
+        exps_gar = extract_GR1_expressions_of_type_spot(str(GR1FormulaType.GAR), self.text.split("\n"), ignore_initial)
         match exp_type:
             case GR1FormulaType.ASM:
                 return exps_asm
@@ -74,6 +74,16 @@ class Spec:
     def get_spec(self):
         return self.text
 
+    def is_equivalent_to_spot(self, spot_formula: str, formula_type: Optional[GR1FormulaType]=None, ignore_initial=False) -> bool:
+        this_formula = self.to_spot(formula_type, ignore_initial)
+        return is_left_cmp_right(this_formula, LTLFiltOperation.EQUIVALENT, spot_formula)
+
+    def is_trivial_true(self, formula_type: Optional[GR1FormulaType]=None, ignore_initial=False) -> bool:
+        return self.is_equivalent_to_spot("G(true)", formula_type, ignore_initial)
+
+    def is_trivial_false(self, formula_type: Optional[GR1FormulaType]=None, ignore_initial=False) -> bool:
+        return self.is_equivalent_to_spot("G(false)", formula_type, ignore_initial)
+
 
 def is_left_cmp_right(this_exps: str, ltl_op: LTLFiltOperation, other_exps: str) -> bool:
     # TODO: introduce an assertion against ltl_ops which do not exist yet
@@ -89,12 +99,14 @@ def is_left_cmp_right(this_exps: str, ltl_op: LTLFiltOperation, other_exps: str)
     return result == "1"
 
 
-def extract_GR1_expressions_of_type_spot(exp_type: str, spec: list[str]) -> str:
+def extract_GR1_expressions_of_type_spot(exp_type: str, spec: list[str], ignore_initial: bool = False) -> str:
     variables = strip_vars(spec)
     spec = simplify_assignments(spec, variables)
-    expressions = [re.sub(r"\s", "", spec[i + 1]) for i, line in enumerate(spec) if re.search(f"^{exp_type}", line)]
-    expressions = [shift_prev_to_next(formula, variables) for formula in expressions]
-    if any([re.search("PREV", x) for x in expressions]):
+    formulas = [re.sub(r"\s", "", spec[i + 1]) for i, line in enumerate(spec) if re.search(f"^{exp_type}", line)]
+    if ignore_initial:
+        formulas = [formula for formula in formulas if re.search(f"GF?\(", formula)]
+    formulas = [shift_prev_to_next(formula, variables) for formula in formulas]
+    if any([re.search("PREV", x) for x in formulas]):
         raise Exception("There are still PREVs in the expressions!")
-    exp_conj = re.sub(";", "", '&'.join(expressions))
+    exp_conj = re.sub(";", "", '&'.join(formulas))
     return exp_conj
