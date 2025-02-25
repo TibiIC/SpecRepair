@@ -2,11 +2,20 @@ import os
 import random
 import re
 import string
+from pathlib import Path
 
 # Custom type definitions
 Log = str
 ASPTrace = str
 FilePath = str
+
+
+def validate_spectra_file(file_path: str) -> None:
+    path = Path(file_path)
+    if not path.is_file():
+        raise FileNotFoundError(f"File not found: {file_path}")
+    if path.suffix.lower() != ".spectra":
+        raise ValueError(f"Invalid file type: {file_path}. Expected a '.spectra' file.")
 
 
 def write_file(filename: FilePath, content: list[str]):

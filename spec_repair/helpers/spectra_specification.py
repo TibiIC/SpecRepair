@@ -1,5 +1,6 @@
 import re
-from typing import TypedDict, Optional
+from pathlib import Path
+from typing import TypedDict, Optional, TypeVar
 
 import pandas as pd
 
@@ -7,6 +8,8 @@ from spec_repair.helpers.adaptation_learned import AdaptationLearned
 from spec_repair.helpers.spectra_atom import SpectraAtom
 from spec_repair.helpers.spectra_formula import SpectraFormula
 from spec_repair.ltl_types import GR1FormulaType, GR1TemporalType
+from spec_repair.util.file_util import read_file_lines, validate_spectra_file
+from spec_repair.util.spec_util import format_spec
 
 
 class FormulaDataPoint(TypedDict):
@@ -14,6 +17,9 @@ class FormulaDataPoint(TypedDict):
     type: GR1FormulaType
     when: GR1TemporalType
     formula: "SpectraFormula"  # Use the class name as a string for forward declaration
+
+
+Self = TypeVar('T', bound='SpectraSpecification')
 
 
 class SpectraSpecification:
@@ -43,24 +49,29 @@ class SpectraSpecification:
 
         self.formulas_df = pd.DataFrame(formula_list, columns=["name", "type", "when", "formula"])
 
-    def integrate_learning_rule(self, formula_name: str, learning_rule: list[str]):
-        # Get formula by name
-        formula = self.formulas_df.loc[self.formulas_df["name"] == formula_name, "formula"]
-        print(formula.to_str())
+    @staticmethod
+    def from_file(spec_file: str) -> Self:
+        validate_spectra_file(spec_file)
+        spec_txt: str = "".join(format_spec(read_file_lines(spec_file)))
+        return SpectraSpecification(spec_txt)
+
+    # TODO: deal with generation of multiple lines of assumptions/guarantees from current
+    def integrate_adaptation(self, adaptation: AdaptationLearned):
+        formula = self.get_formula(adaptation.formula_name)
+        print("Rule:")
+        print(f'\t{formula.to_str()}')
         print("Hypothesis:")
-        print(f'\t{formula_name}')
-
-        # Generate data structures from line strings
-        adaptation_learned = AdaptationLearned.from_str(formula_name)
-
-        # Integrate the learned adaptation into the spectra rule
-        formula.integrate(adaptation_learned)
-
-        # Replace the old rule with the new one
-        self.formulas_df.loc[self.formulas_df["name"] == formula_name, "formula"] = formula
-        # TODO: deal with generation of multiple lines of assumptions/guarantees from current
-
+        print(f'\t{adaptation.type}({adaptation.formula_name},{adaptation.disjunction_index},{adaptation.atom_temporal_operators})')
+        formula.integrate(adaptation)
         print("New Rule:")
-        print(new_spectra_rule_str)
-        output_list.append(new_spectra_rule_str)
-        pass
+        print(f'\t{formula.to_str()}')
+        self.replace_formula(adaptation.formula_name, formula)
+
+    def replace_formula(self, formula_name, formula):
+        self.formulas_df.loc[self.formulas_df["name"] == formula_name, "formula"] = formula
+
+    def get_formula(self, name: str):
+        # Get formula by name
+        formula: SpectraFormula = \
+        self.formulas_df.loc[self.formulas_df["name"] == name, "formula"].iloc[0]
+        return formula

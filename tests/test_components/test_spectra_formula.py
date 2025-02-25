@@ -96,7 +96,7 @@ class TestSpectraFormula(TestCase):
         )
         adaptation = AdaptationLearned(
             type='antecedent_exception',
-            name_expression='assumption2_1',
+            formula_name='assumption2_1',
             disjunction_index=0,
             atom_temporal_operators=[('current', 'methane=true')]
         )
@@ -113,7 +113,7 @@ class TestSpectraFormula(TestCase):
         )
         adaptation = AdaptationLearned(
             type='antecedent_exception',
-            name_expression='a_always',
+            formula_name='a_always',
             disjunction_index=0,
             atom_temporal_operators=[('current', 'r1=false'),
                                      ('current', 'r2=false')]
@@ -132,7 +132,7 @@ class TestSpectraFormula(TestCase):
         )
         adaptation = AdaptationLearned(
             type="ev_temp_op",
-            name_expression="assumption2_1",
+            formula_name="assumption2_1",
             disjunction_index=None,
             atom_temporal_operators=[]
         )
@@ -151,7 +151,7 @@ class TestSpectraFormula(TestCase):
         )
         adaptation = AdaptationLearned(
             type="ev_temp_op",
-            name_expression="guarantee3_1",
+            formula_name="guarantee3_1",
             disjunction_index=None,
             atom_temporal_operators=[]
         )

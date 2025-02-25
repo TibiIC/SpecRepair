@@ -1,6 +1,7 @@
 import os
 from unittest import TestCase
 
+from spec_repair.helpers.adaptation_learned import AdaptationLearned
 from spec_repair.helpers.spectra_formula import SpectraFormula
 from spec_repair.helpers.spectra_specification import SpectraSpecification
 from spec_repair.helpers.spectra_atom import SpectraAtom
@@ -24,9 +25,7 @@ class TestSpectraSpecification(TestCase):
 
     def test_file_to_specification_records_all_formulas(self):
         spec_file = "./test_files/minepump_strong.spectra"
-        spec_txt: str = "".join(format_spec(read_file_lines(spec_file)))
-        # spec = SpectraSpecification.from_file(spec_file)
-        spec = SpectraSpecification(spec_txt)
+        spec = SpectraSpecification.from_file(spec_file)
         # get all entries at column "formula" in the DataFrame
         print(spec.formulas_df.columns)
         formulas = spec.formulas_df["formula"]
@@ -43,9 +42,7 @@ class TestSpectraSpecification(TestCase):
 
     def test_file_to_specification_records_all_atoms(self):
         spec_file = "./test_files/minepump_strong.spectra"
-        spec_txt: str = "".join(format_spec(read_file_lines(spec_file)))
-        # spec = SpectraSpecification.from_file(spec_file)
-        spec = SpectraSpecification(spec_txt)
+        spec = SpectraSpecification.from_file(spec_file)
 
         print(spec.atoms)
         expected_atoms_str: set[str] = {
@@ -55,3 +52,27 @@ class TestSpectraSpecification(TestCase):
         }
         for atom in spec.atoms:
             self.assertIn(str(atom), expected_atoms_str)
+
+    def test_integrate_learning_rule(self):
+        spec_file = "./test_files/minepump_strong.spectra"
+        spec = SpectraSpecification.from_file(spec_file)
+        adaptation = AdaptationLearned(
+            type='antecedent_exception',
+            formula_name='assumption2_1',
+            disjunction_index=0,
+            atom_temporal_operators=[('current', 'methane=true')]
+        )
+        spec.integrate_adaptation(adaptation)
+
+        formulas = spec.formulas_df["formula"]
+        expected_formulas: set[str] = {
+            SpectraFormula.from_str("\thighwater=false&methane=false;").to_str(),
+            SpectraFormula.from_str("\tpump=false;").to_str(),
+            SpectraFormula.from_str("G(highwater=true->next(pump=true));").to_str(),
+            SpectraFormula.from_str("G(methane=true->next(pump=false));").to_str(),
+            SpectraFormula.from_str("G(PREV(pump=true)&pump=true->next(highwater=false));").to_str(),
+            SpectraFormula.from_str("G(methane=false->highwater=false|methane=false)").to_str(),
+        }
+        for formula in formulas:
+            self.assertIn(formula.to_str(), expected_formulas)
+

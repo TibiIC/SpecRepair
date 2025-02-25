@@ -31,7 +31,7 @@ class NewSpecLearner:
     ):
         trace, cts, learning_type = data
         adaptations: List[AdaptationLearned] = self.find_weakening_adaptations(spec, trace, cts, learning_type)
-        new_specs = [deepcopy(spec).integrate_learning_rule(adaptation) for adaptation in adaptations]
+        new_specs = [deepcopy(spec).integrate_adaptation(adaptation) for adaptation in adaptations]
         return new_specs
 
     def get_all_complete_counter_trace_lists(self, spec, trace, init_cts, learning_type) -> List[List[CounterTrace]]:

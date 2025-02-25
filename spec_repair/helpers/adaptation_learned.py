@@ -10,17 +10,20 @@ class AdaptationLearned:
     and is used to structure and extract the learned adaptation.
     """
 
-    def __init__(self, type, name_expression, disjunction_index, atom_temporal_operators):
+    def __init__(self, type, formula_name, disjunction_index, atom_temporal_operators):
         """
         :param type: The type of the adaptation learned (i.e. antecedent_exception, consequent_exception, etc).
-        :param name_expression: The name of the invariant/justice goal that will be adapted.
+        :param formula_name: The name of the invariant/justice goal that will be adapted.
         :param disjunction_index: The index of the disjunction that will be adapted within the expression.
         :param atom_temporal_operators: The atoms and their respective temporal operators used in the adaptation.
         """
         self.type: str = type
-        self.name_expression: str = name_expression
+        self.formula_name: str = formula_name
         self.disjunction_index: Optional[int] = disjunction_index
         self.atom_temporal_operators = atom_temporal_operators
+
+    def __str__(self):
+        return f'{self.type}({self.formula_name},{self.disjunction_index},{self.atom_temporal_operators})'
 
     @staticmethod
     def from_str(rule: str) -> Self:
@@ -55,7 +58,7 @@ class AdaptationLearned:
 
         return AdaptationLearned(
             type=function_name,
-            name_expression=name_expression,
+            formula_name=name_expression,
             disjunction_index=disjunction_index,
             atom_temporal_operators=replaced_holds_at_args
         )
