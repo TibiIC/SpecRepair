@@ -1,10 +1,10 @@
 import re
 from pathlib import Path
-from typing import TypedDict, Optional, TypeVar
+from typing import TypedDict, Optional, TypeVar, List
 
 import pandas as pd
 
-from spec_repair.helpers.adaptation_learned import AdaptationLearned
+from spec_repair.helpers.adaptation_learned import Adaptation
 from spec_repair.helpers.spectra_atom import SpectraAtom
 from spec_repair.helpers.spectra_formula import SpectraFormula
 from spec_repair.ltl_types import GR1FormulaType, GR1TemporalType
@@ -55,8 +55,11 @@ class SpectraSpecification:
         spec_txt: str = "".join(format_spec(read_file_lines(spec_file)))
         return SpectraSpecification(spec_txt)
 
-    # TODO: deal with generation of multiple lines of assumptions/guarantees from current
-    def integrate_adaptation(self, adaptation: AdaptationLearned):
+    def integrate_multiple(self, adaptations: List[Adaptation]):
+        for adaptation in adaptations:
+            self.integrate(adaptation)
+
+    def integrate(self, adaptation: Adaptation):
         formula = self.get_formula(adaptation.formula_name)
         print("Rule:")
         print(f'\t{formula.to_str()}')

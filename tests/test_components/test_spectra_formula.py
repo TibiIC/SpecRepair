@@ -1,7 +1,7 @@
 from collections import defaultdict
 from unittest import TestCase
 
-from spec_repair.helpers.adaptation_learned import AdaptationLearned
+from spec_repair.helpers.adaptation_learned import Adaptation
 from spec_repair.helpers.spectra_formula import SpectraFormula
 from spec_repair.ltl_types import GR1TemporalType
 
@@ -94,7 +94,7 @@ class TestSpectraFormula(TestCase):
             consequent=[{'current': ['highwater=false']},
                         {'current': ['methane=false']}]
         )
-        adaptation = AdaptationLearned(
+        adaptation = Adaptation(
             type='antecedent_exception',
             formula_name='assumption2_1',
             disjunction_index=0,
@@ -111,7 +111,7 @@ class TestSpectraFormula(TestCase):
             antecedent=[defaultdict(list)],
             consequent=[{'current': ['a=true']}]
         )
-        adaptation = AdaptationLearned(
+        adaptation = Adaptation(
             type='antecedent_exception',
             formula_name='a_always',
             disjunction_index=0,
@@ -130,7 +130,7 @@ class TestSpectraFormula(TestCase):
             consequent=[{'current': ['highwater=false']},
                         {'current': ['methane=false']}]
         )
-        adaptation = AdaptationLearned(
+        adaptation = Adaptation(
             type="ev_temp_op",
             formula_name="assumption2_1",
             disjunction_index=None,
@@ -149,7 +149,7 @@ class TestSpectraFormula(TestCase):
             consequent=[{'current': ['r2=false']},
                         {'current': ['g1=false', 'g2=false']}]
         )
-        adaptation = AdaptationLearned(
+        adaptation = Adaptation(
             type="ev_temp_op",
             formula_name="guarantee3_1",
             disjunction_index=None,

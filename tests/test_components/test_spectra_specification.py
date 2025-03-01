@@ -1,7 +1,7 @@
 import os
 from unittest import TestCase
 
-from spec_repair.helpers.adaptation_learned import AdaptationLearned
+from spec_repair.helpers.adaptation_learned import Adaptation
 from spec_repair.helpers.spectra_formula import SpectraFormula
 from spec_repair.helpers.spectra_specification import SpectraSpecification
 from spec_repair.helpers.spectra_atom import SpectraAtom
@@ -56,13 +56,13 @@ class TestSpectraSpecification(TestCase):
     def test_integrate_learning_rule(self):
         spec_file = "./test_files/minepump_strong.spectra"
         spec = SpectraSpecification.from_file(spec_file)
-        adaptation = AdaptationLearned(
+        adaptation = Adaptation(
             type='antecedent_exception',
             formula_name='assumption2_1',
             disjunction_index=0,
             atom_temporal_operators=[('current', 'methane=true')]
         )
-        spec.integrate_adaptation(adaptation)
+        spec.integrate(adaptation)
 
         formulas = spec.formulas_df["formula"]
         expected_formulas: set[str] = {
@@ -76,3 +76,40 @@ class TestSpectraSpecification(TestCase):
         for formula in formulas:
             self.assertIn(formula.to_str(), expected_formulas)
 
+
+    def test_integrate_learning_rule_multiple(self):
+        spec_file = "./test_files/minepump_strong.spectra"
+        spec = SpectraSpecification.from_file(spec_file)
+        adaptation = Adaptation(
+            type='antecedent_exception',
+            formula_name='assumption2_1',
+            disjunction_index=0,
+            atom_temporal_operators=[('current', 'methane=true')]
+        )
+        adaptation_2 = Adaptation(
+            type="consequent_exception",
+            formula_name="guarantee1_1",
+            disjunction_index=None,
+            atom_temporal_operators=[("current", "pump=true")]
+        )
+        adaptation_3 = Adaptation(
+            type="consequent_exception",
+            formula_name="guarantee2_1",
+            disjunction_index=None,
+            atom_temporal_operators=[("current", "pump=false")]
+        )
+        spec.integrate(adaptation)
+        spec.integrate(adaptation_2)
+        spec.integrate(adaptation_3)
+
+        formulas = spec.formulas_df["formula"]
+        expected_formulas: set[str] = {
+            SpectraFormula.from_str("\thighwater=false&methane=false;").to_str(),
+            SpectraFormula.from_str("\tpump=false;").to_str(),
+            SpectraFormula.from_str("G(highwater=true->pump=true|next(pump=true));").to_str(),
+            SpectraFormula.from_str("G(methane=true->pump=false|next(pump=false));").to_str(),
+            SpectraFormula.from_str("G(PREV(pump=true)&pump=true->next(highwater=false));").to_str(),
+            SpectraFormula.from_str("G(methane=false->highwater=false|methane=false)").to_str(),
+        }
+        for formula in formulas:
+            self.assertIn(formula.to_str(), expected_formulas)

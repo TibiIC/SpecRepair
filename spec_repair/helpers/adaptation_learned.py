@@ -3,7 +3,7 @@ from typing import TypeVar, Optional
 
 Self = TypeVar('T', bound='AdaptationLearned')
 
-class AdaptationLearned:
+class Adaptation:
     """
     Represents an adaptation learned from a violation of a specification.
     It is a decoding of the output that is produced by ILASP during learning,
@@ -24,6 +24,14 @@ class AdaptationLearned:
 
     def __str__(self):
         return f'{self.type}({self.formula_name},{self.disjunction_index},{self.atom_temporal_operators})'
+
+    def __eq__(self, other):
+        return (
+            self.type == other.type
+            and self.formula_name == other.formula_name
+            and self.disjunction_index == other.disjunction_index
+            and self.atom_temporal_operators == other.atom_temporal_operators
+        )
 
     @staticmethod
     def from_str(rule: str) -> Self:
@@ -56,7 +64,7 @@ class AdaptationLearned:
             for prefix, atom, arg2 in holds_at_args
         ]
 
-        return AdaptationLearned(
+        return Adaptation(
             type=function_name,
             formula_name=name_expression,
             disjunction_index=disjunction_index,

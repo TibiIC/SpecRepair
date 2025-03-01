@@ -2,7 +2,7 @@ from collections import defaultdict
 from copy import deepcopy
 from typing import List, Dict, TypeVar
 
-from spec_repair.helpers.adaptation_learned import AdaptationLearned
+from spec_repair.helpers.adaptation_learned import Adaptation
 from spec_repair.ltl_types import GR1TemporalType
 from spec_repair.special_types import GR1Formula
 from spec_repair.util.spec_util import parse_formula_str, replace_false_true
@@ -28,7 +28,7 @@ class SpectraFormula:
             return f'{self.temp_type}({antecedent_str}->{consequent_str});'
         return f'{self.temp_type}({consequent_str});'
 
-    def integrate(self, adaptation: AdaptationLearned):
+    def integrate(self, adaptation: Adaptation):
         match adaptation.type:
             case "antecedent_exception":
                 disjunct = self.antecedent[adaptation.disjunction_index]

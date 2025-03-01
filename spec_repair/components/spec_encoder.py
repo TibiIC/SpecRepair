@@ -5,7 +5,7 @@ from typing import List, Optional
 import pandas as pd
 
 from spec_repair import config
-from spec_repair.helpers.adaptation_learned import AdaptationLearned
+from spec_repair.helpers.adaptation_learned import Adaptation
 from spec_repair.helpers.counter_trace import CounterTrace
 from spec_repair.enums import Learning, ExpType, When
 from spec_repair.exceptions import LearningException
@@ -171,7 +171,7 @@ class SpecEncoder:
 
         # Generate data structures from line strings
         spectra_rule: SpectraFormula = SpectraFormula.from_str(line)
-        adaptation_learned = AdaptationLearned.from_str(adaptation_str)
+        adaptation_learned = Adaptation.from_str(adaptation_str)
 
         # Integrate the learned adaptation into the spectra rule
         spectra_rule.integrate(adaptation_learned)

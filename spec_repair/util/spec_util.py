@@ -7,7 +7,7 @@ from typing import Set, Dict, Union, List, Optional
 import pandas as pd
 
 from spec_repair.enums import Learning, When, ExpType, SimEnv
-from spec_repair.helpers.adaptation_learned import AdaptationLearned
+from spec_repair.helpers.adaptation_learned import Adaptation
 from spec_repair.heuristics import choose_one_with_heuristic, manual_choice, HeuristicType
 from spec_repair.ltl_types import CounterStrategy
 from spec_repair.old.patterns import PRS_REG
