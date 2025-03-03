@@ -59,7 +59,7 @@ class Test(TestCase):
         ]
         self.assertEqual(output, expected_output)
 
-    def test_propositionalise_assumption_exception(self):
+    def test_propositionalise_assumption_exception_no_eventually(self):
         line_data = {
             'type': 'assumption',
             'name': 'a_always',
@@ -70,7 +70,7 @@ class Test(TestCase):
         }
 
         line = pd.Series(line_data)
-        out = expression_to_str(line, ['a_always'], for_clingo=False)
+        out = expression_to_str(line, ['a_always'], for_clingo=False, is_ev_temp_op=False)
         expected = """
 %assumption -- a_always
 %\tG(a=true);
@@ -272,7 +272,7 @@ root_consequent_holds(OP,a_always,0,T1,S):-
         }
 
         line = pd.Series(line_data)
-        out = expression_to_str(line, ['guarantee1_1'], for_clingo=True)
+        out = expression_to_str(line, ['guarantee1_1'], for_clingo=True, is_ev_temp_op=True)
         expected = """
 %guarantee -- guarantee1_1
 %\tG(r1=true->F(g1=true));
@@ -320,7 +320,7 @@ root_consequent_holds(OP,guarantee1_1,0,T1,S):-
         }
 
         line = pd.Series(line_data)
-        out = expression_to_str(line, ['guarantee3_1'], for_clingo=True)
+        out = expression_to_str(line, ['guarantee3_1'], for_clingo=True, is_ev_temp_op=True)
         expected = """
 %guarantee -- guarantee3_1
 %	G(a=false->g1=false&g2=false);
@@ -369,7 +369,7 @@ root_consequent_holds(OP,guarantee3_1,0,T1,S):-
         }
 
         line = pd.Series(line_data)
-        out = expression_to_str(line, ['guarantee4'], for_clingo=True)
+        out = expression_to_str(line, ['guarantee4'], for_clingo=True, is_ev_temp_op=True)
         expected = """
 %guarantee -- guarantee4
 %	G(g1=false|g2=false);

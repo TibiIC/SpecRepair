@@ -1,10 +1,15 @@
 from abc import ABC, abstractmethod
+from collections import defaultdict
 from typing import List
 
 from spec_repair.helpers.counter_trace import CounterTrace
 
 
 class HeuristicManager(ABC):
+    def __init__(self):
+        self._heuristics = defaultdict(bool)
+        self._heuristics["INVARIANT_TO_RESPONSE_WEAKENING"] = True
+
     @abstractmethod
     def select_counter_traces(self, cts: List[CounterTrace]) -> List[CounterTrace]:
         pass
@@ -16,6 +21,9 @@ class HeuristicManager(ABC):
     @abstractmethod
     def select_weakening_hypotheses(self, hypotheses: List[List[str]]) -> List[List[str]]:
         pass
+
+    def is_enabled(self, param):
+        return self._heuristics[param]
 
     def reset(self):
         """

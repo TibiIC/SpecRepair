@@ -49,7 +49,6 @@ def find_ideal_and_worse_specs(spec_directory_path: str):
 
     semantically_unique_specs: Dict[str, Spec] = filter_duplicate_keys(specs)
 
-    """
     maximal_asm_specs: Dict[str, Spec] = {}
     for spec_name, spec in semantically_unique_specs.items():
         is_maximal = True
@@ -73,8 +72,8 @@ def find_ideal_and_worse_specs(spec_directory_path: str):
                 break
         if is_maximal:
             maximal_gar_specs[spec_name] = spec
-    """
 
+    """
     maximal_specs: Dict[str, Spec] = {}
     for spec_name, spec in semantically_unique_specs.items():
         is_maximal = True
@@ -86,9 +85,9 @@ def find_ideal_and_worse_specs(spec_directory_path: str):
                 break
         if is_maximal:
             maximal_specs[spec_name] = spec
-
-
     """
+
+
     # Printing all maximal spec names
     unique_max_asm_max_gar = maximal_asm_specs.keys() & maximal_gar_specs.keys()
     unique_max_asm_not_max_gar = maximal_asm_specs.keys() - maximal_gar_specs.keys()
@@ -118,8 +117,8 @@ def find_ideal_and_worse_specs(spec_directory_path: str):
         not_max_gr1_specs |= weaker_gr1 - stronger_gr1
         impossible_specs_gr1 |= stronger_gr1 - weaker_gr1
         unrelated_specs_gr1 |= specs.keys() - weaker_gr1 - stronger_gr1
-
     """
+
     # Comparing maximal assumption specs
     formula_type: Optional[GR1FormulaType] = GR1FormulaType.ASM
     max_asm_specs = set()
@@ -191,6 +190,7 @@ def find_ideal_and_worse_specs(spec_directory_path: str):
     print(f"Unrelated GR1 SPECS: {len(unrelated_specs_gr1)}")
     print(unrelated_specs_gr1)
     """
+
     print(f"Max Asm SPECS: {len(max_asm_specs)}")
     print(f"Not Max Asm SPECS: {len(not_max_asm_specs)}")
     print(f"Impossible Asm SPECS: {len(impossible_specs_asm)}")
@@ -208,7 +208,6 @@ def find_ideal_and_worse_specs(spec_directory_path: str):
     print(f"Impossible Both SPECS: {len(impossible_specs_both)}")
     print(f"Unrelated Both SPECS: {len(unrelated_specs_both)}")
     print(unrelated_specs_both)
-    """
 
 
 

@@ -9,6 +9,7 @@ from spec_repair.helpers.adaptation_learned import Adaptation
 from spec_repair.helpers.counter_trace import CounterTrace
 from spec_repair.enums import Learning, ExpType, When
 from spec_repair.exceptions import LearningException
+from spec_repair.helpers.heuristic_managers.heuristic_manager import HeuristicManager
 from spec_repair.helpers.spectra_formula import SpectraFormula
 from spec_repair.ltl_types import Spec
 from spec_repair.old.patterns import FIRST_PRED, ALL_PREDS
@@ -20,10 +21,11 @@ from spec_repair.components.spec_generator import SpecGenerator
 
 
 class SpecEncoder:
-    def __init__(self, spec_generator: SpecGenerator):
+    def __init__(self, spec_generator: SpecGenerator, heuristic_manager: HeuristicManager):
         self.include_prev = False
         self.include_next = False
         self.spec_generator = spec_generator
+        self._hm = heuristic_manager
 
     def encode_ASP(self, spec_df: Spec, trace: list[str], ct_list: List[CounterTrace]) -> str:
         """
@@ -54,12 +56,12 @@ class SpecEncoder:
             exp_names_to_learn = get_violated_expression_names_of_type(violations, learning_type.exp_type_str())
         else:
             exp_names_to_learn = get_expression_names_of_type(violations, learning_type.exp_type_str())
-        expressions_to_weaken = expressions_df_to_str(expressions, exp_names_to_learn)
+        expressions_to_weaken = expressions_df_to_str(expressions, exp_names_to_learn, is_ev_temp_op=self._hm.is_enabled("INVARIANT_TO_RESPONSE_WEAKENING"))
         las = self.spec_generator.generate_ilasp(spec_df, mode_declaration, expressions_to_weaken, trace_ilasp,
                                                  ct_list_ilasp)
         return las
 
-    def _create_mode_bias(self, spec_df: Spec, violations: list[str], learning_type, is_eventually=True) -> str:
+    def _create_mode_bias(self, spec_df: Spec, violations: list[str], learning_type) -> str:
         head = "antecedent"
         extra_args = "_,_"
 
@@ -80,7 +82,7 @@ class SpecEncoder:
         output += f"#modeb(2,timepoint_of_op(const(temp_op_v), var(time), var(time), var(trace)){restriction}).\n"
         output += f"#modeb(2,holds_at(const(usable_atom), var(time), var(trace)){restriction}).\n"
         output += f"#modeb(2,not_holds_at(const(usable_atom), var(time), var(trace)){restriction}).\n"
-        if is_eventually:
+        if self._hm.is_enabled("INVARIANT_TO_RESPONSE_WEAKENING"):
             output += f"#modeh(ev_temp_op(const(expression_v))).\n"
 
         for variable in sorted(extract_variables(spec_df)):
@@ -128,7 +130,7 @@ class SpecEncoder:
             output += f":- body(root_consequent_holds(_,_,_,_,_)), body(timepoint_of_op(_,_,_,_)).\n"
             output += f":- body(root_consequent_holds(_,_,_,_,_)), body(holds_at(_,_,_)).\n"
             output += f":- body(root_consequent_holds(_,_,_,_,_)), body(not_holds_at(_,_,_)).\n"
-        if is_eventually:
+        if self._hm.is_enabled("INVARIANT_TO_RESPONSE_WEAKENING"):
             output += f":- head(ev_temp_op(_)), body(timepoint_of_op(_,_,_,_)).\n"
             output += f":- head(ev_temp_op(_)), body(holds_at(_,_,_)).\n"
             output += f":- head(ev_temp_op(_)), body(not_holds_at(_,_,_)).\n"
@@ -204,6 +206,9 @@ class SpecEncoder:
         print(output.strip("\n"))
         output_list.append(output.strip("\n"))
 
+    def set_heuristic_manager(self, heuristic_manager):
+        self._hm = heuristic_manager
+
 
 def get_violated_expression_names_of_type(violations: list[str], exp_type: str) -> list[str]:
     assert exp_type in ["assumption", "guarantee"]
@@ -222,16 +227,16 @@ def get_violated_expression_names(violations: list[str]) -> list[str]:
 
 
 def expressions_df_to_str(expressions: pd.DataFrame, learning_names: Optional[List[str]] = None,
-                          for_clingo=False) -> str:
+                          for_clingo: bool=False, is_ev_temp_op: bool = True) -> str:
     if learning_names is None:
         learning_names = []
     expression_string = ""
     for _, line in expressions.iterrows():
-        expression_string += expression_to_str(line, learning_names, for_clingo)
+        expression_string += expression_to_str(line, learning_names, for_clingo, is_ev_temp_op=is_ev_temp_op)
     return expression_string
 
 
-def expression_to_str(line: pd.Series, learning_names: list[str], for_clingo: bool) -> str:
+def expression_to_str(line: pd.Series, learning_names: list[str], for_clingo: bool, is_ev_temp_op: bool = True) -> str:
     if line.when == When.EVENTUALLY and line['name'] not in learning_names and not for_clingo:
         return ""
     expression_string = f"%{line['type']} -- {line['name']}\n"
@@ -240,8 +245,8 @@ def expression_to_str(line: pd.Series, learning_names: list[str], for_clingo: bo
     is_exception = (line['name'] in learning_names) and not for_clingo
     ant_exception = is_exception and line['type'] == str(ExpType.ASSUMPTION)
     gar_exception = is_exception
-    expression_string += propositionalise_antecedent(line, ant_exception)
-    expression_string += propositionalise_consequent(line, gar_exception)
+    expression_string += propositionalise_antecedent(line, exception=ant_exception)
+    expression_string += propositionalise_consequent(line, exception=gar_exception, is_ev_temp_op=is_ev_temp_op)
     return expression_string
 
 
@@ -331,7 +336,7 @@ def propositionalise_antecedent(line, exception=False):
     return output
 
 
-def propositionalise_consequent(line, exception=False):
+def propositionalise_consequent(line, exception=False, is_ev_temp_op=True):
     output = ""
     disjunction_of_conjunctions = parse_formula_str(line["consequent"])
     n_root_consequents = 0
@@ -347,10 +352,10 @@ def propositionalise_consequent(line, exception=False):
             if line['when'] == When.EVENTUALLY:
                 temp_op = "eventually"
             output += f",\n{component_end_consequent(line['name'], temp_op, timepoint, n_root_consequents + i)}"
-        if "eventually" not in disjunct.keys() and exception and timepoint == "T":
+        if "eventually" not in disjunct.keys() and exception and is_ev_temp_op and timepoint == "T":
             output += f",\n\tnot ev_temp_op({line['name']})"
         output += ".\n\n"
-        if exception:
+        if exception and is_ev_temp_op:
             output += component_body
             for i in range(len(disjunct)):
                 output += f",\n{component_end_consequent(line['name'], 'eventually', timepoint, n_root_consequents + i)}"
@@ -368,7 +373,9 @@ def propositionalise_consequent(line, exception=False):
     if exception and line['type'] == "guarantee":
         output += component_body
         output += f",\n\tconsequent_exception({line['name']},{timepoint},S)"
-        output += f",\n\tnot ev_temp_op({line['name']}).\n\n"
+        if is_ev_temp_op:
+            output += f",\n\tnot ev_temp_op({line['name']})"
+        output += f".\n\n"
 
     return output
 

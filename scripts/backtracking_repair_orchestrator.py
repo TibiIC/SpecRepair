@@ -26,9 +26,10 @@ class BacktrackingRepairOrchestrator:
             logger: Logger = NoLogger()
 
     ):
-        self._learner = learner
-        self._oracle = oracle
         self._hm = heuristic_manager
+        self._learner = learner
+        self._learner.set_heuristic_manager(self._hm)
+        self._oracle = oracle
         self._logger = logger
         self._initialise_repair_variables()
 
