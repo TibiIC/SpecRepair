@@ -15,7 +15,13 @@ class TestSpecEncoder(TestCase):
     minepump_clingo_file = '../test_files/minepump_strong_WA_no_cs.lp'
     minepump_mode_bias_aw_file = '../test_files/mode_bias/minepump_1_aw_step.txt'
     minepump_mode_bias_gw_file = '../test_files/mode_bias/minepump_1_gw_step.txt'
+    traffic_updated_spec_file = '../../input-files/case-studies/spectra/traffic-updated/strong.spectra'
+    traffic_updated_mode_bias_aw_file = '../test_files/mode_bias/traffic_updated_aw.txt'
+    traffic_updated_mode_bias_aw_file_no_ev = '../test_files/mode_bias/traffic_updated_aw_no_ev.txt'
     maxDiff = None
+
+    def __init__(self, methodName: str = "runTest"):
+        super().__init__(methodName)
 
     def test_encode_asp(self):
         expected_clingo_str: str = read_file(self.minepump_clingo_file)
@@ -55,6 +61,52 @@ class TestSpecEncoder(TestCase):
         mode_bias: str = encoder._create_mode_bias(spec_df, violations, Learning.ASSUMPTION_WEAKENING)
 
         expected_mode_bias: str = read_file(self.minepump_mode_bias_aw_file)
+        self.assertEqual(expected_mode_bias, mode_bias)
+
+    def test_create_mode_bias_aw_traffic_updated(self):
+        spec_df: pd.DataFrame = get_assumptions_and_guarantees_from(self.traffic_updated_spec_file)
+        violations: list[str] = [
+            """\
+    assumption(no_emergency_often)
+    assumption(carA_idle_when_red)
+    assumption(carB_idle_when_red)
+    assumption(carA_moves_when_green)
+    assumption(carB_moves_when_green)
+    guarantee(lights_not_both_red)
+    guarantee(carA_leads_to_greenA)
+    guarantee(carB_lead_to_greenB)
+    guarantee(red_when_emergency)
+    violation_holds(carA_idle_when_red,0,trace_name_0)
+    violation_holds(carB_idle_when_red,0,trace_name_0)\
+    """
+        ]
+        encoder: SpecEncoder = SpecEncoder(SpecGenerator())
+        mode_bias: str = encoder._create_mode_bias(spec_df, violations, Learning.ASSUMPTION_WEAKENING)
+
+        expected_mode_bias: str = read_file(self.traffic_updated_mode_bias_aw_file)
+        self.assertEqual(expected_mode_bias, mode_bias)
+
+    def test_create_mode_bias_aw_traffic_updated_no_ev(self):
+        spec_df: pd.DataFrame = get_assumptions_and_guarantees_from(self.traffic_updated_spec_file)
+        violations: list[str] = [
+            """\
+    assumption(no_emergency_often)
+    assumption(carA_idle_when_red)
+    assumption(carB_idle_when_red)
+    assumption(carA_moves_when_green)
+    assumption(carB_moves_when_green)
+    guarantee(lights_not_both_red)
+    guarantee(carA_leads_to_greenA)
+    guarantee(carB_lead_to_greenB)
+    guarantee(red_when_emergency)
+    violation_holds(carA_idle_when_red,0,trace_name_0)
+    violation_holds(carB_idle_when_red,0,trace_name_0)\
+    """
+        ]
+        encoder: SpecEncoder = SpecEncoder(SpecGenerator())
+        mode_bias: str = encoder._create_mode_bias(spec_df, violations, Learning.ASSUMPTION_WEAKENING, False)
+
+        expected_mode_bias: str = read_file(self.traffic_updated_mode_bias_aw_file_no_ev)
         self.assertEqual(expected_mode_bias, mode_bias)
 
     def test_create_mode_bias_gw(self):

@@ -59,7 +59,7 @@ class SpecEncoder:
                                                  ct_list_ilasp)
         return las
 
-    def _create_mode_bias(self, spec_df: Spec, violations: list[str], learning_type):
+    def _create_mode_bias(self, spec_df: Spec, violations: list[str], learning_type, is_eventually=True) -> str:
         head = "antecedent"
         extra_args = "_,_"
 
@@ -80,7 +80,8 @@ class SpecEncoder:
         output += f"#modeb(2,timepoint_of_op(const(temp_op_v), var(time), var(time), var(trace)){restriction}).\n"
         output += f"#modeb(2,holds_at(const(usable_atom), var(time), var(trace)){restriction}).\n"
         output += f"#modeb(2,not_holds_at(const(usable_atom), var(time), var(trace)){restriction}).\n"
-        output += f"#modeh(ev_temp_op(const(expression_v))).\n"
+        if is_eventually:
+            output += f"#modeh(ev_temp_op(const(expression_v))).\n"
 
         for variable in sorted(extract_variables(spec_df)):
             output += f"#constant(usable_atom,{variable}).\n"
@@ -127,9 +128,10 @@ class SpecEncoder:
             output += f":- body(root_consequent_holds(_,_,_,_,_)), body(timepoint_of_op(_,_,_,_)).\n"
             output += f":- body(root_consequent_holds(_,_,_,_,_)), body(holds_at(_,_,_)).\n"
             output += f":- body(root_consequent_holds(_,_,_,_,_)), body(not_holds_at(_,_,_)).\n"
-        output += f":- head(ev_temp_op(_)), body(timepoint_of_op(_,_,_,_)).\n"
-        output += f":- head(ev_temp_op(_)), body(holds_at(_,_,_)).\n"
-        output += f":- head(ev_temp_op(_)), body(not_holds_at(_,_,_)).\n"
+        if is_eventually:
+            output += f":- head(ev_temp_op(_)), body(timepoint_of_op(_,_,_,_)).\n"
+            output += f":- head(ev_temp_op(_)), body(holds_at(_,_,_)).\n"
+            output += f":- head(ev_temp_op(_)), body(not_holds_at(_,_,_)).\n"
         output += "\").\n\n"
         return output
 
