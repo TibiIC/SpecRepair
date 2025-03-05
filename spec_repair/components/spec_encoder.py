@@ -125,11 +125,6 @@ class SpecEncoder:
         if learning_type == Learning.ASSUMPTION_WEAKENING or not config.WEAKENING_TO_JUSTICE:
             # Learning eventually expressions doesn't make sense within the antecedent of a formula
             output += f":- head({head}_exception({extra_args},_,_)), body(timepoint_of_op(eventually,_,_,_)).\n"
-        if learning_type == Learning.GUARANTEE_WEAKENING and config.WEAKENING_TO_JUSTICE:
-            output += f":- head(consequent_exception(E1,V1,V2)), body(root_consequent_holds(_,E2,_,V3,V4)), (E1,V1,V2) != (E2,V3,V4).\n"
-            output += f":- body(root_consequent_holds(_,_,_,_,_)), body(timepoint_of_op(_,_,_,_)).\n"
-            output += f":- body(root_consequent_holds(_,_,_,_,_)), body(holds_at(_,_,_)).\n"
-            output += f":- body(root_consequent_holds(_,_,_,_,_)), body(not_holds_at(_,_,_)).\n"
         if self._hm.is_enabled("INVARIANT_TO_RESPONSE_WEAKENING"):
             output += f":- head(ev_temp_op(_)), body(timepoint_of_op(_,_,_,_)).\n"
             output += f":- head(ev_temp_op(_)), body(holds_at(_,_,_)).\n"
