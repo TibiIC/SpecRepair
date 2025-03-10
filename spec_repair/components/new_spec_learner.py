@@ -4,12 +4,14 @@ from typing import Set, List, Tuple, Optional
 
 import pandas as pd
 
+from spec_repair.components.ilearner import ILearner
 from spec_repair.helpers.adaptation_learned import Adaptation
 from spec_repair.helpers.counter_trace import CounterTrace, complete_cts_from_ct
 from spec_repair.components.spec_encoder import SpecEncoder
 from spec_repair.enums import Learning
 from spec_repair.exceptions import NoViolationException, NoWeakeningException, DeadlockRequiredException, \
     NoAssumptionWeakeningException
+from spec_repair.helpers.heuristic_managers.heuristic_manager import HeuristicManager
 from spec_repair.helpers.ilasp_interpreter import ILASPInterpreter
 from spec_repair.helpers.spectra_specification import SpectraSpecification
 from spec_repair.heuristics import choose_one_with_heuristic, HeuristicType
@@ -19,16 +21,16 @@ from spec_repair.components.spec_generator import SpecGenerator
 from spec_repair.wrappers.asp_wrappers import get_violations, run_ILASP
 
 
-class NewSpecLearner:
-    def __init__(self):
+class NewSpecLearner(ILearner):
+    def __init__(self, heuristic_manager: HeuristicManager):
         self.file_generator = SpecGenerator()
-        self.spec_encoder = SpecEncoder(self.file_generator)
+        self.spec_encoder = SpecEncoder(self.file_generator, heuristic_manager)
 
     def learn_new(
             self,
             spec: SpectraSpecification,
             data: Tuple[list[str], list[CounterTrace], Learning]
-    ):
+    ) -> List[SpectraSpecification]:
         trace, cts, learning_type = data
         possible_adaptations: List[List[Adaptation]] = self.find_possible_adaptations(spec, trace, cts, learning_type)
         new_specs = [deepcopy(spec).integrate_multiple(adaptations) for adaptations in possible_adaptations]

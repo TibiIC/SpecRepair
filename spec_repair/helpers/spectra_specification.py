@@ -4,6 +4,7 @@ from typing import TypedDict, Optional, TypeVar, List
 
 import pandas as pd
 
+from spec_repair.components.ispecification import ISpecification
 from spec_repair.helpers.adaptation_learned import Adaptation
 from spec_repair.helpers.spectra_atom import SpectraAtom
 from spec_repair.helpers.spectra_formula import SpectraFormula
@@ -22,7 +23,7 @@ class FormulaDataPoint(TypedDict):
 Self = TypeVar('T', bound='SpectraSpecification')
 
 
-class SpectraSpecification:
+class SpectraSpecification(ISpecification):
     formulas_df: pd.DataFrame = None
     atoms: set[SpectraAtom] = set()
 
