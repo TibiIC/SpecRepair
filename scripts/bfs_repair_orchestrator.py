@@ -1,6 +1,7 @@
 from collections import deque
-from typing import Deque, Tuple, Any
+from typing import Deque, Tuple, Any, Dict
 
+from spec_repair.components.idiscriminator import IDiscriminator
 from spec_repair.components.ilearner import ILearner
 from spec_repair.components.imittigator import IMittigator
 from spec_repair.components.ioracle import IOracle
@@ -36,16 +37,18 @@ class OrchestrationManager:
 class BFSRepairOrchestrator:
     def __init__(
             self,
-            learner: ILearner,
+            learners: Dict[str, ILearner],
             oracle: IOracle,
+            discriminator: IDiscriminator,
             mittigator: IMittigator,
             orchestration_manager: OrchestrationManager,
             heuristic_manager: HeuristicManager = NoFilterHeuristicManager(),
             recorder: Recorder[ISpecification] = UniqueRecorder()
     ):
-        self._learner = learner
+        self._learners = learners
         self._oracle = oracle
-        self._mittigator = None
+        self._discriminator = discriminator
+        self._mittigator = mittigator
         self._om = orchestration_manager
         self._hm = heuristic_manager
         self._recorder = recorder
@@ -66,7 +69,9 @@ class BFSRepairOrchestrator:
 
         while self._om.has_next():
             spec, data = self._om.get_next()
-            new_specs = self._learner.learn_new(spec, data)
+            learning_strategy: str = self._discriminator.get_learning_strategy(spec, data)
+            learner = self._learners[learning_strategy]
+            new_specs = learner.learn_new(spec, data)
             if not new_specs:
                 alternate_tasks = self._mittigator.prepare_alternative_learning_tasks(spec, data)
                 for alt_spec, alt_data in alternate_tasks:
