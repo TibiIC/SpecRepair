@@ -1,10 +1,13 @@
 from typing import List
 
 from spec_repair.helpers.counter_trace import CounterTrace
-from spec_repair.helpers.heuristic_managers.heuristic_manager import HeuristicManager
+from spec_repair.helpers.heuristic_managers.iheuristic_manager import IHeuristicManager
 
 
-class NoFilterHeuristicManager(HeuristicManager):
+class NoFilterHeuristicManager(IHeuristicManager):
+    def __init__(self):
+        super().__init__()
+
     def select_counter_traces(self, cts: List[CounterTrace]) -> List[CounterTrace]:
         return cts
 

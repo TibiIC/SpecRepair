@@ -7,42 +7,38 @@ import pandas as pd
 from spec_repair import config
 from spec_repair.helpers.adaptation_learned import Adaptation
 from spec_repair.helpers.counter_trace import CounterTrace
-from spec_repair.enums import Learning, ExpType, When
+from spec_repair.enums import Learning, When
 from spec_repair.exceptions import LearningException
 from spec_repair.helpers.heuristic_managers.iheuristic_manager import IHeuristicManager
+from spec_repair.helpers.heuristic_managers.no_filter_heuristic_manager import NoFilterHeuristicManager
 from spec_repair.helpers.spectra_formula import SpectraFormula
-from spec_repair.ltl_types import Spec
+from spec_repair.helpers.spectra_specification import SpectraSpecification
+from spec_repair.ltl_types import Spec, GR1FormulaType
 from spec_repair.old.patterns import FIRST_PRED, ALL_PREDS
 from spec_repair.special_types import EventuallyConsequentRule
 from spec_repair.util.spec_util import extract_variables, trace_list_to_asp_form, \
     trace_list_to_ilasp_form, format_spec, integrate_rule, filter_formulas_of_type, parse_formula_str, \
-    eventualise_consequent, re_line_spec, create_signature
+    eventualise_consequent, re_line_spec, create_atom_signature_asp
 from spec_repair.components.spec_generator import SpecGenerator
 
 
-class SpecEncoder:
-    def __init__(self, heuristic_manager: IHeuristicManager):
-        self.include_prev = False
-        self.include_next = False
+class NewSpecEncoder:
+    def __init__(self, heuristic_manager: Optional[IHeuristicManager]):
+        if heuristic_manager is None:
+            self._hm = NoFilterHeuristicManager()
         self._hm = heuristic_manager
 
-    def encode_ASP(self, spec_df: Spec, trace: list[str], ct_list: List[CounterTrace]) -> str:
+    def encode_ASP(self, spec: SpectraSpecification, trace: list[str], ct_list: List[CounterTrace]) -> str:
         """
         ASSUMES LEARNING ASSUMPTION WEAKENING ONLY
         """
         # Generate first Clingo file to find violating assumptions/guarantees
-        assumptions = filter_formulas_of_type(spec_df, ExpType.ASSUMPTION)
-        guarantees = filter_formulas_of_type(spec_df, ExpType.GUARANTEE)
-        assumption_string = expressions_df_to_str(assumptions, for_clingo=True)
-        guarantee_string = expressions_df_to_str(guarantees, for_clingo=True)
-        signature_string = create_signature(spec_df)
+        formulas_string = spec.to_asp(for_clingo=True)
+        signature_string = create_atom_signature_asp(spec.get_atoms())
         violation_trace = trace_list_to_asp_form(trace)
         cs_trace_string: str = ''.join([cs_trace.get_asp_form() for cs_trace in ct_list])
-        return SpecGenerator.generate_clingo(assumption_string, guarantee_string, signature_string, violation_trace,
+        return SpecGenerator.generate_clingo(formulas_string, "", signature_string, violation_trace,
                                                    cs_trace_string)
-
-        # TODO: consider, instead of spec_df, to offer only assumptions/guarantees as df, based on learning type
-        #       won't need to carry flag type anymore
 
     def encode_ILASP(self, spec_df: pd.DataFrame, trace: List[str], ct_list: List[CounterTrace], violations: list[str],
                      learning_type: Learning):
@@ -59,7 +55,7 @@ class SpecEncoder:
         expressions_to_weaken = expressions_df_to_str(expressions, exp_names_to_learn, is_ev_temp_op=self._hm.is_enabled("INVARIANT_TO_RESPONSE_WEAKENING"))
         signature_string = create_signature(spec_df)
         las = SpecGenerator.generate_ilasp(mode_declaration, expressions_to_weaken, signature_string, trace_ilasp,
-                                                 ct_list_ilasp)
+                                           ct_list_ilasp)
         return las
 
     def _create_mode_bias(self, spec_df: Spec, violations: list[str], learning_type) -> str:

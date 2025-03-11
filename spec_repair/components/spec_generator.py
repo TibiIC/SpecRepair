@@ -6,10 +6,11 @@ from spec_repair.util.spec_util import create_signature
 
 
 class SpecGenerator:
-    def __init__(self, background_file_path=f"{PROJECT_PATH}/files/background_knowledge.txt"):
-        self.background_knowledge = ''.join(read_file_lines(background_file_path))
+    background_file_path = f"{PROJECT_PATH}/files/background_knowledge.txt"
+    background_knowledge = ''.join(read_file_lines(background_file_path))
 
-    def generate_clingo(self, spec_df: pd.DataFrame, assumptions: str, guarantees: str, violation_trace: str,
+    @staticmethod
+    def generate_clingo(assumptions: str, guarantees: str, signature: str, violation_trace: str,
                         cs_trace: str) -> str:
         """
         Generate the contents of the .lp file to be run in Clingo.
@@ -21,17 +22,18 @@ class SpecGenerator:
         :param cs_trace: Traces from counter-strategies, which are supposed to violate current specification
         :return:
         """
-        lp = self.background_knowledge + \
+        lp = SpecGenerator.background_knowledge + \
              assumptions + \
              guarantees + \
-             create_signature(spec_df) + \
+             signature + \
              violation_trace + \
              cs_trace
         for element_to_show in ["violation_holds/3", "assumption/1", "guarantee/1", "entailed/1"]:
             lp += f"\n#show {element_to_show}.\n"
         return lp
 
-    def generate_ilasp(self, spec_df: pd.DataFrame, mode_declaration: str, expressions: str, violation_trace: str,
+    @staticmethod
+    def generate_ilasp(mode_declaration: str, expressions: str, signature: str, violation_trace: str,
                        cs_trace: str) -> str:
         '''
         Generate the contents of the .las file to be run in Clingo.
@@ -44,9 +46,9 @@ class SpecGenerator:
         :return:
         '''
         las = mode_declaration + \
-              self.background_knowledge + \
+              SpecGenerator.background_knowledge + \
               expressions + \
-              create_signature(spec_df) + \
+              signature + \
               violation_trace + \
               cs_trace
         return las

@@ -7,7 +7,7 @@ from typing import Deque, List
 from spec_repair.helpers.logger import Logger, NoLogger
 from spec_repair.helpers.recorders.recorder import Recorder
 from spec_repair.helpers.counter_trace import CounterTrace, cts_from_cs
-from spec_repair.helpers.heuristic_managers.heuristic_manager import HeuristicManager
+from spec_repair.helpers.heuristic_managers.iheuristic_manager import IHeuristicManager
 from spec_repair.components.spec_learner import SpecLearner
 from spec_repair.components.spec_oracle import SpecOracle
 from spec_repair.enums import Learning
@@ -22,7 +22,7 @@ class BacktrackingRepairOrchestrator:
             self,
             learner: SpecLearner,
             oracle: SpecOracle,
-            heuristic_manager: HeuristicManager,
+            heuristic_manager: IHeuristicManager,
             logger: Logger = NoLogger()
 
     ):

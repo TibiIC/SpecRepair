@@ -3,8 +3,10 @@ from unittest import TestCase
 import pandas as pd
 
 from spec_repair.components.spec_encoder import SpecEncoder
-from spec_repair.components.spec_generator import SpecGenerator
 from spec_repair.enums import Learning
+from spec_repair.helpers.heuristic_managers.no_eventually_hypothesis_heuristic_manager import \
+    NoEventuallyHypothesisHeuristicManager
+from spec_repair.helpers.heuristic_managers.no_filter_heuristic_manager import NoFilterHeuristicManager
 from spec_repair.util.file_util import read_file
 from spec_repair.util.spec_util import get_assumptions_and_guarantees_from
 
@@ -37,7 +39,7 @@ class TestSpecEncoder(TestCase):
             f'not_holds_at(pump,1,{trace_name}).\n',
             '\n'
         ]
-        encoder: SpecEncoder = SpecEncoder(SpecGenerator())
+        encoder: SpecEncoder = SpecEncoder(NoFilterHeuristicManager())
         clingo_str: str = encoder.encode_ASP(spec_df, trace, set())
         clingo_str = clingo_str.replace('\n\n\n', '\n\n')
 
@@ -57,7 +59,7 @@ class TestSpecEncoder(TestCase):
     violation_holds(guarantee1_1,1,trace_name_0)\
     """
         ]
-        encoder: SpecEncoder = SpecEncoder(SpecGenerator())
+        encoder: SpecEncoder = SpecEncoder(NoFilterHeuristicManager())
         mode_bias: str = encoder._create_mode_bias(spec_df, violations, Learning.ASSUMPTION_WEAKENING)
 
         expected_mode_bias: str = read_file(self.minepump_mode_bias_aw_file)
@@ -80,7 +82,7 @@ class TestSpecEncoder(TestCase):
     violation_holds(carB_idle_when_red,0,trace_name_0)\
     """
         ]
-        encoder: SpecEncoder = SpecEncoder(SpecGenerator())
+        encoder: SpecEncoder = SpecEncoder(NoFilterHeuristicManager())
         mode_bias: str = encoder._create_mode_bias(spec_df, violations, Learning.ASSUMPTION_WEAKENING)
 
         expected_mode_bias: str = read_file(self.traffic_updated_mode_bias_aw_file)
@@ -103,8 +105,8 @@ class TestSpecEncoder(TestCase):
     violation_holds(carB_idle_when_red,0,trace_name_0)\
     """
         ]
-        encoder: SpecEncoder = SpecEncoder(SpecGenerator())
-        mode_bias: str = encoder._create_mode_bias(spec_df, violations, Learning.ASSUMPTION_WEAKENING, False)
+        encoder: SpecEncoder = SpecEncoder(NoEventuallyHypothesisHeuristicManager())
+        mode_bias: str = encoder._create_mode_bias(spec_df, violations, Learning.ASSUMPTION_WEAKENING)
 
         expected_mode_bias: str = read_file(self.traffic_updated_mode_bias_aw_file_no_ev)
         self.assertEqual(expected_mode_bias, mode_bias)
@@ -123,9 +125,9 @@ class TestSpecEncoder(TestCase):
     violation_holds(guarantee1_1,1,counter_strat_0)\
     """
         ]
-        encoder: SpecEncoder = SpecEncoder(SpecGenerator())
+        encoder: SpecEncoder = SpecEncoder(NoFilterHeuristicManager())
         mode_bias: str = encoder._create_mode_bias(spec_df, violations, Learning.GUARANTEE_WEAKENING)
 
         expected_mode_bias: str = read_file(self.minepump_mode_bias_gw_file)
-        self.assertEquals(expected_mode_bias, mode_bias)
+        self.assertEqual(expected_mode_bias, mode_bias)
 

@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 from typing import Any
 
-from spec_repair.components.ispecification import ISpecification
+from spec_repair.components.interfaces.ispecification import ISpecification
 
 
 class IDiscriminator(ABC):

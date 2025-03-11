@@ -1,8 +1,8 @@
 from copy import deepcopy
 from typing import List, Tuple, Any, Set
 
-from spec_repair.components.imittigator import IMittigator
-from spec_repair.components.ispecification import ISpecification
+from spec_repair.components.interfaces.imittigator import IMittigator
+from spec_repair.components.interfaces.ispecification import ISpecification
 from spec_repair.enums import Learning
 from spec_repair.helpers.counter_trace import CounterTrace
 

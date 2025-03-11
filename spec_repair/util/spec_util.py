@@ -7,7 +7,7 @@ from typing import Set, Dict, Union, List, Optional
 import pandas as pd
 
 from spec_repair.enums import Learning, When, ExpType, SimEnv
-from spec_repair.helpers.adaptation_learned import Adaptation
+from spec_repair.helpers.spectra_atom import SpectraAtom
 from spec_repair.heuristics import choose_one_with_heuristic, manual_choice, HeuristicType
 from spec_repair.ltl_types import CounterStrategy
 from spec_repair.old.patterns import PRS_REG
@@ -48,6 +48,15 @@ def create_signature(spec_df: pd.DataFrame):
     output = "%---*** Signature  ***---\n\n"
     for var in sorted(variables):
         output += f"atom({var}).\n"
+    output += "\n\n"
+    return output
+
+
+# TODO: find way to sort atoms
+def create_atom_signature_asp(spec_atoms: Set[SpectraAtom]):
+    output = "%---*** Signature  ***---\n\n"
+    for atom in spec_atoms:
+        output += f"atom({atom.name}).\n"
     output += "\n\n"
     return output
 
@@ -790,7 +799,7 @@ def gr1_type_of(formula):
     return pRespondsToS, when
 
 
-def filter_expressions_of_type(formula_df: pd.DataFrame, expression: ExpType) -> pd.DataFrame:
+def filter_formulas_of_type(formula_df: pd.DataFrame, expression: ExpType) -> pd.DataFrame:
     return formula_df.loc[formula_df['type'] == str(expression)]
 
 

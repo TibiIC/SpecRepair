@@ -5,7 +5,7 @@ from typing import List
 from spec_repair.helpers.counter_trace import CounterTrace
 
 
-class HeuristicManager(ABC):
+class IHeuristicManager(ABC):
     def __init__(self):
         self._heuristics = defaultdict(bool)
         self._heuristics["INVARIANT_TO_RESPONSE_WEAKENING"] = True

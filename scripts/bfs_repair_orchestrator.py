@@ -1,13 +1,13 @@
 from collections import deque
 from typing import Deque, Tuple, Any, Dict
 
-from spec_repair.components.idiscriminator import IDiscriminator
-from spec_repair.components.ilearner import ILearner
-from spec_repair.components.imittigator import IMittigator
-from spec_repair.components.ioracle import IOracle
-from spec_repair.components.ispecification import ISpecification
+from spec_repair.components.interfaces.idiscriminator import IDiscriminator
+from spec_repair.components.interfaces.ilearner import ILearner
+from spec_repair.components.interfaces.imittigator import IMittigator
+from spec_repair.components.interfaces.ioracle import IOracle
+from spec_repair.components.interfaces.ispecification import ISpecification
 from spec_repair.enums import Learning
-from spec_repair.helpers.heuristic_managers.heuristic_manager import HeuristicManager
+from spec_repair.helpers.heuristic_managers.iheuristic_manager import IHeuristicManager
 from spec_repair.helpers.heuristic_managers.no_filter_heuristic_manager import NoFilterHeuristicManager
 from spec_repair.helpers.recorders.recorder import Recorder
 from spec_repair.helpers.recorders.unique_recorder import UniqueRecorder
@@ -42,7 +42,7 @@ class BFSRepairOrchestrator:
             discriminator: IDiscriminator,
             mittigator: IMittigator,
             orchestration_manager: OrchestrationManager,
-            heuristic_manager: HeuristicManager = NoFilterHeuristicManager(),
+            heuristic_manager: IHeuristicManager = NoFilterHeuristicManager(),
             recorder: Recorder[ISpecification] = UniqueRecorder()
     ):
         self._learners = learners

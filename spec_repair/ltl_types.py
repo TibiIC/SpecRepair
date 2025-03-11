@@ -82,6 +82,15 @@ class GR1FormulaType(Enum):
             return GR1FormulaType.GAR
         raise ValueError(f"Unsupported value: {value}")
 
+    def to_asp(self) -> str:
+        if self == GR1FormulaType.ASM:
+            return "assumption"
+        elif self == GR1FormulaType.GAR:
+            return "guarantee"
+        else:
+            raise ValueError(f"Unsupported value: {self}")
+
+
 class GR1AtomType(Enum):
     SYS = "sys"
     ENV = "env"
@@ -96,6 +105,7 @@ class GR1AtomType(Enum):
         elif value == "env":
             return GR1AtomType.ENV
         raise ValueError(f"Unsupported value: {value}")
+
 
 class GR1TemporalType(Enum):
     INITIAL = "ini"

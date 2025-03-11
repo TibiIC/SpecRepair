@@ -10,22 +10,20 @@ from spec_repair.config import FASTLAS
 from spec_repair.enums import Learning
 from spec_repair.exceptions import NoViolationException, NoWeakeningException, DeadlockRequiredException, \
     NoAssumptionWeakeningException
-from spec_repair.helpers.heuristic_managers.heuristic_manager import HeuristicManager
+from spec_repair.helpers.heuristic_managers.iheuristic_manager import IHeuristicManager
 from spec_repair.helpers.heuristic_managers.no_filter_heuristic_manager import NoFilterHeuristicManager
 from spec_repair.heuristics import choose_one_with_heuristic, HeuristicType, first_choice
 
 from spec_repair.util.spec_util import spectra_to_df
-from spec_repair.components.spec_generator import SpecGenerator
 from spec_repair.wrappers.asp_wrappers import get_violations, run_ILASP
 
 
 class SpecLearner:
-    def __init__(self, heuristic_manager: HeuristicManager = NoFilterHeuristicManager()):
-        self.file_generator = SpecGenerator()
+    def __init__(self, heuristic_manager: IHeuristicManager = NoFilterHeuristicManager()):
         self._hm = heuristic_manager
-        self.spec_encoder = SpecEncoder(self.file_generator, self._hm)
+        self.spec_encoder = SpecEncoder(self._hm)
 
-    def set_heuristic_manager(self, heuristic_manager: HeuristicManager):
+    def set_heuristic_manager(self, heuristic_manager: IHeuristicManager):
         self._hm = heuristic_manager
         self.spec_encoder.set_heuristic_manager(heuristic_manager)
 

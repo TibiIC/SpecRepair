@@ -27,8 +27,8 @@ class TestSpectraSpecification(TestCase):
         spec_file = "./test_files/minepump_strong.spectra"
         spec = SpectraSpecification.from_file(spec_file)
         # get all entries at column "formula" in the DataFrame
-        print(spec.formulas_df.columns)
-        formulas = spec.formulas_df["formula"]
+        print(spec._formulas_df.columns)
+        formulas = spec._formulas_df["formula"]
         expected_formulas: set[str] = {
             SpectraFormula.from_str("\thighwater=false&methane=false;").to_str(),
             SpectraFormula.from_str("\tpump=false;").to_str(),
@@ -44,13 +44,13 @@ class TestSpectraSpecification(TestCase):
         spec_file = "./test_files/minepump_strong.spectra"
         spec = SpectraSpecification.from_file(spec_file)
 
-        print(spec.atoms)
+        print(spec._atoms)
         expected_atoms_str: set[str] = {
             str(SpectraAtom.from_str("env boolean highwater;")),
             str(SpectraAtom.from_str("env boolean methane;")),
             str(SpectraAtom.from_str("sys boolean pump;")),
         }
-        for atom in spec.atoms:
+        for atom in spec._atoms:
             self.assertIn(str(atom), expected_atoms_str)
 
     def test_integrate_learning_rule(self):
@@ -64,7 +64,7 @@ class TestSpectraSpecification(TestCase):
         )
         spec.integrate(adaptation)
 
-        formulas = spec.formulas_df["formula"]
+        formulas = spec._formulas_df["formula"]
         expected_formulas: set[str] = {
             SpectraFormula.from_str("\thighwater=false&methane=false;").to_str(),
             SpectraFormula.from_str("\tpump=false;").to_str(),
@@ -102,7 +102,7 @@ class TestSpectraSpecification(TestCase):
         spec.integrate(adaptation_2)
         spec.integrate(adaptation_3)
 
-        formulas = spec.formulas_df["formula"]
+        formulas = spec._formulas_df["formula"]
         expected_formulas: set[str] = {
             SpectraFormula.from_str("\thighwater=false&methane=false;").to_str(),
             SpectraFormula.from_str("\tpump=false;").to_str(),

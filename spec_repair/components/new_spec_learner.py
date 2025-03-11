@@ -4,27 +4,25 @@ from typing import Set, List, Tuple, Optional
 
 import pandas as pd
 
-from spec_repair.components.ilearner import ILearner
+from spec_repair.components.interfaces.ilearner import ILearner
 from spec_repair.helpers.adaptation_learned import Adaptation
 from spec_repair.helpers.counter_trace import CounterTrace, complete_cts_from_ct
 from spec_repair.components.spec_encoder import SpecEncoder
 from spec_repair.enums import Learning
 from spec_repair.exceptions import NoViolationException, NoWeakeningException, DeadlockRequiredException, \
     NoAssumptionWeakeningException
-from spec_repair.helpers.heuristic_managers.heuristic_manager import HeuristicManager
+from spec_repair.helpers.heuristic_managers.iheuristic_manager import IHeuristicManager
 from spec_repair.helpers.ilasp_interpreter import ILASPInterpreter
 from spec_repair.helpers.spectra_specification import SpectraSpecification
 from spec_repair.heuristics import choose_one_with_heuristic, HeuristicType
 
 from spec_repair.util.spec_util import spectra_to_df
-from spec_repair.components.spec_generator import SpecGenerator
 from spec_repair.wrappers.asp_wrappers import get_violations, run_ILASP
 
 
 class NewSpecLearner(ILearner):
-    def __init__(self, heuristic_manager: HeuristicManager):
-        self.file_generator = SpecGenerator()
-        self.spec_encoder = SpecEncoder(self.file_generator, heuristic_manager)
+    def __init__(self, heuristic_manager: IHeuristicManager):
+        self.spec_encoder = SpecEncoder(heuristic_manager)
 
     def learn_new(
             self,
@@ -36,7 +34,7 @@ class NewSpecLearner(ILearner):
         new_specs = [deepcopy(spec).integrate_multiple(adaptations) for adaptations in possible_adaptations]
         return new_specs
 
-    def find_possible_adaptations(self, spec, trace, cts, learning_type) -> List[List[Adaptation]]:
+    def find_possible_adaptations(self, spec: SpectraSpecification, trace, cts, learning_type) -> List[List[Adaptation]]:
         spec_df: pd.DataFrame = spectra_to_df(spec)
         violations = self.get_spec_violations(spec_df, trace, cts, learning_type)
         ilasp: str = self.spec_encoder.encode_ILASP(spec_df, trace, cts, violations, learning_type)
