@@ -22,8 +22,8 @@ def filter_duplicates(specs: Set[Spec]) -> Set[Spec]:
             unique_specs.add(spec)
     return unique_specs
 
-# filter_duplicates but for the keys of a dictionary
-def filter_duplicate_keys(specs: Dict[str, Spec]) -> Dict[str, Spec]:
+# filter_duplicates but for the values of a dictionary
+def filter_duplicate_values(specs: Dict[str, Spec]) -> Dict[str, Spec]:
     unique_specs = {}
     for spec_name, spec in specs.items():
         is_unique = True
@@ -47,7 +47,7 @@ def find_ideal_and_worse_specs(spec_directory_path: str):
         spec: Spec = Spec(spec_txt)
         specs[spec_name] = spec
 
-    semantically_unique_specs: Dict[str, Spec] = filter_duplicate_keys(specs)
+    semantically_unique_specs: Dict[str, Spec] = filter_duplicate_values(specs)
 
     maximal_asm_specs: Dict[str, Spec] = {}
     for spec_name, spec in semantically_unique_specs.items():
@@ -89,9 +89,9 @@ def find_ideal_and_worse_specs(spec_directory_path: str):
 
 
     # Printing all maximal spec names
-    unique_max_asm_max_gar = maximal_asm_specs.keys() & maximal_gar_specs.keys()
     unique_max_asm_not_max_gar = maximal_asm_specs.keys() - maximal_gar_specs.keys()
     unique_max_gar_not_max_asm = maximal_gar_specs.keys() - maximal_asm_specs.keys()
+    unique_max_asm_max_gar = maximal_asm_specs.keys() & maximal_gar_specs.keys()
     print(f"Unique ID Maximal Assumption Specs: {unique_max_asm_not_max_gar}")
     print(f"Unique ID Maximal Guarantee Specs: {unique_max_gar_not_max_asm}")
     print(f"Unique ID Maximal Both Specs: {unique_max_asm_max_gar}")
@@ -124,7 +124,6 @@ def find_ideal_and_worse_specs(spec_directory_path: str):
     max_asm_specs = set()
     not_max_asm_specs = set()
     impossible_specs_asm = set() # Debug set to check if any specs are stronger than the maximal spec
-    unrelated_specs_asm = set()
     for max_spec_name, max_spec in maximal_asm_specs.items() - maximal_gar_specs.items():
         weaker_asms = set()
         stronger_asms = set()
@@ -138,7 +137,7 @@ def find_ideal_and_worse_specs(spec_directory_path: str):
         max_asm_specs |= weaker_asms & stronger_asms
         not_max_asm_specs |= weaker_asms - stronger_asms
         impossible_specs_asm |= stronger_asms - weaker_asms
-        unrelated_specs_asm |= specs.keys() - weaker_asms - stronger_asms
+    unrelated_specs_asm = specs.keys() - max_asm_specs - not_max_asm_specs - impossible_specs_asm
 
 
     # Comparing maximal guarantee specs
@@ -146,7 +145,6 @@ def find_ideal_and_worse_specs(spec_directory_path: str):
     max_gar_specs = set()
     not_max_gar_specs = set()
     impossible_specs_gar = set() # Debug set to check if any specs are stronger than the maximal spec
-    unrelated_specs_gar = set()
     for max_spec_name, max_spec in maximal_gar_specs.items() - maximal_asm_specs.items():
         weaker_gars = set()
         stronger_gars = set()
@@ -160,14 +158,13 @@ def find_ideal_and_worse_specs(spec_directory_path: str):
         max_gar_specs |= weaker_gars & stronger_gars
         not_max_gar_specs |= weaker_gars - stronger_gars
         impossible_specs_gar |= stronger_gars - weaker_gars
-        unrelated_specs_gar |= specs.keys() - weaker_gars - stronger_gars
+    unrelated_specs_gar = specs.keys() - max_gar_specs - not_max_gar_specs - impossible_specs_gar
 
 
     # Comparing maximal both specs
     max_both_specs = set()
     not_max_both_specs = set()
     impossible_specs_both = set() # Debug set to check if any specs are stronger than the maximal spec
-    unrelated_specs_both = set()
     for max_spec_name, max_spec in maximal_gar_specs.items() & maximal_asm_specs.items():
         weaker_both = set()
         stronger_both = set()
@@ -181,7 +178,7 @@ def find_ideal_and_worse_specs(spec_directory_path: str):
         max_both_specs |= weaker_both & stronger_both
         not_max_both_specs |= weaker_both - stronger_both
         impossible_specs_both |= stronger_both - weaker_both
-        unrelated_specs_both |= specs.keys() - weaker_both - stronger_both
+    unrelated_specs_both = specs.keys() - max_both_specs - not_max_both_specs - impossible_specs_both
     """
     print(f"TOTAL SPECS: {len(specs)}")
     print(f"Max GR1 SPECS: {len(max_gr1_specs)}")
