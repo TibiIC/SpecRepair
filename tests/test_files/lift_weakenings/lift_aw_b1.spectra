@@ -63,6 +63,5 @@ guarantee -- button3_answered
 	G(b3=true -> F(f3=true | c=true));
 
 assumption -- not_all_buttons_on
-	G(b1=false-> b1=false | b2=false | b3=false);
-
+	G(b1=false->b1=false|b2=false|b3=false);
 

@@ -20,7 +20,5 @@ assumption -- assumption1_1
 	G(PREV(pump=true)&pump=true->next(highwater=false));
 
 assumption -- assumption2_1
-	G(methane=false-> highwater=false|methane=false);
-
-
+	G(methane=false->highwater=false|methane=false);
 

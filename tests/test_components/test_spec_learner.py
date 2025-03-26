@@ -14,14 +14,14 @@ from spec_repair.util.spec_util import format_spec
 
 def methane_choice_asm(options_list: List[T]) -> T:
     options_list.sort()
-    assert len(options_list) == 3
+    assert len(options_list) == 4
     return options_list[1]
 
 
 def methane_choice_gar(options_list: List[T]) -> T:
     options_list.sort()
     print(options_list)
-    assert len(options_list) == 3
+    assert len(options_list) == 4
     return options_list[1]
 
 
@@ -43,7 +43,7 @@ class TestSpecLearner(TestCase):
         spec_learner = SpecLearner()
 
         spec: list[str] = format_spec(read_file_lines(
-            '../input-files/examples/Minepump/minepump_strong.spectra'))
+            '../input-files/case-studies/spectra/minepump/strong.spectra'))
         trace: list[str] = read_file_lines(
             "./test_files/minepump_strong_auto_violation.txt")
 
@@ -63,7 +63,7 @@ class TestSpecLearner(TestCase):
         spec_learner = SpecLearner()
 
         spec: list[str] = format_spec(read_file_lines(
-            '../input-files/examples/Minepump/minepump_strong.spectra'))
+            '../input-files/case-studies/spectra/minepump/strong.spectra'))
         trace: list[str] = read_file_lines(
             "./test_files/minepump_strong_auto_violation.txt")
         cs: CounterStrategy = \
@@ -89,7 +89,7 @@ class TestSpecLearner(TestCase):
         spec_learner = SpecLearner()
 
         spec: list[str] = format_spec(read_file_lines(
-            '../input-files/examples/Minepump/minepump_strong.spectra'))
+            '../input-files/case-studies/spectra/minepump/strong.spectra'))
         trace: list[str] = read_file_lines(
             "./test_files/minepump_strong_auto_violation.txt")
         cs1: CounterStrategy = \

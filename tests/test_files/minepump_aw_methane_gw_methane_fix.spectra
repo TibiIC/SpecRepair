@@ -23,4 +23,3 @@ assumption -- assumption2_1
 	G(methane=false->highwater=false|methane=false);
 
 
-
