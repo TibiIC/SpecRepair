@@ -1,7 +1,7 @@
 import re
 from collections import defaultdict
 from copy import deepcopy
-from typing import TypedDict, Optional, TypeVar, List, Set
+from typing import TypedDict, Optional, TypeVar, List, Set, Any, Callable
 
 import pandas as pd
 
@@ -50,6 +50,11 @@ class SpectraSpecification(ISpecification):
             raise e
 
         self._formulas_df = pd.DataFrame(formula_list, columns=["name", "type", "when", "formula"])
+
+    """
+    def filter(self, to_filter: str, by_value: Any, to_get: str) -> List[Any]:
+        return self._formulas_df.loc[self._formulas_df[to_filter] == by_value, to_get].tolist()
+    """
 
     def integrate_multiple(self, adaptations: List[Adaptation]):
         for adaptation in adaptations:
@@ -111,6 +116,9 @@ class SpectraSpecification(ISpecification):
         expression_string += propositionalise_antecedent(row, exception=ant_exception)
         expression_string += propositionalise_consequent(row, exception=gar_exception, is_ev_temp_op=is_ev_temp_op)
         return expression_string
+
+    def filter(self, func: Callable[[pd.DataFrame], bool]) -> pd.DataFrame:
+        return self._formulas_df.loc[func(self._formulas_df)]
 
 
 def propositionalise_antecedent(row, exception=False):

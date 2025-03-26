@@ -15,23 +15,27 @@ from spec_repair.helpers.recorders.unique_recorder import UniqueRecorder
 
 class OrchestrationManager:
     def __init__(self):
-        self._stack: Deque[CandidateRepairNode] = deque()
-        self._visited_nodes: Recorder[CandidateRepairNode] = Recorder()
+        self._stack: Deque[Tuple[ISpecification,Any]] = deque()
+        self._visited_nodes: Recorder[Tuple[ISpecification,Any]] = Recorder()
 
-    def initialise_learning_tasks(self, spec, trace):
-        root_node = CandidateRepairNode(spec, trace, [], Learning.ASSUMPTION_WEAKENING)
-        self._visited_nodes.add(root_node)
-        self._stack.append(root_node)
+    def _reset(self):
+        self._stack.clear()
+        self._visited_nodes = Recorder()
 
-    def enqueue_new_tasks(self, node, new_spec, counter_strategy):
-        pass
+    def initialise_learning_tasks(self, spec: ISpecification, data: Any):
+        self._reset()
+        self.enqueue_new_tasks(spec, data)
 
-    def has_next(self):
-        pass
+    def enqueue_new_tasks(self, spec: ISpecification, data: Any):
+        node: Tuple[Any, Any] = (spec, data)
+        self._stack.append(node)
+        self._visited_nodes.add(node)
+
+    def has_next(self) -> bool:
+        return bool(self._stack)
 
     def get_next(self) -> Tuple[ISpecification, Any]:
-        next_node = self._stack.popleft()
-        return next_node.spec, next_node.get_data()
+        return self._stack.popleft()
 
 
 class BFSRepairOrchestrator:
@@ -61,8 +65,8 @@ class BFSRepairOrchestrator:
 
     def repair_bfs(
             self,
-            og_spec,
-            og_data
+            og_spec: ISpecification,
+            og_data: Any
     ):
         self._initialise_repair()
         self._om.initialise_learning_tasks(og_spec, og_data)
@@ -78,11 +82,10 @@ class BFSRepairOrchestrator:
                     self._om.enqueue_new_tasks(alt_spec, alt_data)
             else:
                 for new_spec in new_specs:
-                    counter_arguments = self._oracle.is_valid_or_counter_arguments(new_spec)
-                    if not counter_arguments:
+                    counter_examples = self._oracle.is_valid_or_counter_arguments(new_spec)
+                    if not counter_examples:
                         self._recorder.add(new_spec)
                     else:
-                        for counter_argument in counter_arguments:
-                            self._om.enqueue_new_tasks(new_spec, data, counter_argument)
-
-        return self._recorder.get_specs()
+                        for counter_example in counter_examples:
+                            new_data = self._mittigator.add_counter_example_to_data(data, counter_example)
+                            self._om.enqueue_new_tasks(new_spec, new_data)

@@ -29,6 +29,10 @@ def print_comparison_results(ideal_spec_path: str, spec_directory_path: str):
         spec: Spec = Spec(spec_txt)
         specs[spec_name] = spec
 
+    print_comparison_results_one_to_many(ideal_spec, specs)
+
+
+def print_comparison_results_one_to_many(ideal_spec: Spec, specs: Dict[str, Spec]):
     weaker_asms = set()
     stronger_asms = set()
     formula_type: Optional[GR1FormulaType] = GR1FormulaType.ASM
@@ -39,7 +43,6 @@ def print_comparison_results(ideal_spec_path: str, spec_directory_path: str):
             weaker_asms.add(spec_name)
         if stronger:
             stronger_asms.add(spec_name)
-
     weaker_gars = set()
     stronger_gars = set()
     formula_type: Optional[GR1FormulaType] = GR1FormulaType.GAR
@@ -50,7 +53,6 @@ def print_comparison_results(ideal_spec_path: str, spec_directory_path: str):
             weaker_gars.add(spec_name)
         if stronger:
             stronger_gars.add(spec_name)
-
     weaker_specs = set()
     stronger_specs = set()
     formula_type: Optional[GR1FormulaType] = None
@@ -61,32 +63,26 @@ def print_comparison_results(ideal_spec_path: str, spec_directory_path: str):
             weaker_specs.add(spec_name)
         if stronger:
             stronger_specs.add(spec_name)
-
     identical_asms = weaker_asms & stronger_asms
     identical_gars = weaker_gars & stronger_gars
     identical_specs = weaker_specs & stronger_specs
-
     print(f"TOTAL SPECS: {len(specs)}")
     print(f"AwGw SPECS: {len((weaker_asms - identical_asms) & (weaker_gars - identical_gars))}")
     print(f"AwGi SPECS: {len((weaker_asms - identical_asms) & identical_gars)}")
     print(f"AwGs SPECS: {len((weaker_asms - identical_asms) & (stronger_gars - identical_gars))}")
     print(f"AwGu SPECS: {len((weaker_asms - identical_asms) - (weaker_gars | stronger_gars))}")
-
     print(f"AiGw SPECS: {len(identical_asms & (weaker_gars - identical_gars))}")
     print(f"AiGi SPECS: {len(identical_asms & identical_gars)}")
     print(f"AiGs SPECS: {len(identical_asms & (stronger_gars - identical_gars))}")
     print(f"AiGu SPECS: {len(identical_asms - (weaker_gars | stronger_gars))}")
-
     print(f"AsGw SPECS: {len((stronger_asms - identical_asms) & (weaker_gars - identical_gars))}")
     print(f"AsGi SPECS: {len((stronger_asms - identical_asms) & identical_gars)}")
     print(f"AsGs SPECS: {len((stronger_asms - identical_asms) & (stronger_gars - identical_gars))}")
     print(f"AsGu SPECS: {len((stronger_asms - identical_asms) - (weaker_gars | stronger_gars))}")
-
     print(f"AuGw SPECS: {len((specs.keys() - weaker_asms - stronger_asms) & (weaker_gars - identical_gars))}")
     print(f"AuGi SPECS: {len((specs.keys() - weaker_asms - stronger_asms) & identical_gars)}")
     print(f"AuGs SPECS: {len((specs.keys() - weaker_asms - stronger_asms) & (stronger_gars - identical_gars))}")
     print(f"AuGu SPECS: {len(specs) - len(weaker_asms | stronger_asms | weaker_gars | stronger_gars)}")
-
     print(f"A->G WEAKER SPECS: {len(weaker_specs - identical_specs)}")
     print(f"A->G STRONGER SPECS: {len(stronger_specs - identical_specs)}")
     print(f"A->G IDENTICAL SPECS: {len(identical_specs)}")

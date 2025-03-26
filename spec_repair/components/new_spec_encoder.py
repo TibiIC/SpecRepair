@@ -1,8 +1,9 @@
 import re
 from collections import defaultdict
-from typing import List, Optional
+from typing import List, Optional, Set
 
 import pandas as pd
+from spot import formula
 
 from spec_repair import config
 from spec_repair.helpers.adaptation_learned import Adaptation
@@ -11,6 +12,7 @@ from spec_repair.enums import Learning, When
 from spec_repair.exceptions import LearningException
 from spec_repair.helpers.heuristic_managers.iheuristic_manager import IHeuristicManager
 from spec_repair.helpers.heuristic_managers.no_filter_heuristic_manager import NoFilterHeuristicManager
+from spec_repair.helpers.spectra_atom import SpectraAtom
 from spec_repair.helpers.spectra_formula import SpectraFormula
 from spec_repair.helpers.spectra_specification import SpectraSpecification
 from spec_repair.ltl_types import Spec, GR1FormulaType
@@ -58,7 +60,7 @@ class NewSpecEncoder:
                                            ct_list_ilasp)
         return las
 
-    def _create_mode_bias(self, spec_df: Spec, violations: list[str], learning_type) -> str:
+    def _create_mode_bias(self, spec: SpectraSpecification, violations: list[str], learning_type) -> str:
         head = "antecedent"
         extra_args = "_,_"
 
@@ -82,8 +84,8 @@ class NewSpecEncoder:
         if self._hm.is_enabled("INVARIANT_TO_RESPONSE_WEAKENING"):
             output += f"#modeh(ev_temp_op(const(expression_v))).\n"
 
-        for variable in sorted(extract_variables(spec_df)):
-            output += f"#constant(usable_atom,{variable}).\n"
+        for atom in sorted(spec.get_atoms()):
+            output += f"#constant(usable_atom,{atom.name}).\n"
         # TODO: find a way to provide the correct end index value
         output += f"#constant(index,0..1).\n"
         for temp_op in ["current", "next", "prev", "eventually"]:
@@ -91,13 +93,13 @@ class NewSpecEncoder:
 
         # This determines which rules can be weakened.
         if learning_type == Learning.GUARANTEE_WEAKENING:
-            expression_names = spec_df.loc[spec_df["type"] == "guarantee"]["name"]
+            formula_names = spec.filter(lambda x: x['type'] == GR1FormulaType.GAR)["name"]
         elif not violations:
-            expression_names = spec_df.loc[spec_df["type"] == "assumption"]["name"]
+            formula_names = spec.filter(lambda x: x['type'] == GR1FormulaType.ASM)["name"]
         else:
-            expression_names = get_violated_expression_names_of_type(violations, learning_type.exp_type_str())
+            formula_names = get_violated_expression_names_of_type(violations, learning_type.exp_type_str())
 
-        for name in expression_names:
+        for name in formula_names:
             output += f"#constant(expression_v, {name}).\n"
 
         output += f"#bias(\"\n"
@@ -115,9 +117,9 @@ class NewSpecEncoder:
         output += f":- body(holds_at(_,V1,V2)), not body(timepoint_of_op(_,_,V1,V2)).\n"
         output += f":- body(not_holds_at(_,V1,V2)), not body(timepoint_of_op(_,_,V1,V2)).\n"
 
-        if not self.include_next:
+        if not self._hm.is_enabled("INCLUDE_NEXT"):
             output += f":- head({head}_exception({extra_args},_,_)), body(timepoint_of_op(next,_,_,_)).\n"
-        if not self.include_prev:
+        if not self._hm.is_enabled("INCLUDE_PREV"):
             output += f":- head({head}_exception({extra_args},_,_)), body(timepoint_of_op(prev,_,_,_)).\n"
         if learning_type == Learning.ASSUMPTION_WEAKENING or not config.WEAKENING_TO_JUSTICE:
             # Learning eventually expressions doesn't make sense within the antecedent of a formula

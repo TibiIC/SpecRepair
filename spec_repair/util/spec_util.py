@@ -52,10 +52,9 @@ def create_signature(spec_df: pd.DataFrame):
     return output
 
 
-# TODO: find way to sort atoms
 def create_atom_signature_asp(spec_atoms: Set[SpectraAtom]):
     output = "%---*** Signature  ***---\n\n"
-    for atom in spec_atoms:
+    for atom in sorted(spec_atoms):
         output += f"atom({atom.name}).\n"
     output += "\n\n"
     return output
