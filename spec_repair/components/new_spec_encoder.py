@@ -12,14 +12,13 @@ from spec_repair.enums import Learning, When
 from spec_repair.exceptions import LearningException
 from spec_repair.helpers.heuristic_managers.iheuristic_manager import IHeuristicManager
 from spec_repair.helpers.heuristic_managers.no_filter_heuristic_manager import NoFilterHeuristicManager
-from spec_repair.helpers.spectra_atom import SpectraAtom
 from spec_repair.helpers.spectra_formula import SpectraFormula
 from spec_repair.helpers.spectra_specification import SpectraSpecification
-from spec_repair.ltl_types import Spec, GR1FormulaType
+from spec_repair.ltl_types import GR1FormulaType
 from spec_repair.old.patterns import FIRST_PRED, ALL_PREDS
 from spec_repair.special_types import EventuallyConsequentRule
-from spec_repair.util.spec_util import extract_variables, trace_list_to_asp_form, \
-    trace_list_to_ilasp_form, format_spec, integrate_rule, filter_formulas_of_type, parse_formula_str, \
+from spec_repair.util.spec_util import trace_list_to_asp_form, \
+    trace_list_to_ilasp_form, format_spec, parse_formula_str, \
     eventualise_consequent, re_line_spec, create_atom_signature_asp
 from spec_repair.components.spec_generator import SpecGenerator
 
@@ -40,22 +39,26 @@ class NewSpecEncoder:
         violation_trace = trace_list_to_asp_form(trace)
         cs_trace_string: str = ''.join([cs_trace.get_asp_form() for cs_trace in ct_list])
         return SpecGenerator.generate_clingo(formulas_string, "", signature_string, violation_trace,
-                                                   cs_trace_string)
+                                             cs_trace_string)
 
-    def encode_ILASP(self, spec_df: pd.DataFrame, trace: List[str], ct_list: List[CounterTrace], violations: list[str],
+    def encode_ILASP(self, spec: SpectraSpecification, trace: List[str], ct_list: List[CounterTrace],
+                     violations: list[str],
                      learning_type: Learning):
-        mode_declaration = self._create_mode_bias(spec_df, violations, learning_type)
+        mode_declaration = self._create_mode_bias(spec, violations, learning_type)
         trace_asp = trace_list_to_asp_form(trace)
         trace_ilasp = trace_list_to_ilasp_form(trace_asp, learning=Learning.ASSUMPTION_WEAKENING)
         # TODO: see how to deal with generation/renaming of counter-strategy traces (based on Learning type too)
         ct_list_ilasp: str = ''.join([cs_trace.get_ilasp_form(learning=learning_type) for cs_trace in ct_list])
-        expressions = filter_formulas_of_type(spec_df, learning_type.exp_type())
+        sub_spec = spec.extract_sub_specification(
+            lambda x: x['type'] == learning_type.formula_type()
+        )
         if learning_type == Learning.ASSUMPTION_WEAKENING:
             exp_names_to_learn = get_violated_expression_names_of_type(violations, learning_type.exp_type_str())
         else:
             exp_names_to_learn = get_expression_names_of_type(violations, learning_type.exp_type_str())
-        expressions_to_weaken = expressions_df_to_str(expressions, exp_names_to_learn, is_ev_temp_op=self._hm.is_enabled("INVARIANT_TO_RESPONSE_WEAKENING"))
-        signature_string = create_signature(spec_df)
+        expressions_to_weaken = sub_spec.to_asp(learning_names=exp_names_to_learn, for_clingo=False,
+                                                is_ev_temp_op=self._hm.is_enabled("INVARIANT_TO_RESPONSE_WEAKENING"))
+        signature_string = create_atom_signature_asp(spec.get_atoms())
         las = SpecGenerator.generate_ilasp(mode_declaration, expressions_to_weaken, signature_string, trace_ilasp,
                                            ct_list_ilasp)
         return las
@@ -218,30 +221,6 @@ def get_expression_names_of_type(asp_text: list[str], exp_type: str):
 
 def get_violated_expression_names(violations: list[str]) -> list[str]:
     return re.findall(r"violation_holds\(\b([^,^)]*)", ''.join(violations))
-
-
-def expressions_df_to_str(expressions: pd.DataFrame, learning_names: Optional[List[str]] = None,
-                          for_clingo: bool=False, is_ev_temp_op: bool = True) -> str:
-    if learning_names is None:
-        learning_names = []
-    expression_string = ""
-    for _, line in expressions.iterrows():
-        expression_string += expression_to_str(line, learning_names, for_clingo, is_ev_temp_op=is_ev_temp_op)
-    return expression_string
-
-
-def expression_to_str(line: pd.Series, learning_names: list[str], for_clingo: bool, is_ev_temp_op: bool = True) -> str:
-    if line.when == When.EVENTUALLY and line['name'] not in learning_names and not for_clingo:
-        return ""
-    expression_string = f"%{line['type']} -- {line['name']}\n"
-    expression_string += f"%\t{line['formula']}\n\n"
-    expression_string += f"{line['type']}({line['name']}).\n\n"
-    is_exception = (line['name'] in learning_names) and not for_clingo
-    ant_exception = is_exception and line['type'] == str(ExpType.ASSUMPTION)
-    gar_exception = is_exception
-    expression_string += propositionalise_antecedent(line, exception=ant_exception)
-    expression_string += propositionalise_consequent(line, exception=gar_exception, is_ev_temp_op=is_ev_temp_op)
-    return expression_string
 
 
 def get_temp_op(rule: str) -> str:

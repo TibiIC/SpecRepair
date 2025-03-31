@@ -3,18 +3,20 @@ from unittest import TestCase
 import pandas as pd
 
 from spec_repair.components.spec_encoder import SpecEncoder
-from spec_repair.enums import Learning
+from spec_repair.enums import Learning, ExpType
 from spec_repair.helpers.heuristic_managers.no_eventually_hypothesis_heuristic_manager import \
     NoEventuallyHypothesisHeuristicManager
 from spec_repair.helpers.heuristic_managers.no_filter_heuristic_manager import NoFilterHeuristicManager
 from spec_repair.util.file_util import read_file
 from spec_repair.util.spec_util import get_assumptions_and_guarantees_from
+from spec_repair.wrappers.asp_wrappers import get_violations
 
 
 class TestSpecEncoder(TestCase):
     minepump_spec_file = '../../input-files/examples/Minepump/minepump_strong.spectra'
     minepump_spec_1_aw_step = '../test_files/minepump_aw_methane.spectra'
     minepump_clingo_file = '../test_files/minepump_strong_WA_no_cs.lp'
+    minepump_ilasp_file = '../test_files/minepump_strong_WA_no_cs.las'
     minepump_mode_bias_aw_file = '../test_files/mode_bias/minepump_1_aw_step.txt'
     minepump_mode_bias_gw_file = '../test_files/mode_bias/minepump_1_gw_step.txt'
     traffic_updated_spec_file = '../../input-files/case-studies/spectra/traffic-updated/strong.spectra'
@@ -40,10 +42,35 @@ class TestSpecEncoder(TestCase):
             '\n'
         ]
         encoder: SpecEncoder = SpecEncoder(NoFilterHeuristicManager())
-        clingo_str: str = encoder.encode_ASP(spec_df, trace, set())
+        clingo_str: str = encoder.encode_ASP(spec_df, trace, list())
         clingo_str = clingo_str.replace('\n\n\n', '\n\n')
 
         self.assertEqual(expected_clingo_str, clingo_str)
+
+
+    def test_encode_ilasp(self):
+        expected_las_str: str = read_file(self.minepump_ilasp_file)
+        spec_df: pd.DataFrame = get_assumptions_and_guarantees_from(self.minepump_spec_file)
+        trace_name = "trace_name_0"
+        trace = [
+            f'not_holds_at(highwater,0,{trace_name}).\n',
+            f'not_holds_at(methane,0,{trace_name}).\n',
+            f'not_holds_at(pump,0,{trace_name}).\n',
+            '\n',
+            f'holds_at(highwater,1,{trace_name}).\n',
+            f'holds_at(methane,1,{trace_name}).\n',
+            f'not_holds_at(pump,1,{trace_name}).\n',
+            '\n'
+        ]
+        cts = list()
+        encoder: SpecEncoder = SpecEncoder(NoFilterHeuristicManager())
+        asp: str = read_file(self.minepump_clingo_file)
+        violations = get_violations(asp, exp_type=ExpType.ASSUMPTION)
+        las_str: str = encoder.encode_ILASP(spec_df, trace, cts, violations, Learning.ASSUMPTION_WEAKENING)
+
+        self.assertEqual(expected_las_str, las_str)
+
+
 
     def test_create_mode_bias_aw(self):
         spec_df: pd.DataFrame = get_assumptions_and_guarantees_from(self.minepump_spec_file)

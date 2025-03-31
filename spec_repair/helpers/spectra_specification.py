@@ -25,10 +25,9 @@ Self = TypeVar('T', bound='SpectraSpecification')
 
 
 class SpectraSpecification(ISpecification):
-    _formulas_df: pd.DataFrame = None
-    _atoms: Set[SpectraAtom] = set()
-
     def __init__(self, spec_txt: str):
+        self._formulas_df: pd.DataFrame = None
+        self._atoms: Set[SpectraAtom] = set()
         formula_list = []
         spec_lines = spec_txt.splitlines()
         try:
@@ -50,11 +49,6 @@ class SpectraSpecification(ISpecification):
             raise e
 
         self._formulas_df = pd.DataFrame(formula_list, columns=["name", "type", "when", "formula"])
-
-    """
-    def filter(self, to_filter: str, by_value: Any, to_get: str) -> List[Any]:
-        return self._formulas_df.loc[self._formulas_df[to_filter] == by_value, to_get].tolist()
-    """
 
     def integrate_multiple(self, adaptations: List[Adaptation]):
         for adaptation in adaptations:
@@ -119,6 +113,11 @@ class SpectraSpecification(ISpecification):
 
     def filter(self, func: Callable[[pd.DataFrame], bool]) -> pd.DataFrame:
         return self._formulas_df.loc[func(self._formulas_df)]
+
+    def extract_sub_specification(self, func: Callable[[pd.DataFrame], bool]) -> Any:
+        sub_spec = deepcopy(self)
+        sub_spec._formulas_df = deepcopy(self.filter(func))
+        return sub_spec
 
 
 def propositionalise_antecedent(row, exception=False):

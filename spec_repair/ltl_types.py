@@ -3,46 +3,6 @@ from typing import Set, List
 
 import pandas as pd
 
-from spec_repair.enums import ExpType, When
-
-
-class LTLFormula:
-    formula: str
-    # >>>>> NOT YET IN USE >>>>>
-    type: ExpType
-    name: str
-    antecedent: set[str]
-    consequent: set[str]
-    when: When
-
-    # <<<<< NOT YET IN USE <<<<<
-
-    def __init__(self, formula: str):
-        if not isinstance(formula, str) or '\n' in formula:
-            raise ValueError("Formula must be a one-line string.")
-        self.formula = formula
-
-    def __getattr__(self, name):
-        # If the attribute is a string method, apply it to the stored formula
-        if hasattr(self.formula, name) and callable(getattr(self.formula, name)):
-            return getattr(self.formula, name)
-        raise AttributeError(f"'LTLFormula' object has no attribute '{name}'")
-
-    def __setattr__(self, name, value):
-        # Make the class immutable by preventing attribute changes after initialization
-        if hasattr(self, "_data"):
-            raise AttributeError("Cannot modify attributes of 'LTLFormula' object.")
-        super().__setattr__(name, value)
-
-
-class Assumption(LTLFormula):
-    pass
-
-
-class Guarantee(LTLFormula):
-    pass
-
-
 class Trace:
     variables: Set[str]
     path: List[Set[str]]

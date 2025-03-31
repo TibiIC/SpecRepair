@@ -1,5 +1,7 @@
 from enum import Enum
 
+from spec_repair.ltl_types import GR1FormulaType
+
 
 class When(Enum):
     INITIALLY = 1
@@ -31,6 +33,13 @@ class Learning(Enum):
                 return ExpType.ASSUMPTION
             case Learning.GUARANTEE_WEAKENING:
                 return ExpType.GUARANTEE
+
+    def formula_type(self) -> GR1FormulaType:
+        match self:
+            case Learning.ASSUMPTION_WEAKENING:
+                return GR1FormulaType.ASM
+            case Learning.GUARANTEE_WEAKENING:
+                return GR1FormulaType.GAR
 
 
 class Outcome(Enum):

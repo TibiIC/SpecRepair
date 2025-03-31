@@ -5,6 +5,7 @@ from typing import Set, List, Tuple, Optional
 import pandas as pd
 
 from spec_repair.components.interfaces.ilearner import ILearner
+from spec_repair.components.new_spec_encoder import NewSpecEncoder
 from spec_repair.helpers.adaptation_learned import Adaptation
 from spec_repair.helpers.counter_trace import CounterTrace, complete_cts_from_ct
 from spec_repair.components.spec_encoder import SpecEncoder
@@ -22,7 +23,7 @@ from spec_repair.wrappers.asp_wrappers import get_violations, run_ILASP
 
 class NewSpecLearner(ILearner):
     def __init__(self, heuristic_manager: IHeuristicManager):
-        self.spec_encoder = SpecEncoder(heuristic_manager)
+        self.spec_encoder = NewSpecEncoder(heuristic_manager)
 
     def learn_new(
             self,
@@ -35,9 +36,8 @@ class NewSpecLearner(ILearner):
         return new_specs
 
     def find_possible_adaptations(self, spec: SpectraSpecification, trace, cts, learning_type) -> List[List[Adaptation]]:
-        spec_df: pd.DataFrame = spectra_to_df(spec)
-        violations = self.get_spec_violations(spec_df, trace, cts, learning_type)
-        ilasp: str = self.spec_encoder.encode_ILASP(spec_df, trace, cts, violations, learning_type)
+        violations = self.get_spec_violations(spec, trace, cts, learning_type)
+        ilasp: str = self.spec_encoder.encode_ILASP(spec, trace, cts, violations, learning_type)
         output: str = run_ILASP(ilasp)
         adaptations: Optional[List[Tuple[int, List[Adaptation]]]] = ILASPInterpreter.extract_learned_possible_adaptations(output)
         if not adaptations:
@@ -52,8 +52,8 @@ class NewSpecLearner(ILearner):
         useful_adaptations: List[List[Adaptation]] = filter_useful_adaptations(adaptations)
         return useful_adaptations
 
-    def get_spec_violations(self, spec_df, trace, cts, learning_type) -> List[str]:
-        asp: str = self.spec_encoder.encode_ASP(spec_df, trace, cts)
+    def get_spec_violations(self, spec: SpectraSpecification, trace, cts, learning_type) -> List[str]:
+        asp: str = self.spec_encoder.encode_ASP(spec, trace, cts)
         violations = get_violations(asp, exp_type=learning_type.exp_type())
         if not violations:
             raise NoViolationException("Violation trace is not violating!")
