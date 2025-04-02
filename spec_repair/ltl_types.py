@@ -34,6 +34,13 @@ class GR1FormulaType(Enum):
     def __str__(self) -> str:
         return f"{self.value}"
 
+    def to_str(self, short_version: bool = False) -> str:
+        if short_version:
+            return self.value.split("|")[1]
+        else:
+            return self.value.split("|")[0]
+
+
     @staticmethod
     def from_str(value: str) -> "GR1FormulaType":
         if value in ["assumption", "asm"]:

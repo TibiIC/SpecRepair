@@ -75,6 +75,20 @@ class TestSpectraFormula(TestCase):
         self.assertEqual(expected_output.antecedent, output.antecedent)
         self.assertEqual(expected_output.consequent, output.consequent)
 
+    def test_parse_spectra_formula_to_DNF_4(self):
+        formula = "\tG(true->F(highwater=false|methane=false));"
+        output = SpectraFormula.from_str(formula)
+        expected_output = SpectraFormula(
+            temp_type=GR1TemporalType.JUSTICE,
+            antecedent=[defaultdict(list)],
+            consequent=[{'current': ['highwater=false']},
+                        {'current': ['methane=false']}]
+        )
+        self.assertEqual(expected_output.temp_type, output.temp_type)
+        self.assertEqual(expected_output.antecedent, output.antecedent)
+        self.assertEqual(expected_output.consequent, output.consequent)
+
+
     def test_parse_justice_formula(self):
         formula = SpectraFormula(
             temp_type=GR1TemporalType.JUSTICE,
@@ -141,7 +155,6 @@ class TestSpectraFormula(TestCase):
         expected_output = "GF(highwater=false|methane=false);"
         self.assertEqual(expected_output, output)
 
-
     def test_integrate_eventualisation_adaptation_to_formula_2(self):
         formula = SpectraFormula(
             temp_type=GR1TemporalType.INVARIANT,
@@ -159,3 +172,17 @@ class TestSpectraFormula(TestCase):
         output = formula.to_str()
         expected_output = "G(a=false->F(r2=false)|F(g1=false&g2=false));"
         self.assertEqual(expected_output, output)
+
+    def test_parse_spectra_formula_to_justice(self):
+        formula = "\tG(true->F(highwater=false|methane=false));"
+        output = SpectraFormula.from_str(formula)
+        expected_output = SpectraFormula(
+            temp_type=GR1TemporalType.JUSTICE,
+            antecedent=[defaultdict(list)],
+            consequent=[{'current': ['highwater=false']},
+                        {'current': ['methane=false']}]
+        )
+        self.assertEqual(expected_output.temp_type, output.temp_type)
+        self.assertEqual(expected_output.antecedent, output.antecedent)
+        self.assertEqual(expected_output.consequent, output.consequent)
+

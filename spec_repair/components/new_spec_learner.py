@@ -8,7 +8,6 @@ from spec_repair.components.interfaces.ilearner import ILearner
 from spec_repair.components.new_spec_encoder import NewSpecEncoder
 from spec_repair.helpers.adaptation_learned import Adaptation
 from spec_repair.helpers.counter_trace import CounterTrace, complete_cts_from_ct
-from spec_repair.components.spec_encoder import SpecEncoder
 from spec_repair.enums import Learning
 from spec_repair.exceptions import NoViolationException, NoWeakeningException, DeadlockRequiredException, \
     NoAssumptionWeakeningException
@@ -105,8 +104,8 @@ def select_learning_hypothesis(hypotheses: List[List[str]], heuristic: Heuristic
 def filter_useful_adaptations(potential_adaptations: List[Tuple[int, List[Adaptation]]]) -> List[List[Adaptation]]:
     ev_adaptations = [(score, adaptations) for score, adaptations in potential_adaptations if "ev_temp_op" in [adaptation.type for adaptation in adaptations] ]
     other_adaptations = [(score, adaptations) for score, adaptations in potential_adaptations if "ev_temp_op" not in [adaptation.type for adaptation in adaptations] ]
-    top_adaptations = ([adaptations for score, adaptations in other_adaptations if score == min(other_adaptations, key=lambda x: x[0])] +
-                       [adaptations for score, adaptations in ev_adaptations if score == min(other_adaptations, key=lambda x: x[0])])
+    top_adaptations = ([adaptations for score, adaptations in other_adaptations if score == min(other_adaptations, key=lambda x: x[0])[0]] +
+                       [adaptations for score, adaptations in ev_adaptations if score == min(ev_adaptations, key=lambda x: x[0])[0]])
     return top_adaptations
 
 

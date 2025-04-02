@@ -5,8 +5,6 @@ from spec_repair.helpers.adaptation_learned import Adaptation
 from spec_repair.helpers.spectra_formula import SpectraFormula
 from spec_repair.helpers.spectra_specification import SpectraSpecification
 from spec_repair.helpers.spectra_atom import SpectraAtom
-from spec_repair.util.file_util import read_file_lines
-from spec_repair.util.spec_util import format_spec
 
 
 class TestSpectraSpecification(TestCase):
@@ -113,3 +111,29 @@ class TestSpectraSpecification(TestCase):
         }
         for formula in formulas:
             self.assertIn(formula.to_str(), expected_formulas)
+
+    def test_to_str(self):
+        spec_file = "./test_files/minepump_strong.spectra"
+        spec = SpectraSpecification.from_file(spec_file)
+        expected_str = (
+            "env boolean highwater;\n"
+            "env boolean methane;\n"
+            "sys boolean pump;\n"
+            "assumption -- initial_assumption\n"
+            "ini(highwater=false&methane=false);\n"
+            "guarantee -- initial_guarantee\n"
+            "ini(pump=false);\n"
+            "guarantee -- guarantee1_1\n"
+            "G(highwater=true->next(pump=true));\n"
+            "guarantee -- guarantee2_1\n"
+            "G(methane=true->next(pump=false));\n"
+            "assumption -- assumption1_1\n"
+            "G(PREV(pump=true)&pump=true->next(highwater=false));\n"
+            "assumption -- assumption2_1\n"
+            "G(highwater=false|methane=false);"
+        )
+        spec_str = spec.to_str()
+        # remove all new lines more than one from spec string
+        spec_str = "\n".join(line for line in spec_str.split("\n") if line.strip())
+
+        self.assertEqual(spec_str, expected_str)

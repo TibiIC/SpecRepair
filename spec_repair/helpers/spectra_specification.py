@@ -53,6 +53,7 @@ class SpectraSpecification(ISpecification):
     def integrate_multiple(self, adaptations: List[Adaptation]):
         for adaptation in adaptations:
             self.integrate(adaptation)
+        return self
 
     def integrate(self, adaptation: Adaptation):
         formula = self.get_formula(adaptation.formula_name)
@@ -118,6 +119,29 @@ class SpectraSpecification(ISpecification):
         sub_spec = deepcopy(self)
         sub_spec._formulas_df = deepcopy(self.filter(func))
         return sub_spec
+
+    def to_str(self):
+        """
+        Convert the specification to a string representation.
+        """
+        spec_str = ""
+        for atom in sorted(self._atoms):
+            spec_str += f"{atom.atom_type} {atom.value_type} {atom.name};\n"
+        spec_str += "\n\n"
+
+        for _, row in self._formulas_df.iterrows():
+            spec_str += f"{row['type'].to_str()} -- {row['name']}\n"
+            spec_str += f"{row['formula'].to_str()}\n\n"
+        return spec_str
+
+    def __deepcopy__(self, memo):
+        new_spec = SpectraSpecification("")
+        new_spec._formulas_df = self._formulas_df.copy(deep=True)
+        for col in new_spec._formulas_df.columns:
+            if new_spec._formulas_df[col].dtype == 'O':  # Object dtype means it might contain class instances
+                new_spec._formulas_df[col] = new_spec._formulas_df[col].apply(lambda x: deepcopy(x, memo))
+        new_spec._atoms = deepcopy(self._atoms, memo)
+        return new_spec
 
 
 def propositionalise_antecedent(row, exception=False):
