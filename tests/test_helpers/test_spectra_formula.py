@@ -2,17 +2,24 @@ from collections import defaultdict
 from unittest import TestCase
 
 from spec_repair.helpers.adaptation_learned import Adaptation
-from spec_repair.helpers.spectra_formula import SpectraFormula
+from spec_repair.helpers.gr1_formula import GR1Formula
+from spec_repair.helpers.spectra_formula_parser import SpectraFormulaParser
 from spec_repair.ltl_types import GR1TemporalType
 
+from py_ltl.formula import AtomicProposition, Not, And, Or, Until, Next, Globally, Eventually, Implies, Prev, Top, Bottom
 
-class TestSpectraFormula(TestCase):
+
+class TestGR1Formula(TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.parser = SpectraFormulaParser()
+
     def test_formula_DNF_to_str(self):
         parsed_formula = [
             {'next': ['a=true', 'b=true', 'c=false'], 'current': ['d=false'], 'prev': ['e=true']},  # First conjunct
             {'next': ['f=false'], 'current': ['g=true'], 'eventually': ['h=true', 'i=false']}  # Second conjunct
         ]
-        output = SpectraFormula.formula_DNF_to_str(parsed_formula)
+        output = GR1Formula.formula_DNF_to_str(parsed_formula)
         expected_output = "(next(a=true&b=true&c=false)&d=false&PREV(e=true))|(next(f=false)&g=true&F(h=true&i=false))"
         self.assertEqual(expected_output, output)
 
@@ -21,17 +28,17 @@ class TestSpectraFormula(TestCase):
             {'eventually': ['a=true', 'b=true']},
             {'eventually': ['c=true', 'd=false']}
         ]
-        output = SpectraFormula.formula_DNF_to_str(parsed_formula)
+        output = GR1Formula.formula_DNF_to_str(parsed_formula)
         expected_output = "(F(a=true&b=true))|(F(c=true&d=false))"
         self.assertEqual(expected_output, output)
 
     def test_parse_spectra_formula_ini_to_DNF(self):
         formula = "\thighwater=false&methane=false;"
-        output = SpectraFormula.from_str(formula)
-        expected_output = SpectraFormula(
+        output = GR1Formula.from_str(formula, parser=self.parser)
+        expected_output = GR1Formula(
             temp_type=GR1TemporalType.INITIAL,
-            antecedent=[defaultdict(list)],
-            consequent=[{'current': ['highwater=false','methane=false']}]
+            antecedent=None,
+            consequent=And(AtomicProposition("highwater", False), AtomicProposition("methane", False)),
         )
         self.assertEqual(expected_output.temp_type, output.temp_type)
         self.assertEqual(expected_output.antecedent, output.antecedent)
@@ -40,12 +47,11 @@ class TestSpectraFormula(TestCase):
 
     def test_parse_spectra_formula_to_DNF(self):
         formula = "\tG(highwater=false|methane=false);"
-        output = SpectraFormula.from_str(formula)
-        expected_output = SpectraFormula(
+        output = GR1Formula.from_str(formula, parser=self.parser)
+        expected_output = GR1Formula(
             temp_type=GR1TemporalType.INVARIANT,
-            antecedent=[defaultdict(list)],
-            consequent=[{'current': ['highwater=false']},
-                        {'current': ['methane=false']}]
+            antecedent=None,
+            consequent=Or(AtomicProposition("highwater", False), AtomicProposition("methane", False)),
         )
         self.assertEqual(expected_output.temp_type, output.temp_type)
         self.assertEqual(expected_output.antecedent, output.antecedent)
@@ -53,11 +59,11 @@ class TestSpectraFormula(TestCase):
 
     def test_parse_spectra_formula_to_DNF_2(self):
         formula = "\tG(PREV(pump=true)&pump=true->highwater=false);"
-        output = SpectraFormula.from_str(formula)
-        expected_output = SpectraFormula(
+        output = GR1Formula.from_str(formula, parser=self.parser)
+        expected_output = GR1Formula(
             temp_type=GR1TemporalType.INVARIANT,
-            antecedent=[{'prev': ['pump=true'], 'current': ['pump=true']}],
-            consequent=[{'current': ['highwater=false']}]
+            antecedent=And(Prev(AtomicProposition("pump", True)), AtomicProposition("pump", True)),
+            consequent=AtomicProposition("highwater", False),
         )
         self.assertEqual(expected_output.temp_type, output.temp_type)
         self.assertEqual(expected_output.antecedent, output.antecedent)
@@ -65,11 +71,11 @@ class TestSpectraFormula(TestCase):
 
     def test_parse_spectra_formula_to_DNF_3(self):
         formula = "\tGF(pump=true);"
-        output = SpectraFormula.from_str(formula)
-        expected_output = SpectraFormula(
+        output = GR1Formula.from_str(formula, parser=self.parser)
+        expected_output = GR1Formula(
             temp_type=GR1TemporalType.JUSTICE,
-            antecedent=[defaultdict(list)],
-            consequent=[{'current': ['pump=true']}]
+            antecedent=None,
+            consequent=AtomicProposition("pump", True),
         )
         self.assertEqual(expected_output.temp_type, output.temp_type)
         self.assertEqual(expected_output.antecedent, output.antecedent)
@@ -77,7 +83,7 @@ class TestSpectraFormula(TestCase):
 
 
     def test_parse_justice_formula(self):
-        formula = SpectraFormula(
+        formula = GR1Formula(
             temp_type=GR1TemporalType.JUSTICE,
             antecedent=[defaultdict(list)],
             consequent=[{'current': ['highwater=false']},
@@ -89,7 +95,7 @@ class TestSpectraFormula(TestCase):
 
 
     def test_integrate_adaptation_to_formula(self):
-        formula = SpectraFormula(
+        formula = GR1Formula(
             temp_type=GR1TemporalType.INVARIANT,
             antecedent=[defaultdict(list)],
             consequent=[{'current': ['highwater=false']},
@@ -107,7 +113,7 @@ class TestSpectraFormula(TestCase):
         self.assertEqual(expected_output, output)
 
     def test_integrate_adaptation_to_formula_2(self):
-        formula = SpectraFormula(
+        formula = GR1Formula(
             temp_type=GR1TemporalType.INVARIANT,
             antecedent=[defaultdict(list)],
             consequent=[{'current': ['a=true']}]
@@ -125,7 +131,7 @@ class TestSpectraFormula(TestCase):
         self.assertEqual(expected_output, output)
 
     def test_integrate_eventualisation_adaptation_to_formula(self):
-        formula = SpectraFormula(
+        formula = GR1Formula(
             temp_type=GR1TemporalType.INVARIANT,
             antecedent=[defaultdict(list)],
             consequent=[{'current': ['highwater=false']},
@@ -143,7 +149,7 @@ class TestSpectraFormula(TestCase):
         self.assertEqual(expected_output, output)
 
     def test_integrate_eventualisation_adaptation_to_formula_2(self):
-        formula = SpectraFormula(
+        formula = GR1Formula(
             temp_type=GR1TemporalType.INVARIANT,
             antecedent=[{'current': ['a=false']}],
             consequent=[{'current': ['r2=false']},
@@ -162,12 +168,11 @@ class TestSpectraFormula(TestCase):
 
     def test_parse_spectra_formula_to_justice(self):
         formula = "\tG(true->F(highwater=false|methane=false));"
-        output = SpectraFormula.from_str(formula)
-        expected_output = SpectraFormula(
-            temp_type=GR1TemporalType.JUSTICE,
-            antecedent=[defaultdict(list)],
-            consequent=[{'current': ['highwater=false']},
-                        {'current': ['methane=false']}]
+        output = GR1Formula.from_str(formula, parser=self.parser)
+        expected_output = GR1Formula(
+            temp_type=GR1TemporalType.INVARIANT,
+            antecedent=Top(),
+            consequent=Eventually(Or(AtomicProposition("highwater", False), AtomicProposition("methane", False))),
         )
         self.assertEqual(expected_output.temp_type, output.temp_type)
         self.assertEqual(expected_output.antecedent, output.antecedent)

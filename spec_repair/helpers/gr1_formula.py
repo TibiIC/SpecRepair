@@ -4,13 +4,16 @@ from typing import List, Dict, TypeVar
 
 from spec_repair.helpers.adaptation_learned import Adaptation
 from spec_repair.ltl_types import GR1TemporalType
-from spec_repair.special_types import GR1Formula
-from spec_repair.util.spec_util import parse_formula_str, replace_false_true
+from spec_repair.util.spec_util import replace_false_true
+
+from py_ltl.parser import ILTLParser
+from py_ltl.formula import AtomicProposition, Not, And, Or, Until, Next, Globally, Eventually, Implies
+
 
 Self = TypeVar('T', bound='SpectraRule')
 
 
-class SpectraFormula:
+class GR1Formula:
     def __init__(
             self,
             temp_type: GR1TemporalType,
@@ -68,7 +71,7 @@ class SpectraFormula:
                 raise ValueError(f"Unsupported temporal type: {self.temp_type}")
 
     @staticmethod
-    def from_str(formula: str) -> Self:
+    def from_str(formula: str, parser: ILTLParser) -> Self:
         """
         Parse a formula from a Spectra file into a SpectraFormula object.
 
@@ -76,34 +79,26 @@ class SpectraFormula:
             formula (str): The input formula to parse.
 
         Returns:
-            SpectraFormula: A SpectraFormula object containing the parsed formula.
+            GR1Formula: A SpectraFormula object containing the parsed formula.
         """
-
-        try:
-            temp_op_str = GR1Formula.pattern.match(formula).group(GR1Formula.TEMP_OP)
-            match temp_op_str:
-                case "G":
-                    temp_op = GR1TemporalType.INVARIANT
-                case "GF":
-                    temp_op = GR1TemporalType.JUSTICE
-                case _:
-                    temp_op = GR1TemporalType.INITIAL
-            formula = GR1Formula.pattern.match(formula).group(GR1Formula.FORMULA)
-        except AttributeError:
-            temp_op = GR1TemporalType.INITIAL
-            formula = formula.strip(";")
-
-        # Split the formula by '->'
-        parts = formula.split('->')
-
-        if len(parts) == 1:
-            antecedent = [defaultdict(list)]
-            consequent = parse_formula_str(parts[0])
+        parsed = parser.parse(formula)
+        if not isinstance(parsed, Globally):
+            temp_type = GR1TemporalType.INITIAL
         else:
-            antecedent = parse_formula_str(parts[0])
-            consequent = parse_formula_str(parts[1])
+            parsed = parsed.formula
+            if isinstance(parsed, Eventually):
+                temp_type = GR1TemporalType.JUSTICE
+                parsed = parsed.formula
+            else:
+                temp_type = GR1TemporalType.INVARIANT
+        if isinstance(parsed, Implies):
+            antecedent = parsed.left
+            consequent = parsed.right
+        else:
+            antecedent = None
+            consequent = parsed
 
-        return SpectraFormula(temp_op, antecedent, consequent)
+        return GR1Formula(temp_type, antecedent, consequent)
 
     @staticmethod
     def formula_DNF_to_str(parsed_formula: List[Dict[str, List[str]]], optimise_parantheses: bool = False) -> str:

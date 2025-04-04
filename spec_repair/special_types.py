@@ -29,7 +29,7 @@ class HoldsAtAtom:
     pattern = re.compile(r"^(not_)?holds_at\(([^,]+),([^,]+),[^,]+\).?$")
 
 
-class GR1Formula:
+class GR1FormulaPattern:
     TEMP_OP = 1
     FORMULA = 2
     pattern = re.compile(r"\s*(inv|alw|alwEv|G|GF)?\((.*)\);?$")

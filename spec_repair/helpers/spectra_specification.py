@@ -8,7 +8,7 @@ import pandas as pd
 from spec_repair.components.interfaces.ispecification import ISpecification
 from spec_repair.helpers.adaptation_learned import Adaptation
 from spec_repair.helpers.spectra_atom import SpectraAtom
-from spec_repair.helpers.spectra_formula import SpectraFormula
+from spec_repair.helpers.gr1_formula import GR1Formula
 from spec_repair.ltl_types import GR1FormulaType, GR1TemporalType
 from spec_repair.util.file_util import read_file_lines, validate_spectra_file
 from spec_repair.util.spec_util import format_spec
@@ -18,7 +18,7 @@ class FormulaDataPoint(TypedDict):
     name: str
     type: GR1FormulaType
     when: GR1TemporalType
-    formula: "SpectraFormula"  # Use the class name as a string for forward declaration
+    formula: "GR1Formula"  # Use the class name as a string for forward declaration
 
 
 Self = TypeVar('T', bound='SpectraSpecification')
@@ -37,7 +37,7 @@ class SpectraSpecification(ISpecification):
                     type_txt: str = re.search(r'\s*(asm|assumption|gar|guarantee)\s*--', line).group(1)
                     type: GR1FormulaType = GR1FormulaType.from_str(type_txt)
                     formula_txt: str = re.sub('\s*', '', spec_lines[i + 1])
-                    formula: SpectraFormula = SpectraFormula.from_str(formula_txt)
+                    formula: GR1Formula = GR1Formula.from_str(formula_txt)
                     when: GR1TemporalType = formula.temp_type
                     formula_list.append([name, type, when, formula])
                 else:
@@ -72,7 +72,7 @@ class SpectraSpecification(ISpecification):
 
     def get_formula(self, name: str):
         # Get formula by name
-        formula: SpectraFormula = \
+        formula: GR1Formula = \
             self._formulas_df.loc[self._formulas_df["name"] == name, "formula"].iloc[0]
         return formula
 
@@ -101,7 +101,7 @@ class SpectraSpecification(ISpecification):
     def _formula_to_asp_str(self, row, learning_names, for_clingo, is_ev_temp_op):
         if row.when == GR1TemporalType.JUSTICE and row['name'] not in learning_names and not for_clingo:
             return ""
-        formula: SpectraFormula = row.formula
+        formula: GR1Formula = row.formula
         expression_string = f"%{row.type.to_asp()} -- {row['name']}\n"
         expression_string += f"%\t{formula.to_str()}\n\n"
         expression_string += f"{row.type.to_asp()}({row['name']}).\n\n"

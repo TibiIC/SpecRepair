@@ -2,7 +2,7 @@ from unittest import TestCase
 import unittest
 from py_ltl.formula import LTLFormula
 from py_ltl.formula import (
-    AtomicProposition, Not, And, Or, Until, Next, Globally, Eventually, Implies
+    AtomicProposition, Not, And, Or, Until, Next, Globally, Eventually, Implies, Prev
 )
 
 from spec_repair.helpers.spectra_formula_parser import SpectraFormulaParser
@@ -113,6 +113,26 @@ class TestSpectraFormulaParser(TestCase):
         self.assertEqual(parsed.right.formula.right.name, "r")
         self.assertEqual(parsed.right.formula.right.value, True)
 
+    def test_parse_nested_expression_global_eventually(self):
+        """Test parsing a more complex nested formula: () using LTLFormula.parse()."""
+        parsed = LTLFormula.parse("\tGF(pump=true);", self.parser)
+        self.assertIsInstance(parsed, Globally)
+        self.assertIsInstance(parsed.formula, Eventually)
+        self.assertIsInstance(parsed.formula.formula, AtomicProposition)
+        self.assertEqual(parsed.formula.formula.name, "pump")
+        self.assertEqual(parsed.formula.formula.value, True)
+
+    @unittest.skip("Not happening in spectra, but should find way to allow anyway")
+    def test_parse_nested_expression_eventually_global(self):
+        """Test parsing a more complex nested formula: () using LTLFormula.parse()."""
+        parsed = LTLFormula.parse("\tFG(pump=true);", self.parser)
+        self.assertIsInstance(parsed, Eventually)
+        self.assertIsInstance(parsed.formula, Globally)
+        self.assertIsInstance(parsed.formula.formula, AtomicProposition)
+        self.assertEqual(parsed.formula.formula.name, "pump")
+        self.assertEqual(parsed.formula.formula.value, True)
+
+
     def test_parse_nested_expression_with_next(self):
         """Test parsing a more complex nested formula: (p & next(q)) using LTLFormula.parse()."""
         parsed = LTLFormula.parse("(p=true & next(q=false))", self.parser)
@@ -139,6 +159,31 @@ class TestSpectraFormulaParser(TestCase):
         self.assertIsInstance(parsed.formula.right, Next)
         self.assertEqual(parsed.formula.right.formula.name, "pump")
         self.assertEqual(parsed.formula.right.formula.value, True)
+
+    def test_parse_deeply_nested_expression_prev(self):
+        """Test parsing a deeply nested formula: () using LTLFormula.parse()."""
+        parsed = LTLFormula.parse("\tG(PREV(pump=true)&pump=true->highwater=false);", self.parser)
+        self.assertIsInstance(parsed, Globally)
+        self.assertIsInstance(parsed.formula, Implies)
+        self.assertIsInstance(parsed.formula.left, And)
+        self.assertIsInstance(parsed.formula.left.left, Prev)
+        self.assertEqual(parsed.formula.left.left.formula.name, "pump")
+        self.assertEqual(parsed.formula.left.left.formula.value, True)
+        self.assertEqual(parsed.formula.left.right.name, "pump")
+        self.assertEqual(parsed.formula.left.right.value, True)
+        self.assertEqual(parsed.formula.right.name, "highwater")
+        self.assertEqual(parsed.formula.right.value, False)
+
+
+    def test_parse_ignore_optional_tab_and_semicolumn(self):
+        """Test that optional tabs at the beginning of the formula are ignored."""
+        parsed = LTLFormula.parse("\tG(highwater=false|methane=false);", self.parser)
+        self.assertIsInstance(parsed, Globally)
+        self.assertIsInstance(parsed.formula, Or)
+        self.assertEqual(parsed.formula.left.name, "highwater")
+        self.assertEqual(parsed.formula.left.value, False)
+        self.assertEqual(parsed.formula.right.name, "methane")
+        self.assertEqual(parsed.formula.right.value, False)
 
     def test_invalid_formula(self):
         """Test that invalid formulas raise an exception when using LTLFormula.parse()."""

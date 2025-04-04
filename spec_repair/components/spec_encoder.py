@@ -10,7 +10,7 @@ from spec_repair.helpers.counter_trace import CounterTrace
 from spec_repair.enums import Learning, ExpType, When
 from spec_repair.exceptions import LearningException
 from spec_repair.helpers.heuristic_managers.iheuristic_manager import IHeuristicManager
-from spec_repair.helpers.spectra_formula import SpectraFormula
+from spec_repair.helpers.gr1_formula import GR1Formula
 from spec_repair.ltl_types import Spec
 from spec_repair.old.patterns import FIRST_PRED, ALL_PREDS
 from spec_repair.special_types import EventuallyConsequentRule
@@ -170,7 +170,7 @@ class SpecEncoder:
         adaptation_list.append(adaptation_str)
 
         # Generate data structures from line strings
-        spectra_formula: SpectraFormula = SpectraFormula.from_str(line)
+        spectra_formula: GR1Formula = GR1Formula.from_str(line)
         adaptation_learned = Adaptation.from_str(adaptation_str)
 
         # Integrate the learned adaptation into the spectra rule

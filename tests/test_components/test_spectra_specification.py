@@ -2,7 +2,7 @@ import os
 from unittest import TestCase
 
 from spec_repair.helpers.adaptation_learned import Adaptation
-from spec_repair.helpers.spectra_formula import SpectraFormula
+from spec_repair.helpers.gr1_formula import GR1Formula
 from spec_repair.helpers.spectra_specification import SpectraSpecification
 from spec_repair.helpers.spectra_atom import SpectraAtom
 
@@ -28,12 +28,12 @@ class TestSpectraSpecification(TestCase):
         print(spec._formulas_df.columns)
         formulas = spec._formulas_df["formula"]
         expected_formulas: set[str] = {
-            SpectraFormula.from_str("\thighwater=false&methane=false;").to_str(),
-            SpectraFormula.from_str("\tpump=false;").to_str(),
-            SpectraFormula.from_str("G(highwater=true->next(pump=true));").to_str(),
-            SpectraFormula.from_str("G(methane=true->next(pump=false));").to_str(),
-            SpectraFormula.from_str("G(PREV(pump=true)&pump=true->next(highwater=false));").to_str(),
-            SpectraFormula.from_str("G(highwater=false|methane=false)").to_str(),
+            GR1Formula.from_str("\thighwater=false&methane=false;").to_str(),
+            GR1Formula.from_str("\tpump=false;").to_str(),
+            GR1Formula.from_str("G(highwater=true->next(pump=true));").to_str(),
+            GR1Formula.from_str("G(methane=true->next(pump=false));").to_str(),
+            GR1Formula.from_str("G(PREV(pump=true)&pump=true->next(highwater=false));").to_str(),
+            GR1Formula.from_str("G(highwater=false|methane=false)").to_str(),
         }
         for formula in formulas:
             self.assertIn(formula.to_str(), expected_formulas)
@@ -64,12 +64,12 @@ class TestSpectraSpecification(TestCase):
 
         formulas = spec._formulas_df["formula"]
         expected_formulas: set[str] = {
-            SpectraFormula.from_str("\thighwater=false&methane=false;").to_str(),
-            SpectraFormula.from_str("\tpump=false;").to_str(),
-            SpectraFormula.from_str("G(highwater=true->next(pump=true));").to_str(),
-            SpectraFormula.from_str("G(methane=true->next(pump=false));").to_str(),
-            SpectraFormula.from_str("G(PREV(pump=true)&pump=true->next(highwater=false));").to_str(),
-            SpectraFormula.from_str("G(methane=false->highwater=false|methane=false)").to_str(),
+            GR1Formula.from_str("\thighwater=false&methane=false;").to_str(),
+            GR1Formula.from_str("\tpump=false;").to_str(),
+            GR1Formula.from_str("G(highwater=true->next(pump=true));").to_str(),
+            GR1Formula.from_str("G(methane=true->next(pump=false));").to_str(),
+            GR1Formula.from_str("G(PREV(pump=true)&pump=true->next(highwater=false));").to_str(),
+            GR1Formula.from_str("G(methane=false->highwater=false|methane=false)").to_str(),
         }
         for formula in formulas:
             self.assertIn(formula.to_str(), expected_formulas)
@@ -102,12 +102,12 @@ class TestSpectraSpecification(TestCase):
 
         formulas = spec._formulas_df["formula"]
         expected_formulas: set[str] = {
-            SpectraFormula.from_str("\thighwater=false&methane=false;").to_str(),
-            SpectraFormula.from_str("\tpump=false;").to_str(),
-            SpectraFormula.from_str("G(highwater=true->pump=true|next(pump=true));").to_str(),
-            SpectraFormula.from_str("G(methane=true->pump=false|next(pump=false));").to_str(),
-            SpectraFormula.from_str("G(PREV(pump=true)&pump=true->next(highwater=false));").to_str(),
-            SpectraFormula.from_str("G(methane=false->highwater=false|methane=false)").to_str(),
+            GR1Formula.from_str("\thighwater=false&methane=false;").to_str(),
+            GR1Formula.from_str("\tpump=false;").to_str(),
+            GR1Formula.from_str("G(highwater=true->pump=true|next(pump=true));").to_str(),
+            GR1Formula.from_str("G(methane=true->pump=false|next(pump=false));").to_str(),
+            GR1Formula.from_str("G(PREV(pump=true)&pump=true->next(highwater=false));").to_str(),
+            GR1Formula.from_str("G(methane=false->highwater=false|methane=false)").to_str(),
         }
         for formula in formulas:
             self.assertIn(formula.to_str(), expected_formulas)

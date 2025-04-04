@@ -1,6 +1,6 @@
 from py_ltl.parser import ILTLParser
-from py_ltl.formula import AtomicProposition, Not, And, Implies, Or, Until, Next, Globally, Eventually
-from pyparsing import Word, alphas, opAssoc, infixNotation, alphanums, Literal, oneOf
+from py_ltl.formula import AtomicProposition, Not, And, Implies, Or, Until, Next, Prev, Globally, Eventually, Top, Bottom
+from pyparsing import Word, alphas, opAssoc, infixNotation, alphanums, Literal, oneOf, Optional, White, Suppress
 
 
 class SpectraFormulaParser(ILTLParser):
@@ -11,11 +11,17 @@ class SpectraFormulaParser(ILTLParser):
         equals = Literal("=")
         value = Word(alphas) | Word("0123456789")
 
+        # Define true/false as possible values
+        true_value = Literal("true").setParseAction(lambda t: Top())
+        false_value = Literal("false").setParseAction(lambda t: Bottom())
+
         # Ensure assignments are matched as a single unit FIRST
         atomic_with_value = (identifier + equals + value).setParseAction(self._parse_atomic)
         atomic_alone = identifier.setParseAction(lambda t: AtomicProposition(str(t[0]), True))
 
-        self.operand = atomic_with_value | atomic_alone
+        # Handle true/false as standalone operands
+        self.boolean_operand = true_value | false_value
+        self.operand = self.boolean_operand | atomic_with_value | atomic_alone
 
         NOT = oneOf(["!"])
         AND = oneOf(["&"])
@@ -23,6 +29,7 @@ class SpectraFormulaParser(ILTLParser):
         IMPLIES = oneOf(["->"])
         UNTIL = oneOf(["U"])
         NEXT = oneOf(["X", "next"])
+        PREV = oneOf(["prev", "PREV"])
         GLOBALLY = oneOf(["G", "alw"])
         EVENTUALLY = oneOf(["F"])
 
@@ -30,8 +37,9 @@ class SpectraFormulaParser(ILTLParser):
         self.operators = [
             (NOT, 1, opAssoc.RIGHT, self._parse_not),
             (NEXT, 1, opAssoc.RIGHT, self._parse_next),
-            (GLOBALLY, 1, opAssoc.RIGHT, self._parse_globally),
+            (PREV, 1, opAssoc.RIGHT, self._parse_prev),
             (EVENTUALLY, 1, opAssoc.RIGHT, self._parse_eventually),
+            (GLOBALLY, 1, opAssoc.RIGHT, self._parse_globally),
             (AND, 2, opAssoc.LEFT, self._parse_and),
             (OR, 2, opAssoc.LEFT, self._parse_or),
             (IMPLIES, 2, opAssoc.RIGHT, self._parse_implies),
@@ -43,6 +51,8 @@ class SpectraFormulaParser(ILTLParser):
             self.operand,
             [(op, num, assoc, fn) for op, num, assoc, fn in self.operators]
         )
+        # Allow an optional tab at the beginning and a semicolon at the end
+        self.expression = Optional(White("\t")) + self.expression + Optional(Suppress(";"))
 
     def _parse_atomic(self, tokens) -> AtomicProposition:
         if len(tokens) == 1:
@@ -83,6 +93,9 @@ class SpectraFormulaParser(ILTLParser):
 
     def _parse_next(self, tokens):
         return Next(tokens[0][1])
+
+    def _parse_prev(self, tokens):
+        return Prev(tokens[0][1])
 
     def _parse_globally(self, tokens):
         return Globally(tokens[0][1])
