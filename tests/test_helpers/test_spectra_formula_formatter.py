@@ -35,6 +35,17 @@ class TestSpectraFormatter(unittest.TestCase):
         self.assertEqual(self.formatter.format(Or(a, b)), "(a=true|b=true)")
         self.assertEqual(self.formatter.format(Implies(a, b)), "(a=true->b=true)")
 
+    def test_nested_and_or_implies(self):
+        a = AtomicProposition("a", True)
+        b = AtomicProposition("b", True)
+        c = AtomicProposition("c", True)
+        self.assertEqual(self.formatter.format(And(a,And(b, c))), "(a=true&(b=true&c=true))")
+        self.assertEqual(self.formatter.format(Or(a, Or(b, c))), "(a=true|(b=true|c=true))")
+        self.assertEqual(self.formatter.format(Implies(a, Implies(b, c))), "(a=true->(b=true->c=true))")
+        self.assertEqual(self.formatter.format(And(And(a,b),c)), "((a=true&b=true)&c=true)")
+        self.assertEqual(self.formatter.format(Or(Or(a, b), c)), "((a=true|b=true)|c=true)")
+        self.assertEqual(self.formatter.format(Implies(Implies(a, b), c)), "((a=true->b=true)->c=true)")
+
     def test_temporal_operators(self):
         x = AtomicProposition("x", True)
         self.assertEqual(self.formatter.format(Next(x)), "next(x=true)")

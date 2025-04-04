@@ -80,13 +80,25 @@ class SpectraFormulaParser(ILTLParser):
         return Not(tokens[0][1])
 
     def _parse_and(self, tokens):
-        return And(tokens[0][0], tokens[0][2])
+        # Get all even indexed elements
+        conjuncts = tokens[0][0::2]
+        # Fold them into a single And expression
+        result = conjuncts[0]
+        for disjunct in conjuncts[1:]:
+            result = And(result, disjunct)
+        return result
 
     def _parse_implies(self, tokens):
         return Implies(tokens[0][0], tokens[0][2])
 
     def _parse_or(self, tokens):
-        return Or(tokens[0][0], tokens[0][2])
+        # Get all even indexed elements
+        disjuncts = tokens[0][0::2]
+        # Fold them into a single Or expression
+        result = disjuncts[0]
+        for disjunct in disjuncts[1:]:
+            result = Or(result, disjunct)
+        return result
 
     def _parse_until(self, tokens):
         raise NotImplementedError("Until operator does not make sense in this context")

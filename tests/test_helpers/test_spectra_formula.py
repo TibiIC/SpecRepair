@@ -131,8 +131,7 @@ class TestGR1Formula(TestCase):
         formula = GR1Formula(
             temp_type=GR1TemporalType.INVARIANT,
             antecedent=None,
-            consequent=[{'current': ['highwater=false']},
-                        {'current': ['methane=false']}]
+            consequent=Or(AtomicProposition("highwater", False), AtomicProposition("methane", False))
         )
         adaptation = Adaptation(
             type='antecedent_exception',
@@ -141,7 +140,7 @@ class TestGR1Formula(TestCase):
             atom_temporal_operators=[('current', 'methane=true')]
         )
         formula.integrate(adaptation)
-        output = formula.to_str()
+        output = formula.to_str(self.formatter)
         expected_output = "G(methane=false->highwater=false|methane=false);"
         self.assertEqual(expected_output, output)
 

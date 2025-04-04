@@ -10,7 +10,6 @@ from py_ltl.parser import ILTLParser
 from py_ltl.formatter import ILTLFormatter
 from py_ltl.formula import LTLFormula, AtomicProposition, Not, And, Or, Until, Next, Globally, Eventually, Implies
 
-
 Self = TypeVar('T', bound='SpectraRule')
 
 
@@ -24,6 +23,36 @@ class GR1Formula:
         self.temp_type = temp_type
         self.antecedent = antecedent
         self.consequent = consequent
+
+    @staticmethod
+    def from_str(formula: str, parser: ILTLParser) -> Self:
+        """
+        Parse a formula from a Spectra file into a SpectraFormula object.
+
+        Args:
+            formula (str): The input formula to parse.
+
+        Returns:
+            GR1Formula: A SpectraFormula object containing the parsed formula.
+        """
+        parsed = parser.parse(formula)
+        if not isinstance(parsed, Globally):
+            temp_type = GR1TemporalType.INITIAL
+        else:
+            parsed = parsed.formula
+            if isinstance(parsed, Eventually):
+                temp_type = GR1TemporalType.JUSTICE
+                parsed = parsed.formula
+            else:
+                temp_type = GR1TemporalType.INVARIANT
+        if isinstance(parsed, Implies):
+            antecedent = parsed.left
+            consequent = parsed.right
+        else:
+            antecedent = None
+            consequent = parsed
+
+        return GR1Formula(temp_type, antecedent, consequent)
 
     def to_str(self, formatter: ILTLFormatter) -> str:
         if self.antecedent is None:
@@ -39,7 +68,6 @@ class GR1Formula:
                 return Globally(Eventually(implication)).format(formatter=formatter)
             case _:
                 raise ValueError(f"Unsupported temporal type: {self.temp_type}")
-
 
     def integrate(self, adaptation: Adaptation):
         match adaptation.type:
@@ -79,33 +107,3 @@ class GR1Formula:
 
             case _:
                 raise ValueError(f"Unsupported temporal type: {self.temp_type}")
-
-    @staticmethod
-    def from_str(formula: str, parser: ILTLParser) -> Self:
-        """
-        Parse a formula from a Spectra file into a SpectraFormula object.
-
-        Args:
-            formula (str): The input formula to parse.
-
-        Returns:
-            GR1Formula: A SpectraFormula object containing the parsed formula.
-        """
-        parsed = parser.parse(formula)
-        if not isinstance(parsed, Globally):
-            temp_type = GR1TemporalType.INITIAL
-        else:
-            parsed = parsed.formula
-            if isinstance(parsed, Eventually):
-                temp_type = GR1TemporalType.JUSTICE
-                parsed = parsed.formula
-            else:
-                temp_type = GR1TemporalType.INVARIANT
-        if isinstance(parsed, Implies):
-            antecedent = parsed.left
-            consequent = parsed.right
-        else:
-            antecedent = None
-            consequent = parsed
-
-        return GR1Formula(temp_type, antecedent, consequent)

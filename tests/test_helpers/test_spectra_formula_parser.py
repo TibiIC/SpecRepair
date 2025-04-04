@@ -174,6 +174,57 @@ class TestSpectraFormulaParser(TestCase):
         self.assertEqual(parsed.formula.right.name, "highwater")
         self.assertEqual(parsed.formula.right.value, False)
 
+    def test_parse_disjunction(self):
+        """Test parsing nested disjunctions."""
+        parsed = LTLFormula.parse("(highwater=true | methane=false | pump=true)", self.parser)
+        print(parsed)
+        self.assertIsInstance(parsed, Or)
+        self.assertIsInstance(parsed.left, Or)
+        self.assertEqual(parsed.left.left.name, "highwater")
+        self.assertEqual(parsed.left.left.value, True)
+        self.assertEqual(parsed.left.right.name, "methane")
+        self.assertEqual(parsed.left.right.value, False)
+        self.assertEqual(parsed.right.name, "pump")
+        self.assertEqual(parsed.right.value, True)
+
+    def test_parse_conjunction(self):
+        """Test parsing nested conjunctions."""
+        parsed = LTLFormula.parse("(highwater=true & methane=false & pump=true)", self.parser)
+        self.assertIsInstance(parsed, And)
+        self.assertIsInstance(parsed.left, And)
+        self.assertEqual(parsed.left.left.name, "highwater")
+        self.assertEqual(parsed.left.left.value, True)
+        self.assertEqual(parsed.left.right.name, "methane")
+        self.assertEqual(parsed.left.right.value, False)
+        self.assertEqual(parsed.right.name, "pump")
+        self.assertEqual(parsed.right.value, True)
+
+    def test_parse_dnf(self):
+        """Test parsing a formula in DNF: (a=true & b=false) | (c=true & d=false)."""
+        parsed = LTLFormula.parse("((a=true & b=false) | (c=true & d=false))", self.parser)
+        self.assertIsInstance(parsed, Or)
+        self.assertIsInstance(parsed.left, And)
+        self.assertEqual(parsed.left.left.name, "a")
+        self.assertEqual(parsed.left.left.value, True)
+        self.assertEqual(parsed.left.right.name, "b")
+        self.assertEqual(parsed.left.right.value, False)
+        self.assertIsInstance(parsed.right, And)
+        self.assertEqual(parsed.right.left.name, "c")
+        self.assertEqual(parsed.right.left.value, True)
+        self.assertEqual(parsed.right.right.name, "d")
+        self.assertEqual(parsed.right.right.value, False)
+
+    def test_parse_nested_implication(self):
+        """Test parsing nested implications."""
+        parsed = LTLFormula.parse("(highwater=true -> methane=false -> pump=true)", self.parser)
+        self.assertIsInstance(parsed, Implies)
+        self.assertEqual(parsed.left.name, "highwater")
+        self.assertEqual(parsed.left.value, True)
+        self.assertIsInstance(parsed.right, Implies)
+        self.assertEqual(parsed.right.left.name, "methane")
+        self.assertEqual(parsed.right.left.value, False)
+        self.assertEqual(parsed.right.right.name, "pump")
+        self.assertEqual(parsed.right.right.value, True)
 
     def test_parse_ignore_optional_tab_and_semicolumn(self):
         """Test that optional tabs at the beginning of the formula are ignored."""
