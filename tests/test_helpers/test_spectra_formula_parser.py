@@ -5,7 +5,7 @@ from py_ltl.formula import (
     AtomicProposition, Not, And, Or, Until, Next, Globally, Eventually, Implies
 )
 
-from spec_repair.components.spectra_formula_parser import SpectraFormulaParser
+from spec_repair.helpers.spectra_formula_parser import SpectraFormulaParser
 
 
 class TestSpectraFormulaParser(TestCase):

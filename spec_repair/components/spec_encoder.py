@@ -170,14 +170,14 @@ class SpecEncoder:
         adaptation_list.append(adaptation_str)
 
         # Generate data structures from line strings
-        spectra_rule: SpectraFormula = SpectraFormula.from_str(line)
+        spectra_formula: SpectraFormula = SpectraFormula.from_str(line)
         adaptation_learned = Adaptation.from_str(adaptation_str)
 
         # Integrate the learned adaptation into the spectra rule
-        spectra_rule.integrate(adaptation_learned)
+        spectra_formula.integrate(adaptation_learned)
 
         # Replace the old rule with the new one
-        new_spectra_rule_str = f"\t{spectra_rule.to_str()}\n"
+        new_spectra_rule_str = f"\t{spectra_formula.to_str()}\n"
         spec[j] = new_spectra_rule_str
         # TODO: deal with generation of multiple lines of assumptions/guarantees from current
 
