@@ -7,6 +7,7 @@ from spec_repair.ltl_types import GR1TemporalType
 from spec_repair.util.spec_util import replace_false_true
 
 from py_ltl.parser import ILTLParser
+from py_ltl.formatter import ILTLFormatter
 from py_ltl.formula import LTLFormula, AtomicProposition, Not, And, Or, Until, Next, Globally, Eventually, Implies
 
 
@@ -24,12 +25,21 @@ class GR1Formula:
         self.antecedent = antecedent
         self.consequent = consequent
 
-    def to_str(self):
-        antecedent_str = self.formula_DNF_to_str(self.antecedent, optimise_parantheses=True)
-        consequent_str = self.formula_DNF_to_str(self.consequent, optimise_parantheses=True)
-        if antecedent_str:
-            return f'{self.temp_type}({antecedent_str}->{consequent_str});'
-        return f'{self.temp_type}({consequent_str});'
+    def to_str(self, formatter: ILTLFormatter) -> str:
+        if self.antecedent is None:
+            implication = self.consequent
+        else:
+            implication = Implies(self.antecedent, self.consequent)
+        match self.temp_type:
+            case GR1TemporalType.INITIAL:
+                return implication.format(formatter=formatter)
+            case GR1TemporalType.INVARIANT:
+                return Globally(implication).format(formatter=formatter)
+            case GR1TemporalType.JUSTICE:
+                return Globally(Eventually(implication)).format(formatter=formatter)
+            case _:
+                raise ValueError(f"Unsupported temporal type: {self.temp_type}")
+
 
     def integrate(self, adaptation: Adaptation):
         match adaptation.type:
@@ -99,42 +109,3 @@ class GR1Formula:
             consequent = parsed
 
         return GR1Formula(temp_type, antecedent, consequent)
-
-    @staticmethod
-    def formula_DNF_to_str(parsed_formula: List[Dict[str, List[str]]], optimise_parantheses: bool = False) -> str:
-        """
-        Encode a parsed formula into a string representation.
-        NOTE: encoding will be Spectra-compatible
-
-        Args:
-            parsed_formula (List[Dict[str, List[str]]]): The parsed formula to encode.
-
-        Returns:
-            str: The encoded formula as a string.
-        """
-        encoded_formula = []
-
-        for conjunct in parsed_formula:
-            encoded_conjunct = []
-
-            for operator, literals in conjunct.items():
-                # Encode the operator and literals
-                encoded_operator = operator
-                encoded_literals = "&".join(literals)
-                match encoded_operator:
-                    case "eventually":
-                        encoded_conjunct.append(f"F({encoded_literals})")
-                    case "prev":
-                        encoded_conjunct.append(f"PREV({encoded_literals})")
-                    case "current":
-                        encoded_conjunct.append(encoded_literals)
-                    case _:
-                        encoded_conjunct.append(f"{encoded_operator}({encoded_literals})")
-
-            # Join the encoded conjunctions by 'or' and add to the list
-            encoded_formula.append("&".join(encoded_conjunct))
-
-        if optimise_parantheses:
-            return f"{'|'.join(encoded_formula)}"
-        else:
-            return f"({')|('.join(encoded_formula)})"

@@ -3,6 +3,7 @@ from unittest import TestCase
 
 from spec_repair.helpers.adaptation_learned import Adaptation
 from spec_repair.helpers.gr1_formula import GR1Formula
+from spec_repair.helpers.spectra_formula_formatter import SpectraFormulaFormatter
 from spec_repair.helpers.spectra_formula_parser import SpectraFormulaParser
 from spec_repair.ltl_types import GR1TemporalType
 
@@ -14,6 +15,7 @@ class TestGR1Formula(TestCase):
     @classmethod
     def setUpClass(cls):
         cls.parser = SpectraFormulaParser()
+        cls.formatter = SpectraFormulaFormatter()
 
     def test_parse_spectra_formula_ini(self):
         formula = "\thighwater=false&methane=false;"
@@ -75,39 +77,60 @@ class TestGR1Formula(TestCase):
         self.assertEqual(expected_output.antecedent, output.antecedent)
         self.assertEqual(expected_output.consequent, output.consequent)
 
-    def test_formula_DNF_to_str(self):
-        parsed_formula = [
-            {'next': ['a=true', 'b=true', 'c=false'], 'current': ['d=false'], 'prev': ['e=true']},  # First conjunct
-            {'next': ['f=false'], 'current': ['g=true'], 'eventually': ['h=true', 'i=false']}  # Second conjunct
-        ]
-        output = GR1Formula.formula_DNF_to_str(parsed_formula)
-        expected_output = "(next(a=true&b=true&c=false)&d=false&PREV(e=true))|(next(f=false)&g=true&F(h=true&i=false))"
+    def test_format_formula_ini(self):
+        formula = GR1Formula(
+            temp_type=GR1TemporalType.INITIAL,
+            antecedent=None,
+            consequent=Or(AtomicProposition("highwater", False), AtomicProposition("methane", False)),
+        )
+        output = formula.to_str(formatter=self.formatter)
+        expected_output = "(highwater=false|methane=false)"
         self.assertEqual(expected_output, output)
 
-    def test_formula_DNF_to_str_2(self):
-        parsed_formula = [
-            {'eventually': ['a=true', 'b=true']},
-            {'eventually': ['c=true', 'd=false']}
-        ]
-        output = GR1Formula.formula_DNF_to_str(parsed_formula)
-        expected_output = "(F(a=true&b=true))|(F(c=true&d=false))"
+    def test_format_formula_inv(self):
+        formula = GR1Formula(
+            temp_type=GR1TemporalType.INVARIANT,
+            antecedent=None,
+            consequent=Or(AtomicProposition("highwater", False), AtomicProposition("methane", False)),
+        )
+        output = formula.to_str(formatter=self.formatter)
+        expected_output = "G((highwater=false|methane=false))"
         self.assertEqual(expected_output, output)
 
-    def test_parse_justice_formula(self):
+    def test_format_formula_inv_2(self):
+        formula = GR1Formula(
+            temp_type=GR1TemporalType.INVARIANT,
+            antecedent=And(Prev(AtomicProposition("pump", True)), AtomicProposition("pump", True)),
+            consequent=AtomicProposition("highwater", False),
+        )
+        output = formula.to_str(formatter=self.formatter)
+        expected_output = "G(((PREV(pump=true)&pump=true)->highwater=false))"
+        self.assertEqual(expected_output, output)
+
+    def test_format_formula_justice(self):
         formula = GR1Formula(
             temp_type=GR1TemporalType.JUSTICE,
-            antecedent=[defaultdict(list)],
-            consequent=[{'current': ['highwater=false']},
-                        {'current': ['methane=false']}]
+            antecedent=None,
+            consequent=Or(AtomicProposition("highwater", False), AtomicProposition("methane", False))
         )
-        output = formula.to_str()
-        expected_output = "GF(highwater=false|methane=false);"
+        output = formula.to_str(formatter=self.formatter)
+        expected_output = "GF((highwater=false|methane=false))"
+        self.assertEqual(expected_output, output)
+
+    def test_format_formula_response(self):
+        formula = GR1Formula(
+            temp_type=GR1TemporalType.INVARIANT,
+            antecedent=Top(),
+            consequent=Eventually(Or(AtomicProposition("highwater", False), AtomicProposition("methane", False))),
+        )
+        output = formula.to_str(formatter=self.formatter)
+        expected_output = "G((true->F((highwater=false|methane=false))))"
         self.assertEqual(expected_output, output)
 
     def test_integrate_adaptation_to_formula(self):
         formula = GR1Formula(
             temp_type=GR1TemporalType.INVARIANT,
-            antecedent=[defaultdict(list)],
+            antecedent=None,
             consequent=[{'current': ['highwater=false']},
                         {'current': ['methane=false']}]
         )

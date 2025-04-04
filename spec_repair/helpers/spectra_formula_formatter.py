@@ -17,7 +17,7 @@ class SpectraFormulaFormatter(ILTLFormatter):
             case Next(formula=formula):
                 return f"next({self.format(formula)})"
             case Prev(formula=formula):
-                return f"prev({self.format(formula)})"
+                return f"PREV({self.format(formula)})"
             case Eventually(formula=formula):
                 return f"F({self.format(formula)})"
             case Globally(formula=formula):
