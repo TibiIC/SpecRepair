@@ -1,13 +1,13 @@
 from collections import defaultdict
 from copy import deepcopy
-from typing import List, Dict, TypeVar
+from typing import List, Dict, TypeVar, Optional
 
 from spec_repair.helpers.adaptation_learned import Adaptation
 from spec_repair.ltl_types import GR1TemporalType
 from spec_repair.util.spec_util import replace_false_true
 
 from py_ltl.parser import ILTLParser
-from py_ltl.formula import AtomicProposition, Not, And, Or, Until, Next, Globally, Eventually, Implies
+from py_ltl.formula import LTLFormula, AtomicProposition, Not, And, Or, Until, Next, Globally, Eventually, Implies
 
 
 Self = TypeVar('T', bound='SpectraRule')
@@ -17,8 +17,8 @@ class GR1Formula:
     def __init__(
             self,
             temp_type: GR1TemporalType,
-            antecedent: List[Dict[str, List[str]]],
-            consequent: List[Dict[str, List[str]]],
+            antecedent: Optional[LTLFormula],
+            consequent: LTLFormula
     ):
         self.temp_type = temp_type
         self.antecedent = antecedent
