@@ -1,13 +1,13 @@
 from py_ltl.parser import ILTLParser
 from py_ltl.formula import AtomicProposition, Not, And, Implies, Or, Until, Next, Globally, Eventually
-from pyparsing import Word, alphas, opAssoc, infixNotation, alphanums, Literal, Group
+from pyparsing import Word, alphas, opAssoc, infixNotation, alphanums, Literal, oneOf
+
 
 class SpectraFormulaParser(ILTLParser):
     """Parser for LTL formulas from strings in Spectra encoding using pyparsing."""
-
     def __init__(self):
         # Define atomic propositions (letters and optional values)
-        identifier = Word(alphas, alphanums)
+        identifier = Word(alphas, alphanums + "_")
         equals = Literal("=")
         value = Word(alphas) | Word("0123456789")
 
@@ -17,18 +17,25 @@ class SpectraFormulaParser(ILTLParser):
 
         self.operand = atomic_with_value | atomic_alone
 
+        NOT = oneOf(["!"])
+        AND = oneOf(["&"])
+        OR = oneOf(["|"])
+        IMPLIES = oneOf(["->"])
+        UNTIL = oneOf(["U"])
+        NEXT = oneOf(["X", "next"])
+        GLOBALLY = oneOf(["G", "alw"])
+        EVENTUALLY = oneOf(["F"])
+
         # Define operators
         self.operators = [
-            ("!", 1, opAssoc.RIGHT, self._parse_not),
-            ("&", 2, opAssoc.LEFT, self._parse_and),
-            ("|", 2, opAssoc.LEFT, self._parse_or),
-            ("->", 2, opAssoc.RIGHT, self._parse_implies),
-            ("X", 1, opAssoc.RIGHT, self._parse_next),
-            ("next", 1, opAssoc.RIGHT, self._parse_next),
-            ("G", 1, opAssoc.RIGHT, self._parse_globally),
-            ("alw", 1, opAssoc.RIGHT, self._parse_globally),
-            ("F", 1, opAssoc.RIGHT, self._parse_eventually),
-            ("U", 2, opAssoc.LEFT, self._parse_until),
+            (NOT, 1, opAssoc.RIGHT, self._parse_not),
+            (NEXT, 1, opAssoc.RIGHT, self._parse_next),
+            (GLOBALLY, 1, opAssoc.RIGHT, self._parse_globally),
+            (EVENTUALLY, 1, opAssoc.RIGHT, self._parse_eventually),
+            (AND, 2, opAssoc.LEFT, self._parse_and),
+            (OR, 2, opAssoc.LEFT, self._parse_or),
+            (IMPLIES, 2, opAssoc.RIGHT, self._parse_implies),
+            (UNTIL, 2, opAssoc.LEFT, self._parse_until),
         ]
 
         # Define the grammar using infix notation

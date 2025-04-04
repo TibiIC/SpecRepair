@@ -91,11 +91,42 @@ class TestSpectraFormulaParser(TestCase):
         self.assertEqual(parsed.formula.name, "p")
 
     def test_parse_nested_expression(self):
-        """Test parsing a more complex nested formula: (p & next(q)) using LTLFormula.parse()."""
-        parsed = LTLFormula.parse("(p & next(q))", self.parser)
-        self.assertIsInstance(parsed, And)
+        """Test parsing a more complex nested formula: (p=true->(q=false|r=true) using LTLFormula.parse()."""
+        parsed = LTLFormula.parse("(p=true -> (q=false | r=true))", self.parser)
+        self.assertIsInstance(parsed, Implies)
+        self.assertEqual(parsed.left.name, "p")
+        self.assertIsInstance(parsed.right, Or)
+        self.assertEqual(parsed.right.left.name, "q")
+        self.assertEqual(parsed.right.left.value, False)
+        self.assertEqual(parsed.right.right.name, "r")
+        self.assertEqual(parsed.right.right.value, True)
+
+    def test_parse_nested_expression_with_eventually(self):
+        """Test parsing a more complex nested formula: (p=true->(q=false|r=true) using LTLFormula.parse()."""
+        parsed = LTLFormula.parse("(p=true -> F(q=false & r=true))", self.parser)
+        self.assertIsInstance(parsed, Implies)
         self.assertEqual(parsed.left.name, "p")
         self.assertIsInstance(parsed.right, Eventually)
+        self.assertIsInstance(parsed.right.formula, And)
+        self.assertEqual(parsed.right.formula.left.name, "q")
+        self.assertEqual(parsed.right.formula.left.value, False)
+        self.assertEqual(parsed.right.formula.right.name, "r")
+        self.assertEqual(parsed.right.formula.right.value, True)
+
+    def test_parse_nested_expression_with_next(self):
+        """Test parsing a more complex nested formula: (p & next(q)) using LTLFormula.parse()."""
+        parsed = LTLFormula.parse("(p=true & next(q=false))", self.parser)
+        self.assertIsInstance(parsed, And)
+        self.assertEqual(parsed.left.name, "p")
+        self.assertIsInstance(parsed.right, Next)
+        self.assertEqual(parsed.right.formula.name, "q")
+
+    def test_parse_nested_expression_with_next_in_brackets(self):
+        """Test parsing a more complex nested formula: (p & next(q)) using LTLFormula.parse()."""
+        parsed = LTLFormula.parse("(p & (next(q)))", self.parser)
+        self.assertIsInstance(parsed, And)
+        self.assertEqual(parsed.left.name, "p")
+        self.assertIsInstance(parsed.right, Next)
         self.assertEqual(parsed.right.formula.name, "q")
 
     def test_parse_deeply_nested_expression(self):
