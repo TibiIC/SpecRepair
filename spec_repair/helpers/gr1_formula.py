@@ -10,7 +10,7 @@ from spec_repair.util.spec_util import replace_false_true
 
 from py_ltl.parser import ILTLParser
 from py_ltl.formatter import ILTLFormatter
-from py_ltl.formula import LTLFormula, AtomicProposition, Not, And, Or, Until, Next, Prev, Globally, Eventually, Implies
+from py_ltl.formula import LTLFormula, AtomicProposition, Not, And, Or, Until, Next, Prev, Globally, Eventually, Implies, Top, Bottom
 
 Self = TypeVar('T', bound='SpectraRule')
 
@@ -76,53 +76,48 @@ class GR1Formula:
     def integrate(self, adaptation: Adaptation):
         match adaptation.type:
             case "antecedent_exception":
-                if self.antecedent is None:
-                    first_temp_op, first_atom_assignment = adaptation.atom_temporal_operators[0]
-                    first_atom_assignment = replace_false_true(first_atom_assignment)
-                    self.antecedent = self.generate_literal(first_atom_assignment, first_temp_op)
-                    for op, atom in adaptation.atom_temporal_operators[1:]:
-                        atom = replace_false_true(atom)
-                        new_disjunct = self.generate_literal(atom, op)
-                        self.antecedent = Or(self.antecedent, new_disjunct)
-                else:
-                    disjuncts = self.get_disjuncts_from_DNF(self.antecedent)
-                    disjunct = disjuncts[adaptation.disjunction_index]
-                    disjuncts.remove(disjunct)
-                    for op, atom in adaptation.atom_temporal_operators:
-                        atom = replace_false_true(atom)
-                        new_disjunct = self.generate_literal(atom, op)
-                        new_disjunct = And(deepcopy(disjunct), new_disjunct)
-                        disjuncts.append(new_disjunct)
-                    self.antecedent = self.disjoin_all(disjuncts)
+                self._integrate_antecedent_exception(adaptation)
             case "consequent_exception":
-                ops_in_consequent = {op for disjunct in self.consequent for op in disjunct}
-                if "eventually" in ops_in_consequent:
-                    for disjunct in deepcopy(self.antecedent):
-                        self.antecedent.remove(disjunct)
-                        for op, atom in adaptation.atom_temporal_operators:
-                            new_disjunct = deepcopy(disjunct)
-                            new_disjunct[op].append(replace_false_true(atom))
-                            self.antecedent.append(new_disjunct)
+                if isinstance(self.consequent, Eventually):
+                    self._integrate_antecedent_exception(adaptation)
                 else:
-                    new_disjunct = defaultdict(list)
-                    for op, atom in adaptation.atom_temporal_operators:
-                        new_disjunct[op].append(atom)
-                    self.consequent.insert(0, new_disjunct)
+                    self._integrate_consequent_exception(adaptation)
             case "ev_temp_op":
-                new_consequent = []
-                op = "eventually"
-                if not self.antecedent or self.antecedent == [defaultdict(list)]:
+                self.consequent = self.remove_temporal_operators(self.consequent)
+                if not self.antecedent:
                     self.temp_type = GR1TemporalType.JUSTICE
-                    op = "current"
-                for disjunct in self.consequent:
-                    all_conjuncts = [conjunct for conjuncts in disjunct.values() for conjunct in conjuncts]
-                    new_disjunct = defaultdict(list)
-                    new_disjunct[op] = all_conjuncts
-                    new_consequent.append(new_disjunct)
-                self.consequent = new_consequent
+                else:
+                    self.consequent = Eventually(self.consequent)
 
             case _:
                 raise ValueError(f"Unsupported temporal type: {self.temp_type}")
+
+    def _integrate_consequent_exception(self, adaptation: Adaptation):
+        first_temp_op, first_atom_assignment = adaptation.atom_temporal_operators[0]
+        new_disjunct = self.generate_literal(first_atom_assignment, first_temp_op)
+        for op, atom in adaptation.atom_temporal_operators[1:]:
+            new_disjunct = And(new_disjunct, self.generate_literal(atom, op))
+        self.consequent = Or(self.consequent, new_disjunct)
+
+    def _integrate_antecedent_exception(self, adaptation: Adaptation):
+        if self.antecedent is None:
+            first_temp_op, first_atom_assignment = adaptation.atom_temporal_operators[0]
+            first_atom_assignment = replace_false_true(first_atom_assignment)
+            self.antecedent = self.generate_literal(first_atom_assignment, first_temp_op)
+            for op, atom in adaptation.atom_temporal_operators[1:]:
+                atom = replace_false_true(atom)
+                new_disjunct = self.generate_literal(atom, op)
+                self.antecedent = Or(self.antecedent, new_disjunct)
+        else:
+            disjuncts = self.get_disjuncts_from_DNF(self.antecedent)
+            disjunct = disjuncts[adaptation.disjunction_index]
+            disjuncts.remove(disjunct)
+            for op, atom in adaptation.atom_temporal_operators:
+                atom = replace_false_true(atom)
+                new_disjunct = self.generate_literal(atom, op)
+                new_disjunct = And(deepcopy(disjunct), new_disjunct)
+                disjuncts.append(new_disjunct)
+            self.antecedent = self.disjoin_all(disjuncts)
 
     @staticmethod
     def get_disjuncts_from_DNF(dnf_formula: LTLFormula) -> List[LTLFormula]:
@@ -155,3 +150,41 @@ class GR1Formula:
             case _:
                 raise ValueError(f"Unsupported temporal operator: {op}")
         return new_disjunct
+
+    @staticmethod
+    def remove_temporal_operators(this_formula: LTLFormula) -> LTLFormula:
+        match this_formula:
+            case AtomicProposition(name=name, value=value):
+                return this_formula
+            case Not(formula=formula):
+                return Not(GR1Formula.remove_temporal_operators(formula))
+            case And(left=lhs, right=rhs):
+                return And(
+                    left=GR1Formula.remove_temporal_operators(lhs),
+                    right=GR1Formula.remove_temporal_operators(rhs)
+                )
+            case Or(left=lhs, right=rhs):
+                return Or(
+                    left=GR1Formula.remove_temporal_operators(lhs),
+                    right=GR1Formula.remove_temporal_operators(rhs)
+                )
+            case Implies(left=lhs, right=rhs):
+                return Implies(
+                    left=GR1Formula.remove_temporal_operators(lhs),
+                    right=GR1Formula.remove_temporal_operators(rhs)
+                )
+            case Next(formula=formula):
+                return GR1Formula.remove_temporal_operators(formula)
+            case Prev(formula=formula):
+                return GR1Formula.remove_temporal_operators(formula)
+            case Eventually(formula=formula):
+                return GR1Formula.remove_temporal_operators(formula)
+            case Globally(formula=formula):
+                return GR1Formula.remove_temporal_operators(formula)
+            case Top():
+                return Top()
+            case Bottom():
+                return Bottom()
+            case _:
+                raise NotImplementedError(f"Removing temporal operators not implemented for: {type(this_formula)}")
+
