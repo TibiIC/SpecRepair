@@ -53,7 +53,7 @@ class TestGR1Formula(TestCase):
         self.assertEqual(expected_output.antecedent, output.antecedent)
         self.assertEqual(expected_output.consequent, output.consequent)
 
-    def test_parse_spectra_formula_to_justice(self):
+    def test_parse_spectra_formula_justice(self):
         formula = "\tGF(pump=true);"
         output = GR1Formula.from_str(formula, parser=self.parser)
         expected_output = GR1Formula(
@@ -65,7 +65,7 @@ class TestGR1Formula(TestCase):
         self.assertEqual(expected_output.antecedent, output.antecedent)
         self.assertEqual(expected_output.consequent, output.consequent)
 
-    def test_parse_spectra_formula_to_response(self):
+    def test_parse_spectra_formula_response(self):
         formula = "\tG(true->F(highwater=false|methane=false));"
         output = GR1Formula.from_str(formula, parser=self.parser)
         expected_output = GR1Formula(
@@ -127,12 +127,12 @@ class TestGR1Formula(TestCase):
         expected_output = "G((true->F((highwater=false|methane=false))))"
         self.assertEqual(expected_output, output)
 
-    def test_integrate_adaptation_to_formula(self):
+    def test_integrate_adaptation_to_formula_antecedent_exception(self):
         formula = GR1Formula(
             temp_type=GR1TemporalType.INVARIANT,
             antecedent=None,
             consequent=Or(AtomicProposition("highwater", False), AtomicProposition("methane", False))
-        )
+        ) # formula === G(highwater=false|methane=false)
         adaptation = Adaptation(
             type='antecedent_exception',
             formula_name='assumption2_1',
@@ -141,15 +141,15 @@ class TestGR1Formula(TestCase):
         )
         formula.integrate(adaptation)
         output = formula.to_str(self.formatter)
-        expected_output = "G(methane=false->highwater=false|methane=false);"
+        expected_output = "G((methane=false->(highwater=false|methane=false)))"
         self.assertEqual(expected_output, output)
 
-    def test_integrate_adaptation_to_formula_2(self):
+    def test_integrate_adaptation_to_formula_antecedent_exception_2(self):
         formula = GR1Formula(
             temp_type=GR1TemporalType.INVARIANT,
-            antecedent=[defaultdict(list)],
-            consequent=[{'current': ['a=true']}]
-        )
+            antecedent=None,
+            consequent=AtomicProposition("a", True),
+        ) # formula === G(a=true)
         adaptation = Adaptation(
             type='antecedent_exception',
             formula_name='a_always',
@@ -158,8 +158,76 @@ class TestGR1Formula(TestCase):
                                      ('current', 'r2=false')]
         )
         formula.integrate(adaptation)
-        output = formula.to_str()
-        expected_output = "G(r1=true|r2=true->a=true);"
+        output = formula.to_str(self.formatter)
+        expected_output = "G(((r1=true|r2=true)->a=true))"
+        self.assertEqual(expected_output, output)
+
+    def test_integrate_adaptation_to_formula_antecedent_exception_3(self):
+        formula = GR1Formula(
+            temp_type=GR1TemporalType.INVARIANT,
+            antecedent=AtomicProposition("a", True),
+            consequent=AtomicProposition("b", True),
+        ) # formula === G(a=true->b=true)
+        adaptation = Adaptation(
+            type='antecedent_exception',
+            formula_name='a_always',
+            disjunction_index=0,
+            atom_temporal_operators=[('current', 'c=false')]
+        )
+        formula.integrate(adaptation)
+        output = formula.to_str(self.formatter)
+        expected_output = "G(((a=true&c=true)->b=true))"
+        self.assertEqual(expected_output, output)
+
+    def test_integrate_adaptation_to_formula_antecedent_exception_4(self):
+        formula = GR1Formula(
+            temp_type=GR1TemporalType.INVARIANT,
+            antecedent=And(AtomicProposition("a", True),AtomicProposition("b", True)),
+            consequent=AtomicProposition("c", True),
+        ) # formula === G(a=true&b=true->c=true)
+        adaptation = Adaptation(
+            type='antecedent_exception',
+            formula_name='a_always',
+            disjunction_index=0,
+            atom_temporal_operators=[('current', 'd=false')]
+        )
+        formula.integrate(adaptation)
+        output = formula.to_str(self.formatter)
+        expected_output = "G((((a=true&b=true)&d=true)->c=true))"
+        self.assertEqual(expected_output, output)
+
+    def test_integrate_adaptation_to_formula_antecedent_exception_5(self):
+        formula = GR1Formula(
+            temp_type=GR1TemporalType.INVARIANT,
+            antecedent=Or(AtomicProposition("a", True),AtomicProposition("b", True)),
+            consequent=AtomicProposition("c", True),
+        ) # formula === G(a=true|b=true->c=true)
+        adaptation = Adaptation(
+            type='antecedent_exception',
+            formula_name='a_always',
+            disjunction_index=0,
+            atom_temporal_operators=[('current', 'd=false')]
+        )
+        formula.integrate(adaptation)
+        output = formula.to_str(self.formatter)
+        expected_output = "G(((b=true|(a=true&d=true))->c=true))"
+        self.assertEqual(expected_output, output)
+
+    def test_integrate_adaptation_to_formula_antecedent_exception_6(self):
+        formula = GR1Formula(
+            temp_type=GR1TemporalType.INVARIANT,
+            antecedent=Or(AtomicProposition("a", True),AtomicProposition("b", True)),
+            consequent=AtomicProposition("c", True),
+        ) # formula === G(a=true|b=true->c=true)
+        adaptation = Adaptation(
+            type='antecedent_exception',
+            formula_name='a_always',
+            disjunction_index=0,
+            atom_temporal_operators=[('current', 'd=false'), ('current', 'e=false')]
+        )
+        formula.integrate(adaptation)
+        output = formula.to_str(self.formatter)
+        expected_output = "G((((b=true|(a=true&d=true))|(a=true&e=true))->c=true))"
         self.assertEqual(expected_output, output)
 
     def test_integrate_eventualisation_adaptation_to_formula(self):
@@ -176,7 +244,7 @@ class TestGR1Formula(TestCase):
             atom_temporal_operators=[]
         )
         formula.integrate(adaptation)
-        output = formula.to_str()
+        output = formula.to_str(self.formatter)
         expected_output = "GF(highwater=false|methane=false);"
         self.assertEqual(expected_output, output)
 
@@ -194,6 +262,6 @@ class TestGR1Formula(TestCase):
             atom_temporal_operators=[]
         )
         formula.integrate(adaptation)
-        output = formula.to_str()
+        output = formula.to_str(self.formatter)
         expected_output = "G(a=false->F(r2=false)|F(g1=false&g2=false));"
         self.assertEqual(expected_output, output)
