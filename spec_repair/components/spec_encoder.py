@@ -246,20 +246,6 @@ def expression_to_str(line: pd.Series, learning_names: list[str], for_clingo: bo
     return expression_string
 
 
-def get_temp_op(rule: str) -> str:
-    """
-    Extracts the first argument of the "holds_at" expression.
-    On error (generally means string is empty), returns the
-    "current" temporal operator.
-    @param rule:
-    @return:
-    """
-    try:
-        return re.search(r"holds_at\((\w+)(?:,\w+)*\)", rule).group(1)
-    except AttributeError:
-        return "current"
-
-
 all_temp_ops = ["prev", "current", "next", "eventually"]
 temp_ops_order_map = {string: index for index, string in enumerate(all_temp_ops)}
 

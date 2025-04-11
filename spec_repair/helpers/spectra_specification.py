@@ -5,14 +5,20 @@ from typing import TypedDict, Optional, TypeVar, List, Set, Any, Callable
 
 import pandas as pd
 
+from build.lib.spec_repair.ltl import LTLFormula
 from spec_repair.components.interfaces.ispecification import ISpecification
 from spec_repair.helpers.adaptation_learned import Adaptation
 from spec_repair.helpers.spectra_atom import SpectraAtom
 from spec_repair.helpers.gr1_formula import GR1Formula
+from spec_repair.helpers.spectra_formula_formatter import SpectraFormulaFormatter
+from spec_repair.helpers.spectra_formula_parser import SpectraFormulaParser
 from spec_repair.ltl_types import GR1FormulaType, GR1TemporalType
 from spec_repair.util.file_util import read_file_lines, validate_spectra_file
+from spec_repair.util.formula_util import get_temp_op, get_disjuncts_from_disjunction, get_conjuncts_from_conjunction, \
+    skip_first_temp_op, is_ilasp_compatible_dnf_structure
 from spec_repair.util.spec_util import format_spec
 
+from py_ltl.formula import AtomicProposition, Not, Eventually
 
 class FormulaDataPoint(TypedDict):
     name: str
@@ -28,6 +34,8 @@ class SpectraSpecification(ISpecification):
     def __init__(self, spec_txt: str):
         self._formulas_df: pd.DataFrame = None
         self._atoms: Set[SpectraAtom] = set()
+        self._parser = SpectraFormulaParser()
+        self._formater = SpectraFormulaFormatter()
         formula_list = []
         spec_lines = spec_txt.splitlines()
         try:
@@ -37,7 +45,7 @@ class SpectraSpecification(ISpecification):
                     type_txt: str = re.search(r'\s*(asm|assumption|gar|guarantee)\s*--', line).group(1)
                     type: GR1FormulaType = GR1FormulaType.from_str(type_txt)
                     formula_txt: str = re.sub('\s*', '', spec_lines[i + 1])
-                    formula: GR1Formula = GR1Formula.from_str(formula_txt)
+                    formula: GR1Formula = GR1Formula.from_str(formula_txt, self._parser)
                     when: GR1TemporalType = formula.temp_type
                     formula_list.append([name, type, when, formula])
                 else:
@@ -103,7 +111,7 @@ class SpectraSpecification(ISpecification):
             return ""
         formula: GR1Formula = row.formula
         expression_string = f"%{row.type.to_asp()} -- {row['name']}\n"
-        expression_string += f"%\t{formula.to_str()}\n\n"
+        expression_string += f"%\t{formula.to_str(self._formater)}\n\n"
         expression_string += f"{row.type.to_asp()}({row['name']}).\n\n"
         is_exception = (row['name'] in learning_names) and not for_clingo
         ant_exception = is_exception and row['type'] == GR1FormulaType.ASM
@@ -146,27 +154,35 @@ class SpectraSpecification(ISpecification):
 
 def propositionalise_antecedent(row, exception=False):
     output = ""
-    disjunction_of_conjunctions = row.formula.antecedent
+    disjunction_of_conjunctions: LTLFormula = row.formula.antecedent
     n_root_antecedents = 0
     timepoint = "T" if row['when'] != GR1TemporalType.INITIAL else "0"
-    if len(disjunction_of_conjunctions) == 0 and exception:
-        disjunction_of_conjunctions = [defaultdict(list)]
     component_body = f"antecedent_holds({row['name']},{timepoint},S):-\n" + \
                      f"\ttrace(S),\n" + \
                      f"\ttimepoint({timepoint},S)"
-    for asm_id, disjunct in enumerate(disjunction_of_conjunctions):
+    disjuncts = get_disjuncts_from_disjunction(disjunction_of_conjunctions)
+    if not disjuncts:
+        disjuncts = [None]
+    for asm_id, disjunct in enumerate(disjuncts):
         output += component_body
-        for i, (temp_op, conjuncts) in enumerate(disjunct.items()):
-            output += f",\n{component_end_antecedent(row['name'], temp_op, timepoint, n_root_antecedents + i)}"
+        op_conjunction: List[LTLFormula] = get_conjuncts_from_conjunction(disjunct)
+        for i, op_conjunct in enumerate(op_conjunction):
+            output += f",\n{component_end_antecedent(row['name'], get_temp_op(op_conjunct), timepoint, n_root_antecedents + i)}"
         if exception:
             output += f",\n\tnot antecedent_exception({row['name']},{asm_id},{timepoint},S)"
         output += ".\n\n"
-        for temp_op, conjuncts in disjunct.items():
+        for op_conjunct in op_conjunction:
             output += root_antecedent_body(row['name'], n_root_antecedents)
-            for conjunct in conjuncts:
-                conjunct_and_value = conjunct.split("=")
-                c = conjunct_and_value[0]
-                v = conjunct_and_value[1] == "true"
+            conjunction: LTLFormula = skip_first_temp_op(op_conjunct)
+            conjunction: List[LTLFormula] = get_conjuncts_from_conjunction(conjunction)
+            for conjunct in conjunction:
+                v = False
+                if isinstance(conjunct, Not):
+                    conjunct = conjunct.formula
+                    v = True
+                assert isinstance(conjunct, AtomicProposition)
+                c = conjunct.name
+                v = v ^ conjunct.value # flip conjunct.value if it is negated
                 output += f",\n\t{'' if v else 'not_'}holds_at({c},T2,S)"
             output += ".\n\n"
             n_root_antecedents += 1
@@ -176,34 +192,46 @@ def propositionalise_antecedent(row, exception=False):
 
 def propositionalise_consequent(row, exception=False, is_ev_temp_op=True):
     output = ""
-    disjunction_of_conjunctions = row.formula.consequent
+    disjunction_of_conjunctions: LTLFormula = row.formula.consequent
+    assert is_ilasp_compatible_dnf_structure(disjunction_of_conjunctions)
     n_root_consequents = 0
     timepoint = "T" if row['when'] != GR1TemporalType.INITIAL else "0"
-    if len(disjunction_of_conjunctions) == 0 and exception:
-        disjunction_of_conjunctions = [defaultdict(list)]
     component_body = f"consequent_holds({row['name']},{timepoint},S):-\n" + \
                      f"\ttrace(S),\n" + \
                      f"\ttimepoint({timepoint},S)"
-    for disjunct in disjunction_of_conjunctions:
+    if isinstance(disjunction_of_conjunctions, Eventually):
+        disjunction_of_conjunctions = disjunction_of_conjunctions.formula
+        temp_op = "eventually"
+    disjuncts: List[LTLFormula] = get_disjuncts_from_disjunction(disjunction_of_conjunctions)
+    for disjunct in disjuncts:
         output += component_body
-        for i, (temp_op, conjuncts) in enumerate(disjunct.items()):
+        op_conjunction: List[LTLFormula] = get_conjuncts_from_conjunction(disjunct)
+        for i, op_conjunct in enumerate(op_conjunction):
+            temp_op = get_temp_op(op_conjunct)
             if row['when'] == GR1TemporalType.JUSTICE:
                 temp_op = "eventually"
             output += f",\n{component_end_consequent(row['name'], temp_op, timepoint, n_root_consequents + i)}"
-        if "eventually" not in disjunct.keys() and exception and is_ev_temp_op and timepoint == "T":
+        # TODO: cook up better way of checking whether a temporal operator is present in a formula
+        if "eventually" not in output and exception and is_ev_temp_op and timepoint == "T":
             output += f",\n\tnot ev_temp_op({row['name']})"
         output += ".\n\n"
         if exception and is_ev_temp_op:
             output += component_body
-            for i in range(len(disjunct)):
+            for i in range(len(op_conjunction)):
                 output += f",\n{component_end_consequent(row['name'], 'eventually', timepoint, n_root_consequents + i)}"
             output += f",\n\tev_temp_op({row['name']}).\n\n"
-        for temp_op, conjuncts in disjunct.items():
+        for op_conjunct in op_conjunction:
             output += root_consequent_body(row['name'], n_root_consequents)
-            for conjunct in conjuncts:
-                conjunct_and_value = conjunct.split("=")
-                c = conjunct_and_value[0]
-                v = conjunct_and_value[1] == "true"
+            conjunction: LTLFormula = skip_first_temp_op(op_conjunct)
+            conjunction: List[LTLFormula] = get_conjuncts_from_conjunction(conjunction)
+            for conjunct in conjunction:
+                v = False
+                if isinstance(conjunct, Not):
+                    conjunct = conjunct.formula
+                    v = True
+                assert isinstance(conjunct, AtomicProposition)
+                c = conjunct.name
+                v = v ^ conjunct.value  # flip conjunct.value if it is negated
                 output += f",\n\t{'' if v else 'not_'}holds_at({c},T2,S)"
             output += ".\n\n"
             n_root_consequents += 1

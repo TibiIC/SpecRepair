@@ -6,11 +6,13 @@ from typing import List, Dict, TypeVar, Optional
 from spec_repair.helpers.adaptation_learned import Adaptation
 from spec_repair.helpers.spectra_formula_parser import SpectraFormulaParser
 from spec_repair.ltl_types import GR1TemporalType
+from spec_repair.util.formula_util import disjoin_all, get_disjuncts_from_disjunction
 from spec_repair.util.spec_util import replace_false_true
 
 from py_ltl.parser import ILTLParser
 from py_ltl.formatter import ILTLFormatter
-from py_ltl.formula import LTLFormula, AtomicProposition, Not, And, Or, Until, Next, Prev, Globally, Eventually, Implies, Top, Bottom
+from py_ltl.formula import LTLFormula, AtomicProposition, Not, And, Or, Until, Next, Prev, Globally, Eventually, \
+    Implies, Top, Bottom
 
 Self = TypeVar('T', bound='SpectraRule')
 
@@ -109,7 +111,7 @@ class GR1Formula:
                 new_disjunct = self.generate_literal(atom, op)
                 self.antecedent = Or(self.antecedent, new_disjunct)
         else:
-            disjuncts = self.get_disjuncts_from_DNF(self.antecedent)
+            disjuncts = get_disjuncts_from_disjunction(self.antecedent)
             disjunct = disjuncts[adaptation.disjunction_index]
             disjuncts.remove(disjunct)
             for op, atom in adaptation.atom_temporal_operators:
@@ -117,24 +119,7 @@ class GR1Formula:
                 new_disjunct = self.generate_literal(atom, op)
                 new_disjunct = And(deepcopy(disjunct), new_disjunct)
                 disjuncts.append(new_disjunct)
-            self.antecedent = self.disjoin_all(disjuncts)
-
-    @staticmethod
-    def get_disjuncts_from_DNF(dnf_formula: LTLFormula) -> List[LTLFormula]:
-        disjunction = dnf_formula
-        disjuncts = []
-        while isinstance(disjunction, Or):
-            disjuncts.append(disjunction.right)
-            disjunction = disjunction.left
-        disjuncts.append(disjunction)
-        disjuncts.reverse()
-        return disjuncts
-
-    @staticmethod
-    def disjoin_all(formulas: list[LTLFormula]) -> LTLFormula:
-        if not formulas:
-            raise ValueError("Cannot disjoin an empty list of formulas")
-        return reduce(lambda a, b: Or(a, b), formulas)
+            self.antecedent = disjoin_all(disjuncts)
 
     def generate_literal(self, atom, op):
         new_disjunct = self.ilasp_parser.parse(atom)
@@ -187,4 +172,3 @@ class GR1Formula:
                 return Bottom()
             case _:
                 raise NotImplementedError(f"Removing temporal operators not implemented for: {type(this_formula)}")
-
