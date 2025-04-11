@@ -28,7 +28,9 @@ def header_boilerplate(time, ops: Optional[List[str]], implication_type: str):
 
 class ASPFormulaFormatter(ILTLFormatter):
     def format(self, this_formula: LTLFormula) -> str:
-        if not isinstance(this_formula, Globally):
+        if isinstance(this_formula, Top) or isinstance(this_formula, Bottom):
+            raise ValueError("Top and Bottom are not supported in this formula")
+        elif not isinstance(this_formula, Globally):
             return self.format_initial(this_formula)
         else:
             return self.format_invariant(this_formula)
@@ -66,7 +68,7 @@ class ASPFormulaFormatter(ILTLFormatter):
             case Not(formula=formula):
                 if isinstance(formula, AtomicProposition):
                     formula.value = not formula.value
-                    return self.format(formula)
+                    return self.format_exp(formula)
                 else:
                     raise ValueError("Not operator not supported for this formula")
             case And(left=lhs, right=rhs):
@@ -138,13 +140,13 @@ class ASPFormulaFormatter(ILTLFormatter):
         output += "."
         return output
 
-def reformat_conjunction_to_op_atom_conjunction(formula) -> Dict[str, List[LTLFormula]]:
-    match formula:
+def reformat_conjunction_to_op_atom_conjunction(this_formula) -> Dict[str, List[LTLFormula]]:
+    match this_formula:
         case AtomicProposition(name=name, value=value):
-            return {"current": [formula]}
+            return {"current": [this_formula]}
         case Not(formula=formula):
             if isinstance(formula, AtomicProposition):
-                return {"current": [formula]}
+                return {"current": [this_formula]}
             else:
                 raise ValueError("Not operator not supported for this formula")
         case And(left=lhs, right=rhs):
@@ -179,11 +181,11 @@ def reformat_conjunction_to_op_atom_conjunction(formula) -> Dict[str, List[LTLFo
         case Globally(formula=formula):
             raise ValueError("Implies operator not supported for this operation")
         case Top():
-            return {"current": [formula]}
+            return {"current": [this_formula]}
         case Bottom():
-            return {"current": [formula]}
+            return {"current": [this_formula]}
         case _:
-            raise NotImplementedError(f"Reformatter not implemented for: {type(formula)}")
+            raise NotImplementedError(f"Reformatter not implemented for: {type(this_formula)}")
 
 
 def complete_implication_part(formatted_string, implication_type: str):

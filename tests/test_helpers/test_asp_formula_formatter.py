@@ -61,15 +61,55 @@ root_consequent_holds(OP,{name},0,T1,S):-
             self.formatter.format(f)
 
     def test_true_false_constants(self):
-        self.assertEqual(self.formatter.format(Top()), "")
-        self.assertEqual(self.formatter.format(Bottom()), None)
+        with self.assertRaises(ValueError):
+            self.formatter.format(Top())
+        with self.assertRaises(ValueError):
+            self.formatter.format(Bottom())
 
     def test_not(self):
         f = Not(AtomicProposition("x", True))
-        self.assertEqual(self.formatter.format(f), "not_holds_at(x,T2,S)")
+        self.assertEqual(self.formatter.format(f),
+"""\
+antecedent_holds({name},0,S):-
+\ttrace(S),
+\ttimepoint(T,S).
+
+consequent_holds({name},0,S):-
+\ttrace(S),
+\ttimepoint(T,S),
+\troot_consequent_holds(current,{name},0,0,S).
+
+root_consequent_holds(OP,{name},0,T1,S):-
+\ttrace(S),
+\ttimepoint(T1,S),
+\tnot weak_timepoint(T1,S),
+\ttimepoint(T2,S),
+\ttemporal_operator(OP),
+\ttimepoint_of_op(OP,T1,T2,S),
+\tnot_holds_at(x,T2,S).\
+""")
 
         g = Not(AtomicProposition("x", False))
-        self.assertEqual(self.formatter.format(g), "holds_at(x,T2,S)")
+        self.assertEqual(self.formatter.format(g),
+    """\
+antecedent_holds({name},0,S):-
+\ttrace(S),
+\ttimepoint(T,S).
+
+consequent_holds({name},0,S):-
+\ttrace(S),
+\ttimepoint(T,S),
+\troot_consequent_holds(current,{name},0,0,S).
+
+root_consequent_holds(OP,{name},0,T1,S):-
+\ttrace(S),
+\ttimepoint(T1,S),
+\tnot weak_timepoint(T1,S),
+\ttimepoint(T2,S),
+\ttemporal_operator(OP),
+\ttimepoint_of_op(OP,T1,T2,S),
+\tholds_at(x,T2,S).\
+""")
 
     def test_not_op(self):
         f = Not(Prev(AtomicProposition("x", True)))
@@ -79,8 +119,7 @@ root_consequent_holds(OP,{name},0,T1,S):-
     def test_and(self):
         a = AtomicProposition("a", True)
         b = AtomicProposition("b", True)
-        self.assertEqual(self.formatter.format(And(a, b)),
-                         """\
+        self.assertEqual(self.formatter.format(And(a, b)), """\
 {implication_type}_holds({name},T,S):-
 \ttrace(S),
 \ttimepoint(T,S),
