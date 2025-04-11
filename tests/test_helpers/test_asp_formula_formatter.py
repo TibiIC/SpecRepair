@@ -11,11 +11,49 @@ class TestASPFormatter(unittest.TestCase):
 
     def test_atomic_proposition_true(self):
         f = AtomicProposition("x", True)
-        self.assertEqual(self.formatter.format(f), "holds_at(x,T2,S)")
+        self.assertEqual(f.format(self.formatter),
+        """\
+antecedent_holds({name},0,S):-
+\ttrace(S),
+\ttimepoint(T,S).
+
+consequent_holds({name},0,S):-
+\ttrace(S),
+\ttimepoint(T,S),
+\troot_consequent_holds(current,{name},0,0,S).
+
+root_consequent_holds(OP,{name},0,T1,S):-
+\ttrace(S),
+\ttimepoint(T1,S),
+\tnot weak_timepoint(T1,S),
+\ttimepoint(T2,S),
+\ttemporal_operator(OP),
+\ttimepoint_of_op(OP,T1,T2,S),
+\tholds_at(x,T2,S).\
+""")
 
     def test_atomic_proposition_false(self):
         f = AtomicProposition("y", False)
-        self.assertEqual(self.formatter.format(f), "not_holds_at(y,T2,S)")
+        self.assertEqual(f.format(self.formatter),
+"""\
+antecedent_holds({name},0,S):-
+\ttrace(S),
+\ttimepoint(T,S).
+
+consequent_holds({name},0,S):-
+\ttrace(S),
+\ttimepoint(T,S),
+\troot_consequent_holds(current,{name},0,0,S).
+
+root_consequent_holds(OP,{name},0,T1,S):-
+\ttrace(S),
+\ttimepoint(T1,S),
+\tnot weak_timepoint(T1,S),
+\ttimepoint(T2,S),
+\ttemporal_operator(OP),
+\ttimepoint_of_op(OP,T1,T2,S),
+\tnot_holds_at(y,T2,S).\
+""")
 
     def test_atomic_proposition_with_value(self):
         f = AtomicProposition("z", 5)
@@ -43,12 +81,12 @@ class TestASPFormatter(unittest.TestCase):
         b = AtomicProposition("b", True)
         self.assertEqual(self.formatter.format(And(a, b)),
                          """\
-{}_holds({name},T,S):-
+{implication_type}_holds({name},T,S):-
 \ttrace(S),
 \ttimepoint(T,S),
-\troot_{}_holds(current,{name},0,T,S).
+\troot_{implication_type}_holds(current,{name},0,T,S).
 
-root_{}_holds(OP,{name},0,T1,S):-
+root_{implication_type}_holds(OP,{name},0,T1,S):-
 \ttrace(S),
 \ttimepoint(T1,S),
 \tnot weak_timepoint(T1,S),
@@ -64,13 +102,13 @@ root_{}_holds(OP,{name},0,T1,S):-
         b = AtomicProposition("b", True)
         self.assertEqual(self.formatter.format(And(Prev(a), Next(b))),
                          """\
-{}_holds({name},T,S):-
+{implication_type}_holds({name},T,S):-
 \ttrace(S),
 \ttimepoint(T,S),
-\troot_{}_holds(prev,{name},0,T,S),
-\troot_{}_holds(next,{name},1,T,S).
+\troot_{implication_type}_holds(prev,{name},0,T,S),
+\troot_{implication_type}_holds(next,{name},1,T,S).
 
-root_{}_holds(OP,{name},0,T1,S):-
+root_{implication_type}_holds(OP,{name},0,T1,S):-
 \ttrace(S),
 \ttimepoint(T1,S),
 \tnot weak_timepoint(T1,S),
@@ -79,7 +117,7 @@ root_{}_holds(OP,{name},0,T1,S):-
 \ttimepoint_of_op(OP,T1,T2,S),
 \tholds_at(a,T2,S).
 
-root_{}_holds(OP,{name},1,T1,S):-
+root_{implication_type}_holds(OP,{name},1,T1,S):-
 \ttrace(S),
 \ttimepoint(T1,S),
 \tnot weak_timepoint(T1,S),
@@ -95,12 +133,12 @@ root_{}_holds(OP,{name},1,T1,S):-
         c = AtomicProposition("c", True)
         self.assertEqual(self.formatter.format(And(And(a, b), c)),
                          """\
-{}_holds({name},T,S):-
+{implication_type}_holds({name},T,S):-
 \ttrace(S),
 \ttimepoint(T,S),
-\troot_{}_holds(current,{name},0,T,S).
+\troot_{implication_type}_holds(current,{name},0,T,S).
 
-root_{}_holds(OP,{name},0,T1,S):-
+root_{implication_type}_holds(OP,{name},0,T1,S):-
 \ttrace(S),
 \ttimepoint(T1,S),
 \tnot weak_timepoint(T1,S),
@@ -118,7 +156,7 @@ root_{}_holds(OP,{name},0,T1,S):-
         b = AtomicProposition("b", True)
         self.assertEqual(self.formatter.format(Or(a, b)),
                          """\
-root_{}_holds(OP,{name},{},T1,S):-
+root_{implication_type}_holds(OP,{name},{},T1,S):-
 \ttrace(S),
 \ttimepoint(T1,S),
 \tnot weak_timepoint(T1,S),
@@ -127,7 +165,7 @@ root_{}_holds(OP,{name},{},T1,S):-
 \ttimepoint_of_op(OP,T1,T2,S),
 \tholds_at(a,T2,S).
 
-root_{}_holds(OP,{name},{},T1,S):-
+root_{implication_type}_holds(OP,{name},{},T1,S):-
 \ttrace(S),
 \ttimepoint(T1,S),
 \tnot weak_timepoint(T1,S),
