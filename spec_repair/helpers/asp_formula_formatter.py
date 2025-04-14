@@ -6,6 +6,8 @@ from py_ltl.formula import LTLFormula, AtomicProposition, Not, And, Or, Until, N
 
 from collections import defaultdict
 
+from spot import formulaiterator
+
 from spec_repair.util.formula_util import get_disjuncts_from_disjunction
 
 
@@ -29,37 +31,54 @@ def header_boilerplate(time, ops: Optional[List[str]], implication_type: str, st
 
 
 class ASPFormulaFormatter(ILTLFormatter):
-    def format(self, this_formula: LTLFormula) -> str:
-        if isinstance(this_formula, Top) or isinstance(this_formula, Bottom):
+    def format(self, formula: LTLFormula) -> str:
+        if isinstance(formula, Top) or isinstance(formula, Bottom):
             raise ValueError("Top and Bottom are not supported in this formula")
-        elif not isinstance(this_formula, Globally):
-            return self.format_initial(this_formula)
+        elif not isinstance(formula, Globally):
+            return self.format_initial(formula)
         else:
-            return self.format_invariant(this_formula)
+            return self.format_invariant(formula.formula)
 
     def format_initial(self, this_formula: LTLFormula) -> str:
         match this_formula:
             case Implies(left=lhs, right=rhs):
-                ops_antecedent_roots: Dict[str, str] = self.format_exp(lhs)
-                ops_consequent_roots: Dict[str, str] = self.format_exp(rhs)
-                output = header_boilerplate(time=0, )
-                return f"{antecedent_roots}\n\n{consequent_roots}"
+                output = self.process_antecedent(lhs, time=0)
+                output += self.process_consequent(rhs, time=0)
+                return output
             case Globally(formula=formula):
                 raise ValueError("Globally operator not supported in this formula")
             case _:
                 output = antecedent_boilerplate(time=0, ops=None)
-                disjunction = get_disjuncts_from_disjunction(this_formula)
-                root_id = 0
-                for disjunct in disjunction:
-                    output += "\n\n"
-                    ops_consequent_roots: Dict[str, List[LTLFormula]] = reformat_conjunction_to_op_atom_conjunction(disjunct)
-                    output += consequent_boilerplate(time=0, ops=ops_consequent_roots.keys(), start_root_id=root_id)
-                    for i, (op, atoms) in enumerate(ops_consequent_roots.items()):
-                        output += "\n\n"
-                        output += self.format_boilerplate_root_holds(atoms, root_id + i).replace("{implication_type}", "consequent")
-                    root_id += len(ops_consequent_roots)
+                output += self.process_consequent(this_formula, time=0)
                 return output
 
+    def format_invariant(self, this_formula: LTLFormula) -> str:
+        match this_formula:
+            case Implies(left=lhs, right=rhs):
+                output = self.process_antecedent(lhs, time=0)
+                output += self.process_consequent(rhs, time=0)
+                return output
+            case Eventually(formula=formula):
+                raise ValueError("Globally operator not supported in this formula")
+            case _:
+                output = antecedent_boilerplate(time="T", ops=None)
+                output += self.process_consequent(this_formula, time="T")
+                return output
+
+    def process_consequent(self, this_formula, time):
+        output = ""
+        disjunction = get_disjuncts_from_disjunction(this_formula)
+        root_id = 0
+        for disjunct in disjunction:
+            output += "\n\n"
+            ops_consequent_roots: Dict[str, List[LTLFormula]] = reformat_conjunction_to_op_atom_conjunction(disjunct)
+            output += consequent_boilerplate(time=time, ops=ops_consequent_roots.keys(), start_root_id=root_id)
+            for i, (op, atoms) in enumerate(ops_consequent_roots.items()):
+                output += "\n\n"
+                output += self.format_boilerplate_root_holds(atoms, root_id + i).replace("{implication_type}",
+                                                                                         "consequent")
+            root_id += len(ops_consequent_roots)
+        return output
 
     def format_exp(self, this_formula: LTLFormula) -> str:
         assert not isinstance(this_formula, Globally)
