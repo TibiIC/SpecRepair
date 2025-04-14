@@ -2193,25 +2193,14 @@ root_consequent_holds(OP,{name},0,T1,S):-
 \tholds_at(a,T2,S).\
 """)
 
-    def test_response(self):
-        a = AtomicProposition("a", True)
-        b = AtomicProposition("b", True)
+    def test_response_edge_case(self):
+        x = AtomicProposition("x", True)
 
-        self.assertEqual(self.formatter.format(Implies(a,Eventually(b))),
+        self.assertEqual(self.formatter.format(Globally(Implies(Top(),Eventually(x)))),
                          """\
 antecedent_holds({name},T,S):-
 \ttrace(S),
-\ttimepoint(T,S),
-\troot_antecedent_holds(current,{name},0,T,S).
-
-root_antecedent_holds(OP,{name},0,T1,S):-
-\ttrace(S),
-\ttimepoint(T1,S),
-\tnot weak_timepoint(T1,S),
-\ttimepoint(T2,S),
-\ttemporal_operator(OP),
-\ttimepoint_of_op(OP,T1,T2,S),
-\tholds_at(a,T2,S).
+\ttimepoint(T,S).
 
 consequent_holds({name},T,S):-
 \ttrace(S),
@@ -2225,7 +2214,7 @@ root_consequent_holds(OP,{name},0,T1,S):-
 \ttimepoint(T2,S),
 \ttemporal_operator(OP),
 \ttimepoint_of_op(OP,T1,T2,S),
-\tholds_at(b,T2,S).\
+\tholds_at(x,T2,S).\
 """)
 
 

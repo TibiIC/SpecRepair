@@ -54,7 +54,7 @@ class ASPFormulaFormatter(ILTLFormatter):
         match this_formula:
             case Implies(left=lhs, right=rhs):
                 output = self.process_antecedent(lhs, time="T")
-                output += self.process_dnf_consequent(rhs, time="T")
+                output += self.process_consequent(rhs, time="T")
                 return output
             case _:
                 output = antecedent_boilerplate(time="T", ops=None)
@@ -255,7 +255,7 @@ def reformat_conjunction_to_op_atom_conjunction(this_formula) -> Dict[str, List[
         case Globally(formula=formula):
             raise ValueError("Implies operator not supported for this operation")
         case Top():
-            return {"current": [this_formula]}
+            return {}
         case Bottom():
             return {"current": [this_formula]}
         case _:
