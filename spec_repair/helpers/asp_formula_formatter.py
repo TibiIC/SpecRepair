@@ -6,14 +6,16 @@ from py_ltl.formula import LTLFormula, AtomicProposition, Not, And, Or, Until, N
 
 from collections import defaultdict
 
+from spec_repair.util.formula_util import get_disjuncts_from_disjunction
+
 
 def antecedent_boilerplate(time, ops):
     return header_boilerplate(time, ops, implication_type="antecedent")
 
-def consequent_boilerplate(time, ops):
-    return header_boilerplate(time, ops, implication_type="consequent")
+def consequent_boilerplate(time, ops, start_root_id=0):
+    return header_boilerplate(time, ops, implication_type="consequent", start_root_id=start_root_id)
 
-def header_boilerplate(time, ops: Optional[List[str]], implication_type: str):
+def header_boilerplate(time, ops: Optional[List[str]], implication_type: str, start_root_id: int = 0):
     assert implication_type in ["antecedent", "consequent"]
     output = f"""\
 {implication_type}_holds({{name}},{time},S):-
@@ -21,8 +23,8 @@ def header_boilerplate(time, ops: Optional[List[str]], implication_type: str):
 \ttimepoint(T,S)\
 """
     if ops is not None:
-        for op in ops:
-            output += f",\n\troot_{implication_type}_holds({op},{{name}},0,{time},S)"
+        for i, op in enumerate(ops):
+            output += f",\n\troot_{implication_type}_holds({op},{{name}},{start_root_id + i},{time},S)"
     return f"{output}."
 
 
@@ -45,13 +47,17 @@ class ASPFormulaFormatter(ILTLFormatter):
             case Globally(formula=formula):
                 raise ValueError("Globally operator not supported in this formula")
             case _:
-                ops_consequent_roots: Dict[str, List[LTLFormula]] = reformat_conjunction_to_op_atom_conjunction(this_formula)
                 output = antecedent_boilerplate(time=0, ops=None)
-                output += "\n\n"
-                output += consequent_boilerplate(time=0, ops=ops_consequent_roots.keys())
-                for i, (op, atoms) in enumerate(ops_consequent_roots.items()):
+                disjunction = get_disjuncts_from_disjunction(this_formula)
+                root_id = 0
+                for disjunct in disjunction:
                     output += "\n\n"
-                    output += self.format_boilerplate_root_holds(atoms, i).replace("{implication_type}", "consequent")
+                    ops_consequent_roots: Dict[str, List[LTLFormula]] = reformat_conjunction_to_op_atom_conjunction(disjunct)
+                    output += consequent_boilerplate(time=0, ops=ops_consequent_roots.keys(), start_root_id=root_id)
+                    for i, (op, atoms) in enumerate(ops_consequent_roots.items()):
+                        output += "\n\n"
+                        output += self.format_boilerplate_root_holds(atoms, root_id + i).replace("{implication_type}", "consequent")
+                    root_id += len(ops_consequent_roots)
                 return output
 
 

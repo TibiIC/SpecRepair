@@ -120,12 +120,16 @@ root_consequent_holds(OP,{name},0,T1,S):-
         a = AtomicProposition("a", True)
         b = AtomicProposition("b", True)
         self.assertEqual(self.formatter.format(And(a, b)), """\
-{implication_type}_holds({name},T,S):-
+antecedent_holds({name},0,S):-
+\ttrace(S),
+\ttimepoint(T,S).
+
+consequent_holds({name},0,S):-
 \ttrace(S),
 \ttimepoint(T,S),
-\troot_{implication_type}_holds(current,{name},0,T,S).
+\troot_consequent_holds(current,{name},0,0,S).
 
-root_{implication_type}_holds(OP,{name},0,T1,S):-
+root_consequent_holds(OP,{name},0,T1,S):-
 \ttrace(S),
 \ttimepoint(T1,S),
 \tnot weak_timepoint(T1,S),
@@ -141,13 +145,17 @@ root_{implication_type}_holds(OP,{name},0,T1,S):-
         b = AtomicProposition("b", True)
         self.assertEqual(self.formatter.format(And(Prev(a), Next(b))),
                          """\
-{implication_type}_holds({name},T,S):-
+antecedent_holds({name},0,S):-
+\ttrace(S),
+\ttimepoint(T,S).
+
+consequent_holds({name},0,S):-
 \ttrace(S),
 \ttimepoint(T,S),
-\troot_{implication_type}_holds(prev,{name},0,T,S),
-\troot_{implication_type}_holds(next,{name},1,T,S).
+\troot_consequent_holds(prev,{name},0,0,S),
+\troot_consequent_holds(next,{name},1,0,S).
 
-root_{implication_type}_holds(OP,{name},0,T1,S):-
+root_consequent_holds(OP,{name},0,T1,S):-
 \ttrace(S),
 \ttimepoint(T1,S),
 \tnot weak_timepoint(T1,S),
@@ -156,7 +164,7 @@ root_{implication_type}_holds(OP,{name},0,T1,S):-
 \ttimepoint_of_op(OP,T1,T2,S),
 \tholds_at(a,T2,S).
 
-root_{implication_type}_holds(OP,{name},1,T1,S):-
+root_consequent_holds(OP,{name},1,T1,S):-
 \ttrace(S),
 \ttimepoint(T1,S),
 \tnot weak_timepoint(T1,S),
@@ -172,12 +180,16 @@ root_{implication_type}_holds(OP,{name},1,T1,S):-
         c = AtomicProposition("c", True)
         self.assertEqual(self.formatter.format(And(And(a, b), c)),
                          """\
-{implication_type}_holds({name},T,S):-
+antecedent_holds({name},0,S):-
+\ttrace(S),
+\ttimepoint(T,S).
+
+consequent_holds({name},0,S):-
 \ttrace(S),
 \ttimepoint(T,S),
-\troot_{implication_type}_holds(current,{name},0,T,S).
+\troot_consequent_holds(current,{name},0,0,S).
 
-root_{implication_type}_holds(OP,{name},0,T1,S):-
+root_consequent_holds(OP,{name},0,T1,S):-
 \ttrace(S),
 \ttimepoint(T1,S),
 \tnot weak_timepoint(T1,S),
@@ -195,7 +207,16 @@ root_{implication_type}_holds(OP,{name},0,T1,S):-
         b = AtomicProposition("b", True)
         self.assertEqual(self.formatter.format(Or(a, b)),
                          """\
-root_{implication_type}_holds(OP,{name},{},T1,S):-
+antecedent_holds({name},0,S):-
+\ttrace(S),
+\ttimepoint(T,S).
+
+consequent_holds({name},0,S):-
+\ttrace(S),
+\ttimepoint(T,S),
+\troot_consequent_holds(current,{name},0,0,S).
+
+root_consequent_holds(OP,{name},0,T1,S):-
 \ttrace(S),
 \ttimepoint(T1,S),
 \tnot weak_timepoint(T1,S),
@@ -204,7 +225,12 @@ root_{implication_type}_holds(OP,{name},{},T1,S):-
 \ttimepoint_of_op(OP,T1,T2,S),
 \tholds_at(a,T2,S).
 
-root_{implication_type}_holds(OP,{name},{},T1,S):-
+consequent_holds({name},0,S):-
+\ttrace(S),
+\ttimepoint(T,S),
+\troot_consequent_holds(current,{name},1,0,S).
+
+root_consequent_holds(OP,{name},1,T1,S):-
 \ttrace(S),
 \ttimepoint(T1,S),
 \tnot weak_timepoint(T1,S),
