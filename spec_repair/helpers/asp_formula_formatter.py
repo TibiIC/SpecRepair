@@ -6,13 +6,11 @@ from py_ltl.formula import LTLFormula, AtomicProposition, Not, And, Or, Until, N
 
 from collections import defaultdict
 
-from spot import formulaiterator
-
 from spec_repair.util.formula_util import get_disjuncts_from_disjunction
 
 
-def antecedent_boilerplate(time, ops):
-    return header_boilerplate(time, ops, implication_type="antecedent")
+def antecedent_boilerplate(time, ops, start_root_id=0):
+    return header_boilerplate(time, ops, implication_type="antecedent", start_root_id=start_root_id)
 
 def consequent_boilerplate(time, ops, start_root_id=0):
     return header_boilerplate(time, ops, implication_type="consequent", start_root_id=start_root_id)
@@ -55,17 +53,40 @@ class ASPFormulaFormatter(ILTLFormatter):
     def format_invariant(self, this_formula: LTLFormula) -> str:
         match this_formula:
             case Implies(left=lhs, right=rhs):
-                output = self.process_antecedent(lhs, time=0)
-                output += self.process_consequent(rhs, time=0)
+                output = self.process_antecedent(lhs, time="T")
+                output += self.process_dnf_consequent(rhs, time="T")
                 return output
-            case Eventually(formula=formula):
-                raise ValueError("Globally operator not supported in this formula")
             case _:
                 output = antecedent_boilerplate(time="T", ops=None)
                 output += self.process_consequent(this_formula, time="T")
                 return output
 
+    def process_antecedent(self, this_formula, time):
+        assert not isinstance(this_formula, Eventually)
+        sections = []
+        root_id = 0
+        disjunction = get_disjuncts_from_disjunction(this_formula)
+        for disjunct in disjunction:
+            section = ""
+            ops_antecedent_roots: Dict[str, List[LTLFormula]] = reformat_conjunction_to_op_atom_conjunction(disjunct)
+            section += antecedent_boilerplate(time=time, ops=ops_antecedent_roots.keys(), start_root_id=root_id)
+            for i, (_, atoms) in enumerate(ops_antecedent_roots.items()):
+                section += "\n\n"
+                section += self.format_boilerplate_root_antecedent_holds(atoms, root_id + i)
+            root_id += len(ops_antecedent_roots)
+            sections.append(section)
+
+        output = "\n\n".join(sections)
+        return output
+
     def process_consequent(self, this_formula, time):
+        if isinstance(this_formula, Eventually):
+            return self.process_eventually_consequent(this_formula)
+        else:
+            return self.process_dnf_consequent(this_formula, time)
+
+    def process_dnf_consequent(self, this_formula, time):
+        assert not isinstance(this_formula, Eventually)
         output = ""
         disjunction = get_disjuncts_from_disjunction(this_formula)
         root_id = 0
@@ -73,10 +94,25 @@ class ASPFormulaFormatter(ILTLFormatter):
             output += "\n\n"
             ops_consequent_roots: Dict[str, List[LTLFormula]] = reformat_conjunction_to_op_atom_conjunction(disjunct)
             output += consequent_boilerplate(time=time, ops=ops_consequent_roots.keys(), start_root_id=root_id)
-            for i, (op, atoms) in enumerate(ops_consequent_roots.items()):
+            for i, (_, atoms) in enumerate(ops_consequent_roots.items()):
                 output += "\n\n"
-                output += self.format_boilerplate_root_holds(atoms, root_id + i).replace("{implication_type}",
-                                                                                         "consequent")
+                output += self.format_boilerplate_root_consequent_holds(atoms, root_id + i)
+            root_id += len(ops_consequent_roots)
+        return output
+
+    def process_eventually_consequent(self, this_formula):
+        assert isinstance(this_formula, Eventually)
+        output = ""
+        disjunction = get_disjuncts_from_disjunction(this_formula.formula)
+        root_id = 0
+        for disjunct in disjunction:
+            output += "\n\n"
+            ops_consequent_roots: Dict[str, List[LTLFormula]] = reformat_conjunction_to_op_atom_conjunction(disjunct)
+            ops = ["eventually"] * len(ops_consequent_roots)
+            output += consequent_boilerplate(time="T", ops=ops, start_root_id=root_id)
+            for i, (_, atoms) in enumerate(ops_consequent_roots.items()):
+                output += "\n\n"
+                output += self.format_boilerplate_root_consequent_holds(atoms, root_id + i)
             root_id += len(ops_consequent_roots)
         return output
 
@@ -101,7 +137,7 @@ class ASPFormulaFormatter(ILTLFormatter):
                 output = self.format_boilerplate_holds(ops_atoms)
                 for i, (_, atoms) in enumerate(ops_atoms.items()):
                     output += "\n\n"
-                    output += self.format_boilerplate_root_holds(atoms, i)
+                    output += self.format_boilerplate_root_consequent_holds(atoms, i)
                 return output
             case Or(left=lhs, right=rhs):
                 return f"({self.format(lhs)}|{self.format(rhs)})"
@@ -115,21 +151,21 @@ class ASPFormulaFormatter(ILTLFormatter):
                 output = self.format_boilerplate_holds(ops_atoms)
                 for i, (_, atoms) in enumerate(ops_atoms.items()):
                     output += "\n\n"
-                    output += self.format_boilerplate_root_holds(atoms, i)
+                    output += self.format_boilerplate_root_consequent_holds(atoms, i)
                 return output
             case Prev(formula=formula):
                 ops_atoms = reformat_conjunction_to_op_atom_conjunction(this_formula)
                 output = self.format_boilerplate_holds(ops_atoms)
                 for i, (_, atoms) in enumerate(ops_atoms.items()):
                     output += "\n\n"
-                    output += self.format_boilerplate_root_holds(atoms, i)
+                    output += self.format_boilerplate_root_consequent_holds(atoms, i)
                 return output
             case Eventually(formula=formula):
                 ops_atoms = reformat_conjunction_to_op_atom_conjunction(this_formula)
                 output = self.format_boilerplate_holds(ops_atoms)
                 for i, (_, atoms) in enumerate(ops_atoms.items()):
                     output += "\n\n"
-                    output += self.format_boilerplate_root_holds(atoms, i)
+                    output += self.format_boilerplate_root_consequent_holds(atoms, i)
                 return output.replace("{implication_type}", "consequent")
             case Globally(formula=formula):
                 if isinstance(formula, Eventually):
@@ -152,8 +188,21 @@ class ASPFormulaFormatter(ILTLFormatter):
         output += "."
         return output
 
-    def format_boilerplate_root_holds(self, atoms, i):
-        output = f"root_{{implication_type}}_holds(OP,{{name}},{i},T1,S):-\n"
+    def format_boilerplate_root_antecedent_holds(self, atoms, i):
+        output = f"root_antecedent_holds(OP,{{name}},{i},T1,S):-\n"
+        output += "\ttrace(S),\n"
+        output += "\ttimepoint(T1,S),\n"
+        output += "\tnot weak_timepoint(T1,S),\n"
+        output += "\ttimepoint(T2,S),\n"
+        output += "\ttemporal_operator(OP),\n"
+        output += "\ttimepoint_of_op(OP,T1,T2,S)"
+        for atom in atoms:
+            output += f",\n\t{self.format_exp(atom)}"
+        output += "."
+        return output
+
+    def format_boilerplate_root_consequent_holds(self, atoms, i):
+        output = f"root_consequent_holds(OP,{{name}},{i},T1,S):-\n"
         output += "\ttrace(S),\n"
         output += "\ttimepoint(T1,S),\n"
         output += "\tnot weak_timepoint(T1,S),\n"
