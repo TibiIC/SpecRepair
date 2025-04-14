@@ -257,7 +257,8 @@ def reformat_conjunction_to_op_atom_conjunction(this_formula) -> Dict[str, List[
         case Top():
             return {}
         case Bottom():
-            return {"current": [this_formula]}
+            raise ValueError("Bottom operator not supported for this operation")
+            # return {"current": [this_formula]}
         case _:
             raise NotImplementedError(f"Reformatter not implemented for: {type(this_formula)}")
 

@@ -2138,46 +2138,15 @@ root_consequent_holds(OP,{name},0,T1,S):-
 \tholds_at(x,T2,S).\
 """)
 
-    def test_implies(self):
-        a = AtomicProposition("a", True)
-        b = AtomicProposition("b", True)
-
-        self.assertEqual(self.formatter.format(Implies(a, b)),
-                         """\
-antecedent_holds({name},T,S):-
-\ttrace(S),
-\ttimepoint(T,S),
-\troot_antecedent_holds(current,{name},0,T,S).
-
-root_antecedent_holds(OP,{name},0,T1,S):-
-\ttrace(S),
-\ttimepoint(T1,S),
-\tnot weak_timepoint(T1,S),
-\ttimepoint(T2,S),
-\ttemporal_operator(OP),
-\ttimepoint_of_op(OP,T1,T2,S),
-\tholds_at(a,T2,S).
-
-consequent_holds({name},T,S):-
-\ttrace(S),
-\ttimepoint(T,S),
-\troot_consequent_holds(current,{name},0,T,S).
-
-root_consequent_holds(OP,{name},0,T1,S):-
-\ttrace(S),
-\ttimepoint(T1,S),
-\tnot weak_timepoint(T1,S),
-\ttimepoint(T2,S),
-\ttemporal_operator(OP),
-\ttimepoint_of_op(OP,T1,T2,S),
-\tholds_at(b,T2,S).\
-""")
-
     def test_eventually(self):
         a = AtomicProposition("a", True)
 
-        self.assertEqual(self.formatter.format(Eventually(a)),
+        self.assertEqual(self.formatter.format(Globally(Eventually(a))),
                          """\
+antecedent_holds({name},T,S):-
+\ttrace(S),
+\ttimepoint(T,S).
+
 consequent_holds({name},T,S):-
 \ttrace(S),
 \ttimepoint(T,S),
