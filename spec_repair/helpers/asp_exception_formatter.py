@@ -9,32 +9,18 @@ from collections import defaultdict
 from spec_repair.util.formula_util import get_disjuncts_from_disjunction
 
 
-def antecedent_boilerplate(time, ops, antecedent_id, start_root_id=0):
-    output = f"""\
-antecedent_holds({{name}},{time},S):-
-\ttrace(S),
-\ttimepoint({time},S)\
-"""
-    if ops is not None:
-        for i, op in enumerate(ops):
-            output += f",\n\troot_antecedent_holds({op},{{name}},{start_root_id + i},{time},S)"
-    if True:#antecedent_exception:
-        output += f",\n\tnot antecedent_exception({{name}},{antecedent_id},{time},S)"
-    return f"{output}."
-
-def consequent_boilerplate(time, ops, start_root_id=0):
-    output = f"""\
-consequent_holds({{name}},{time},S):-
-\ttrace(S),
-\ttimepoint({time},S)\
-"""
-    if ops is not None:
-        for i, op in enumerate(ops):
-            output += f",\n\troot_consequent_holds({op},{{name}},{start_root_id + i},{time},S)"
-    return f"{output}."
-
 
 class ASPExceptionFormatter(ILTLFormatter):
+    def __init__(
+            self,
+            is_antecedent_exception: bool = False,
+            is_consequent_exception: bool = False,
+            is_eventually_exception: bool = False,
+    ):
+        self.is_antecedent_exception = is_antecedent_exception
+        self.is_consequent_exception = is_consequent_exception
+        self.is_eventually_exception = is_eventually_exception
+
     def format(self, formula: LTLFormula) -> str:
         if isinstance(formula, Top) or isinstance(formula, Bottom):
             raise ValueError("Top and Bottom are not supported in this formula")
@@ -52,7 +38,7 @@ class ASPExceptionFormatter(ILTLFormatter):
             case Globally(formula=formula):
                 raise ValueError("Globally operator not supported in this formula")
             case _:
-                output = antecedent_boilerplate(time=0, ops=None, antecedent_id=0)
+                output = self.antecedent_boilerplate(time=0, ops=None, antecedent_id=0)
                 output += self.process_consequent(this_formula, time=0)
                 return output
 
@@ -63,7 +49,7 @@ class ASPExceptionFormatter(ILTLFormatter):
                 output += self.process_consequent(rhs, time="T")
                 return output
             case _:
-                output = antecedent_boilerplate(time="T", ops=None, antecedent_id=0)
+                output = self.antecedent_boilerplate(time="T", ops=None, antecedent_id=0)
                 output += self.process_consequent(this_formula, time="T")
                 return output
 
@@ -75,7 +61,7 @@ class ASPExceptionFormatter(ILTLFormatter):
         for d_id, disjunct in enumerate(disjunction):
             section = ""
             ops_antecedent_roots: Dict[str, List[LTLFormula]] = reformat_conjunction_to_op_atom_conjunction(disjunct)
-            section += antecedent_boilerplate(time=time, ops=ops_antecedent_roots.keys(), antecedent_id=d_id, start_root_id=root_id)
+            section += self.antecedent_boilerplate(time=time, ops=ops_antecedent_roots.keys(), antecedent_id=d_id, start_root_id=root_id)
             for i, (_, atoms) in enumerate(ops_antecedent_roots.items()):
                 section += "\n\n"
                 section += self.format_boilerplate_root_antecedent_holds(atoms, root_id + i)
@@ -87,9 +73,13 @@ class ASPExceptionFormatter(ILTLFormatter):
 
     def process_consequent(self, this_formula, time):
         if isinstance(this_formula, Eventually):
-            return self.process_eventually_consequent(this_formula)
+            output = self.process_eventually_consequent(this_formula)
         else:
-            return self.process_dnf_consequent(this_formula, time)
+            output = self.process_dnf_consequent(this_formula, time)
+        if self.is_consequent_exception:
+            output += "\n\n"
+            output += self.consequent_exception_boilerplate(time=time)
+        return output
 
     def process_dnf_consequent(self, this_formula, time):
         assert not isinstance(this_formula, Eventually)
@@ -99,7 +89,7 @@ class ASPExceptionFormatter(ILTLFormatter):
         for disjunct in disjunction:
             output += "\n\n"
             ops_consequent_roots: Dict[str, List[LTLFormula]] = reformat_conjunction_to_op_atom_conjunction(disjunct)
-            output += consequent_boilerplate(time=time, ops=ops_consequent_roots.keys(), start_root_id=root_id)
+            output += self.consequent_boilerplate(time=time, ops=ops_consequent_roots.keys(), start_root_id=root_id)
             for i, (_, atoms) in enumerate(ops_consequent_roots.items()):
                 output += "\n\n"
                 output += self.format_boilerplate_root_consequent_holds(atoms, root_id + i)
@@ -115,7 +105,7 @@ class ASPExceptionFormatter(ILTLFormatter):
             output += "\n\n"
             ops_consequent_roots: Dict[str, List[LTLFormula]] = reformat_conjunction_to_op_atom_conjunction(disjunct)
             ops = ["eventually"] * len(ops_consequent_roots)
-            output += consequent_boilerplate(time="T", ops=ops, start_root_id=root_id)
+            output += self.consequent_boilerplate(time="T", ops=ops, start_root_id=root_id)
             for i, (_, atoms) in enumerate(ops_consequent_roots.items()):
                 output += "\n\n"
                 output += self.format_boilerplate_root_consequent_holds(atoms, root_id + i)
@@ -219,6 +209,38 @@ class ASPExceptionFormatter(ILTLFormatter):
             output += f",\n\t{self.format_exp(atom)}"
         output += "."
         return output
+
+    def antecedent_boilerplate(self, time, ops, antecedent_id, start_root_id=0):
+        output = f"""\
+antecedent_holds({{name}},{time},S):-
+\ttrace(S),
+\ttimepoint({time},S)\
+"""
+        if ops is not None:
+            for i, op in enumerate(ops):
+                output += f",\n\troot_antecedent_holds({op},{{name}},{start_root_id + i},{time},S)"
+        if self.is_antecedent_exception:
+            output += f",\n\tnot antecedent_exception({{name}},{antecedent_id},{time},S)"
+        return f"{output}."
+
+    def consequent_boilerplate(self, time, ops, start_root_id=0):
+        output = f"""\
+consequent_holds({{name}},{time},S):-
+\ttrace(S),
+\ttimepoint({time},S)\
+"""
+        if ops is not None:
+            for i, op in enumerate(ops):
+                output += f",\n\troot_consequent_holds({op},{{name}},{start_root_id + i},{time},S)"
+        return f"{output}."
+
+    def consequent_exception_boilerplate(self, time):
+        return f"""\
+consequent_holds({{name}},{time},S):-
+\ttrace(S),
+\ttimepoint({time},S),
+\tconsequent_exception({{name}},{time},S).\
+"""
 
 def reformat_conjunction_to_op_atom_conjunction(this_formula) -> Dict[str, List[LTLFormula]]:
     match this_formula:
