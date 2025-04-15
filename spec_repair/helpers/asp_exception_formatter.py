@@ -9,7 +9,7 @@ from collections import defaultdict
 from spec_repair.util.formula_util import get_disjuncts_from_disjunction
 
 
-def antecedent_boilerplate(time, ops, start_root_id=0):
+def antecedent_boilerplate(time, ops, antecedent_id, start_root_id=0):
     output = f"""\
 antecedent_holds({{name}},{time},S):-
 \ttrace(S),
@@ -19,7 +19,7 @@ antecedent_holds({{name}},{time},S):-
         for i, op in enumerate(ops):
             output += f",\n\troot_antecedent_holds({op},{{name}},{start_root_id + i},{time},S)"
     if True:#antecedent_exception:
-        output += f",\n\tnot antecedent_exception({{name}},{start_root_id},{time},S)"
+        output += f",\n\tnot antecedent_exception({{name}},{antecedent_id},{time},S)"
     return f"{output}."
 
 def consequent_boilerplate(time, ops, start_root_id=0):
@@ -52,7 +52,7 @@ class ASPExceptionFormatter(ILTLFormatter):
             case Globally(formula=formula):
                 raise ValueError("Globally operator not supported in this formula")
             case _:
-                output = antecedent_boilerplate(time=0, ops=None)
+                output = antecedent_boilerplate(time=0, ops=None, antecedent_id=0)
                 output += self.process_consequent(this_formula, time=0)
                 return output
 
@@ -63,7 +63,7 @@ class ASPExceptionFormatter(ILTLFormatter):
                 output += self.process_consequent(rhs, time="T")
                 return output
             case _:
-                output = antecedent_boilerplate(time="T", ops=None)
+                output = antecedent_boilerplate(time="T", ops=None, antecedent_id=0)
                 output += self.process_consequent(this_formula, time="T")
                 return output
 
@@ -72,10 +72,10 @@ class ASPExceptionFormatter(ILTLFormatter):
         sections = []
         root_id = 0
         disjunction = get_disjuncts_from_disjunction(this_formula)
-        for disjunct in disjunction:
+        for d_id, disjunct in enumerate(disjunction):
             section = ""
             ops_antecedent_roots: Dict[str, List[LTLFormula]] = reformat_conjunction_to_op_atom_conjunction(disjunct)
-            section += antecedent_boilerplate(time=time, ops=ops_antecedent_roots.keys(), start_root_id=root_id)
+            section += antecedent_boilerplate(time=time, ops=ops_antecedent_roots.keys(), antecedent_id=d_id, start_root_id=root_id)
             for i, (_, atoms) in enumerate(ops_antecedent_roots.items()):
                 section += "\n\n"
                 section += self.format_boilerplate_root_antecedent_holds(atoms, root_id + i)

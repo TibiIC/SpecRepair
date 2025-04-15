@@ -771,7 +771,7 @@ antecedent_holds({name},0,S):-
 \ttrace(S),
 \ttimepoint(0,S),
 \troot_antecedent_holds(current,{name},1,0,S),
-\tnot antecedent_exception({name},1,T,S).
+\tnot antecedent_exception({name},1,0,S).
 
 root_antecedent_holds(OP,{name},1,T1,S):-
 \ttrace(S),
@@ -823,7 +823,7 @@ antecedent_holds({name},0,S):-
 \ttrace(S),
 \ttimepoint(0,S),
 \troot_antecedent_holds(current,{name},1,0,S),
-\tnot antecedent_exception({name},1,T,S).
+\tnot antecedent_exception({name},1,0,S).
 
 root_antecedent_holds(OP,{name},1,T1,S):-
 \ttrace(S),
@@ -838,7 +838,7 @@ antecedent_holds({name},0,S):-
 \ttrace(S),
 \ttimepoint(0,S),
 \troot_antecedent_holds(current,{name},2,0,S),
-\tnot antecedent_exception({name},2,T,S).
+\tnot antecedent_exception({name},2,0,S).
 
 root_antecedent_holds(OP,{name},2,T1,S):-
 \ttrace(S),
@@ -898,7 +898,7 @@ antecedent_holds({name},0,S):-
 \ttrace(S),
 \ttimepoint(0,S),
 \troot_antecedent_holds(current,{name},1,0,S),
-\tnot antecedent_exception({name},1,T,S).
+\tnot antecedent_exception({name},1,0,S).
 
 root_antecedent_holds(OP,{name},1,T1,S):-
 \ttrace(S),
@@ -915,7 +915,7 @@ antecedent_holds({name},0,S):-
 \ttrace(S),
 \ttimepoint(0,S),
 \troot_antecedent_holds(current,{name},2,0,S),
-\tnot antecedent_exception({name},2,T,S).
+\tnot antecedent_exception({name},2,0,S).
 
 root_antecedent_holds(OP,{name},2,T1,S):-
 \ttrace(S),
@@ -997,7 +997,7 @@ antecedent_holds({name},0,S):-
 \troot_antecedent_holds(prev,{name},3,0,S),
 \troot_antecedent_holds(current,{name},4,0,S),
 \troot_antecedent_holds(next,{name},5,0,S),
-\tnot antecedent_exception({name},1,T,S).
+\tnot antecedent_exception({name},1,0,S).
 
 root_antecedent_holds(OP,{name},3,T1,S):-
 \ttrace(S),
@@ -1032,7 +1032,7 @@ antecedent_holds({name},0,S):-
 \troot_antecedent_holds(prev,{name},6,0,S),
 \troot_antecedent_holds(current,{name},7,0,S),
 \troot_antecedent_holds(next,{name},8,0,S),
-\tnot antecedent_exception({name},2,T,S).
+\tnot antecedent_exception({name},2,0,S).
 
 root_antecedent_holds(OP,{name},6,T1,S):-
 \ttrace(S),
@@ -1957,7 +1957,7 @@ antecedent_holds({name},T,S):-
 \ttrace(S),
 \ttimepoint(T,S),
 \troot_antecedent_holds(current,{name},2,T,S),
-\tnot antecedent_exception({name},3,T,S).
+\tnot antecedent_exception({name},2,T,S).
 
 root_antecedent_holds(OP,{name},2,T1,S):-
 \ttrace(S),
@@ -2256,7 +2256,7 @@ root_consequent_holds(OP,{name},0,T1,S):-
 antecedent_holds({name},0,S):-
 \ttrace(S),
 \ttimepoint(0,S),
-\tnot antecedent_exception({name},0,T,S).
+\tnot antecedent_exception({name},0,0,S).
 
 consequent_holds({name},0,S):-
 \ttrace(S),
