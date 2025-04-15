@@ -20,7 +20,7 @@ def header_boilerplate(time, ops: Optional[List[str]], implication_type: str, st
     output = f"""\
 {implication_type}_holds({{name}},{time},S):-
 \ttrace(S),
-\ttimepoint(T,S)\
+\ttimepoint({time},S)\
 """
     if ops is not None:
         for i, op in enumerate(ops):

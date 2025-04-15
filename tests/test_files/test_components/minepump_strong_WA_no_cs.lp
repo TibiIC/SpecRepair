@@ -161,7 +161,7 @@ exp(E):-
 % ---*** Domain dependent Axioms ***---
 
 %assumption -- initial_assumption
-%	ini(highwater=false&methane=false);
+%	(highwater=false&methane=false)
 
 assumption(initial_assumption).
 
@@ -185,7 +185,7 @@ root_consequent_holds(OP,initial_assumption,0,T1,S):-
 	not_holds_at(methane,T2,S).
 
 %guarantee -- initial_guarantee
-%	ini(pump=false);
+%	pump=false
 
 guarantee(initial_guarantee).
 
@@ -208,7 +208,7 @@ root_consequent_holds(OP,initial_guarantee,0,T1,S):-
 	not_holds_at(pump,T2,S).
 
 %guarantee -- guarantee1_1
-%	G(highwater=true->next(pump=true));
+%	G((highwater=true->next(pump=true)))
 
 guarantee(guarantee1_1).
 
@@ -241,7 +241,7 @@ root_consequent_holds(OP,guarantee1_1,0,T1,S):-
 	holds_at(pump,T2,S).
 
 %guarantee -- guarantee2_1
-%	G(methane=true->next(pump=false));
+%	G((methane=true->next(pump=false)))
 
 guarantee(guarantee2_1).
 
@@ -274,7 +274,7 @@ root_consequent_holds(OP,guarantee2_1,0,T1,S):-
 	not_holds_at(pump,T2,S).
 
 %assumption -- assumption1_1
-%	G(PREV(pump=true)&pump=true->next(highwater=false));
+%	G(((PREV(pump=true)&pump=true)->next(highwater=false)))
 
 assumption(assumption1_1).
 
@@ -317,7 +317,7 @@ root_consequent_holds(OP,assumption1_1,0,T1,S):-
 	not_holds_at(highwater,T2,S).
 
 %assumption -- assumption2_1
-%	G(highwater=false|methane=false);
+%	G((highwater=false|methane=false))
 
 assumption(assumption2_1).
 

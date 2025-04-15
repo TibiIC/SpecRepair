@@ -8,6 +8,7 @@ import pandas as pd
 from build.lib.spec_repair.ltl import LTLFormula
 from spec_repair.components.interfaces.ispecification import ISpecification
 from spec_repair.helpers.adaptation_learned import Adaptation
+from spec_repair.helpers.asp_formula_formatter import ASPFormulaFormatter
 from spec_repair.helpers.spectra_atom import SpectraAtom
 from spec_repair.helpers.gr1_formula import GR1Formula
 from spec_repair.helpers.spectra_formula_formatter import SpectraFormulaFormatter
@@ -36,6 +37,7 @@ class SpectraSpecification(ISpecification):
         self._atoms: Set[SpectraAtom] = set()
         self._parser = SpectraFormulaParser()
         self._formater = SpectraFormulaFormatter()
+        self._asp_formatter = ASPFormulaFormatter()
         formula_list = []
         spec_lines = spec_txt.splitlines()
         try:
@@ -66,13 +68,13 @@ class SpectraSpecification(ISpecification):
     def integrate(self, adaptation: Adaptation):
         formula = self.get_formula(adaptation.formula_name)
         print("Rule:")
-        print(f'\t{formula.to_str()}')
+        print(f'\t{formula.to_str(self._formater)}')
         print("Hypothesis:")
         print(
             f'\t{adaptation.type}({adaptation.formula_name},{adaptation.disjunction_index},{adaptation.atom_temporal_operators})')
         formula.integrate(adaptation)
         print("New Rule:")
-        print(f'\t{formula.to_str()}')
+        print(f'\t{formula.to_str(self._formater)}')
         self.replace_formula(adaptation.formula_name, formula)
 
     def replace_formula(self, formula_name, formula):
@@ -104,6 +106,7 @@ class SpectraSpecification(ISpecification):
         formulas_str = ""
         for _, row in self._formulas_df.iterrows():
             formulas_str += self._formula_to_asp_str(row, learning_names, for_clingo, is_ev_temp_op)
+            formulas_str += "\n\n"
         return formulas_str
 
     def _formula_to_asp_str(self, row, learning_names, for_clingo, is_ev_temp_op):
@@ -116,8 +119,7 @@ class SpectraSpecification(ISpecification):
         is_exception = (row['name'] in learning_names) and not for_clingo
         ant_exception = is_exception and row['type'] == GR1FormulaType.ASM
         gar_exception = is_exception
-        expression_string += propositionalise_antecedent(row, exception=ant_exception)
-        expression_string += propositionalise_consequent(row, exception=gar_exception, is_ev_temp_op=is_ev_temp_op)
+        expression_string += row.formula.to_str(self._asp_formatter).replace("{name}", row['name'])
         return expression_string
 
     def filter(self, func: Callable[[pd.DataFrame], bool]) -> pd.DataFrame:
