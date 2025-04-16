@@ -46,13 +46,14 @@ class SpectraFormulaParser(ILTLParser):
             (UNTIL, 2, opAssoc.LEFT, self._parse_until),
         ]
 
+    def _build_expression(self):
         # Define the grammar using infix notation
-        self.expression = infixNotation(
+        expression = infixNotation(
             self.operand,
             [(op, num, assoc, fn) for op, num, assoc, fn in self.operators]
         )
         # Allow an optional tab at the beginning and a semicolon at the end
-        self.expression = Optional(White("\t")) + self.expression + Optional(Suppress(";"))
+        return Optional(White("\t")) + expression + Optional(Suppress(";"))
 
     def _parse_atomic(self, tokens) -> AtomicProposition:
         if len(tokens) == 1:
@@ -117,4 +118,5 @@ class SpectraFormulaParser(ILTLParser):
 
     def parse(self, expression: str):
         """Parse a string into an LTL formula object."""
-        return self.expression.parseString(expression, parseAll=True)[0]
+        expressions = self._build_expression()
+        return expressions.parseString(expression, parseAll=True)[0]

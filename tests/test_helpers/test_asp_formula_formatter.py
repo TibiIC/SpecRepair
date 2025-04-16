@@ -1,5 +1,6 @@
 import unittest
 
+from spec_repair.helpers.asp_exception_formatter import ASPExceptionFormatter
 from spec_repair.helpers.asp_formula_formatter import ASPFormulaFormatter
 
 from py_ltl.formula import AtomicProposition, Not, And, Or, Until, Next, Globally, Eventually, Implies, Prev, Top, \
@@ -7,7 +8,7 @@ from py_ltl.formula import AtomicProposition, Not, And, Or, Until, Next, Globall
 
 class TestASPFormatter(unittest.TestCase):
     def setUp(self):
-        self.formatter = ASPFormulaFormatter()
+        self.formatter = ASPExceptionFormatter()
 
     def test_atomic_proposition_true(self):
         f = AtomicProposition("x", True)

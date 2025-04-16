@@ -247,6 +247,23 @@ class TestGR1Formula(TestCase):
         expected_output = "G((((b=true|(PREV(a=true)&next(d=true)))|(PREV(a=true)&PREV(e=true)))->c=true))"
         self.assertEqual(expected_output, output)
 
+    def test_integrate_adaptation_to_formula_antecedent_exception_8(self):
+        formula = GR1Formula(
+            temp_type=GR1TemporalType.INVARIANT,
+            antecedent=None,
+            consequent=Or(AtomicProposition("highwater", False), AtomicProposition("methane", False))
+        )  # formula === G(highwater=false|methane=false)
+        adaptation = Adaptation(
+            type='antecedent_exception',
+            formula_name='assumption2_1',
+            disjunction_index=0,
+            atom_temporal_operators=[('current', 'pump=false')]
+        )
+        formula.integrate(adaptation)
+        output = formula.to_str(self.formatter)
+        expected_output = "G((pump=true->(highwater=false|methane=false)))"
+        self.assertEqual(expected_output, output)
+
     def test_integrate_adaptation_to_formula_consequent_exception(self):
         formula = GR1Formula(
             temp_type=GR1TemporalType.INVARIANT,

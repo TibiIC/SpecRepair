@@ -201,7 +201,7 @@ exp(E):-
 % ---*** Domain dependent Axioms ***---
 
 %assumption -- initial_assumption
-%	ini(highwater=false&methane=false);
+%	(highwater=false&methane=false)
 
 assumption(initial_assumption).
 
@@ -225,7 +225,7 @@ root_consequent_holds(OP,initial_assumption,0,T1,S):-
 	not_holds_at(methane,T2,S).
 
 %assumption -- assumption1_1
-%	G(PREV(pump=true)&pump=true->next(highwater=false));
+%	G(((PREV(pump=true)&pump=true)->next(highwater=false)))
 
 assumption(assumption1_1).
 
@@ -268,7 +268,7 @@ root_consequent_holds(OP,assumption1_1,0,T1,S):-
 	not_holds_at(highwater,T2,S).
 
 %assumption -- assumption2_1
-%	G(highwater=false|methane=false);
+%	G((highwater=false|methane=false))
 
 assumption(assumption2_1).
 

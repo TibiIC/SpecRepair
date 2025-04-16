@@ -8,6 +8,7 @@ import pandas as pd
 from build.lib.spec_repair.ltl import LTLFormula
 from spec_repair.components.interfaces.ispecification import ISpecification
 from spec_repair.helpers.adaptation_learned import Adaptation
+from spec_repair.helpers.asp_exception_formatter import ASPExceptionFormatter
 from spec_repair.helpers.asp_formula_formatter import ASPFormulaFormatter
 from spec_repair.helpers.spectra_atom import SpectraAtom
 from spec_repair.helpers.gr1_formula import GR1Formula
@@ -37,7 +38,7 @@ class SpectraSpecification(ISpecification):
         self._atoms: Set[SpectraAtom] = set()
         self._parser = SpectraFormulaParser()
         self._formater = SpectraFormulaFormatter()
-        self._asp_formatter = ASPFormulaFormatter()
+        self._asp_formatter = ASPExceptionFormatter()
         formula_list = []
         spec_lines = spec_txt.splitlines()
         try:
@@ -118,7 +119,11 @@ class SpectraSpecification(ISpecification):
         expression_string += f"{row.type.to_asp()}({row['name']}).\n\n"
         is_exception = (row['name'] in learning_names) and not for_clingo
         ant_exception = is_exception and row['type'] == GR1FormulaType.ASM
-        gar_exception = is_exception
+        gar_exception = is_exception and row['type'] == GR1FormulaType.GAR
+        ev_exception = is_exception and is_ev_temp_op
+        self._asp_formatter.is_antecedent_exception = ant_exception
+        self._asp_formatter.is_consequent_exception = gar_exception
+        self._asp_formatter.is_eventually_exception = ev_exception
         expression_string += row.formula.to_str(self._asp_formatter).replace("{name}", row['name'])
         return expression_string
 
@@ -141,7 +146,7 @@ class SpectraSpecification(ISpecification):
 
         for _, row in self._formulas_df.iterrows():
             spec_str += f"{row['type'].to_str()} -- {row['name']}\n"
-            spec_str += f"{row['formula'].to_str()}\n\n"
+            spec_str += f"{row['formula'].to_str(self._formater)}\n\n"
         return spec_str
 
     def __deepcopy__(self, memo):
