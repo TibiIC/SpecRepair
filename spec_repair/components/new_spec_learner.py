@@ -16,7 +16,6 @@ from spec_repair.helpers.ilasp_interpreter import ILASPInterpreter
 from spec_repair.helpers.spectra_specification import SpectraSpecification
 from spec_repair.heuristics import choose_one_with_heuristic, HeuristicType
 
-from spec_repair.util.spec_util import spectra_to_df
 from spec_repair.wrappers.asp_wrappers import get_violations, run_ILASP
 
 
@@ -62,33 +61,6 @@ class NewSpecLearner(ILearner):
             if deadlock_required and not violation_ct:
                 raise DeadlockRequiredException("Violation trace is not violating! Deadlock completion is required.")
         return violations
-
-    def get_all_complete_counter_trace_lists(self, spec, trace, init_cts, learning_type) -> List[List[CounterTrace]]:
-        if learning_type == Learning.GUARANTEE_WEAKENING:
-            spec_df: pd.DataFrame = spectra_to_df(spec)
-            ctss: Set[Tuple[CounterTrace]] = {tuple(init_cts)}
-            unchanged = False
-            while not unchanged:
-                unchanged = True
-                for cts in deepcopy(ctss):
-                    asp: str = self.spec_encoder.encode_ASP(spec_df, trace, list(cts))
-                    violations = get_violations(asp, exp_type=learning_type.exp_type())
-                    if not violations:
-                        raise NoViolationException("Violation trace is not violating!")
-                    deadlock_required = re.findall(r"entailed\((counter_strat_\d*_\d*)\)", ''.join(violations))
-                    if deadlock_required:
-                        set_cts = set(cts)
-                        for i, ct in enumerate(copy(cts)):
-                            if ct.is_deadlock() and ct.get_name() in deadlock_required:
-                                new_set_cts = copy(set_cts)
-                                new_set_cts.remove(ct)
-                                ctss |= set([tuple(new_set_cts | {complete_ct}) for complete_ct in
-                                             complete_cts_from_ct(ct, spec, deadlock_required)])
-                                unchanged = False
-                        if not unchanged:
-                            ctss.remove(cts)
-            return [list(cts) for cts in ctss]
-        return [init_cts]
 
     def integrate_learning_hypothesis(self, spec, learning_hypothesis, learning_type) -> list[str]:
         return self.spec_encoder.integrate_learned_hypothesis(spec, learning_hypothesis, learning_type)

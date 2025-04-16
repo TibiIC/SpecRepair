@@ -236,6 +236,29 @@ class TestSpectraFormulaParser(TestCase):
         self.assertEqual(parsed.formula.right.name, "methane")
         self.assertEqual(parsed.formula.right.value, False)
 
+    def test_parse_real_example_lift(self):
+        """Test that optional tabs at the beginning of the formula are ignored."""
+        parsed = LTLFormula.parse("\tG(f2 -> (next(f1) & b1) | (next(f2) & !b1 & !b3) | (next(f3) & b3) | next(f2) & c);", self.parser)
+        self.assertIsInstance(parsed, Globally)
+        self.assertIsInstance(parsed.formula, Implies)
+        self.assertEqual(parsed.formula.left.name, "f2")
+        self.assertEqual(parsed.formula.left.value, True)
+        self.assertIsInstance(parsed.formula.right, Or)
+        self.assertIsInstance(parsed.formula.right.left, Or)
+        self.assertIsInstance(parsed.formula.right.left.left, Or)
+        self.assertIsInstance(parsed.formula.right.left.left.left, And)
+        self.assertIsInstance(parsed.formula.right.left.left.left.left, Next)
+        self.assertEqual(parsed.formula.right.left.left.left.left.formula.name, "f1")
+        self.assertEqual(parsed.formula.right.left.left.left.right.name, "b1")
+        self.assertIsInstance(parsed.formula.right.left.left.right, And)
+        self.assertIsInstance(parsed.formula.right.left.left.right.left, And)
+        self.assertIsInstance(parsed.formula.right.left.left.right.left.left, Next)
+        self.assertEqual(parsed.formula.right.left.left.right.left.left.formula.value, "f2")
+        self.assertIsInstance(parsed.formula.right.left.left.right.left.right, Not)
+        self.assertEqual(parsed.formula.right.left.left.right.left.right.formula.name, "b1")
+        self.assertIsInstance(parsed.formula.right.left.left.right.right, Not)
+        self.assertEqual(parsed.formula.right.left.left.right.right.formula.name, "b3")
+
     def test_invalid_formula(self):
         """Test that invalid formulas raise an exception when using LTLFormula.parse()."""
         with self.assertRaises(Exception):

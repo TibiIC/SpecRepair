@@ -1,11 +1,11 @@
 from copy import deepcopy
 from typing import Optional, List
 
-from spec_repair.helpers.recorders.recorder import Recorder
+from spec_repair.helpers.recorders.irecorder import IRecorder
 from spec_repair.heuristics import T
 
 
-class NonUniqueRecorder(Recorder[T]):
+class NonUniqueRecorder(IRecorder[T]):
     def __init__(self):
         self._list: list[T] = []
 

@@ -4,7 +4,7 @@ from typing import Generic, TypeVar, List, Optional
 T = TypeVar("T")
 
 
-class Recorder(ABC, Generic[T]):
+class IRecorder(ABC, Generic[T]):
     @abstractmethod
     def add(self, value: T) -> int:
         pass

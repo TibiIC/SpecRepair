@@ -35,6 +35,7 @@ Self = TypeVar('T', bound='SpectraSpecification')
 class SpectraSpecification(ISpecification):
     def __init__(self, spec_txt: str):
         self._formulas_df: pd.DataFrame = None
+        self._module_name: str
         self._atoms: Set[SpectraAtom] = set()
         self._parser = SpectraFormulaParser()
         self._formater = SpectraFormulaFormatter()
@@ -43,7 +44,9 @@ class SpectraSpecification(ISpecification):
         spec_lines = spec_txt.splitlines()
         try:
             for i, line in enumerate(spec_lines):
-                if line.find("--") >= 0:
+                if line.find("module") >= 0:
+                    self._module_name = line.split()[1]
+                elif line.find("--") >= 0:
                     name: str = re.search(r'--\s*(\S+)', line).group(1)
                     type_txt: str = re.search(r'\s*(asm|assumption|gar|guarantee)\s*--', line).group(1)
                     type: GR1FormulaType = GR1FormulaType.from_str(type_txt)
@@ -139,18 +142,19 @@ class SpectraSpecification(ISpecification):
         """
         Convert the specification to a string representation.
         """
-        spec_str = ""
+        spec_str = f"module {self._module_name}\n\n"
         for atom in sorted(self._atoms):
             spec_str += f"{atom.atom_type} {atom.value_type} {atom.name};\n"
         spec_str += "\n\n"
 
         for _, row in self._formulas_df.iterrows():
             spec_str += f"{row['type'].to_str()} -- {row['name']}\n"
-            spec_str += f"{row['formula'].to_str(self._formater)}\n\n"
+            spec_str += f"\t{row['formula'].to_str(self._formater)};\n\n"
         return spec_str
 
     def __deepcopy__(self, memo):
         new_spec = SpectraSpecification("")
+        new_spec._module_name = self._module_name
         new_spec._formulas_df = self._formulas_df.copy(deep=True)
         for col in new_spec._formulas_df.columns:
             if new_spec._formulas_df[col].dtype == 'O':  # Object dtype means it might contain class instances

@@ -5,7 +5,7 @@ from copy import deepcopy
 from typing import Deque, List
 
 from spec_repair.helpers.logger import Logger, NoLogger
-from spec_repair.helpers.recorders.recorder import Recorder
+from spec_repair.helpers.recorders.irecorder import IRecorder
 from spec_repair.helpers.counter_trace import CounterTrace, cts_from_cs
 from spec_repair.helpers.heuristic_managers.iheuristic_manager import IHeuristicManager
 from spec_repair.components.spec_learner import SpecLearner
@@ -38,7 +38,7 @@ class BacktrackingRepairOrchestrator:
             self,
             spec: list[str],
             trace: list[str],
-            spec_recorder: Recorder[Spec]
+            spec_recorder: IRecorder[Spec]
     ) -> None:
         self._initialise_repair_variables()
         root_node = CandidateRepairNode(spec, [], None, Learning.ASSUMPTION_WEAKENING)

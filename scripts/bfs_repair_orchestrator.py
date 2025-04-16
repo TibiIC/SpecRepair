@@ -9,7 +9,7 @@ from spec_repair.components.interfaces.ispecification import ISpecification
 from spec_repair.enums import Learning
 from spec_repair.helpers.heuristic_managers.iheuristic_manager import IHeuristicManager
 from spec_repair.helpers.heuristic_managers.no_filter_heuristic_manager import NoFilterHeuristicManager
-from spec_repair.helpers.recorders.recorder import Recorder
+from spec_repair.helpers.recorders.irecorder import IRecorder
 from spec_repair.helpers.recorders.unique_recorder import UniqueRecorder
 
 
@@ -17,11 +17,11 @@ from spec_repair.helpers.recorders.unique_recorder import UniqueRecorder
 class OrchestrationManager:
     def __init__(self):
         self._stack: Deque[Tuple[ISpecification,Any]] = deque()
-        self._visited_nodes: Recorder[Tuple[ISpecification,Any]] = Recorder()
+        self._visited_nodes: IRecorder[Tuple[ISpecification,Any]] = UniqueRecorder()
 
     def _reset(self):
         self._stack.clear()
-        self._visited_nodes = Recorder()
+        self._visited_nodes = UniqueRecorder()
 
     def initialise_learning_tasks(self, spec: ISpecification, data: Any):
         self._reset()
@@ -47,7 +47,7 @@ class BFSRepairOrchestrator:
             discriminator: IDiscriminator,
             mittigator: IMittigator,
             heuristic_manager: IHeuristicManager = NoFilterHeuristicManager(),
-            recorder: Recorder[ISpecification] = UniqueRecorder()
+            recorder: IRecorder[ISpecification] = UniqueRecorder()
     ):
         self._learners = learners
         self._oracle = oracle

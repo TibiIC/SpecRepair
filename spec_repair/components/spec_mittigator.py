@@ -1,10 +1,13 @@
+import re
 from copy import deepcopy
 from typing import List, Tuple, Any, Set
 
 from spec_repair.components.interfaces.imittigator import IMittigator
 from spec_repair.components.interfaces.ispecification import ISpecification
 from spec_repair.enums import Learning
+from spec_repair.exceptions import NoViolationException
 from spec_repair.helpers.counter_trace import CounterTrace
+from spec_repair.wrappers.asp_wrappers import get_violations
 
 
 class SpecMittigator(IMittigator):
@@ -38,3 +41,5 @@ class SpecMittigator(IMittigator):
                         ctss.remove(cts)
         return [list(cts) for cts in ctss]
 
+    def add_counter_example_to_data(self, data, counter_argument) -> List[Tuple[ISpecification, Any]]:
+        pass
