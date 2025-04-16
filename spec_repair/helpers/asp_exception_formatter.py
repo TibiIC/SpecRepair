@@ -90,6 +90,10 @@ class ASPExceptionFormatter(ILTLFormatter):
             output += "\n\n"
             ops_consequent_roots: Dict[str, List[LTLFormula]] = reformat_conjunction_to_op_atom_conjunction(disjunct)
             output += self.consequent_boilerplate(time=time, ops=ops_consequent_roots.keys(), start_root_id=root_id)
+            if time != 0 and self.is_eventually_exception:
+                output += "\n\n"
+                ops = ["eventually"] * len(ops_consequent_roots)
+                output += self.consequent_boilerplate(time=time, ops=ops, start_root_id=root_id)
             for i, (_, atoms) in enumerate(ops_consequent_roots.items()):
                 output += "\n\n"
                 output += self.format_boilerplate_root_consequent_holds(atoms, root_id + i)
@@ -106,6 +110,7 @@ class ASPExceptionFormatter(ILTLFormatter):
             ops_consequent_roots: Dict[str, List[LTLFormula]] = reformat_conjunction_to_op_atom_conjunction(disjunct)
             ops = ["eventually"] * len(ops_consequent_roots)
             output += self.consequent_boilerplate(time="T", ops=ops, start_root_id=root_id)
+            output = output.replace(",\n\tev_temp_op({name})","")
             for i, (_, atoms) in enumerate(ops_consequent_roots.items()):
                 output += "\n\n"
                 output += self.format_boilerplate_root_consequent_holds(atoms, root_id + i)
@@ -232,6 +237,11 @@ consequent_holds({{name}},{time},S):-
         if ops is not None:
             for i, op in enumerate(ops):
                 output += f",\n\troot_consequent_holds({op},{{name}},{start_root_id + i},{time},S)"
+        if time != 0 and self.is_eventually_exception:
+            if "eventually" not in ops:
+                output += f",\n\tnot ev_temp_op({{name}})"
+            else:
+                output += f",\n\tev_temp_op({{name}})"
         return f"{output}."
 
     def consequent_exception_boilerplate(self, time):
