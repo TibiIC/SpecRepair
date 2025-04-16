@@ -13,6 +13,7 @@ from spec_repair.helpers.recorders.recorder import Recorder
 from spec_repair.helpers.recorders.unique_recorder import UniqueRecorder
 
 
+# TODO: turn this one into an argument in the BFS strategy initialisation as well
 class OrchestrationManager:
     def __init__(self):
         self._stack: Deque[Tuple[ISpecification,Any]] = deque()
@@ -45,7 +46,6 @@ class BFSRepairOrchestrator:
             oracle: IOracle,
             discriminator: IDiscriminator,
             mittigator: IMittigator,
-            orchestration_manager: OrchestrationManager,
             heuristic_manager: IHeuristicManager = NoFilterHeuristicManager(),
             recorder: Recorder[ISpecification] = UniqueRecorder()
     ):
@@ -53,7 +53,7 @@ class BFSRepairOrchestrator:
         self._oracle = oracle
         self._discriminator = discriminator
         self._mittigator = mittigator
-        self._om = orchestration_manager
+        self._om = OrchestrationManager()
         self._hm = heuristic_manager
         self._recorder = recorder
         self._initialise_repair()

@@ -3,7 +3,10 @@ from unittest import TestCase
 
 from scripts.bfs_repair_orchestrator import BFSRepairOrchestrator
 from spec_repair.components.new_spec_learner import NewSpecLearner
+from spec_repair.components.spec_oracle import SpecOracle
+from spec_repair.components.spectra_discriminator import SpectraDiscriminator
 from spec_repair.helpers.heuristic_managers.no_filter_heuristic_manager import NoFilterHeuristicManager
+from spec_repair.helpers.logger import RepairLogger
 from spec_repair.helpers.recorders.unique_spec_recorder import UniqueSpecRecorder
 from spec_repair.helpers.spectra_specification import SpectraSpecification
 from spec_repair.util.file_util import read_file_lines
@@ -32,8 +35,9 @@ class TestBFSRepairOrchestrator(TestCase):
         trace: list[str] = read_file_lines("'../input-files/case-studies/spectra/lift/violation_trace.txt")
         recorder: UniqueSpecRecorder = UniqueSpecRecorder()
         repairer: BFSRepairOrchestrator = BFSRepairOrchestrator(
-            NewSpecLearner(),
-            NewSpecOracle(),
+            NewSpecLearner(NoFilterHeuristicManager()),
+            SpecOracle(),
+            SpectraDiscriminator(),
             NoFilterHeuristicManager(),
             RepairLogger(transitions_file_path, debug=True)
         )
