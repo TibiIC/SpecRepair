@@ -1,7 +1,9 @@
 from py_ltl.parser import ILTLParser
 from py_ltl.formula import AtomicProposition, Not, And, Implies, Or, Until, Next, Prev, Globally, Eventually, Top, Bottom
 from pyparsing import Word, alphas, opAssoc, infixNotation, alphanums, Literal, oneOf, Optional, White, Suppress
+from pyparsing import ParserElement
 
+ParserElement.enablePackrat()
 
 class SpectraFormulaParser(ILTLParser):
     """Parser for LTL formulas from strings in Spectra encoding using pyparsing."""

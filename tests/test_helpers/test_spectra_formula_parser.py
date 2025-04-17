@@ -253,7 +253,7 @@ class TestSpectraFormulaParser(TestCase):
         self.assertIsInstance(parsed.formula.right.left.left.right, And)
         self.assertIsInstance(parsed.formula.right.left.left.right.left, And)
         self.assertIsInstance(parsed.formula.right.left.left.right.left.left, Next)
-        self.assertEqual(parsed.formula.right.left.left.right.left.left.formula.value, "f2")
+        self.assertEqual(parsed.formula.right.left.left.right.left.left.formula.name, "f2")
         self.assertIsInstance(parsed.formula.right.left.left.right.left.right, Not)
         self.assertEqual(parsed.formula.right.left.left.right.left.right.formula.name, "b1")
         self.assertIsInstance(parsed.formula.right.left.left.right.right, Not)

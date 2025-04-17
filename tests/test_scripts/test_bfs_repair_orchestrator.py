@@ -38,9 +38,9 @@ class TestBFSRepairOrchestrator(TestCase):
         transitions_file_path = f"{out_test_dir_name}/transitions.csv"
         if os.path.exists(transitions_file_path):
             os.remove(transitions_file_path)
-        # spec: SpectraSpecification = SpectraSpecification.from_file('../input-files/case-studies/spectra/lift/strong.spectra')
-        with open('spec_lift_strong.dill', 'rb') as f:
-            spec: SpectraSpecification = dill.load(f)
+        spec: SpectraSpecification = SpectraSpecification.from_file('../input-files/case-studies/spectra/lift/strong.spectra')
+        # with open('spec_lift_strong.dill', 'rb') as f:
+        #     spec: SpectraSpecification = dill.load(f)
         trace: list[str] = read_file_lines("../input-files/case-studies/spectra/lift/violation_trace.txt")
         learners: Dict[str, ILearner] = {
             "assumption_weakening": NewSpecLearner(NoFilterHeuristicManager()),
@@ -58,22 +58,19 @@ class TestBFSRepairOrchestrator(TestCase):
 
         # Getting all possible repairs
         repairer.repair_bfs(spec, (trace, [], Learning.ASSUMPTION_WEAKENING))
-        new_specs: list[str] = recorder.get_specs()
-        new_specs.sort()
-        for i, new_spec in enumerate(new_specs):
+        new_spec_strings: list[str] = [spec.to_str() for spec in recorder.get_all_values()]
+        for i, new_spec in enumerate(new_spec_strings):
             write_to_file(f"{out_test_dir_name}/lift_test_fix_{i}.spectra", new_spec)
 
-        # Getting expected repairs
-        expected_specs_recorder: UniqueSpecRecorder = UniqueSpecRecorder()
         expected_specs_files: list[str] = os.listdir('./test_files/lift_weakenings')
-        expected_specs_files.sort()  # To mimic the actual order of weakening from the algorithm
-        expected_specs_files.reverse()  # To mimic the actual order of weakening from the algorithm
-        for spec_file in expected_specs_files:
-            print(spec_file)
-            expected_specs_recorder.add(
-                Spec(''.join(format_spec(read_file_lines(f'./test_files/lift_weakenings/{spec_file}')))))
-        expected_specs: list = expected_specs_recorder.get_specs()
-        expected_specs.sort()
+        expected_spec_strings: list[str] = [
+            SpectraSpecification.from_file(f"./test_files/lift_weakenings/{spec_file}")
+            for spec_file in expected_specs_files
+        ]
 
-        self.assertEqual(len(expected_specs), len(new_specs))
-        self.assertEqual(expected_specs, new_specs)
+        for new_spec_str in new_spec_strings:
+            print(new_spec_str)
+        self.assertEqual(len(expected_spec_strings), len(new_spec_strings))
+        for i, expected_spec in enumerate(expected_spec_strings):
+            print(i)
+            self.assertIn(expected_spec, new_spec_strings)

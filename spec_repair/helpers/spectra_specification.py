@@ -33,6 +33,23 @@ Self = TypeVar('T', bound='SpectraSpecification')
 
 
 class SpectraSpecification(ISpecification):
+    _response_pattern = """\
+    pattern pRespondsToS(s, p) {
+      var { S0, S1} state;
+
+      // initial assignments: initial state
+      ini state=S0;
+
+      // safety this and next state
+      alw ((state=S0 & ((!s) | (s & p)) & next(state=S0)) |
+      (state=S0 & (s & !p) & next(state=S1)) |
+      (state=S1 & (p) & next(state=S0)) |
+      (state=S1 & (!p) & next(state=S1)));
+
+      // equivalence of satisfaction
+      alwEv (state=S0);
+    }"""
+
     def __init__(self, spec_txt: str):
         self._formulas_df: pd.DataFrame = None
         self._module_name: str
@@ -138,7 +155,7 @@ class SpectraSpecification(ISpecification):
         sub_spec._formulas_df = deepcopy(self.filter(func))
         return sub_spec
 
-    def to_str(self):
+    def to_str(self, is_to_compile: bool = False) -> str:
         """
         Convert the specification to a string representation.
         """
@@ -147,9 +164,15 @@ class SpectraSpecification(ISpecification):
             spec_str += f"{atom.atom_type} {atom.value_type} {atom.name};\n"
         spec_str += "\n\n"
 
+        self._formater.is_response_pattern = is_to_compile
+
         for _, row in self._formulas_df.iterrows():
             spec_str += f"{row['type'].to_str()} -- {row['name']}\n"
             spec_str += f"\t{row['formula'].to_str(self._formater)};\n\n"
+
+        if is_to_compile and "pRespondsToS" in spec_str:
+            spec_str += self._response_pattern
+        self._formater.is_response_pattern = False
         return spec_str
 
     def __deepcopy__(self, memo):
