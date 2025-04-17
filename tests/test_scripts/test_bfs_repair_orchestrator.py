@@ -39,8 +39,6 @@ class TestBFSRepairOrchestrator(TestCase):
         if os.path.exists(transitions_file_path):
             os.remove(transitions_file_path)
         spec: SpectraSpecification = SpectraSpecification.from_file('../input-files/case-studies/spectra/lift/strong.spectra')
-        # with open('spec_lift_strong.dill', 'rb') as f:
-        #     spec: SpectraSpecification = dill.load(f)
         trace: list[str] = read_file_lines("../input-files/case-studies/spectra/lift/violation_trace.txt")
         learners: Dict[str, ILearner] = {
             "assumption_weakening": NewSpecLearner(NoFilterHeuristicManager()),
@@ -73,4 +71,4 @@ class TestBFSRepairOrchestrator(TestCase):
         self.assertEqual(len(expected_spec_strings), len(new_spec_strings))
         for i, expected_spec in enumerate(expected_spec_strings):
             print(i)
-            self.assertIn(expected_spec, new_spec_strings)
+            self.assertIn(expected_spec.to_str(), new_spec_strings)
