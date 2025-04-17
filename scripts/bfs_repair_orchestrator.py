@@ -86,6 +86,7 @@ class BFSRepairOrchestrator:
                     if not counter_examples:
                         self._recorder.add(new_spec)
                     else:
+                        # TODO: find a way to filter the counter examples using the heuristic manager
                         for counter_example in counter_examples:
                             new_data = self._mittigator.add_counter_example_to_data(data, counter_example)
                             self._om.enqueue_new_tasks(new_spec, new_data)

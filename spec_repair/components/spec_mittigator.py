@@ -14,6 +14,8 @@ class SpecMittigator(IMittigator):
     def __init__(self):
         pass
 
+    # TODO: generate test for this method, from
+    #  both assumption and guarantee weakening perspectives
     def prepare_alternative_learning_tasks(self, spec, data) -> List[Tuple[ISpecification, Any]]:
         trace, cts, learning_type = data
         assert learning_type == Learning.ASSUMPTION_WEAKENING
@@ -41,5 +43,6 @@ class SpecMittigator(IMittigator):
                         ctss.remove(cts)
         return [list(cts) for cts in ctss]
 
-    def add_counter_example_to_data(self, data, counter_argument) -> List[Tuple[ISpecification, Any]]:
-        pass
+    def add_counter_example_to_data(self, data, counter_argument) -> Any:
+        trace, cts, learning_type = data
+        return trace, cts + [counter_argument], learning_type

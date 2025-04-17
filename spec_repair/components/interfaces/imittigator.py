@@ -10,5 +10,5 @@ class IMittigator(ABC):
         pass
 
     @abstractmethod
-    def add_counter_example_to_data(self, data, counter_argument) -> List[Tuple[ISpecification, Any]]:
+    def add_counter_example_to_data(self, data, counter_argument) -> Any:
         pass

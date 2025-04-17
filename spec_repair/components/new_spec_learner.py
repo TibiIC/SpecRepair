@@ -29,9 +29,13 @@ class NewSpecLearner(ILearner):
             data: Tuple[list[str], list[CounterTrace], Learning]
     ) -> List[SpectraSpecification]:
         trace, cts, learning_type = data
-        possible_adaptations: List[List[Adaptation]] = self.find_possible_adaptations(spec, trace, cts, learning_type)
-        new_specs = [deepcopy(spec).integrate_multiple(adaptations) for adaptations in possible_adaptations]
-        return new_specs
+        try:
+            possible_adaptations: List[List[Adaptation]] = self.find_possible_adaptations(spec, trace, cts, learning_type)
+            new_specs = [deepcopy(spec).integrate_multiple(adaptations) for adaptations in possible_adaptations]
+            return new_specs
+        except NoWeakeningException as e:
+            print(f"Weakening failed: {e}")
+            return []
 
     def find_possible_adaptations(self, spec: SpectraSpecification, trace, cts, learning_type) -> List[List[Adaptation]]:
         violations = self.get_spec_violations(spec, trace, cts, learning_type)

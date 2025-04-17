@@ -72,3 +72,43 @@ class TestBFSRepairOrchestrator(TestCase):
         for i, expected_spec in enumerate(expected_spec_strings):
             print(i)
             self.assertIn(expected_spec.to_str(), new_spec_strings)
+
+    def test_bfs_repair_spec_minepump(self):
+        out_test_dir_name = "./test_files/out/new_minepump_test_bfs"
+        transitions_file_path = f"{out_test_dir_name}/transitions.csv"
+        if os.path.exists(transitions_file_path):
+            os.remove(transitions_file_path)
+        spec: SpectraSpecification = SpectraSpecification.from_file('../input-files/case-studies/spectra/minepump/strong.spectra')
+        trace: list[str] = read_file_lines("../input-files/case-studies/spectra/minepump/violation_trace.txt")
+        learners: Dict[str, ILearner] = {
+            "assumption_weakening": NewSpecLearner(NoFilterHeuristicManager()),
+            "guarantee_weakening": NewSpecLearner(NoFilterHeuristicManager())
+        }
+        recorder: UniqueSpecRecorder = UniqueSpecRecorder()
+        repairer: BFSRepairOrchestrator = BFSRepairOrchestrator(
+            learners,
+            NewSpecOracle(),
+            SpectraDiscriminator(),
+            SpecMittigator(),
+            NoFilterHeuristicManager(),
+            recorder
+        )
+
+        # Getting all possible repairs
+        repairer.repair_bfs(spec, (trace, [], Learning.ASSUMPTION_WEAKENING))
+        new_spec_strings: list[str] = [spec.to_str() for spec in recorder.get_all_values()]
+        for i, new_spec in enumerate(new_spec_strings):
+            write_to_file(f"{out_test_dir_name}/minepump_test_fix_{i}.spectra", new_spec)
+
+        expected_specs_files: list[str] = os.listdir('./test_files/minepump_weakenings')
+        expected_spec_strings: list[str] = [
+            SpectraSpecification.from_file(f"./test_files/minepump_weakenings/{spec_file}")
+            for spec_file in expected_specs_files
+        ]
+
+        for new_spec_str in new_spec_strings:
+            print(new_spec_str)
+        self.assertEqual(len(expected_spec_strings), len(new_spec_strings))
+        for i, expected_spec in enumerate(expected_spec_strings):
+            print(i)
+            self.assertIn(expected_spec.to_str(), new_spec_strings)
