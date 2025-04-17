@@ -2,6 +2,10 @@ from py_ltl.formatter import ILTLFormatter
 from py_ltl.formula import LTLFormula, AtomicProposition, Not, And, Or, Until, Next, Globally, Eventually, Implies, Prev, Top, Bottom
 
 class SpectraFormulaFormatter(ILTLFormatter):
+    def __init__(self):
+        # Flag to prime formatter for Spectra-aware syntax or LTL syntax
+        self.is_response_pattern = False
+
     def format(self, formula: LTLFormula) -> str:
         match formula:
             case AtomicProposition(name=name, value=value):
@@ -23,6 +27,12 @@ class SpectraFormulaFormatter(ILTLFormatter):
             case Globally(formula=formula):
                 if isinstance(formula, Eventually):
                     return f"G{self.format(formula)}"
+                elif (self.is_response_pattern and
+                      isinstance(formula, Implies) and
+                      isinstance(formula.right, Eventually)):
+                    s = formula.left
+                    p = formula.right.formula
+                    return f"pRespondsToS({self.format(s)},{self.format(p)})"
                 return f"G({self.format(formula)})"
             case Top():
                 return "true"

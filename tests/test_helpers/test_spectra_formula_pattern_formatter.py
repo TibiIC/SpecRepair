@@ -8,6 +8,7 @@ from py_ltl.formula import AtomicProposition, Not, And, Or, Until, Next, Globall
 class TestSpectraFormatter(unittest.TestCase):
     def setUp(self):
         self.formatter = SpectraFormulaFormatter()
+        self.formatter.is_response_pattern = True
 
     def test_atomic_proposition_plain(self):
         f = AtomicProposition("x", True)
@@ -66,12 +67,12 @@ class TestSpectraFormatter(unittest.TestCase):
 
     def test_response_formula(self):
         f = Globally(
-            Implies(
-                AtomicProposition("ready", True),
-                Eventually(AtomicProposition("done", True))
-            )
+                Implies(
+                    AtomicProposition("ready", True),
+                    Eventually(AtomicProposition("done", True))
+                )
         )
-        self.assertEqual(self.formatter.format(f), "G((ready=true->F(done=true)))")
+        self.assertEqual(self.formatter.format(f), "pRespondsToS(ready=true,done=true)")
 
 if __name__ == '__main__':
     unittest.main()
