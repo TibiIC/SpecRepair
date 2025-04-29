@@ -1,18 +1,20 @@
 import re
-from copy import deepcopy
+from copy import deepcopy, copy
 from typing import List, Tuple, Any, Set
 
 from spec_repair.components.interfaces.imittigator import IMittigator
 from spec_repair.components.interfaces.ispecification import ISpecification
+from spec_repair.components.new_spec_encoder import NewSpecEncoder
 from spec_repair.enums import Learning
 from spec_repair.exceptions import NoViolationException
-from spec_repair.helpers.counter_trace import CounterTrace
+from spec_repair.helpers.counter_trace import CounterTrace, complete_cts_from_ct
+from spec_repair.helpers.heuristic_managers.no_filter_heuristic_manager import NoFilterHeuristicManager
 from spec_repair.wrappers.asp_wrappers import get_violations
 
 
 class SpecMittigator(IMittigator):
     def __init__(self):
-        pass
+        self.spec_encoder = NewSpecEncoder(NoFilterHeuristicManager())
 
     # TODO: generate test for this method, from
     #  both assumption and guarantee weakening perspectives
@@ -25,7 +27,7 @@ class SpecMittigator(IMittigator):
         while not unchanged:
             unchanged = True
             for cts in deepcopy(ctss):
-                asp: str = self.spec_encoder.encode_ASP(spec_df, trace, list(cts))
+                asp: str = self.spec_encoder.encode_ASP(spec, trace, list(cts))
                 violations = get_violations(asp, exp_type=learning_type.exp_type())
                 if not violations:
                     raise NoViolationException("Violation trace is not violating!")
@@ -41,7 +43,15 @@ class SpecMittigator(IMittigator):
                             unchanged = False
                     if not unchanged:
                         ctss.remove(cts)
-        return [list(cts) for cts in ctss]
+        possible_cts_list = [list(cts) for cts in ctss]
+        alternative_learning_tasks: List[Tuple[ISpecification, Any]] = []
+        for possible_cts in possible_cts_list:
+            new_spec = deepcopy(spec)
+            new_learning_type = Learning.GUARANTEE_WEAKENING
+            new_data = (trace, possible_cts, new_learning_type)
+            alternative_learning_tasks.append((new_spec, new_data))
+        return alternative_learning_tasks
+
 
     def add_counter_example_to_data(self, data, counter_argument) -> Any:
         trace, cts, learning_type = data

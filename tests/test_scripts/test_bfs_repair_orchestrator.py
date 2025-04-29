@@ -61,7 +61,7 @@ class TestBFSRepairOrchestrator(TestCase):
             write_to_file(f"{out_test_dir_name}/lift_test_fix_{i}.spectra", new_spec)
 
         expected_specs_files: list[str] = os.listdir('./test_files/lift_weakenings')
-        expected_spec_strings: list[str] = [
+        expected_spec_strings: list[SpectraSpecification] = [
             SpectraSpecification.from_file(f"./test_files/lift_weakenings/{spec_file}")
             for spec_file in expected_specs_files
         ]
@@ -101,7 +101,7 @@ class TestBFSRepairOrchestrator(TestCase):
             write_to_file(f"{out_test_dir_name}/minepump_test_fix_{i}.spectra", new_spec)
 
         expected_specs_files: list[str] = os.listdir('./test_files/minepump_weakenings')
-        expected_spec_strings: list[str] = [
+        expected_spec_strings: list[SpectraSpecification] = [
             SpectraSpecification.from_file(f"./test_files/minepump_weakenings/{spec_file}")
             for spec_file in expected_specs_files
         ]
