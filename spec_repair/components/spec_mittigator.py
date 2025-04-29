@@ -16,11 +16,8 @@ class SpecMittigator(IMittigator):
     def __init__(self):
         self.spec_encoder = NewSpecEncoder(NoFilterHeuristicManager())
 
-    # TODO: generate test for this method, from
-    #  both assumption and guarantee weakening perspectives
     def prepare_alternative_learning_tasks(self, spec, data) -> List[Tuple[ISpecification, Any]]:
         trace, cts, learning_type = data
-        assert learning_type == Learning.ASSUMPTION_WEAKENING
 
         ctss: Set[Tuple[CounterTrace]] = {tuple(cts)}
         unchanged = False

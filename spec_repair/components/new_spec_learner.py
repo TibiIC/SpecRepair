@@ -36,6 +36,9 @@ class NewSpecLearner(ILearner):
         except NoWeakeningException as e:
             print(f"Weakening failed: {e}")
             return []
+        except DeadlockRequiredException as e:
+            print(f"Weakening failed: {e}")
+            return []
 
     def find_possible_adaptations(self, spec: SpectraSpecification, trace, cts, learning_type) -> List[List[Adaptation]]:
         violations = self.get_spec_violations(spec, trace, cts, learning_type)

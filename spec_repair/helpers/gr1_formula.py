@@ -81,6 +81,9 @@ class GR1Formula:
                 self._integrate_antecedent_exception(adaptation)
             case "consequent_exception":
                 if isinstance(self.consequent, Eventually):
+                    # TODO: remove possibility of consequent
+                    # exception when eventually consequent
+                    adaptation.disjunction_index = 0 # Placeholder. TODO: remove
                     self._integrate_antecedent_exception(adaptation)
                 else:
                     self._integrate_consequent_exception(adaptation)
