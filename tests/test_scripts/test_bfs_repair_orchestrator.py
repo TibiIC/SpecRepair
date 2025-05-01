@@ -2,18 +2,14 @@ import os
 from typing import Dict
 from unittest import TestCase
 
-import dill
-
 from scripts.bfs_repair_orchestrator import BFSRepairOrchestrator
 from spec_repair.components.interfaces.ilearner import ILearner
 from spec_repair.components.new_spec_learner import NewSpecLearner
 from spec_repair.components.new_spec_oracle import NewSpecOracle
 from spec_repair.components.spec_mittigator import SpecMittigator
-from spec_repair.components.spec_oracle import SpecOracle
 from spec_repair.components.spectra_discriminator import SpectraDiscriminator
 from spec_repair.enums import Learning
 from spec_repair.helpers.heuristic_managers.no_filter_heuristic_manager import NoFilterHeuristicManager
-from spec_repair.helpers.logger import RepairLogger
 from spec_repair.helpers.recorders.unique_spec_recorder import UniqueSpecRecorder
 from spec_repair.helpers.spectra_specification import SpectraSpecification
 from spec_repair.util.file_util import read_file_lines, write_to_file

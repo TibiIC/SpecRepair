@@ -1,5 +1,4 @@
 import re
-from collections import defaultdict
 from copy import deepcopy
 from typing import TypedDict, Optional, TypeVar, List, Set, Any, Callable
 
@@ -9,7 +8,6 @@ from build.lib.spec_repair.ltl import LTLFormula
 from spec_repair.components.interfaces.ispecification import ISpecification
 from spec_repair.helpers.adaptation_learned import Adaptation
 from spec_repair.helpers.asp_exception_formatter import ASPExceptionFormatter
-from spec_repair.helpers.asp_formula_formatter import ASPFormulaFormatter
 from spec_repair.helpers.spectra_atom import SpectraAtom
 from spec_repair.helpers.gr1_formula import GR1Formula
 from spec_repair.helpers.spectra_formula_formatter import SpectraFormulaFormatter
