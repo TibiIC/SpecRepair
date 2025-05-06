@@ -2,9 +2,6 @@ import re
 from collections import defaultdict
 from typing import List, Optional, Set
 
-import pandas as pd
-from spot import formula
-
 from spec_repair import config
 from spec_repair.helpers.adaptation_learned import Adaptation
 from spec_repair.helpers.counter_trace import CounterTrace
