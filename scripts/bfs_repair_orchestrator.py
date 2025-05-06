@@ -75,18 +75,18 @@ class BFSRepairOrchestrator:
             spec, data = self._om.get_next()
             learning_strategy: str = self._discriminator.get_learning_strategy(spec, data)
             learner = self._learners[learning_strategy]
-            new_specs = learner.learn_new(spec, data)
-            if not new_specs:
+            learned_specs = learner.learn_new(spec, data)
+            if not learned_specs:
                 alternate_tasks = self._mittigator.prepare_alternative_learning_tasks(spec, data)
                 for alt_spec, alt_data in alternate_tasks:
                     self._om.enqueue_new_tasks(alt_spec, alt_data)
             else:
-                for new_spec in new_specs:
-                    counter_examples = self._oracle.is_valid_or_counter_arguments(new_spec)
+                for learned_spec in learned_specs:
+                    counter_examples = self._oracle.is_valid_or_counter_arguments(learned_spec)
                     if not counter_examples:
-                        self._recorder.add(new_spec)
+                        self._recorder.add(learned_spec)
                     else:
                         # TODO: find a way to filter the counter examples using the heuristic manager
                         for counter_example in counter_examples:
-                            new_data = self._mittigator.add_counter_example_to_data(data, counter_example)
+                            new_spec, new_data = self._mittigator.prepare_learning_task(spec, data, learned_spec, counter_example)
                             self._om.enqueue_new_tasks(new_spec, new_data)

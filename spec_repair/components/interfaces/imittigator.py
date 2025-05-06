@@ -10,5 +10,5 @@ class IMittigator(ABC):
         pass
 
     @abstractmethod
-    def add_counter_example_to_data(self, data, counter_argument) -> Any:
+    def prepare_learning_task(self, spec, data, learned_spec, counter_argument) -> Tuple[ISpecification, Any]:
         pass

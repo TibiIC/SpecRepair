@@ -38,7 +38,7 @@ class TestNewSpecLearner(TestCase):
         expected_specs.append(SpectraSpecification.from_file('./test_files/minepump_aw_ev.spectra'))
 
         new_specs: list[ISpecification]
-        new_specs = spec_learner.learn_new(spec, (trace, [], Learning.ASSUMPTION_WEAKENING))
+        new_specs = spec_learner.learn_new(spec, (trace, [], Learning.ASSUMPTION_WEAKENING, []))
         new_specs_str: list[str] = [new_spec.to_str() for new_spec in new_specs]
 
         for new_spec_str in new_specs_str:

@@ -17,7 +17,9 @@ class SpecMittigator(IMittigator):
         self.spec_encoder = NewSpecEncoder(NoFilterHeuristicManager())
 
     def prepare_alternative_learning_tasks(self, spec, data) -> List[Tuple[ISpecification, Any]]:
-        trace, cts, learning_type = data
+        trace, cts, learning_type, spec_history = data
+        if learning_type == Learning.ASSUMPTION_WEAKENING:
+            return self._move_to_guarantee_weakening(trace, cts, spec_history)
 
         ctss: Set[Tuple[CounterTrace]] = {tuple(cts)}
         unchanged = False
@@ -45,11 +47,22 @@ class SpecMittigator(IMittigator):
         for possible_cts in possible_cts_list:
             new_spec = deepcopy(spec)
             new_learning_type = Learning.GUARANTEE_WEAKENING
-            new_data = (trace, possible_cts, new_learning_type)
+            new_data = (trace, possible_cts, new_learning_type, spec_history)
             alternative_learning_tasks.append((new_spec, new_data))
         return alternative_learning_tasks
 
+    @staticmethod
+    def _move_to_guarantee_weakening(trace, cts, spec_history):
+        new_spec = spec_history[0]
+        new_cts = cts[0:1]  # Only keep the first counter trace
+        new_learning_type = Learning.GUARANTEE_WEAKENING
+        new_spec_history = []
+        new_data = (trace, new_cts, new_learning_type, new_spec_history)
+        return [(new_spec, new_data)]
 
-    def add_counter_example_to_data(self, data, counter_argument) -> Any:
-        trace, cts, learning_type = data
-        return trace, cts + [counter_argument], learning_type
+    def prepare_learning_task(self, spec, data, learned_spec, counter_argument) -> Tuple[ISpecification, Any]:
+        trace, cts, learning_type, spec_history = data
+        if learning_type == Learning.ASSUMPTION_WEAKENING:
+            return spec, (trace, cts + [counter_argument], learning_type, spec_history + [deepcopy(learned_spec)])
+        else:
+            return learned_spec, (trace, cts + [counter_argument], learning_type, spec_history + [deepcopy(learned_spec)])

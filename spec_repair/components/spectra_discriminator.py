@@ -14,7 +14,7 @@ class SpectraDiscriminator(IDiscriminator):
         :param data: The data to learn from.
         :return: The learning strategy.
         """
-        trace, cts, learning_type = data
+        trace, cts, learning_type, spec_history = data
         match learning_type:
             case Learning.ASSUMPTION_WEAKENING:
                 return "assumption_weakening"
