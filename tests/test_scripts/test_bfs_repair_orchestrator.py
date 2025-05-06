@@ -29,32 +29,42 @@ class TestBFSRepairOrchestrator(TestCase):
         # Restore the original working directory
         os.chdir(cls.original_working_directory)
 
-    def test_bfs_repair_spec_lift(self):
-        out_test_dir_name = "./test_files/out/new_lift_test_bfs"
-        transitions_file_path = f"{out_test_dir_name}/transitions.csv"
-        if os.path.exists(transitions_file_path):
-            os.remove(transitions_file_path)
-        spec: SpectraSpecification = SpectraSpecification.from_file('../input-files/case-studies/spectra/lift/strong.spectra')
-        trace: list[str] = read_file_lines("../input-files/case-studies/spectra/lift/violation_trace.txt")
-        learners: Dict[str, ILearner] = {
-            "assumption_weakening": NewSpecLearner(NoFilterHeuristicManager()),
-            "guarantee_weakening": NewSpecLearner(NoFilterHeuristicManager())
-        }
-        recorder: UniqueSpecRecorder = UniqueSpecRecorder()
-        repairer: BFSRepairOrchestrator = BFSRepairOrchestrator(
-            learners,
-            NewSpecOracle(),
-            SpectraDiscriminator(),
-            SpecMittigator(),
-            NoFilterHeuristicManager(),
-            recorder
+    def test_bfs_repair_spec_arbiter(self):
+        case_study_name = 'arbiter'
+        case_study_path = '../input-files/case-studies/spectra/arbiter'
+        out_test_dir_name = "./test_files/out/new_arbiter_test_bfs"
+        new_spec_strings = self.run_bfs_repair(
+            case_study_name,
+            case_study_path,
+            out_test_dir_name,
+            is_debug=True
         )
 
-        # Getting all possible repairs
-        repairer.repair_bfs(spec, (trace, [], Learning.ASSUMPTION_WEAKENING, []))
-        new_spec_strings: list[str] = [spec.to_str() for spec in recorder.get_all_values()]
-        for i, new_spec in enumerate(new_spec_strings):
-            write_to_file(f"{out_test_dir_name}/lift_test_fix_{i}.spectra", new_spec)
+    def test_bfs_repair_spec_traffic_single(self):
+        case_study_name = 'traffic_single'
+        case_study_path = '../input-files/case-studies/spectra/traffic-single'
+        out_test_dir_name = "./test_files/out/new_traffic_single_test_bfs"
+        new_spec_strings = self.run_bfs_repair(
+            case_study_name,
+            case_study_path,
+            out_test_dir_name
+        )
+
+    def test_bfs_repair_spec_traffic_updated(self):
+        case_study_name = 'traffic_updated'
+        case_study_path = '../input-files/case-studies/spectra/traffic-updated'
+        out_test_dir_name = "./test_files/out/new_traffic_updated_test_bfs"
+        new_spec_strings = self.run_bfs_repair(
+            case_study_name,
+            case_study_path,
+            out_test_dir_name
+        )
+
+    def test_bfs_repair_spec_lift(self):
+        case_study_name = 'lift'
+        case_study_path = '../input-files/case-studies/spectra/lift'
+        out_test_dir_name = "./test_files/out/new_lift_test_bfs"
+        new_spec_strings = self.run_bfs_repair(case_study_name, case_study_path, out_test_dir_name)
 
         expected_specs_files: list[str] = os.listdir('./test_files/lift_weakenings')
         expected_spec_strings: list[SpectraSpecification] = [
@@ -70,17 +80,38 @@ class TestBFSRepairOrchestrator(TestCase):
             self.assertIn(expected_spec.to_str(), new_spec_strings)
 
     def test_bfs_repair_spec_minepump(self):
-        out_test_dir_name = "./test_files/out/new_minepump_test_bfs"
+        case_study_name = 'minepump'
+        case_study_path = '../input-files/case-studies/spectra/minepump'
+        out_test_dir_name = "./test_files/out/new_minepump_bfs"
+        new_spec_strings = self.run_bfs_repair(case_study_name, case_study_path, out_test_dir_name)
+
+        expected_specs_files: list[str] = os.listdir('./test_files/minepump_weakenings')
+        expected_spec_strings: list[SpectraSpecification] = [
+            SpectraSpecification.from_file(f"./test_files/minepump_weakenings/{spec_file}")
+            for spec_file in expected_specs_files
+        ]
+
+        self.assertEqual(len(expected_spec_strings), len(new_spec_strings))
+        for i, expected_spec in enumerate(expected_spec_strings):
+            print(i)
+            self.assertIn(expected_spec.to_str(), new_spec_strings)
+
+    def run_bfs_repair(self, case_study_name, case_study_path, out_test_dir_name, is_debug=False):
         transitions_file_path = f"{out_test_dir_name}/transitions.csv"
+        if not os.path.exists(out_test_dir_name):
+            os.mkdir(out_test_dir_name)
         if os.path.exists(transitions_file_path):
             os.remove(transitions_file_path)
-        spec: SpectraSpecification = SpectraSpecification.from_file('../input-files/case-studies/spectra/minepump/strong.spectra')
-        trace: list[str] = read_file_lines("../input-files/case-studies/spectra/minepump/violation_trace.txt")
+        spec: SpectraSpecification = SpectraSpecification.from_file(f"{case_study_path}/strong.spectra")
+        trace: list[str] = read_file_lines(f"{case_study_path}/violation_trace.txt")
         learners: Dict[str, ILearner] = {
             "assumption_weakening": NewSpecLearner(NoFilterHeuristicManager()),
             "guarantee_weakening": NewSpecLearner(NoFilterHeuristicManager())
         }
-        recorder: UniqueSpecRecorder = UniqueSpecRecorder()
+        if is_debug:
+            recorder = UniqueSpecRecorder(debug_folder=out_test_dir_name)
+        else:
+            recorder = UniqueSpecRecorder()
         repairer: BFSRepairOrchestrator = BFSRepairOrchestrator(
             learners,
             NewSpecOracle(),
@@ -89,22 +120,9 @@ class TestBFSRepairOrchestrator(TestCase):
             NoFilterHeuristicManager(),
             recorder
         )
-
         # Getting all possible repairs
         repairer.repair_bfs(spec, (trace, [], Learning.ASSUMPTION_WEAKENING, []))
         new_spec_strings: list[str] = [spec.to_str() for spec in recorder.get_all_values()]
         for i, new_spec in enumerate(new_spec_strings):
-            write_to_file(f"{out_test_dir_name}/minepump_test_fix_{i}.spectra", new_spec)
-
-        expected_specs_files: list[str] = os.listdir('./test_files/minepump_weakenings')
-        expected_spec_strings: list[SpectraSpecification] = [
-            SpectraSpecification.from_file(f"./test_files/minepump_weakenings/{spec_file}")
-            for spec_file in expected_specs_files
-        ]
-
-        for new_spec_str in new_spec_strings:
-            print(new_spec_str)
-        self.assertEqual(len(expected_spec_strings), len(new_spec_strings))
-        for i, expected_spec in enumerate(expected_spec_strings):
-            print(i)
-            self.assertIn(expected_spec.to_str(), new_spec_strings)
+            write_to_file(f"{out_test_dir_name}/{case_study_name}_fix_{i}.spectra", new_spec)
+        return new_spec_strings
