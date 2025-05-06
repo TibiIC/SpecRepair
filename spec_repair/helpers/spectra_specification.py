@@ -4,7 +4,6 @@ from typing import TypedDict, Optional, TypeVar, List, Set, Any, Callable
 
 import pandas as pd
 
-from build.lib.spec_repair.ltl import LTLFormula
 from spec_repair.components.interfaces.ispecification import ISpecification
 from spec_repair.helpers.adaptation_learned import Adaptation
 from spec_repair.helpers.asp_exception_formatter import ASPExceptionFormatter
@@ -18,7 +17,7 @@ from spec_repair.util.formula_util import get_temp_op, get_disjuncts_from_disjun
     skip_first_temp_op, is_ilasp_compatible_dnf_structure
 from spec_repair.util.spec_util import format_spec
 
-from py_ltl.formula import AtomicProposition, Not, Eventually
+from py_ltl.formula import LTLFormula, AtomicProposition, Not, Eventually
 
 class FormulaDataPoint(TypedDict):
     name: str
