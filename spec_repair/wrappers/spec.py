@@ -2,8 +2,6 @@ import re
 import subprocess
 from typing import Optional
 
-from spot import formula
-
 from spec_repair.ltl_types import GR1FormulaType, LTLFiltOperation
 from spec_repair.old.specification_helper import strip_vars
 from spec_repair.util.spec_util import simplify_assignments, shift_prev_to_next
