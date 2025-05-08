@@ -113,6 +113,12 @@ class SpectraSpecification(ISpecification):
     def get_atoms(self):
         return deepcopy(self._atoms)
 
+    def to_formatted_string(
+            self,
+            formatter
+    ) -> str:
+        return formatter.format(self)
+
     def to_asp(
             self,
             learning_names: Optional[List[str]] = None,

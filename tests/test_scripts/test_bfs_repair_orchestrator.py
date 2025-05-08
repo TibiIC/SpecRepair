@@ -105,8 +105,12 @@ class TestBFSRepairOrchestrator(TestCase):
         spec: SpectraSpecification = SpectraSpecification.from_file(f"{case_study_path}/strong.spectra")
         trace: list[str] = read_file_lines(f"{case_study_path}/violation_trace.txt")
         learners: Dict[str, ILearner] = {
-            "assumption_weakening": NewSpecLearner(NoFilterHeuristicManager()),
-            "guarantee_weakening": NewSpecLearner(NoFilterHeuristicManager())
+            "assumption_weakening": NewSpecLearner(
+                heuristic_manager=NoFilterHeuristicManager()
+            ),
+            "guarantee_weakening": NewSpecLearner(
+                heuristic_manager=NoFilterHeuristicManager()
+            )
         }
         if is_debug:
             recorder = UniqueSpecRecorder(debug_folder=out_test_dir_name)

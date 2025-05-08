@@ -8,6 +8,8 @@ from spec_repair.helpers.counter_trace import CounterTrace
 class IHeuristicManager(ABC):
     def __init__(self):
         self._heuristics = defaultdict(bool)
+        self._heuristics["ANTECEDENT_WEAKENING"] = True
+        self._heuristics["CONSEQUENT_WEAKENING"] = True
         self._heuristics["INVARIANT_TO_RESPONSE_WEAKENING"] = True
 
     @abstractmethod

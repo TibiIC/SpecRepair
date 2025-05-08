@@ -44,7 +44,6 @@ class NewSpecEncoder:
         mode_declaration = self._create_mode_bias(spec, violations, learning_type)
         trace_asp = trace_list_to_asp_form(trace)
         trace_ilasp = trace_list_to_ilasp_form(trace_asp, learning=Learning.ASSUMPTION_WEAKENING)
-        # TODO: see how to deal with generation/renaming of counter-strategy traces (based on Learning type too)
         ct_list_ilasp: str = ''.join([cs_trace.get_ilasp_form(learning=learning_type) for cs_trace in ct_list])
         sub_spec = spec.extract_sub_specification(
             lambda x: x['type'] == learning_type.formula_type()

@@ -2,8 +2,6 @@ import re
 from copy import copy, deepcopy
 from typing import Set, List, Tuple, Optional
 
-import pandas as pd
-
 from spec_repair.components.interfaces.ilearner import ILearner
 from spec_repair.components.new_spec_encoder import NewSpecEncoder
 from spec_repair.helpers.adaptation_learned import Adaptation
@@ -12,15 +10,19 @@ from spec_repair.enums import Learning
 from spec_repair.exceptions import NoViolationException, NoWeakeningException, DeadlockRequiredException, \
     NoAssumptionWeakeningException
 from spec_repair.helpers.heuristic_managers.iheuristic_manager import IHeuristicManager
+from spec_repair.helpers.heuristic_managers.no_filter_heuristic_manager import NoFilterHeuristicManager
 from spec_repair.helpers.ilasp_interpreter import ILASPInterpreter
 from spec_repair.helpers.spectra_specification import SpectraSpecification
-from spec_repair.heuristics import choose_one_with_heuristic, HeuristicType
 
 from spec_repair.wrappers.asp_wrappers import get_violations, run_ILASP
 
 
 class NewSpecLearner(ILearner):
-    def __init__(self, heuristic_manager: IHeuristicManager):
+    def __init__(
+            self,
+            heuristic_manager: IHeuristicManager = NoFilterHeuristicManager(),
+    ):
+        self.heuristic_manager = heuristic_manager
         self.spec_encoder = NewSpecEncoder(heuristic_manager)
 
     def learn_new(
@@ -30,7 +32,8 @@ class NewSpecLearner(ILearner):
     ) -> List[SpectraSpecification]:
         trace, cts, learning_type, spec_history = data
         try:
-            possible_adaptations: List[List[Adaptation]] = self.find_possible_adaptations(spec, trace, cts, learning_type)
+            possible_adaptations: List[List[Adaptation]] = self.find_possible_adaptations(spec, trace, cts,
+                                                                                          learning_type)
             new_specs = [deepcopy(spec).integrate_multiple(adaptations) for adaptations in possible_adaptations]
             return new_specs
         except NoWeakeningException as e:
@@ -43,11 +46,13 @@ class NewSpecLearner(ILearner):
             print(f"Weakening failed: {e}")
             return []
 
-    def find_possible_adaptations(self, spec: SpectraSpecification, trace, cts, learning_type) -> List[List[Adaptation]]:
+    def find_possible_adaptations(self, spec: SpectraSpecification, trace, cts, learning_type) -> List[
+        List[Adaptation]]:
         violations = self.get_spec_violations(spec, trace, cts, learning_type)
         ilasp: str = self.spec_encoder.encode_ILASP(spec, trace, cts, violations, learning_type)
         output: str = run_ILASP(ilasp)
-        adaptations: Optional[List[Tuple[int, List[Adaptation]]]] = ILASPInterpreter.extract_learned_possible_adaptations(output)
+        adaptations: Optional[
+            List[Tuple[int, List[Adaptation]]]] = ILASPInterpreter.extract_learned_possible_adaptations(output)
         if not adaptations:
             if learning_type == Learning.ASSUMPTION_WEAKENING:
                 raise NoAssumptionWeakeningException(
@@ -76,18 +81,13 @@ class NewSpecLearner(ILearner):
         return self.spec_encoder.integrate_learned_hypothesis(spec, learning_hypothesis, learning_type)
 
 
-def select_learning_hypothesis(hypotheses: List[List[str]], heuristic: HeuristicType) -> List[str]:
-    # TODO: store amount of top_hyp learned
-    # TODO: make sure no repeated hypotheses occur
-    learning_hyp = choose_one_with_heuristic(hypotheses, heuristic)
-    return learning_hyp
-
-
 def filter_useful_adaptations(potential_adaptations: List[Tuple[int, List[Adaptation]]]) -> List[List[Adaptation]]:
-    ev_adaptations = [(score, adaptations) for score, adaptations in potential_adaptations if "ev_temp_op" in [adaptation.type for adaptation in adaptations] ]
-    other_adaptations = [(score, adaptations) for score, adaptations in potential_adaptations if "ev_temp_op" not in [adaptation.type for adaptation in adaptations] ]
-    top_adaptations = ([adaptations for score, adaptations in other_adaptations if score == min(other_adaptations, key=lambda x: x[0])[0]] +
-                       [adaptations for score, adaptations in ev_adaptations if score == min(ev_adaptations, key=lambda x: x[0])[0]])
+    ev_adaptations = [(score, adaptations) for score, adaptations in potential_adaptations if
+                      "ev_temp_op" in [adaptation.type for adaptation in adaptations]]
+    other_adaptations = [(score, adaptations) for score, adaptations in potential_adaptations if
+                         "ev_temp_op" not in [adaptation.type for adaptation in adaptations]]
+    top_adaptations = ([adaptations for score, adaptations in other_adaptations if
+                        score == min(other_adaptations, key=lambda x: x[0])[0]] +
+                       [adaptations for score, adaptations in ev_adaptations if
+                        score == min(ev_adaptations, key=lambda x: x[0])[0]])
     return top_adaptations
-
-
