@@ -52,36 +52,28 @@ class NewSpecEncoder:
             exp_names_to_learn = get_violated_expression_names_of_type(violations, learning_type.exp_type_str())
         else:
             exp_names_to_learn = get_expression_names_of_type(violations, learning_type.exp_type_str())
-        expressions_to_weaken = sub_spec.to_asp(learning_names=exp_names_to_learn, for_clingo=False,
-                                                is_ev_temp_op=self._hm.is_enabled("INVARIANT_TO_RESPONSE_WEAKENING"))
+        expressions_to_weaken = sub_spec.to_asp(learning_names=exp_names_to_learn, for_clingo=False, hm=self._hm)
         signature_string = create_atom_signature_asp(spec.get_atoms())
         las = SpecGenerator.generate_ilasp(mode_declaration, expressions_to_weaken, signature_string, trace_ilasp,
                                            ct_list_ilasp)
         return las
 
     def _create_mode_bias(self, spec: SpectraSpecification, violations: list[str], learning_type) -> str:
-        head = "antecedent"
-        extra_args = "_,_"
-
-        if learning_type == Learning.GUARANTEE_WEAKENING:
-            head = "consequent"
-            extra_args = "_"
-
         output = "%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%\n" \
                  "%% Mode Declaration\n" \
                  "%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%\n\n"
 
-        if learning_type == Learning.ASSUMPTION_WEAKENING:
-            output += f"#modeh({head}_exception(const(expression_v), const(index), var(time), var(trace))).\n"
-        else:
-            output += f"#modeh({head}_exception(const(expression_v), var(time), var(trace))).\n"
+        if self._hm.is_enabled("ANTECEDENT_WEAKENING"):
+            output += f"#modeh(antecedent_exception(const(expression_v), const(index), var(time), var(trace))).\n"
+        if self._hm.is_enabled("CONSEQUENT_WEAKENING"):
+            output += f"#modeh(consequent_exception(const(expression_v), var(time), var(trace))).\n"
+        if self._hm.is_enabled("INVARIANT_TO_RESPONSE_WEAKENING"):
+            output += f"#modeh(ev_temp_op(const(expression_v))).\n"
 
         restriction = ", (positive)"
         output += f"#modeb(2,timepoint_of_op(const(temp_op_v), var(time), var(time), var(trace)){restriction}).\n"
         output += f"#modeb(2,holds_at(const(usable_atom), var(time), var(trace)){restriction}).\n"
         output += f"#modeb(2,not_holds_at(const(usable_atom), var(time), var(trace)){restriction}).\n"
-        if self._hm.is_enabled("INVARIANT_TO_RESPONSE_WEAKENING"):
-            output += f"#modeh(ev_temp_op(const(expression_v))).\n"
 
         for atom in sorted(spec.get_atoms()):
             output += f"#constant(usable_atom,{atom.name}).\n"
@@ -103,9 +95,14 @@ class NewSpecEncoder:
 
         output += f"#bias(\"\n"
         output += f":- constraint.\n"
-        output += f":- head({head}_exception({extra_args},V1,V2)), body(timepoint_of_op(_,V3,_,V4)), (V1, V2) != (V3, V4).\n"
-        output += f":- head({head}_exception({extra_args},_,V1)), body(holds_at(_,_,V2)), V1 != V2.\n"
-        output += f":- head({head}_exception({extra_args},_,V1)), body(not_holds_at(_,_,V2)), V1 != V2.\n"
+        if self._hm.is_enabled("ANTECEDENT_WEAKENING"):
+            output += f":- head(antecedent_exception(_,_,V1,V2)), body(timepoint_of_op(_,V3,_,V4)), (V1, V2) != (V3, V4).\n"
+            output += f":- head(antecedent_exception(_,_,_,V1)), body(holds_at(_,_,V2)), V1 != V2.\n"
+            output += f":- head(antecedent_exception(_,_,_,V1)), body(not_holds_at(_,_,V2)), V1 != V2.\n"
+        if self._hm.is_enabled("CONSEQUENT_WEAKENING"):
+            output += f":- head(consequent_exception(_,V1,V2)), body(timepoint_of_op(_,V3,_,V4)), (V1, V2) != (V3, V4).\n"
+            output += f":- head(consequent_exception(_,_,V1)), body(holds_at(_,_,V2)), V1 != V2.\n"
+            output += f":- head(consequent_exception(_,_,V1)), body(not_holds_at(_,_,V2)), V1 != V2.\n"
         output += f":- body(timepoint_of_op(_,_,V1,_)), body(holds_at(_,V2,_)), V1 != V2.\n"
         output += f":- body(timepoint_of_op(_,_,V1,_)), body(not_holds_at(_,V2,_)), V1 != V2.\n"
         output += f":- body(timepoint_of_op(_,_,_,_)), not body(not_holds_at(_,_,_)), not body(holds_at(_,_,_)).\n"
@@ -117,12 +114,21 @@ class NewSpecEncoder:
         output += f":- body(not_holds_at(_,V1,V2)), not body(timepoint_of_op(_,_,V1,V2)).\n"
 
         if not self._hm.is_enabled("INCLUDE_NEXT"):
-            output += f":- head({head}_exception({extra_args},_,_)), body(timepoint_of_op(next,_,_,_)).\n"
+            if self._hm.is_enabled("ANTECEDENT_WEAKENING"):
+                output += f":- head(antecedent_exception(_,_,_,_)), body(timepoint_of_op(next,_,_,_)).\n"
+            if self._hm.is_enabled("CONSEQUENT_WEAKENING"):
+                output += f":- head(consequent_exception(_,_,_)), body(timepoint_of_op(next,_,_,_)).\n"
         if not self._hm.is_enabled("INCLUDE_PREV"):
-            output += f":- head({head}_exception({extra_args},_,_)), body(timepoint_of_op(prev,_,_,_)).\n"
-        if learning_type == Learning.ASSUMPTION_WEAKENING or not config.WEAKENING_TO_JUSTICE:
+            if self._hm.is_enabled("ANTECEDENT_WEAKENING"):
+                output += f":- head(antecedent_exception(_,_,_,_)), body(timepoint_of_op(prev,_,_,_)).\n"
+            if self._hm.is_enabled("CONSEQUENT_WEAKENING"):
+                output += f":- head(consequent_exception(_,_,_)), body(timepoint_of_op(prev,_,_,_)).\n"
+        if self._hm.is_enabled("ANTECEDENT_WEAKENING"):
             # Learning eventually expressions doesn't make sense within the antecedent of a formula
-            output += f":- head({head}_exception({extra_args},_,_)), body(timepoint_of_op(eventually,_,_,_)).\n"
+            output += f":- head(antecedent_exception(_,_,_,_)), body(timepoint_of_op(eventually,_,_,_)).\n"
+        if self._hm.is_enabled("CONSEQUENT_WEAKENING"):
+            # This is already taken care of by the INVARIANT_TO_RESPONSE_WEAKENING behaviour
+            output += f":- head(consequent_exception(_,_,_)), body(timepoint_of_op(eventually,_,_,_)).\n"
         if self._hm.is_enabled("INVARIANT_TO_RESPONSE_WEAKENING"):
             output += f":- head(ev_temp_op(_)), body(timepoint_of_op(_,_,_,_)).\n"
             output += f":- head(ev_temp_op(_)), body(holds_at(_,_,_)).\n"

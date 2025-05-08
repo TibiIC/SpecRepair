@@ -63,7 +63,7 @@ class TestBFSRepairOrchestrator(TestCase):
     def test_bfs_repair_spec_lift(self):
         case_study_name = 'lift'
         case_study_path = '../input-files/case-studies/spectra/lift'
-        out_test_dir_name = "./test_files/out/new_lift_test_bfs"
+        out_test_dir_name = "./test_files/out/lift_all_bfs"
         new_spec_strings = self.run_bfs_repair(case_study_name, case_study_path, out_test_dir_name)
 
         expected_specs_files: list[str] = os.listdir('./test_files/lift_weakenings')

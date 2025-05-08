@@ -7,6 +7,8 @@ import pandas as pd
 from spec_repair.components.interfaces.ispecification import ISpecification
 from spec_repair.helpers.adaptation_learned import Adaptation
 from spec_repair.helpers.asp_exception_formatter import ASPExceptionFormatter
+from spec_repair.helpers.heuristic_managers.iheuristic_manager import IHeuristicManager
+from spec_repair.helpers.heuristic_managers.no_filter_heuristic_manager import NoFilterHeuristicManager
 from spec_repair.helpers.spectra_atom import SpectraAtom
 from spec_repair.helpers.gr1_formula import GR1Formula
 from spec_repair.helpers.spectra_formula_formatter import SpectraFormulaFormatter
@@ -123,17 +125,17 @@ class SpectraSpecification(ISpecification):
             self,
             learning_names: Optional[List[str]] = None,
             for_clingo: bool = False,
-            is_ev_temp_op: bool = True
+            hm: IHeuristicManager = NoFilterHeuristicManager()
     ) -> str:
         if learning_names is None:
             learning_names = []
         formulas_str = ""
         for _, row in self._formulas_df.iterrows():
-            formulas_str += self._formula_to_asp_str(row, learning_names, for_clingo, is_ev_temp_op)
+            formulas_str += self._formula_to_asp_str(row, learning_names, for_clingo, hm)
             formulas_str += "\n\n"
         return formulas_str
 
-    def _formula_to_asp_str(self, row, learning_names, for_clingo, is_ev_temp_op):
+    def _formula_to_asp_str(self, row, learning_names, for_clingo, hm: IHeuristicManager):
         if row.when == GR1TemporalType.JUSTICE and row['name'] not in learning_names and not for_clingo:
             return ""
         formula: GR1Formula = row.formula
@@ -141,9 +143,9 @@ class SpectraSpecification(ISpecification):
         expression_string += f"%\t{formula.to_str(self._formater)}\n\n"
         expression_string += f"{row.type.to_asp()}({row['name']}).\n\n"
         is_exception = (row['name'] in learning_names) and not for_clingo
-        ant_exception = is_exception and row['type'] == GR1FormulaType.ASM
-        gar_exception = is_exception and row['type'] == GR1FormulaType.GAR
-        ev_exception = is_exception and is_ev_temp_op
+        ant_exception = is_exception and hm.is_enabled("ANTECEDENT_WEAKENING")
+        gar_exception = is_exception and hm.is_enabled("CONSEQUENT_WEAKENING")
+        ev_exception = is_exception and hm.is_enabled("INVARIANT_TO_RESPONSE_WEAKENING")
         self._asp_formatter.is_antecedent_exception = ant_exception
         self._asp_formatter.is_consequent_exception = gar_exception
         self._asp_formatter.is_eventually_exception = ev_exception
