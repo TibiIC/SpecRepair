@@ -1,22 +1,14 @@
 import re
 from collections import defaultdict
-from typing import List, Optional, Set
+from typing import List, Optional
 
-from spec_repair import config
-from spec_repair.helpers.adaptation_learned import Adaptation
 from spec_repair.helpers.counter_trace import CounterTrace
 from spec_repair.enums import Learning, When
-from spec_repair.exceptions import LearningException
 from spec_repair.helpers.heuristic_managers.iheuristic_manager import IHeuristicManager
 from spec_repair.helpers.heuristic_managers.no_filter_heuristic_manager import NoFilterHeuristicManager
-from spec_repair.helpers.gr1_formula import GR1Formula
 from spec_repair.helpers.spectra_specification import SpectraSpecification
 from spec_repair.ltl_types import GR1FormulaType
-from spec_repair.old.patterns import FIRST_PRED, ALL_PREDS
-from spec_repair.special_types import EventuallyConsequentRule
-from spec_repair.util.spec_util import trace_list_to_asp_form, \
-    trace_list_to_ilasp_form, format_spec, parse_formula_str, \
-    eventualise_consequent, re_line_spec, create_atom_signature_asp
+from spec_repair.util.spec_util import trace_list_to_asp_form, trace_list_to_ilasp_form, parse_formula_str, create_atom_signature_asp
 from spec_repair.components.spec_generator import SpecGenerator
 
 
@@ -135,75 +127,6 @@ class NewSpecEncoder:
             output += f":- head(ev_temp_op(_)), body(not_holds_at(_,_,_)).\n"
         output += "\").\n\n"
         return output
-
-    def integrate_learned_hypothesis(self, spec: list[str], learning_hypothesis, learning_type) -> list[str]:
-        adaptations_strings: list[str] = list(
-            filter(re.compile("_exception|ev_temp_op").search, learning_hypothesis))
-        if len(adaptations_strings) == 0:
-            raise LearningException("Nothing learned")
-        else:
-            print("Rule:")
-        formatted_spec = format_spec(spec)
-        line_list = []
-        rule_list = []
-        output_list = []
-        for adaptation_str in adaptations_strings:
-            if EventuallyConsequentRule.pattern.match(adaptation_str):
-                self.process_new_eventually_exception(learning_type, line_list, output_list, adaptation_str, rule_list,
-                                                      formatted_spec)
-            else:  # either antecedent or consequent exception
-                self.process_new_rule_exception(learning_type, line_list, output_list, adaptation_str, rule_list,
-                                                formatted_spec)
-
-        formatted_spec = [re.sub(r"\bI\b\s*\(", "(", line) for line in formatted_spec]
-        formatted_spec = re_line_spec(formatted_spec)
-        return formatted_spec
-
-    def process_new_rule_exception(self, learning_type, line_list, output_list, adaptation_str: str, adaptation_list,
-                                   spec):
-        name = FIRST_PRED.search(adaptation_str).group(1)
-        for i, line in enumerate(spec):
-            if re.search(name + r"\b", line):
-                j = i + 1
-        line = spec[j].strip("\n")
-        print(line)
-        line_list.append(line)
-        print("Hypothesis:")
-        print(f'\t{adaptation_str}')
-        adaptation_list.append(adaptation_str)
-
-        # Generate data structures from line strings
-        spectra_rule: GR1Formula = GR1Formula.from_str(line)
-        adaptation_learned = Adaptation.from_str(adaptation_str)
-
-        # Integrate the learned adaptation into the spectra rule
-        spectra_rule.integrate(adaptation_learned)
-
-        # Replace the old rule with the new one
-        new_spectra_rule_str = f"\t{spectra_rule.to_str()}\n"
-        spec[j] = new_spectra_rule_str
-        # TODO: deal with generation of multiple lines of assumptions/guarantees from current
-
-        print("New Rule:")
-        print(new_spectra_rule_str)
-        output_list.append(new_spectra_rule_str)
-
-    def process_new_eventually_exception(self, learning_type, line_list, output_list, rule, rule_list, spec):
-        name = ALL_PREDS.search(rule).group(1).split(',')[1].strip()
-        for i, line in enumerate(spec):
-            if re.search(name + r"\b", line):
-                j = i + 1
-        line = spec[j].strip("\n")
-        print(line)
-        line_list.append(line)
-        print("Hypothesis:")
-        print(f'\t{rule}')
-        rule_list.append(rule)
-        output = eventualise_consequent(line, learning_type)
-        spec[j] = output
-        print("New Rule:")
-        print(output.strip("\n"))
-        output_list.append(output.strip("\n"))
 
     def set_heuristic_manager(self, heuristic_manager):
         self._hm = heuristic_manager

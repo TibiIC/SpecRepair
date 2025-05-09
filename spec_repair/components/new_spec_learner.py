@@ -77,9 +77,6 @@ class NewSpecLearner(ILearner):
                 raise DeadlockRequiredException("Violation trace is not violating! Deadlock completion is required.")
         return violations
 
-    def integrate_learning_hypothesis(self, spec, learning_hypothesis, learning_type) -> list[str]:
-        return self.spec_encoder.integrate_learned_hypothesis(spec, learning_hypothesis, learning_type)
-
 
 def filter_useful_adaptations(potential_adaptations: List[Tuple[int, List[Adaptation]]]) -> List[List[Adaptation]]:
     ev_adaptations = [(score, adaptations) for score, adaptations in potential_adaptations if
