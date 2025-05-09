@@ -27,6 +27,12 @@ class IHeuristicManager(ABC):
     def is_enabled(self, param):
         return self._heuristics[param]
 
+    def set_enabled(self, param):
+        self._heuristics[param] = True
+
+    def set_disabled(self, param):
+        self._heuristics[param] = False
+
     def reset(self):
         """
         A heuristic manager may keep track internally of the state of
