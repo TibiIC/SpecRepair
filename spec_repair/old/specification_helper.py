@@ -26,7 +26,7 @@ def get_folders(folder, exclusions=[]):
 # TODO: Fix infinite recursion
 def run_subprocess(cmd, encoding: str = 'utf-8', suppress=False, timeout=-1):
     # timed = timeout > 0
-
+    # print("Running command: ", " ".join(cmd))
     if suppress:
         p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL)#, start_new_session=timed)
     else:

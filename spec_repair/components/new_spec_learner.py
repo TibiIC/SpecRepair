@@ -49,10 +49,11 @@ class NewSpecLearner(ILearner):
     def find_possible_adaptations(self, spec: SpectraSpecification, trace, cts, learning_type) -> List[
         List[Adaptation]]:
         violations = self.get_spec_violations(spec, trace, cts, learning_type)
-        ant_adaptations = self.find_antecedent_exception_adaptations(cts, learning_type, spec, trace, violations)
-        con_adaptations = self.find_consequent_exception_adaptations(cts, learning_type, spec, trace, violations)
-        ev_adaptations = self.find_eventualisation_adaptations(cts, learning_type, spec, trace, violations)
+        ant_adaptations = self.find_antecedent_exception_adaptations(spec, trace, cts, learning_type, violations)
+        con_adaptations = self.find_consequent_exception_adaptations(spec, trace, cts, learning_type, violations)
+        ev_adaptations = self.find_eventualisation_adaptations(spec, trace, cts, learning_type, violations)
         adaptations = ant_adaptations + con_adaptations + ev_adaptations
+        # adaptations = self.find_all_exception_adaptations(spec, trace, cts, learning_type, violations)
         if not adaptations:
             if learning_type == Learning.ASSUMPTION_WEAKENING:
                 raise NoAssumptionWeakeningException(
@@ -65,39 +66,35 @@ class NewSpecLearner(ILearner):
         useful_adaptations: List[List[Adaptation]] = filter_useful_adaptations(adaptations)
         return useful_adaptations
 
-    def find_antecedent_exception_adaptations(self, cts, learning_type, spec, trace, violations) -> List[Tuple[int, List[Adaptation]]]:
+    def find_all_exception_adaptations(self, spec, trace, cts, learning_type, violations) -> List[Tuple[int, List[Adaptation]]]:
+        hm = NoFilterHeuristicManager()
+        hm.set_enabled("ANTECEDENT_WEAKENING")
+        hm.set_enabled("CONSEQUENT_WEAKENING")
+        hm.set_enabled("INVARIANT_TO_RESPONSE_WEAKENING")
+        return self.find_adaptations_with_heuristic(spec, trace, cts, learning_type, violations, hm)
+
+    def find_antecedent_exception_adaptations(self, spec, trace, cts, learning_type, violations) -> List[Tuple[int, List[Adaptation]]]:
         hm = NoFilterHeuristicManager()
         hm.set_enabled("ANTECEDENT_WEAKENING")
         hm.set_disabled("CONSEQUENT_WEAKENING")
         hm.set_disabled("INVARIANT_TO_RESPONSE_WEAKENING")
-        self.spec_encoder.set_heuristic_manager(hm)
-        ilasp: str = self.spec_encoder.encode_ILASP(spec, trace, cts, violations, learning_type)
-        output: str = run_ILASP(ilasp)
-        adaptations: Optional[
-            List[Tuple[int, List[Adaptation]]]] = ILASPInterpreter.extract_learned_possible_adaptations(output)
-        if not adaptations:
-            return []
-        return adaptations
+        return self.find_adaptations_with_heuristic(spec, trace, cts, learning_type, violations, hm)
 
-    def find_consequent_exception_adaptations(self, cts, learning_type, spec, trace, violations) -> List[Tuple[int, List[Adaptation]]]:
+    def find_consequent_exception_adaptations(self, spec, trace, cts, learning_type, violations) -> List[Tuple[int, List[Adaptation]]]:
         hm = NoFilterHeuristicManager()
         hm.set_disabled("ANTECEDENT_WEAKENING")
         hm.set_enabled("CONSEQUENT_WEAKENING")
         hm.set_disabled("INVARIANT_TO_RESPONSE_WEAKENING")
-        self.spec_encoder.set_heuristic_manager(hm)
-        ilasp: str = self.spec_encoder.encode_ILASP(spec, trace, cts, violations, learning_type)
-        output: str = run_ILASP(ilasp)
-        adaptations: Optional[
-            List[Tuple[int, List[Adaptation]]]] = ILASPInterpreter.extract_learned_possible_adaptations(output)
-        if not adaptations:
-            return []
-        return adaptations
+        return self.find_adaptations_with_heuristic(spec, trace, cts, learning_type, violations, hm)
 
-    def find_eventualisation_adaptations(self, cts, learning_type, spec, trace, violations) -> List[Tuple[int, List[Adaptation]]]:
+    def find_eventualisation_adaptations(self, spec, trace, cts, learning_type, violations) -> List[Tuple[int, List[Adaptation]]]:
         hm = NoFilterHeuristicManager()
         hm.set_disabled("ANTECEDENT_WEAKENING")
         hm.set_disabled("CONSEQUENT_WEAKENING")
         hm.set_enabled("INVARIANT_TO_RESPONSE_WEAKENING")
+        return self.find_adaptations_with_heuristic(spec, trace, cts, learning_type, violations, hm)
+
+    def find_adaptations_with_heuristic(self, spec, trace, cts, learning_type, violations, hm):
         self.spec_encoder.set_heuristic_manager(hm)
         ilasp: str = self.spec_encoder.encode_ILASP(spec, trace, cts, violations, learning_type)
         output: str = run_ILASP(ilasp)
