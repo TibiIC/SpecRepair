@@ -2,7 +2,7 @@ import os
 from typing import Tuple
 from unittest import TestCase
 
-from spec_repair.components.spec_mittigator import SpecMittigator
+from spec_repair.components.spec_mitigator import SpecMitigator
 from spec_repair.enums import Learning
 from spec_repair.helpers.counter_trace import cts_from_cs, CounterTrace
 from spec_repair.helpers.spectra_specification import SpectraSpecification
@@ -18,7 +18,7 @@ class TestSpecMittigator(TestCase):
         tests_dir = os.path.dirname(test_components_dir)
         os.chdir(tests_dir)
         # Set up the mittigator
-        cls.mittigator = SpecMittigator()
+        cls.mittigator = SpecMitigator()
 
     @classmethod
     def tearDownClass(cls):

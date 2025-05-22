@@ -6,7 +6,7 @@ from scripts.bfs_repair_orchestrator import BFSRepairOrchestrator
 from spec_repair.components.interfaces.ilearner import ILearner
 from spec_repair.components.new_spec_learner import NewSpecLearner
 from spec_repair.components.new_spec_oracle import NewSpecOracle
-from spec_repair.components.spec_mittigator import SpecMittigator
+from spec_repair.components.spec_mitigator import SpecMitigator
 from spec_repair.components.spectra_discriminator import SpectraDiscriminator
 from spec_repair.enums import Learning
 from spec_repair.helpers.heuristic_managers.no_filter_heuristic_manager import NoFilterHeuristicManager
@@ -120,7 +120,7 @@ class TestBFSRepairOrchestrator(TestCase):
             learners,
             NewSpecOracle(),
             SpectraDiscriminator(),
-            SpecMittigator(),
+            SpecMitigator(),
             NoFilterHeuristicManager(),
             recorder
         )

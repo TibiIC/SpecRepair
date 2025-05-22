@@ -2,7 +2,7 @@ import re
 from copy import deepcopy, copy
 from typing import List, Tuple, Any, Set
 
-from spec_repair.components.interfaces.imittigator import IMittigator
+from spec_repair.components.interfaces.imitigator import IMitigator
 from spec_repair.components.interfaces.ispecification import ISpecification
 from spec_repair.components.new_spec_encoder import NewSpecEncoder
 from spec_repair.enums import Learning
@@ -12,7 +12,7 @@ from spec_repair.helpers.heuristic_managers.no_filter_heuristic_manager import N
 from spec_repair.wrappers.asp_wrappers import get_violations
 
 
-class SpecMittigator(IMittigator):
+class SpecMitigator(IMitigator):
     def __init__(self):
         self.spec_encoder = NewSpecEncoder(NoFilterHeuristicManager())
 
@@ -54,7 +54,7 @@ class SpecMittigator(IMittigator):
     @staticmethod
     def _move_to_guarantee_weakening(trace, cts, spec_history):
         new_spec = spec_history[0]
-        new_cts = cts[0:1]  # Only keep the first counter trace
+        new_cts = cts[0:1]  # Only keep the first counter-trace
         new_learning_type = Learning.GUARANTEE_WEAKENING
         new_spec_history = []
         new_data = (trace, new_cts, new_learning_type, new_spec_history)

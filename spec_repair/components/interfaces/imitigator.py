@@ -4,7 +4,7 @@ from typing import List, Tuple, Any
 from spec_repair.components.interfaces.ispecification import ISpecification
 
 
-class IMittigator(ABC):
+class IMitigator(ABC):
     @abstractmethod
     def prepare_alternative_learning_tasks(self, spec, data) -> List[Tuple[ISpecification, Any]]:
         pass
