@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import Any, List
+from typing import Any, List, Tuple
 
 from spec_repair.components.interfaces.ispecification import ISpecification
 
@@ -10,7 +10,7 @@ class ILearner(ABC):
         self,
         spec: ISpecification,
         data: Any
-    ) -> List[ISpecification]:
+    ) -> List[Tuple[ISpecification, Any]]:
         """
         Given a specification and data, learn new specifications.
         :param spec: The original specification.

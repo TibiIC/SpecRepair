@@ -125,7 +125,7 @@ class TestBFSRepairOrchestrator(TestCase):
             recorder
         )
         # Getting all possible repairs
-        repairer.repair_bfs(spec, (trace, [], Learning.ASSUMPTION_WEAKENING, []))
+        repairer.repair_bfs(spec, (trace, [], Learning.ASSUMPTION_WEAKENING, [], 0, 0))
         new_spec_strings: list[str] = [spec.to_str() for spec in recorder.get_all_values()]
         for i, new_spec in enumerate(new_spec_strings):
             write_to_file(f"{out_test_dir_name}/{case_study_name}_fix_{i}.spectra", new_spec)

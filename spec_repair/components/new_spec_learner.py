@@ -25,17 +25,19 @@ class NewSpecLearner(ILearner):
         self.heuristic_manager = heuristic_manager
         self.spec_encoder = NewSpecEncoder(heuristic_manager)
 
+    # TODO: consider returning "data" instead of empty list when no learning is possible
     def learn_new(
             self,
             spec: SpectraSpecification,
-            data: Tuple[list[str], list[CounterTrace], Learning, list[SpectraSpecification]]
-    ) -> List[SpectraSpecification]:
-        trace, cts, learning_type, spec_history = data
+            data: Tuple[list[str], list[CounterTrace], Learning, list[SpectraSpecification], int, float]
+    ) -> List[Tuple[SpectraSpecification, Tuple[list[str], list[CounterTrace], Learning, list[SpectraSpecification], int, float]]]:
+        trace, cts, learning_type, spec_history, learning_steps, learning_time = data
         try:
-            possible_adaptations: List[List[Adaptation]] = self.find_possible_adaptations(spec, trace, cts,
-                                                                                          learning_type)
+            possible_adaptations: List[List[Adaptation]] = self.find_possible_adaptations(spec, trace, cts, learning_type)
             new_specs = [deepcopy(spec).integrate_multiple(adaptations) for adaptations in possible_adaptations]
-            return new_specs
+            new_data = (trace, cts, learning_type, spec_history, learning_steps + 1, learning_time)
+            new_tasks = [(new_spec, deepcopy(new_data)) for new_spec in new_specs]
+            return new_tasks
         except NoWeakeningException as e:
             print(f"Weakening failed: {e}")
             return []

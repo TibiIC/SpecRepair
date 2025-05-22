@@ -1,9 +1,11 @@
 import re
-from typing import Optional, List
+from copy import deepcopy
+from typing import Optional, List, Tuple
 
 from spec_repair.components.interfaces.ioracle import IOracle
 from spec_repair.components.spec_oracle import SpecOracle
 from spec_repair.config import PATH_TO_CLI
+from spec_repair.enums import Learning
 from spec_repair.helpers.counter_trace import cts_from_cs, CounterTrace
 from spec_repair.helpers.spectra_specification import SpectraSpecification
 from spec_repair.ltl_types import CounterStrategy
@@ -15,12 +17,17 @@ class NewSpecOracle(IOracle):
     def __init__(self):
         self._ct_cnt = 0
 
-    def is_valid_or_counter_arguments(self, new_spec) -> Optional[List[CounterTrace]]:
+    def is_valid_or_counter_arguments(
+            self,
+            new_spec: SpectraSpecification,
+            data: Tuple[list[str], list[CounterTrace], Learning, list[SpectraSpecification], int, float]
+    ) -> Optional[List[Tuple[CounterTrace, Tuple[list[str], list[CounterTrace], Learning, list[SpectraSpecification], int, float]]]]:
         counter_strategy = self.synthesise_and_check(new_spec)
         if counter_strategy:
             possible_counter_traces = cts_from_cs(counter_strategy, cs_id=self._ct_cnt)
             self._ct_cnt += 1
-            return possible_counter_traces
+            possible_counter_traces_with_data = [(possible_counter_trace, deepcopy(data)) for possible_counter_trace in possible_counter_traces]
+            return possible_counter_traces_with_data
         else:
             return None
 

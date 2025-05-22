@@ -1,4 +1,4 @@
-from typing import Any, Dict
+from typing import Any, Dict, List, Tuple
 
 from spec_repair.components.interfaces.idiscriminator import IDiscriminator
 from spec_repair.components.interfaces.ilearner import ILearner
@@ -48,19 +48,21 @@ class BFSRepairOrchestrator:
             spec, data = self._om.get_next()
             learning_strategy: str = self._discriminator.get_learning_strategy(spec, data)
             learner = self._learners[learning_strategy]
-            learned_specs = learner.learn_new(spec, data)
-            if not learned_specs:
-                alternate_tasks = self._mitigator.prepare_alternative_learning_tasks(spec, data)
-                for alt_spec, alt_data in alternate_tasks:
+            learned_tasks: List[Tuple[ISpecification, Any]] = learner.learn_new(spec, data)
+            if not learned_tasks:
+                alt_tasks: List[Tuple[ISpecification, Any]] = self._mitigator.prepare_alternative_learning_tasks(spec,
+                                                                                                                 data)
+                for alt_spec, alt_data in alt_tasks:
                     self._om.enqueue_new_tasks(alt_spec, alt_data)
             else:
-                for learned_spec in learned_specs:
-                    counter_examples = self._oracle.is_valid_or_counter_arguments(learned_spec)
-                    if not counter_examples:
+                for learned_spec, data in learned_tasks:
+                    counter_examples_with_data: List[Tuple[Any, Any]] = self._oracle.is_valid_or_counter_arguments(
+                        learned_spec, data)
+                    if not counter_examples_with_data:
                         self._recorder.add(learned_spec)
                     else:
                         # TODO: find a way to filter the counter examples using the heuristic manager
-                        for counter_example in counter_examples:
+                        for counter_example, data in counter_examples_with_data:
                             new_spec, new_data = self._mitigator.prepare_learning_task(spec, data, learned_spec,
                                                                                        counter_example)
                             self._om.enqueue_new_tasks(new_spec, new_data)
