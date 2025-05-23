@@ -93,6 +93,8 @@ def to_dnf(f: LTLFormula) -> LTLFormula:
         left = to_dnf(f.left)
         right = to_dnf(f.right)
         return Or(left, right)
+    if isinstance(f, Implies):
+        return to_dnf(Or(Not(f.left), f.right))
     # Temporal operators and others we don't convert to DNF:
     # Return as-is or raise
     return f
@@ -123,10 +125,14 @@ def normalize_to_pattern(formula: LTLFormula) -> LTLFormula:
             else:
                 rhs_dnf = to_dnf(rhs)
                 return Globally(Implies(lhs_dnf, rhs_dnf))
+        elif isinstance(inner, Eventually):
+            inner = inner.formula
+            inner_dnf = to_dnf(inner)
+            return Globally(Eventually(inner_dnf))
         else:
             # convert to GF(DNF)
             inner_dnf = to_dnf(inner)
-            return Globally(Eventually(inner_dnf))
+            return Globally(inner_dnf)
 
-    # Otherwise just convert whole formula to GF(DNF)
-    return Globally(Eventually(to_dnf(formula)))
+    # Otherwise, raise ValueError
+    raise ValueError(f"Formula {formula} cannot be converted to G(F(f)) or G(f→g) form")

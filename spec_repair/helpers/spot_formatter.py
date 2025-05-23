@@ -8,7 +8,7 @@ class SpotFormatter(ILTLFormatter):
             case AtomicProposition(name=name, value=True):
                 return name
             case AtomicProposition(name=name, value=value):
-                return f"{name} = {str(value).lower()}"
+                return f"!{name}"
             case Not(formula=formula):
                 return f"!({self.format(formula)})"
             case And(left=left, right=right):

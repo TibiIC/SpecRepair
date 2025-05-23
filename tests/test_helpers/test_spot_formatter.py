@@ -14,7 +14,7 @@ class TestSpotFormatter(unittest.TestCase):
         self.assertEqual(self.formatter.format(f), "a")
 
         f = AtomicProposition("x", False)
-        self.assertEqual(self.formatter.format(f), "x = false")
+        self.assertEqual(self.formatter.format(f), "!x")
 
     def test_constants(self):
         self.assertEqual(self.formatter.format(Top()), "true")
