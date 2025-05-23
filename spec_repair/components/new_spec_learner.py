@@ -121,9 +121,9 @@ class NewSpecLearner(ILearner):
 
 def filter_useful_adaptations(potential_adaptations: List[Tuple[int, List[Adaptation]]]) -> List[List[Adaptation]]:
     ev_adaptations = [(score, adaptations) for score, adaptations in potential_adaptations if
-                      "ev_temp_op" in [adaptation.type for adaptation in adaptations]]
+                      all(adaptation.type == "ev_temp_op" for adaptation in adaptations)]
     other_adaptations = [(score, adaptations) for score, adaptations in potential_adaptations if
-                         "ev_temp_op" not in [adaptation.type for adaptation in adaptations]]
+                         (score, adaptations) not in ev_adaptations]
     top_adaptations = ([adaptations for score, adaptations in other_adaptations if
                         score == min(other_adaptations, key=lambda x: x[0])[0]] +
                        [adaptations for score, adaptations in ev_adaptations if

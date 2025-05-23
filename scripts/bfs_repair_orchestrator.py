@@ -1,3 +1,4 @@
+from datetime import datetime
 from typing import Any, Dict, List, Tuple
 
 from spec_repair.components.interfaces.idiscriminator import IDiscriminator
@@ -12,6 +13,19 @@ from spec_repair.helpers.recorders.irecorder import IRecorder
 from spec_repair.helpers.recorders.unique_recorder import UniqueRecorder
 
 
+class SpecLogger:
+    def __init__(self, filename: str = "spec_repair.log"):
+        self.filename = filename
+        with open(self.filename, 'a') as f:
+            f.write(f"[SpecLogger] Started at: {datetime.now()}\n")
+
+    def record(self, idx: int, spec: ISpecification, data: Any):
+        trace, cts, learning_type, spec_history, learning_steps, learning_time = data
+        log_message = f"[SpecLogger] Index: {idx}, learning_type: {learning_type}, learning_steps: {learning_steps}, learning_time: {learning_time}\n"
+        with open(self.filename, 'a') as f:
+            f.write(log_message)
+
+
 class BFSRepairOrchestrator:
     def __init__(
             self,
@@ -20,7 +34,8 @@ class BFSRepairOrchestrator:
             discriminator: IDiscriminator,
             mitigator: IMitigator,
             heuristic_manager: IHeuristicManager = NoFilterHeuristicManager(),
-            recorder: IRecorder[ISpecification] = UniqueRecorder()
+            recorder: IRecorder[ISpecification] = UniqueRecorder(),
+            logger: SpecLogger = SpecLogger("spec_repair.log")
     ):
         self._learners = learners
         self._oracle = oracle
@@ -29,6 +44,7 @@ class BFSRepairOrchestrator:
         self._om = OrchestrationManager()
         self._hm = heuristic_manager
         self._recorder = recorder
+        self._logger = logger
         self._initialise_repair()
 
     def _initialise_repair(self):
@@ -59,7 +75,8 @@ class BFSRepairOrchestrator:
                     counter_examples_with_data: List[Tuple[Any, Any]] = self._oracle.is_valid_or_counter_arguments(
                         learned_spec, data)
                     if not counter_examples_with_data:
-                        self._recorder.add(learned_spec)
+                        learned_id = self._recorder.add(learned_spec)
+                        self._logger.record(learned_id, learned_spec, data)
                     else:
                         # TODO: find a way to filter the counter examples using the heuristic manager
                         for counter_example, data in counter_examples_with_data:

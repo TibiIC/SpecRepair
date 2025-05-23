@@ -2,7 +2,7 @@ import os
 from typing import Dict
 from unittest import TestCase
 
-from scripts.bfs_repair_orchestrator import BFSRepairOrchestrator
+from scripts.bfs_repair_orchestrator import BFSRepairOrchestrator, SpecLogger
 from spec_repair.components.interfaces.ilearner import ILearner
 from spec_repair.components.new_spec_learner import NewSpecLearner
 from spec_repair.components.new_spec_oracle import NewSpecOracle
@@ -98,6 +98,7 @@ class TestBFSRepairOrchestrator(TestCase):
 
     def run_bfs_repair(self, case_study_name, case_study_path, out_test_dir_name, is_debug=False):
         transitions_file_path = f"{out_test_dir_name}/transitions.csv"
+        log_file = f"{out_test_dir_name}/log.txt"
         if not os.path.exists(out_test_dir_name):
             os.mkdir(out_test_dir_name)
         if os.path.exists(transitions_file_path):
@@ -122,7 +123,8 @@ class TestBFSRepairOrchestrator(TestCase):
             SpectraDiscriminator(),
             SpecMitigator(),
             NoFilterHeuristicManager(),
-            recorder
+            recorder,
+            SpecLogger(filename=log_file)
         )
         # Getting all possible repairs
         repairer.repair_bfs(spec, (trace, [], Learning.ASSUMPTION_WEAKENING, [], 0, 0))
