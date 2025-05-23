@@ -1,0 +1,21 @@
+module TrafficE2
+
+env boolean car;
+env boolean emergency;
+sys boolean green;
+env boolean police;
+
+guarantee -- green_often
+    G(((car=true&emergency=true)->F(green=true)));
+
+guarantee -- no_car_often -- needs to be rewritten to take out implication
+    GF((emergency=true->car=false));
+
+assumption -- not_police_often
+    GF(police=false);
+
+assumption -- car_idle_when_red
+    G(((car=true&green=false)->next(car=true)));
+
+assumption -- car_moves_when_green
+    G((((car=true&green=true)&green=false)->next(car=false)));
