@@ -2248,7 +2248,7 @@ root_consequent_holds(OP,{name},1,T1,S):-
 \ttimepoint(T2,S),
 \ttemporal_operator(OP),
 \ttimepoint_of_op(OP,T1,T2,S),
-\tholds_at(b,T2,S).
+\tholds_at(b,T2,S).\
 """)
 
 if __name__ == '__main__':

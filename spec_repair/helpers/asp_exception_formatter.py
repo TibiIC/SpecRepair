@@ -7,7 +7,7 @@ from py_ltl.formula import LTLFormula, AtomicProposition, Not, And, Or, Until, N
 from collections import defaultdict
 
 from spec_repair.util.formula_util import get_disjuncts_from_disjunction
-
+from spec_repair.util.ltl_formula_util import normalize_to_pattern
 
 
 class ASPExceptionFormatter(ILTLFormatter):
@@ -27,6 +27,7 @@ class ASPExceptionFormatter(ILTLFormatter):
         elif not isinstance(formula, Globally):
             return self.format_initial(formula)
         else:
+            formula = normalize_to_pattern(formula)
             return self.format_invariant(formula.formula)
 
     def format_initial(self, this_formula: LTLFormula) -> str:
