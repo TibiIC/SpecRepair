@@ -1,6 +1,20 @@
 from py_ltl.formula import LTLFormula, Globally, Implies, AtomicProposition, Not, Top, Bottom, Eventually, And, Or
 
 
+def is_dnf_implies_dnf(f: LTLFormula) -> bool:
+    # Check if f is Implies(lhs, rhs) and lhs, rhs are DNF
+    if not isinstance(f, Implies):
+        return False
+    return is_dnf(f.left) and is_dnf(f.right)
+
+
+def is_gdnf(f: LTLFormula) -> bool:
+    # Check if f is Globally(formula) and formula is DNF
+    if not isinstance(f, Globally):
+        return False
+    return is_dnf(f.formula)
+
+
 def is_g_dnf_implies_dnf(f: LTLFormula) -> bool:
     # Check if f is Globally(Implies(lhs, rhs)) and lhs, rhs are DNF
     if not isinstance(f, Globally):
@@ -62,6 +76,7 @@ def is_disjunction_of_conjunctions(f: LTLFormula) -> bool:
 def is_dnf(f: LTLFormula) -> bool:
     return is_disjunction_of_conjunctions(f)
 
+
 def to_dnf(f: LTLFormula) -> LTLFormula:
     # Base cases
     if is_literal(f):
@@ -101,38 +116,54 @@ def to_dnf(f: LTLFormula) -> LTLFormula:
 
 
 def normalize_to_pattern(formula: LTLFormula) -> LTLFormula:
-    # If already matches one of the three, done
-    if is_g_dnf_implies_dnf(formula):
+    if is_pattern(formula):
         return formula
-    if is_g_dnf_implies_fdnf(formula):
-        return formula
-    if is_gf_dnf(formula):
-        return formula
-
     # Otherwise, we must convert
-
-    # Example heuristic:
-    # If formula is of form G(...), transform inside
     if isinstance(formula, Globally):
-        inner = formula.formula
-        if isinstance(inner, Implies):
-            lhs_dnf = to_dnf(inner.left)
-            rhs = inner.right
-            # if rhs can be turned into Eventually(DNF), do so
-            if isinstance(rhs, Eventually):
-                rhs_dnf = to_dnf(rhs.formula)
-                return Globally(Implies(lhs_dnf, Eventually(rhs_dnf)))
-            else:
-                rhs_dnf = to_dnf(rhs)
-                return Globally(Implies(lhs_dnf, rhs_dnf))
-        elif isinstance(inner, Eventually):
-            inner = inner.formula
-            inner_dnf = to_dnf(inner)
-            return Globally(Eventually(inner_dnf))
-        else:
-            # convert to GF(DNF)
-            inner_dnf = to_dnf(inner)
-            return Globally(inner_dnf)
-
+        inner_formula = normalize_inner_formula_to_pattern(formula.formula)
+        formula = Globally(inner_formula)
+    else:
+        formula = normalize_inner_formula_to_pattern(formula)
+    # TODO: eventually this should become unnecessary, but for now we need to check again
+    if is_pattern(formula):
+        return formula
     # Otherwise, raise ValueError
     raise ValueError(f"Formula {formula} cannot be converted to G(F(f)) or G(f→g) form")
+
+
+def is_pattern(formula: LTLFormula) -> bool:
+    # If already matches one of the six, done
+    pattern_checks = [
+        is_dnf,
+        is_dnf_implies_dnf,
+        is_gdnf,
+        is_g_dnf_implies_dnf,
+        is_g_dnf_implies_fdnf,
+        is_gf_dnf
+    ]
+
+    for check in pattern_checks:
+        if check(formula):
+            return True
+    return False
+
+
+def normalize_inner_formula_to_pattern(inner):
+    if isinstance(inner, Implies):
+        lhs_dnf = to_dnf(inner.left)
+        rhs = inner.right
+        # if rhs can be turned into Eventually(DNF), do so
+        if isinstance(rhs, Eventually):
+            rhs_dnf = to_dnf(rhs.formula)
+            return Implies(lhs_dnf, Eventually(rhs_dnf))
+        else:
+            rhs_dnf = to_dnf(rhs)
+            return Implies(lhs_dnf, rhs_dnf)
+    elif isinstance(inner, Eventually):
+        inner = inner.formula
+        inner_dnf = to_dnf(inner)
+        return Eventually(inner_dnf)
+    else:
+        # convert to GF(DNF)
+        inner_dnf = to_dnf(inner)
+        return inner_dnf
