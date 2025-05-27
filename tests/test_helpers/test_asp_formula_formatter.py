@@ -2215,41 +2215,8 @@ root_consequent_holds(OP,{name},0,T1,S):-
     def test_always_eventually_implies(self):
         a = AtomicProposition("a", True)
         b = AtomicProposition("b", True)
-        self.assertEqual(
-            self.formatter.format(Globally(Eventually(Implies(a, b)))),
-            """\
-antecedent_holds({name},T,S):-
-\ttrace(S),
-\ttimepoint(T,S).
-
-consequent_holds({name},T,S):-
-\ttrace(S),
-\ttimepoint(T,S),
-\troot_consequent_holds(eventually,{name},0,T,S).
-
-root_consequent_holds(OP,{name},0,T1,S):-
-\ttrace(S),
-\ttimepoint(T1,S),
-\tnot weak_timepoint(T1,S),
-\ttimepoint(T2,S),
-\ttemporal_operator(OP),
-\ttimepoint_of_op(OP,T1,T2,S),
-\tnot_holds_at(a,T2,S).
-
-consequent_holds({name},T,S):-
-\ttrace(S),
-\ttimepoint(T,S),
-\troot_consequent_holds(eventually,{name},1,T,S).
-
-root_consequent_holds(OP,{name},1,T1,S):-
-\ttrace(S),
-\ttimepoint(T1,S),
-\tnot weak_timepoint(T1,S),
-\ttimepoint(T2,S),
-\ttemporal_operator(OP),
-\ttimepoint_of_op(OP,T1,T2,S),
-\tholds_at(b,T2,S).\
-""")
+        with self.assertRaises(ValueError):
+            self.formatter.format(Globally(Eventually(Implies(a, b))))
 
 if __name__ == '__main__':
     unittest.main()

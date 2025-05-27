@@ -2492,5 +2492,11 @@ consequent_holds({name},0,S):-
 """)
 
 
+    def test_always_eventually_implies(self):
+        a = AtomicProposition("a", True)
+        b = AtomicProposition("b", True)
+        with self.assertRaises(ValueError):
+            self.formatter.format(Globally(Eventually(Implies(a, b))))
+
 if __name__ == '__main__':
     unittest.main()

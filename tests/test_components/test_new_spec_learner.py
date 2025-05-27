@@ -1,4 +1,5 @@
 import os
+from typing import Any, Tuple
 from unittest import TestCase
 
 from spec_repair.components.interfaces.ispecification import ISpecification
@@ -37,9 +38,9 @@ class TestNewSpecLearner(TestCase):
         expected_specs.append(SpectraSpecification.from_file('./test_files/minepump_aw_pump.spectra'))
         expected_specs.append(SpectraSpecification.from_file('./test_files/minepump_aw_ev.spectra'))
 
-        new_specs: list[ISpecification]
-        new_specs = spec_learner.learn_new(spec, (trace, [], Learning.ASSUMPTION_WEAKENING, []))
-        new_specs_str: list[str] = [new_spec.to_str() for new_spec in new_specs]
+        new_tasks: list[Tuple[ISpecification, Any]]
+        new_tasks = spec_learner.learn_new(spec, (trace, [], Learning.ASSUMPTION_WEAKENING, [], 0, 0))
+        new_specs_str: list[str] = [new_spec.to_str() for new_spec, new_data in new_tasks]
 
         for new_spec_str in new_specs_str:
             print(new_spec_str)
