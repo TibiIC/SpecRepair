@@ -1,12 +1,11 @@
-from collections import defaultdict
 from copy import deepcopy
-from functools import reduce
-from typing import List, Dict, TypeVar, Optional
+from typing import TypeVar, Optional
 
 from spec_repair.helpers.adaptation_learned import Adaptation
 from spec_repair.helpers.spectra_formula_parser import SpectraFormulaParser
 from spec_repair.ltl_types import GR1TemporalType
 from spec_repair.util.formula_util import disjoin_all, get_disjuncts_from_disjunction
+from spec_repair.util.ltl_formula_util import normalize_to_pattern
 from spec_repair.util.spec_util import replace_false_true
 
 from py_ltl.parser import ILTLParser
@@ -41,24 +40,55 @@ class GR1Formula:
         Returns:
             GR1Formula: A SpectraFormula object containing the parsed formula.
         """
-        parsed = parser.parse(formula)
-        if not isinstance(parsed, Globally):
+        parsed_formula: LTLFormula = parser.parse(formula)
+        return GR1Formula.from_ltl_formula(parsed_formula)
+
+    @staticmethod
+    def from_ltl_formula(parsed_formula: LTLFormula) -> Self:
+        parsed_formula = normalize_to_pattern(parsed_formula)
+        temp_type, antecedent, consequent = GR1Formula._from_normal_ltl_formula(parsed_formula)
+        return GR1Formula(temp_type, antecedent, consequent)
+
+    @staticmethod
+    def _from_normal_ltl_formula(parsed_formula):
+        """
+        precondition: parsed_formula is in a normal form
+        """
+        if not isinstance(parsed_formula, Globally):
             temp_type = GR1TemporalType.INITIAL
         else:
-            parsed = parsed.formula
-            if isinstance(parsed, Eventually):
+            parsed_formula = parsed_formula.formula
+            if isinstance(parsed_formula, Eventually):
                 temp_type = GR1TemporalType.JUSTICE
-                parsed = parsed.formula
+                parsed_formula = parsed_formula.formula
             else:
                 temp_type = GR1TemporalType.INVARIANT
-        if isinstance(parsed, Implies):
-            antecedent = parsed.left
-            consequent = parsed.right
+        if isinstance(parsed_formula, Implies):
+            antecedent = parsed_formula.left
+            consequent = parsed_formula.right
         else:
             antecedent = None
-            consequent = parsed
+            consequent = parsed_formula
+        return temp_type, antecedent, consequent
 
-        return GR1Formula(temp_type, antecedent, consequent)
+    def _normalize(self):
+        ltl_formula: LTLFormula = self._to_ltl_formula()
+        self.temp_type, self.antecedent, self.consequent = self._from_normal_ltl_formula(ltl_formula)
+
+    def _to_ltl_formula(self) -> LTLFormula:
+        if self.antecedent is None:
+            implication = self.consequent
+        else:
+            implication = Implies(self.antecedent, self.consequent)
+        match self.temp_type:
+            case GR1TemporalType.INITIAL:
+                return implication
+            case GR1TemporalType.INVARIANT:
+                return Globally(implication)
+            case GR1TemporalType.JUSTICE:
+                return Globally(Eventually(implication))
+            case _:
+                raise ValueError(f"Unsupported temporal type: {self.temp_type}")
 
     def to_str(self, formatter: ILTLFormatter) -> str:
         if self.antecedent is None:
@@ -96,22 +126,23 @@ class GR1Formula:
 
             case _:
                 raise ValueError(f"Unsupported temporal type: {self.temp_type}")
+        self._normalize()
 
     def _integrate_consequent_exception(self, adaptation: Adaptation):
         first_temp_op, first_atom_assignment = adaptation.atom_temporal_operators[0]
-        new_disjunct = self.generate_literal(first_atom_assignment, first_temp_op)
+        new_disjunct = self._generate_literal(first_atom_assignment, first_temp_op)
         for op, atom in adaptation.atom_temporal_operators[1:]:
-            new_disjunct = And(new_disjunct, self.generate_literal(atom, op))
+            new_disjunct = And(new_disjunct, self._generate_literal(atom, op))
         self.consequent = Or(self.consequent, new_disjunct)
 
     def _integrate_antecedent_exception(self, adaptation: Adaptation):
         if self.antecedent is None:
             first_temp_op, first_atom_assignment = adaptation.atom_temporal_operators[0]
             first_atom_assignment = replace_false_true(first_atom_assignment)
-            self.antecedent = self.generate_literal(first_atom_assignment, first_temp_op)
+            self.antecedent = self._generate_literal(first_atom_assignment, first_temp_op)
             for op, atom in adaptation.atom_temporal_operators[1:]:
                 atom = replace_false_true(atom)
-                new_disjunct = self.generate_literal(atom, op)
+                new_disjunct = self._generate_literal(atom, op)
                 self.antecedent = Or(self.antecedent, new_disjunct)
         else:
             disjuncts = get_disjuncts_from_disjunction(self.antecedent)
@@ -119,12 +150,12 @@ class GR1Formula:
             disjuncts.remove(disjunct)
             for op, atom in adaptation.atom_temporal_operators:
                 atom = replace_false_true(atom)
-                new_disjunct = self.generate_literal(atom, op)
+                new_disjunct = self._generate_literal(atom, op)
                 new_disjunct = And(deepcopy(disjunct), new_disjunct)
                 disjuncts.append(new_disjunct)
             self.antecedent = disjoin_all(disjuncts)
 
-    def generate_literal(self, atom, op):
+    def _generate_literal(self, atom, op):
         new_disjunct = self.ilasp_parser.parse(atom)
         match op:
             case "current":
