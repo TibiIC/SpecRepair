@@ -1,11 +1,10 @@
-import re
 import unittest
 import spot
 
 from py_ltl.formula import LTLFormula, Globally, Implies, AtomicProposition, Not, Top, Bottom, Eventually, And, Or, Next
 
 from spec_repair.helpers.spectra_formula_parser import SpectraFormulaParser
-from spec_repair.helpers.spot_formatter import SpotFormatter
+from spec_repair.helpers.spot_formula_formatter import SpotFormulaFormatter
 from spec_repair.util.ltl_formula_util import normalize_to_pattern
 
 
@@ -14,7 +13,7 @@ class TestLTLNormalization(unittest.TestCase):
         self.a = AtomicProposition("a", True)
         self.b = AtomicProposition("b", True)
         self.c = AtomicProposition("c", True)
-        self._formatter = SpotFormatter()
+        self._formatter = SpotFormulaFormatter()
 
     def _equiv(self, formula1: LTLFormula, formula2: LTLFormula):
         f1 = spot.formula(formula1.format(self._formatter))

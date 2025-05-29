@@ -1,16 +1,21 @@
 import os
+import unittest
 from unittest import TestCase
 
 import pandas as pd
+import spot
 
 from spec_repair.helpers.adaptation_learned import Adaptation
 from spec_repair.helpers.gr1_formula import GR1Formula
+from spec_repair.helpers.heuristic_managers.no_filter_heuristic_manager import NoFilterHeuristicManager
 from spec_repair.helpers.spectra_formula_formatter import SpectraFormulaFormatter
 from spec_repair.helpers.spectra_formula_parser import SpectraFormulaParser
-from spec_repair.helpers.spectra_specification import SpectraSpecification, propositionalise_antecedent, \
-    propositionalise_consequent
+from spec_repair.helpers.spectra_specification import SpectraSpecification
 from spec_repair.helpers.spectra_atom import SpectraAtom
+from spec_repair.helpers.spot_specification_formatter import SpotSpecificationFormatter
 from spec_repair.ltl_types import GR1FormulaType, GR1TemporalType
+from tests.test_common_utility_strings.specs import spec_perf, spec_fixed_perf, spec_fixed_imperf, \
+    spec_asm_eq_gar_weaker, spec_asm_stronger_gar_eq
 
 
 class TestSpectraSpecification(TestCase):
@@ -43,7 +48,8 @@ class TestSpectraSpecification(TestCase):
             GR1Formula.from_str("\tpump=false;", self.parser).to_str(self.formatter),
             GR1Formula.from_str("G(highwater=true->next(pump=true));", self.parser).to_str(self.formatter),
             GR1Formula.from_str("G(methane=true->next(pump=false));", self.parser).to_str(self.formatter),
-            GR1Formula.from_str("G(PREV(pump=true)&pump=true->next(highwater=false));", self.parser).to_str(self.formatter),
+            GR1Formula.from_str("G(PREV(pump=true)&pump=true->next(highwater=false));", self.parser).to_str(
+                self.formatter),
             GR1Formula.from_str("G(highwater=false|methane=false)", self.parser).to_str(self.formatter),
         }
         for formula in formulas:
@@ -79,12 +85,12 @@ class TestSpectraSpecification(TestCase):
             GR1Formula.from_str("\tpump=false;", self.parser).to_str(self.formatter),
             GR1Formula.from_str("G(highwater=true->next(pump=true));", self.parser).to_str(self.formatter),
             GR1Formula.from_str("G(methane=true->next(pump=false));", self.parser).to_str(self.formatter),
-            GR1Formula.from_str("G(PREV(pump=true)&pump=true->next(highwater=false));", self.parser).to_str(self.formatter),
+            GR1Formula.from_str("G(PREV(pump=true)&pump=true->next(highwater=false));", self.parser).to_str(
+                self.formatter),
             GR1Formula.from_str("G(methane=false->highwater=false|methane=false)", self.parser).to_str(self.formatter),
         }
         for formula in formulas:
             self.assertIn(formula.to_str(self.formatter), expected_formulas)
-
 
     def test_integrate_learning_rule_multiple(self):
         spec_file = "./test_files/minepump_strong.spectra"
@@ -115,9 +121,10 @@ class TestSpectraSpecification(TestCase):
         expected_formulas: set[str] = {
             GR1Formula.from_str("\thighwater=false&methane=false;", self.parser).to_str(self.formatter),
             GR1Formula.from_str("\tpump=false;", self.parser).to_str(self.formatter),
-            GR1Formula.from_str("G(highwater=true->pump=true|next(pump=true));", self.parser).to_str(self.formatter),
-            GR1Formula.from_str("G(methane=true->pump=false|next(pump=false));", self.parser).to_str(self.formatter),
-            GR1Formula.from_str("G(PREV(pump=true)&pump=true->next(highwater=false));", self.parser).to_str(self.formatter),
+            GR1Formula.from_str("G(highwater=true->next(pump=true)|pump=true);", self.parser).to_str(self.formatter),
+            GR1Formula.from_str("G(methane=true->next(pump=false)|pump=false);", self.parser).to_str(self.formatter),
+            GR1Formula.from_str("G(PREV(pump=true)&pump=true->next(highwater=false));", self.parser).to_str(
+                self.formatter),
             GR1Formula.from_str("G(methane=false->highwater=false|methane=false)", self.parser).to_str(self.formatter),
         }
         for formula in formulas:
@@ -127,27 +134,28 @@ class TestSpectraSpecification(TestCase):
         spec_file = "./test_files/minepump_strong.spectra"
         spec = SpectraSpecification.from_file(spec_file)
         expected_str = (
+            "module Minepump\n"
             "env boolean highwater;\n"
             "env boolean methane;\n"
             "sys boolean pump;\n"
             "assumption -- initial_assumption\n"
-            "ini(highwater=false&methane=false);\n"
+            "\t(highwater=false&methane=false);\n"
             "guarantee -- initial_guarantee\n"
-            "ini(pump=false);\n"
+            "\tpump=false;\n"
             "guarantee -- guarantee1_1\n"
-            "G(highwater=true->next(pump=true));\n"
+            "\tG((highwater=true->next(pump=true)));\n"
             "guarantee -- guarantee2_1\n"
-            "G(methane=true->next(pump=false));\n"
+            "\tG((methane=true->next(pump=false)));\n"
             "assumption -- assumption1_1\n"
-            "G(PREV(pump=true)&pump=true->next(highwater=false));\n"
+            "\tG(((PREV(pump=true)&pump=true)->next(highwater=false)));\n"
             "assumption -- assumption2_1\n"
-            "G(highwater=false|methane=false);"
+            "\tG((highwater=false|methane=false));"
         )
         spec_str = spec.to_str()
         # remove all new lines more than one from spec string
         spec_str = "\n".join(line for line in spec_str.split("\n") if line.strip())
 
-        self.assertEqual(spec_str, expected_str)
+        self.assertEqual(expected_str, spec_str)
 
     def test_propositionalise_assumption_exception_no_eventually(self):
         line_data = {
@@ -158,7 +166,10 @@ class TestSpectraSpecification(TestCase):
         }
 
         line = pd.Series(line_data)
-        out = self.spec._formula_to_asp_str(line, ['a_always'], for_clingo=False, is_ev_temp_op=False)
+        hm = NoFilterHeuristicManager()
+        hm.set_disabled("CONSEQUENT_WEAKENING")
+        hm.set_disabled("INVARIANT_TO_RESPONSE_WEAKENING")
+        out = self.spec._formula_to_asp_str(line, ['a_always'], for_clingo=False, hm=hm)
         expected = """
 %assumption -- a_always
 %\tG(a=true)
@@ -186,157 +197,6 @@ root_consequent_holds(OP,a_always,0,T1,S):-
 """
         self.assertMultiLineEqual(expected.strip(), out.strip())
 
-    def test_propositionalise_formula_antecedent(self):
-        line_data = {
-            'name': 'a_always',
-            'type': GR1FormulaType.ASM,
-            'when': GR1TemporalType.INVARIANT,
-            'formula': GR1Formula.from_str("G(a=true);", parser=self.parser)
-        }
-
-        line = pd.Series(line_data)
-        out = propositionalise_antecedent(line, exception=False)
-        expected = """
-antecedent_holds(a_always,T,S):-
-\ttrace(S),
-\ttimepoint(T,S).
-"""
-        self.assertMultiLineEqual(expected.strip(), out.strip())
-
-    def test_propositionalise_formula_antecedent_2(self):
-        line_data = {
-            'name': 'a_arrow_b',
-            'type': GR1FormulaType.ASM,
-            'when': GR1TemporalType.INVARIANT,
-            'formula': GR1Formula.from_str("G(a=true->b=true);", parser=self.parser)
-        }
-
-        line = pd.Series(line_data)
-        out = propositionalise_antecedent(line, exception=False)
-        expected = """
-antecedent_holds(a_arrow_b,T,S):-
-\ttrace(S),
-\ttimepoint(T,S),
-\troot_antecedent_holds(current,a_arrow_b,0,T,S).
-
-root_antecedent_holds(OP,a_arrow_b,0,T1,S):-
-\ttrace(S),
-\ttimepoint(T1,S),
-\tnot weak_timepoint(T1,S),
-\ttimepoint(T2,S),
-\ttemporal_operator(OP),
-\ttimepoint_of_op(OP,T1,T2,S),
-\tholds_at(a,T2,S).
-"""
-        self.assertMultiLineEqual(expected.strip(), out.strip())
-
-    def test_propositionalise_formula_antecedent_exception(self):
-        line_data = {
-            'name': 'a_always',
-            'type': GR1FormulaType.ASM,
-            'when': GR1TemporalType.INVARIANT,
-            'formula': GR1Formula.from_str("G(a=true);", parser=self.parser)
-        }
-
-        line = pd.Series(line_data)
-        out = propositionalise_antecedent(line, exception=True)
-        expected = """
-antecedent_holds(a_always,T,S):-
-\ttrace(S),
-\ttimepoint(T,S),
-\tnot antecedent_exception(a_always,0,T,S).
-"""
-        self.assertMultiLineEqual(expected.strip(), out.strip())
-
-    def test_propositionalise_formula_antecedent_exception_2(self):
-        line_data = {
-            'name': 'a_arrow_b',
-            'type': GR1FormulaType.ASM,
-            'when': GR1TemporalType.INVARIANT,
-            'formula': GR1Formula.from_str("G(a=false->b=false);", parser=self.parser)
-        }
-
-        line = pd.Series(line_data)
-        out = propositionalise_antecedent(line, exception=True)
-        expected = """
-antecedent_holds(a_arrow_b,T,S):-
-\ttrace(S),
-\ttimepoint(T,S),
-\troot_antecedent_holds(current,a_arrow_b,0,T,S),
-\tnot antecedent_exception(a_arrow_b,0,T,S).
-
-root_antecedent_holds(OP,a_arrow_b,0,T1,S):-
-\ttrace(S),
-\ttimepoint(T1,S),
-\tnot weak_timepoint(T1,S),
-\ttimepoint(T2,S),
-\ttemporal_operator(OP),
-\ttimepoint_of_op(OP,T1,T2,S),
-\tnot_holds_at(a,T2,S).
-"""
-        self.assertMultiLineEqual(expected.strip(), out.strip())
-
-    def test_propositionalise_formula_consequent(self):
-        line_data = {
-            'name': 'a_always',
-            'type': GR1FormulaType.ASM,
-            'when': GR1TemporalType.INVARIANT,
-            'formula': GR1Formula.from_str("G(a=true);", parser=self.parser)
-        }
-
-        line = pd.Series(line_data)
-        out = propositionalise_consequent(line, exception=False)
-        expected = """
-consequent_holds(a_always,T,S):-
-\ttrace(S),
-\ttimepoint(T,S),
-\troot_consequent_holds(current,a_always,0,T,S).
-
-root_consequent_holds(OP,a_always,0,T1,S):-
-\ttrace(S),
-\ttimepoint(T1,S),
-\tnot weak_timepoint(T1,S),
-\ttimepoint(T2,S),
-\ttemporal_operator(OP),
-\ttimepoint_of_op(OP,T1,T2,S),
-\tholds_at(a,T2,S).
-"""
-        self.assertMultiLineEqual(expected.strip(), out.strip())
-
-    def test_propositionalise_formula_assumption_consequent_exception(self):
-        line_data = {
-            'name': 'a_always',
-            'type': GR1FormulaType.ASM,
-            'when': GR1TemporalType.INVARIANT,
-            'formula': GR1Formula.from_str("G(a=true);", parser=self.parser)
-        }
-
-        line = pd.Series(line_data)
-        out = propositionalise_consequent(line, exception=True)
-        expected = """
-consequent_holds(a_always,T,S):-
-\ttrace(S),
-\ttimepoint(T,S),
-\troot_consequent_holds(current,a_always,0,T,S),
-\tnot ev_temp_op(a_always).
-
-consequent_holds(a_always,T,S):-
-\ttrace(S),
-\ttimepoint(T,S),
-\troot_consequent_holds(eventually,a_always,0,T,S),
-\tev_temp_op(a_always).
-
-root_consequent_holds(OP,a_always,0,T1,S):-
-\ttrace(S),
-\ttimepoint(T1,S),
-\tnot weak_timepoint(T1,S),
-\ttimepoint(T2,S),
-\ttemporal_operator(OP),
-\ttimepoint_of_op(OP,T1,T2,S),
-\tholds_at(a,T2,S).
-"""
-        self.assertMultiLineEqual(expected.strip(), out.strip())
-
     def test_propositionalise_formula_edge_case_1(self):
         line_data = {
             'name': 'guarantee1_1',
@@ -346,7 +206,9 @@ root_consequent_holds(OP,a_always,0,T1,S):-
         }
 
         line = pd.Series(line_data)
-        out = self.spec._formula_to_asp_str(line, ['guarantee1_1'], for_clingo=True, is_ev_temp_op=True)
+        hm = NoFilterHeuristicManager()
+        hm.set_enabled("INVARIANT_TO_RESPONSE_WEAKENING")
+        out = self.spec._formula_to_asp_str(line, ['guarantee1_1'], for_clingo=True, hm=hm)
         expected = """
 %guarantee -- guarantee1_1
 %\tG((r1=true->F(g1=true)))
@@ -392,7 +254,10 @@ root_consequent_holds(OP,guarantee1_1,0,T1,S):-
         }
 
         line = pd.Series(line_data)
-        out = self.spec._formula_to_asp_str(line, ['guarantee3_1'], for_clingo=True, is_ev_temp_op=True)
+        hm = NoFilterHeuristicManager()
+        hm.set_disabled("CONSEQUENT_WEAKENING")
+        hm.set_enabled("INVARIANT_TO_RESPONSE_WEAKENING")
+        out = self.spec._formula_to_asp_str(line, ['guarantee3_1'], for_clingo=True, hm=hm)
         expected = """
 %guarantee -- guarantee3_1
 %	G((a=false->(g1=false&g2=false)))
@@ -439,7 +304,10 @@ root_consequent_holds(OP,guarantee3_1,0,T1,S):-
         }
 
         line = pd.Series(line_data)
-        out = self.spec._formula_to_asp_str(line, ['guarantee4'], for_clingo=True, is_ev_temp_op=True)
+        hm = NoFilterHeuristicManager()
+        hm.set_disabled("ANTECEDENT_WEAKENING")
+        hm.set_enabled("INVARIANT_TO_RESPONSE_WEAKENING")
+        out = self.spec._formula_to_asp_str(line, ['guarantee4'], for_clingo=True, hm=hm)
         expected = """
 %guarantee -- guarantee4
 %	G(g1=false|g2=false);
@@ -480,644 +348,118 @@ root_consequent_holds(OP,guarantee4,1,T1,S):-
 """
         self.assertMultiLineEqual(expected.strip(), out.strip())
 
-    def test_propositionalise_formula_antecedent_disjunction(self):
-        line_data = {
-            'name': 'a_b_c',
-            'type': GR1FormulaType.ASM,
-            'when': GR1TemporalType.INVARIANT,
-            'formula': GR1Formula.from_str("G(a=true|b=true->next(c=true));", parser=self.parser)
-        }
-
-        line = pd.Series(line_data)
-        out = propositionalise_antecedent(line, exception=False)
-        expected = """
-antecedent_holds(a_b_c,T,S):-
-\ttrace(S),
-\ttimepoint(T,S),
-\troot_antecedent_holds(current,a_b_c,0,T,S).
-
-root_antecedent_holds(OP,a_b_c,0,T1,S):-
-\ttrace(S),
-\ttimepoint(T1,S),
-\tnot weak_timepoint(T1,S),
-\ttimepoint(T2,S),
-\ttemporal_operator(OP),
-\ttimepoint_of_op(OP,T1,T2,S),
-\tholds_at(a,T2,S).
-
-antecedent_holds(a_b_c,T,S):-
-\ttrace(S),
-\ttimepoint(T,S),
-\troot_antecedent_holds(current,a_b_c,1,T,S).
-
-root_antecedent_holds(OP,a_b_c,1,T1,S):-
-\ttrace(S),
-\ttimepoint(T1,S),
-\tnot weak_timepoint(T1,S),
-\ttimepoint(T2,S),
-\ttemporal_operator(OP),
-\ttimepoint_of_op(OP,T1,T2,S),
-\tholds_at(b,T2,S).
-"""
-        self.assertMultiLineEqual(expected.strip(), out.strip())
-
-    def test_propositionalise_formula_antecedent_disjunction_of_conjunctions(self):
-        line_data = {
-            'name': 'a_b_c',
-            'type': GR1FormulaType.ASM,
-            'when': GR1TemporalType.INVARIANT,
-            'formula': GR1Formula.from_str("G(a=true&b=true|c=true&d=true->next(e=true));", parser=self.parser)
-        }
-
-        line = pd.Series(line_data)
-        out = propositionalise_antecedent(line, exception=False)
-        expected = """
-antecedent_holds(a_b_c,T,S):-
-\ttrace(S),
-\ttimepoint(T,S),
-\troot_antecedent_holds(current,a_b_c,0,T,S).
-
-root_antecedent_holds(OP,a_b_c,0,T1,S):-
-\ttrace(S),
-\ttimepoint(T1,S),
-\tnot weak_timepoint(T1,S),
-\ttimepoint(T2,S),
-\ttemporal_operator(OP),
-\ttimepoint_of_op(OP,T1,T2,S),
-\tholds_at(a,T2,S),
-\tholds_at(b,T2,S).
-
-antecedent_holds(a_b_c,T,S):-
-\ttrace(S),
-\ttimepoint(T,S),
-\troot_antecedent_holds(current,a_b_c,1,T,S).
-
-root_antecedent_holds(OP,a_b_c,1,T1,S):-
-\ttrace(S),
-\ttimepoint(T1,S),
-\tnot weak_timepoint(T1,S),
-\ttimepoint(T2,S),
-\ttemporal_operator(OP),
-\ttimepoint_of_op(OP,T1,T2,S),
-\tholds_at(c,T2,S),
-\tholds_at(d,T2,S).
-"""
-        self.assertMultiLineEqual(expected.strip(), out.strip())
-
-    def test_propositionalise_formula_antecedent_disjunction_of_conjunctions_multi_op(self):
-        line_data = {
-            'name': 'a_b_c',
-            'type': GR1FormulaType.ASM,
-            'when': GR1TemporalType.INVARIANT,
-            'formula': GR1Formula.from_str("G(PREV(a=true)&b=true|PREV(c=true)&d=true->next(e=true));", parser=self.parser)
-        }
-
-        line = pd.Series(line_data)
-        out = propositionalise_antecedent(line, exception=False)
-        expected = """
-antecedent_holds(a_b_c,T,S):-
-\ttrace(S),
-\ttimepoint(T,S),
-\troot_antecedent_holds(prev,a_b_c,0,T,S),
-\troot_antecedent_holds(current,a_b_c,1,T,S).
-
-root_antecedent_holds(OP,a_b_c,0,T1,S):-
-\ttrace(S),
-\ttimepoint(T1,S),
-\tnot weak_timepoint(T1,S),
-\ttimepoint(T2,S),
-\ttemporal_operator(OP),
-\ttimepoint_of_op(OP,T1,T2,S),
-\tholds_at(a,T2,S).
-
-root_antecedent_holds(OP,a_b_c,1,T1,S):-
-\ttrace(S),
-\ttimepoint(T1,S),
-\tnot weak_timepoint(T1,S),
-\ttimepoint(T2,S),
-\ttemporal_operator(OP),
-\ttimepoint_of_op(OP,T1,T2,S),
-\tholds_at(b,T2,S).
-
-antecedent_holds(a_b_c,T,S):-
-\ttrace(S),
-\ttimepoint(T,S),
-\troot_antecedent_holds(prev,a_b_c,2,T,S),
-\troot_antecedent_holds(current,a_b_c,3,T,S).
-
-root_antecedent_holds(OP,a_b_c,2,T1,S):-
-\ttrace(S),
-\ttimepoint(T1,S),
-\tnot weak_timepoint(T1,S),
-\ttimepoint(T2,S),
-\ttemporal_operator(OP),
-\ttimepoint_of_op(OP,T1,T2,S),
-\tholds_at(c,T2,S).
-
-root_antecedent_holds(OP,a_b_c,3,T1,S):-
-\ttrace(S),
-\ttimepoint(T1,S),
-\tnot weak_timepoint(T1,S),
-\ttimepoint(T2,S),
-\ttemporal_operator(OP),
-\ttimepoint_of_op(OP,T1,T2,S),
-\tholds_at(d,T2,S).
-"""
-        self.assertMultiLineEqual(expected.strip(), out.strip())
-
-    def test_propositionalise_formula_antecedent_disjunction_of_conjunctions_multi_op_exception(self):
-        line_data = {
-            'name': 'a_b_c',
-            'type': GR1FormulaType.ASM,
-            'when': GR1TemporalType.INVARIANT,
-            'formula': GR1Formula.from_str("G(PREV(a=true)&b=true|PREV(c=true)&d=true->next(e=true));", parser=self.parser)
-        }
-
-        line = pd.Series(line_data)
-        out = propositionalise_antecedent(line, exception=True)
-        expected = """
-antecedent_holds(a_b_c,T,S):-
-\ttrace(S),
-\ttimepoint(T,S),
-\troot_antecedent_holds(prev,a_b_c,0,T,S),
-\troot_antecedent_holds(current,a_b_c,1,T,S),
-\tnot antecedent_exception(a_b_c,0,T,S).
-
-root_antecedent_holds(OP,a_b_c,0,T1,S):-
-\ttrace(S),
-\ttimepoint(T1,S),
-\tnot weak_timepoint(T1,S),
-\ttimepoint(T2,S),
-\ttemporal_operator(OP),
-\ttimepoint_of_op(OP,T1,T2,S),
-\tholds_at(a,T2,S).
-
-root_antecedent_holds(OP,a_b_c,1,T1,S):-
-\ttrace(S),
-\ttimepoint(T1,S),
-\tnot weak_timepoint(T1,S),
-\ttimepoint(T2,S),
-\ttemporal_operator(OP),
-\ttimepoint_of_op(OP,T1,T2,S),
-\tholds_at(b,T2,S).
-
-antecedent_holds(a_b_c,T,S):-
-\ttrace(S),
-\ttimepoint(T,S),
-\troot_antecedent_holds(prev,a_b_c,2,T,S),
-\troot_antecedent_holds(current,a_b_c,3,T,S),
-\tnot antecedent_exception(a_b_c,1,T,S).
-
-root_antecedent_holds(OP,a_b_c,2,T1,S):-
-\ttrace(S),
-\ttimepoint(T1,S),
-\tnot weak_timepoint(T1,S),
-\ttimepoint(T2,S),
-\ttemporal_operator(OP),
-\ttimepoint_of_op(OP,T1,T2,S),
-\tholds_at(c,T2,S).
-
-root_antecedent_holds(OP,a_b_c,3,T1,S):-
-\ttrace(S),
-\ttimepoint(T1,S),
-\tnot weak_timepoint(T1,S),
-\ttimepoint(T2,S),
-\ttemporal_operator(OP),
-\ttimepoint_of_op(OP,T1,T2,S),
-\tholds_at(d,T2,S).
-"""
-        self.assertMultiLineEqual(expected.strip(), out.strip())
-
-    def test_propositionalise_formula_consequent_disjunction(self):
-        line_data = {
-            'name': 'a_b_c',
-            'type': GR1FormulaType.ASM,
-            'when': GR1TemporalType.INVARIANT,
-            'formula': GR1Formula.from_str("G(PREV(a=true)->b=true|c=true);", parser=self.parser)
-        }
-
-        line = pd.Series(line_data)
-        out = propositionalise_consequent(line, exception=False)
-        expected = """
-consequent_holds(a_b_c,T,S):-
-\ttrace(S),
-\ttimepoint(T,S),
-\troot_consequent_holds(current,a_b_c,0,T,S).
-
-root_consequent_holds(OP,a_b_c,0,T1,S):-
-\ttrace(S),
-\ttimepoint(T1,S),
-\tnot weak_timepoint(T1,S),
-\ttimepoint(T2,S),
-\ttemporal_operator(OP),
-\ttimepoint_of_op(OP,T1,T2,S),
-\tholds_at(b,T2,S).
-
-consequent_holds(a_b_c,T,S):-
-\ttrace(S),
-\ttimepoint(T,S),
-\troot_consequent_holds(current,a_b_c,1,T,S).
-
-root_consequent_holds(OP,a_b_c,1,T1,S):-
-\ttrace(S),
-\ttimepoint(T1,S),
-\tnot weak_timepoint(T1,S),
-\ttimepoint(T2,S),
-\ttemporal_operator(OP),
-\ttimepoint_of_op(OP,T1,T2,S),
-\tholds_at(c,T2,S).
-"""
-        self.assertMultiLineEqual(expected.strip(), out.strip())
-
-    def test_propositionalise_formula_consequent_disjunction_of_conjunctions(self):
-        line_data = {
-            'name': 'a_b_c',
-            'type': GR1FormulaType.ASM,
-            'when': GR1TemporalType.INVARIANT,
-            'formula': GR1Formula.from_str("G(PREV(a=true)->b=true&c=true|d=true&e=true);", parser=self.parser)
-        }
-
-        line = pd.Series(line_data)
-        out = propositionalise_consequent(line, exception=False)
-        expected = """
-consequent_holds(a_b_c,T,S):-
-\ttrace(S),
-\ttimepoint(T,S),
-\troot_consequent_holds(current,a_b_c,0,T,S).
-
-root_consequent_holds(OP,a_b_c,0,T1,S):-
-\ttrace(S),
-\ttimepoint(T1,S),
-\tnot weak_timepoint(T1,S),
-\ttimepoint(T2,S),
-\ttemporal_operator(OP),
-\ttimepoint_of_op(OP,T1,T2,S),
-\tholds_at(b,T2,S),
-\tholds_at(c,T2,S).
-
-consequent_holds(a_b_c,T,S):-
-\ttrace(S),
-\ttimepoint(T,S),
-\troot_consequent_holds(current,a_b_c,1,T,S).
-
-root_consequent_holds(OP,a_b_c,1,T1,S):-
-\ttrace(S),
-\ttimepoint(T1,S),
-\tnot weak_timepoint(T1,S),
-\ttimepoint(T2,S),
-\ttemporal_operator(OP),
-\ttimepoint_of_op(OP,T1,T2,S),
-\tholds_at(d,T2,S),
-\tholds_at(e,T2,S).
-"""
-        self.assertMultiLineEqual(expected.strip(), out.strip())
-
-    def test_propositionalise_formula_consequent_disjunction_of_conjunctions_multi_op(self):
-        line_data = {
-            'name': 'a_b_c',
-            'type': GR1FormulaType.ASM,
-            'when': GR1TemporalType.INVARIANT,
-            'formula': GR1Formula.from_str("G(PREV(a=true)->b=true&next(c=true)|d=true&next(e=true));", parser=self.parser)
-        }
-
-        line = pd.Series(line_data)
-        out = propositionalise_consequent(line, exception=False)
-        expected = """
-consequent_holds(a_b_c,T,S):-
-\ttrace(S),
-\ttimepoint(T,S),
-\troot_consequent_holds(current,a_b_c,0,T,S),
-\troot_consequent_holds(next,a_b_c,1,T,S).
-
-root_consequent_holds(OP,a_b_c,0,T1,S):-
-\ttrace(S),
-\ttimepoint(T1,S),
-\tnot weak_timepoint(T1,S),
-\ttimepoint(T2,S),
-\ttemporal_operator(OP),
-\ttimepoint_of_op(OP,T1,T2,S),
-\tholds_at(b,T2,S).
-
-root_consequent_holds(OP,a_b_c,1,T1,S):-
-\ttrace(S),
-\ttimepoint(T1,S),
-\tnot weak_timepoint(T1,S),
-\ttimepoint(T2,S),
-\ttemporal_operator(OP),
-\ttimepoint_of_op(OP,T1,T2,S),
-\tholds_at(c,T2,S).
-
-consequent_holds(a_b_c,T,S):-
-\ttrace(S),
-\ttimepoint(T,S),
-\troot_consequent_holds(current,a_b_c,2,T,S),
-\troot_consequent_holds(next,a_b_c,3,T,S).
-
-root_consequent_holds(OP,a_b_c,2,T1,S):-
-\ttrace(S),
-\ttimepoint(T1,S),
-\tnot weak_timepoint(T1,S),
-\ttimepoint(T2,S),
-\ttemporal_operator(OP),
-\ttimepoint_of_op(OP,T1,T2,S),
-\tholds_at(d,T2,S).
-
-root_consequent_holds(OP,a_b_c,3,T1,S):-
-\ttrace(S),
-\ttimepoint(T1,S),
-\tnot weak_timepoint(T1,S),
-\ttimepoint(T2,S),
-\ttemporal_operator(OP),
-\ttimepoint_of_op(OP,T1,T2,S),
-\tholds_at(e,T2,S).
-"""
-        self.assertMultiLineEqual(expected.strip(), out.strip())
-
-    def test_propositionalise_formula_assumption_disjunction_of_conjunctions_multi_op_exception(self):
-        line_data = {
-            'name': 'a_b_c',
-            'type': GR1FormulaType.ASM,
-            'when': GR1TemporalType.INVARIANT,
-            'formula': GR1Formula.from_str("G(PREV(a=true)->b=true&next(c=true)|d=true&next(e=true));", parser=self.parser)
-        }
-
-        line = pd.Series(line_data)
-        out = propositionalise_consequent(line, exception=True)
-        expected = """
-consequent_holds(a_b_c,T,S):-
-\ttrace(S),
-\ttimepoint(T,S),
-\troot_consequent_holds(current,a_b_c,0,T,S),
-\troot_consequent_holds(next,a_b_c,1,T,S),
-\tnot ev_temp_op(a_b_c).
-
-consequent_holds(a_b_c,T,S):-
-\ttrace(S),
-\ttimepoint(T,S),
-\troot_consequent_holds(eventually,a_b_c,0,T,S),
-\troot_consequent_holds(eventually,a_b_c,1,T,S),
-\tev_temp_op(a_b_c).
-
-root_consequent_holds(OP,a_b_c,0,T1,S):-
-\ttrace(S),
-\ttimepoint(T1,S),
-\tnot weak_timepoint(T1,S),
-\ttimepoint(T2,S),
-\ttemporal_operator(OP),
-\ttimepoint_of_op(OP,T1,T2,S),
-\tholds_at(b,T2,S).
-
-root_consequent_holds(OP,a_b_c,1,T1,S):-
-\ttrace(S),
-\ttimepoint(T1,S),
-\tnot weak_timepoint(T1,S),
-\ttimepoint(T2,S),
-\ttemporal_operator(OP),
-\ttimepoint_of_op(OP,T1,T2,S),
-\tholds_at(c,T2,S).
-
-consequent_holds(a_b_c,T,S):-
-\ttrace(S),
-\ttimepoint(T,S),
-\troot_consequent_holds(current,a_b_c,2,T,S),
-\troot_consequent_holds(next,a_b_c,3,T,S),
-\tnot ev_temp_op(a_b_c).
-
-consequent_holds(a_b_c,T,S):-
-\ttrace(S),
-\ttimepoint(T,S),
-\troot_consequent_holds(eventually,a_b_c,2,T,S),
-\troot_consequent_holds(eventually,a_b_c,3,T,S),
-\tev_temp_op(a_b_c).
-
-root_consequent_holds(OP,a_b_c,2,T1,S):-
-\ttrace(S),
-\ttimepoint(T1,S),
-\tnot weak_timepoint(T1,S),
-\ttimepoint(T2,S),
-\ttemporal_operator(OP),
-\ttimepoint_of_op(OP,T1,T2,S),
-\tholds_at(d,T2,S).
-
-root_consequent_holds(OP,a_b_c,3,T1,S):-
-\ttrace(S),
-\ttimepoint(T1,S),
-\tnot weak_timepoint(T1,S),
-\ttimepoint(T2,S),
-\ttemporal_operator(OP),
-\ttimepoint_of_op(OP,T1,T2,S),
-\tholds_at(e,T2,S).
-"""
-        self.assertMultiLineEqual(expected.strip(), out.strip())
-
-    def test_propositionalise_formula_guarantee_disjunction_of_conjunctions_multi_op_exception(self):
-        line_data = {
-            'name': 'a_b_c',
-            'type': GR1FormulaType.GAR,
-            'when': GR1TemporalType.INVARIANT,
-            'formula': GR1Formula.from_str("G(PREV(a=true)->b=true&next(c=true)|d=true&next(e=true));", parser=self.parser)
-        }
-
-        line = pd.Series(line_data)
-        out = propositionalise_consequent(line, exception=True)
-        expected = """
-consequent_holds(a_b_c,T,S):-
-\ttrace(S),
-\ttimepoint(T,S),
-\troot_consequent_holds(current,a_b_c,0,T,S),
-\troot_consequent_holds(next,a_b_c,1,T,S),
-\tnot ev_temp_op(a_b_c).
-
-consequent_holds(a_b_c,T,S):-
-\ttrace(S),
-\ttimepoint(T,S),
-\troot_consequent_holds(eventually,a_b_c,0,T,S),
-\troot_consequent_holds(eventually,a_b_c,1,T,S),
-\tev_temp_op(a_b_c).
-
-root_consequent_holds(OP,a_b_c,0,T1,S):-
-\ttrace(S),
-\ttimepoint(T1,S),
-\tnot weak_timepoint(T1,S),
-\ttimepoint(T2,S),
-\ttemporal_operator(OP),
-\ttimepoint_of_op(OP,T1,T2,S),
-\tholds_at(b,T2,S).
-
-root_consequent_holds(OP,a_b_c,1,T1,S):-
-\ttrace(S),
-\ttimepoint(T1,S),
-\tnot weak_timepoint(T1,S),
-\ttimepoint(T2,S),
-\ttemporal_operator(OP),
-\ttimepoint_of_op(OP,T1,T2,S),
-\tholds_at(c,T2,S).
-
-consequent_holds(a_b_c,T,S):-
-\ttrace(S),
-\ttimepoint(T,S),
-\troot_consequent_holds(current,a_b_c,2,T,S),
-\troot_consequent_holds(next,a_b_c,3,T,S),
-\tnot ev_temp_op(a_b_c).
-
-consequent_holds(a_b_c,T,S):-
-\ttrace(S),
-\ttimepoint(T,S),
-\troot_consequent_holds(eventually,a_b_c,2,T,S),
-\troot_consequent_holds(eventually,a_b_c,3,T,S),
-\tev_temp_op(a_b_c).
-
-root_consequent_holds(OP,a_b_c,2,T1,S):-
-\ttrace(S),
-\ttimepoint(T1,S),
-\tnot weak_timepoint(T1,S),
-\ttimepoint(T2,S),
-\ttemporal_operator(OP),
-\ttimepoint_of_op(OP,T1,T2,S),
-\tholds_at(d,T2,S).
-
-root_consequent_holds(OP,a_b_c,3,T1,S):-
-\ttrace(S),
-\ttimepoint(T1,S),
-\tnot weak_timepoint(T1,S),
-\ttimepoint(T2,S),
-\ttemporal_operator(OP),
-\ttimepoint_of_op(OP,T1,T2,S),
-\tholds_at(e,T2,S).
-
-consequent_holds(a_b_c,T,S):-
-\ttrace(S),
-\ttimepoint(T,S),
-\tconsequent_exception(a_b_c,T,S),
-\tnot ev_temp_op(a_b_c).
-"""
-        self.assertMultiLineEqual(expected.strip(), out.strip())
-
-    def test_propositionalise_formula_justice_assumption(self):
-        line_data = {
-            'name': 'a_b_c',
-            'type': GR1FormulaType.ASM,
-            'when': GR1TemporalType.JUSTICE,
-            'formula': GR1Formula.from_str("GF(b=true&c=true|d=true&e=true));", parser=self.parser)
-        }
-
-        line = pd.Series(line_data)
-        out = propositionalise_consequent(line, exception=False)
-        expected = """
-consequent_holds(a_b_c,T,S):-
-\ttrace(S),
-\ttimepoint(T,S),
-\troot_consequent_holds(eventually,a_b_c,0,T,S).
-
-root_consequent_holds(OP,a_b_c,0,T1,S):-
-\ttrace(S),
-\ttimepoint(T1,S),
-\tnot weak_timepoint(T1,S),
-\ttimepoint(T2,S),
-\ttemporal_operator(OP),
-\ttimepoint_of_op(OP,T1,T2,S),
-\tholds_at(b,T2,S),
-\tholds_at(c,T2,S).
-
-consequent_holds(a_b_c,T,S):-
-\ttrace(S),
-\ttimepoint(T,S),
-\troot_consequent_holds(eventually,a_b_c,1,T,S).
-
-root_consequent_holds(OP,a_b_c,1,T1,S):-
-\ttrace(S),
-\ttimepoint(T1,S),
-\tnot weak_timepoint(T1,S),
-\ttimepoint(T2,S),
-\ttemporal_operator(OP),
-\ttimepoint_of_op(OP,T1,T2,S),
-\tholds_at(d,T2,S),
-\tholds_at(e,T2,S).
-"""
-        self.assertMultiLineEqual(expected.strip(), out.strip())
-
-    def test_propositionalise_formula_implies_eventually(self):
-        line_data = {
-            'name': 'a_b_c',
-            'type': GR1FormulaType.ASM,
-            'when': GR1TemporalType.INVARIANT,
-            'formula': GR1Formula.from_str("G(a=true->F(b=true&c=true)|F(d=true&e=true));", parser=self.parser)
-        }
-
-        line = pd.Series(line_data)
-        out = propositionalise_consequent(line, exception=False)
-        expected = """
-consequent_holds(a_b_c,T,S):-
-\ttrace(S),
-\ttimepoint(T,S),
-\troot_consequent_holds(eventually,a_b_c,0,T,S).
-
-root_consequent_holds(OP,a_b_c,0,T1,S):-
-\ttrace(S),
-\ttimepoint(T1,S),
-\tnot weak_timepoint(T1,S),
-\ttimepoint(T2,S),
-\ttemporal_operator(OP),
-\ttimepoint_of_op(OP,T1,T2,S),
-\tholds_at(b,T2,S),
-\tholds_at(c,T2,S).
-
-consequent_holds(a_b_c,T,S):-
-\ttrace(S),
-\ttimepoint(T,S),
-\troot_consequent_holds(eventually,a_b_c,1,T,S).
-
-root_consequent_holds(OP,a_b_c,1,T1,S):-
-\ttrace(S),
-\ttimepoint(T1,S),
-\tnot weak_timepoint(T1,S),
-\ttimepoint(T2,S),
-\ttemporal_operator(OP),
-\ttimepoint_of_op(OP,T1,T2,S),
-\tholds_at(d,T2,S),
-\tholds_at(e,T2,S).
-"""
-        self.assertMultiLineEqual(expected.strip(), out.strip())
-
-    def test_propositionalise_formula_implies_eventually_exception(self):
-        line_data = {
-            'name': 'a_b_c',
-            'type': GR1FormulaType.ASM,
-            'when': GR1TemporalType.INVARIANT,
-            'formula': GR1Formula.from_str("G(a=true->F(b=true&c=true|d=true&e=true)));", parser=self.parser)
-        }
-
-        line = pd.Series(line_data)
-        out = propositionalise_consequent(line, exception=False)
-        expected = """
-consequent_holds(a_b_c,T,S):-
-\ttrace(S),
-\ttimepoint(T,S),
-\troot_consequent_holds(eventually,a_b_c,0,T,S).
-
-root_consequent_holds(OP,a_b_c,0,T1,S):-
-\ttrace(S),
-\ttimepoint(T1,S),
-\tnot weak_timepoint(T1,S),
-\ttimepoint(T2,S),
-\ttemporal_operator(OP),
-\ttimepoint_of_op(OP,T1,T2,S),
-\tholds_at(b,T2,S),
-\tholds_at(c,T2,S).
-
-consequent_holds(a_b_c,T,S):-
-\ttrace(S),
-\ttimepoint(T,S),
-\troot_consequent_holds(eventually,a_b_c,1,T,S).
-
-root_consequent_holds(OP,a_b_c,1,T1,S):-
-\ttrace(S),
-\ttimepoint(T1,S),
-\tnot weak_timepoint(T1,S),
-\ttimepoint(T2,S),
-\ttemporal_operator(OP),
-\ttimepoint_of_op(OP,T1,T2,S),
-\tholds_at(d,T2,S),
-\tholds_at(e,T2,S).
-"""
-        self.assertMultiLineEqual(expected.strip(), out.strip())
+    def _equiv(self, formula1: str, formula2: str):
+        """
+        precondition: formula1 and formula2 are spot formulas
+        """
+        f1 = spot.formula(formula1)
+        f2 = spot.formula(formula2)
+        return spot.are_equivalent(f1, f2)
+
+    def test_minepump_compare(self):
+        spec_ideal: SpectraSpecification = SpectraSpecification.from_file(
+            "../input-files/case-studies/spectra/minepump/ideal.spectra")
+        spec_strong: SpectraSpecification = SpectraSpecification.from_file(
+            "../input-files/case-studies/spectra/minepump/strong.spectra")
+        self.assertTrue(spec_ideal.implied_by(spec_strong, GR1FormulaType.GAR))
+        self.assertTrue(spec_ideal.implied_by(spec_strong, GR1FormulaType.ASM))
+
+    def test_minepump_is_trivial(self):
+        spec_ideal: SpectraSpecification = SpectraSpecification.from_file(
+            "../input-files/case-studies/spectra/minepump/ideal.spectra")
+        self.assertFalse(spec_ideal.is_trivial_true(GR1FormulaType.ASM))
+        self.assertFalse(spec_ideal.is_trivial_false(GR1FormulaType.ASM))
+
+        spec_strong: SpectraSpecification = SpectraSpecification.from_file(
+            "../input-files/case-studies/spectra/minepump/strong.spectra")
+        self.assertFalse(spec_strong.is_trivial_true(GR1FormulaType.ASM))
+        self.assertFalse(spec_strong.is_trivial_false(GR1FormulaType.ASM))
+
+    def test_minepump_is_trivial_no_initial(self):
+        spec_ideal: SpectraSpecification = SpectraSpecification.from_file(
+            "../input-files/case-studies/spectra/minepump/ideal.spectra")
+        self.assertFalse(spec_ideal.is_trivial_true(GR1FormulaType.ASM, ignore_initial=True))
+        self.assertFalse(spec_ideal.is_trivial_false(GR1FormulaType.ASM, ignore_initial=True))
+
+        spec_strong: SpectraSpecification = SpectraSpecification.from_file(
+            "../input-files/case-studies/spectra/minepump/strong.spectra")
+        self.assertFalse(spec_strong.is_trivial_true(GR1FormulaType.ASM, ignore_initial=True))
+        self.assertFalse(spec_strong.is_trivial_false(GR1FormulaType.ASM, ignore_initial=True))
+
+    def test_extract_gr1_expressions_of_type_spot(self):
+        spec_ideal: SpectraSpecification = SpectraSpecification.from_file(
+            "../input-files/case-studies/spectra/minepump/ideal.spectra")
+        spec_strong: SpectraSpecification = SpectraSpecification.from_file(
+            "../input-files/case-studies/spectra/minepump/strong.spectra")
+
+        formatter = SpotSpecificationFormatter(GR1FormulaType.ASM)
+        spec_ideal_spot: str = spec_ideal.to_formatted_string(formatter)
+        self._equiv("!highwater&!methane&G(pump&X(pump)->XX(!highwater))", spec_ideal_spot)
+        spec_strong_spot: str = spec_strong.to_formatted_string(formatter)
+        self._equiv("!highwater&!methane&G(pump&X(pump)->XX(!highwater))&G(!highwater|!methane)", spec_strong_spot)
+
+        formatter = SpotSpecificationFormatter(GR1FormulaType.GAR)
+        spec_ideal_spot: str = spec_ideal.to_formatted_string(formatter)
+        self._equiv("!pump&G(highwater&!methane->X(pump))&G(methane->X(!pump))", spec_ideal_spot)
+        spec_strong_spot: str = spec_strong.to_formatted_string(formatter)
+        self._equiv("!pump&G(highwater->X(pump))&G(methane->X(!pump))", spec_strong_spot)
+
+    def test_extract_gr1_expressions_of_type_spot_no_initial(self):
+        spec_ideal: SpectraSpecification = SpectraSpecification.from_file(
+            "../input-files/case-studies/spectra/minepump/ideal.spectra")
+        spec_strong: SpectraSpecification = SpectraSpecification.from_file(
+            "../input-files/case-studies/spectra/minepump/strong.spectra")
+
+        formatter = SpotSpecificationFormatter(GR1FormulaType.ASM)
+        spec_ideal_spot: str = spec_ideal.to_formatted_string(formatter)
+        self.assertEqual("G(pump&X(pump)->XX(!highwater))", spec_ideal_spot)
+        spec_strong_spot: str = spec_strong.to_formatted_string(formatter)
+        self.assertEqual("G(pump&X(pump)->XX(!highwater))&G(!highwater|!methane)", spec_strong_spot)
+
+        formatter = SpotSpecificationFormatter(GR1FormulaType.GAR)
+        spec_ideal_spot: str = spec_ideal.to_formatted_string(formatter)
+        self.assertEqual("G(highwater&!methane->X(pump))&G(methane->X(!pump))", spec_ideal_spot)
+        spec_strong_spot: str = spec_strong.to_formatted_string(formatter)
+        self.assertEqual("G(highwater->X(pump))&G(methane->X(!pump))", spec_strong_spot)
+
+    def test_eq_identical_strings(self):
+        spec_1 = SpectraSpecification.from_str(spec_perf)
+        spec_2 = SpectraSpecification.from_str(spec_perf)
+        self.assertEqual(spec_1, spec_2)
+
+    def test_eq_1(self):
+        spec_1 = SpectraSpecification.from_str(spec_perf)
+        spec_2 = SpectraSpecification.from_str(spec_fixed_perf)
+        self.assertEqual(spec_1, spec_2)
+
+    def test_neq_1(self):
+        spec_1 = SpectraSpecification.from_str(spec_perf)
+        spec_2 = SpectraSpecification.from_str(spec_fixed_imperf)
+        self.assertNotEquals(spec_1, spec_2)
+
+    def test_neq_2(self):
+        spec_1 = SpectraSpecification.from_str(spec_fixed_imperf)
+        spec_2 = SpectraSpecification.from_str(spec_fixed_perf)
+        self.assertNotEquals(spec_1, spec_2)
+
+    @unittest.skip("To be considered at a later date")
+    def test_swap_rule_1(self):
+        spec = Spec(copy.deepcopy(spec_strong))
+        new_spec = Spec(copy.deepcopy(spec_strong_asm_w))
+        spec.swap_rule(
+            name="assumption2_1",
+            new_rule="G(highwater=false-> highwater=false|methane=false);",
+        )
+        self.assertEqual(spec, new_spec)
+
+    def test_asm_eq_gar_weaker(self):
+        spec_1: SpectraSpecification = SpectraSpecification.from_str(spec_perf)
+        spec_2: SpectraSpecification = SpectraSpecification.from_str(spec_asm_eq_gar_weaker)
+        self.assertTrue(spec_1.equivalent_to(spec_2, GR1FormulaType.ASM))
+        self.assertTrue(spec_1.implies(spec_2, GR1FormulaType.GAR))
+
+    def test_asm_stronger_gar_same(self):
+        spec_1 = SpectraSpecification.from_str(spec_perf)
+        spec_2 = SpectraSpecification.from_str(spec_asm_stronger_gar_eq)
+        self.assertTrue(spec_1.implied_by(spec_2, GR1FormulaType.ASM))
+        self.assertTrue(spec_1.equivalent_to(spec_2, GR1FormulaType.GAR))

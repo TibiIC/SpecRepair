@@ -3,6 +3,7 @@ from unittest import TestCase
 
 from spec_repair.helpers.heuristic_managers.no_filter_heuristic_manager import NoFilterHeuristicManager
 from spec_repair.helpers.spectra_specification import SpectraSpecification
+from spec_repair.util.spec_util import generate_trace_asp
 
 
 class TestASP(TestCase):
@@ -22,3 +23,9 @@ class TestASP(TestCase):
     def test_asp(self):
         spec = SpectraSpecification.from_file("./debug_logs/problem_spec.spectra")
         spec.to_asp(for_clingo=True, hm=NoFilterHeuristicManager())
+
+    def test_hongbo(self):
+        ideal_spec_file = "./test_debug/hongbo_helper_files/ideal_spec.spectra"
+        strong_spec_file = "./test_debug/hongbo_helper_files/strong_spec.spectra"
+        trace_file = "./test_debug/hongbo_helper_files/trace.txt"
+        generate_trace_asp(strong_spec_file, ideal_spec_file, trace_file)

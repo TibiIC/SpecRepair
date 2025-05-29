@@ -386,7 +386,7 @@ def format_spec(spec):
         words = line.strip("\t").split(" ")
         words = [x for x in words if x != ""]
         # This bit fixes boolean style
-        if words[0] not in ['env', 'sys', 'spec', 'assumption', 'guarantee', 'module']:
+        if words and words[0] not in ['env', 'sys', 'spec', 'assumption', 'guarantee', 'module']:
             if len(re.findall(r"\(", line)) == len(re.findall(r"\)", line)) + 1:
                 line = line.replace(";", " ) ;")
             # This replaces next(A & B) with next(A) & next(B):
@@ -874,7 +874,7 @@ def remove_outer_parentheses(s):
     return s  # Return the original string if conditions are not met
 
 
-def generate_trace_asp(start_file, end_file, trace_file):
+def generate_trace_asp(strong_spec_file, ideal_spec_file, trace_file):
     try:
         old_trace = read_file_lines(trace_file)
     except FileNotFoundError:
@@ -884,12 +884,12 @@ def generate_trace_asp(start_file, end_file, trace_file):
     trace = {}
 
     initial_expressions, prevs, primed_expressions, unprimed_expressions, variables \
-        = extract_expressions_from_file(end_file, counter_strat=True)
+        = extract_expressions_from_file(ideal_spec_file, counter_strat=True)
     initial_expressions_s, prevs_s, primed_expressions_s, unprimed_expressions_s, variables_s \
-        = extract_expressions_from_file(start_file, counter_strat=True)
+        = extract_expressions_from_file(strong_spec_file, counter_strat=True)
 
     # To include starting guarantees:
-    ie_g, prevs_g, pe_g, upe_g, v_g = extract_expressions_from_file(start_file, guarantee_only=True)
+    ie_g, prevs_g, pe_g, upe_g, v_g = extract_expressions_from_file(strong_spec_file, guarantee_only=True)
     initial_expressions += ie_g
     primed_expressions += pe_g
     unprimed_expressions += upe_g
