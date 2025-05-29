@@ -310,7 +310,7 @@ root_consequent_holds(OP,guarantee3_1,0,T1,S):-
         out = self.spec._formula_to_asp_str(line, ['guarantee4'], for_clingo=True, hm=hm)
         expected = """
 %guarantee -- guarantee4
-%	G(g1=false|g2=false);
+%	G((g1=false|g2=false))
 
 guarantee(guarantee4).
 

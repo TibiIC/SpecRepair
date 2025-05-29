@@ -206,6 +206,36 @@ class SpectraSpecification(ISpecification):
         # Define the not equal comparison
         return not self.__eq__(other)
 
+    def __le__(self, other):
+        """
+        Check if this specification is equivalent to or implies the other specification.
+        """
+        return self.equivalent_to(other) or self.implies(other)
+
+    def __lt__(self, other):
+        """
+        Check if this specification implies the other specification.
+        """
+        return self.implies(other)
+
+    def __ge__(self, other):
+        """
+        Check if this specification is equivalent to or is implied by the other specification.
+        """
+        return self.equivalent_to(other) or self.implied_by(other)
+
+    def __gt__(self, other):
+        """
+        Check if this specification is implied by the other specification.
+        """
+        return self.implied_by(other)
+
+    def is_trivial_true(self, formula_type: Optional[GR1FormulaType]=None) -> bool:
+        return self.is_equivalent_to_spot("G(true)", formula_type)
+
+    def is_trivial_false(self, formula_type: Optional[GR1FormulaType]=None) -> bool:
+        return self.is_equivalent_to_spot("G(false)", formula_type)
+
     def equivalent_to(self, other, formula_type: Optional[GR1FormulaType] = None) -> bool:
         f1 = spot.formula(self.to_formatted_string(SpotSpecificationFormatter(formula_type)))
         f2 = spot.formula(other.to_formatted_string(SpotSpecificationFormatter(formula_type)))
@@ -218,6 +248,12 @@ class SpectraSpecification(ISpecification):
 
     def implied_by(self, other, formula_type: Optional[GR1FormulaType] = None) -> bool:
         return other.implies(self, formula_type)
+
+    def is_equivalent_to_spot(self, formula: str, formula_type: Optional[GR1FormulaType]):
+        f1 = spot.formula(self.to_formatted_string(SpotSpecificationFormatter(formula_type)))
+        f2 = spot.formula(formula)
+        return spot.are_equivalent(f1, f2)
+
 
 def does_left_imply_right(left_exp: str, right_exp: str) -> bool:
     # TODO: introduce an assertion against ltl_ops which do not exist yet
