@@ -197,6 +197,12 @@ class SpectraSpecification(ISpecification):
         new_spec._atoms = deepcopy(self._atoms, memo)
         return new_spec
 
+    def __hash__(self) -> int:
+        """
+        Generate a hash for the specification based on its module name and formulas.
+        """
+        return hash((self._module_name, tuple(self._formulas_df.itertuples(index=False, name=None))))
+
     def __eq__(self, other) -> bool:
         return (self.equivalent_to(other, GR1FormulaType.ASM)
                 and

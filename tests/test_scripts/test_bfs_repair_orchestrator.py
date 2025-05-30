@@ -47,7 +47,8 @@ class TestBFSRepairOrchestrator(TestCase):
         new_spec_strings = self.run_bfs_repair(
             case_study_name,
             case_study_path,
-            out_test_dir_name
+            out_test_dir_name,
+            is_debug=True
         )
 
     def test_bfs_repair_spec_traffic_updated(self):
