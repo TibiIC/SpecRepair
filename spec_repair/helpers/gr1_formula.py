@@ -73,7 +73,8 @@ class GR1Formula:
 
     def _normalize(self):
         ltl_formula: LTLFormula = self._to_ltl_formula()
-        self.temp_type, self.antecedent, self.consequent = self._from_normal_ltl_formula(ltl_formula)
+        parsed_formula = normalize_to_pattern(ltl_formula)
+        self.temp_type, self.antecedent, self.consequent = GR1Formula._from_normal_ltl_formula(parsed_formula)
 
     def _to_ltl_formula(self) -> LTLFormula:
         if self.antecedent is None:
