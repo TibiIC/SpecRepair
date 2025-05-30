@@ -21,7 +21,7 @@ class TestASP(TestCase):
         os.chdir(cls.original_working_directory)
 
     def test_asp(self):
-        spec = SpectraSpecification.from_file("./debug_logs/problem_spec.spectra")
+        spec = SpectraSpecification.from_file("./debug_logs/specification.spectra")
         spec.to_asp(for_clingo=True, hm=NoFilterHeuristicManager())
 
     def test_hongbo(self):

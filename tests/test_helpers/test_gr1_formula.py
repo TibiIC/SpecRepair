@@ -244,7 +244,7 @@ class TestGR1Formula(TestCase):
         )
         formula.integrate(adaptation)
         output = formula.to_str(self.formatter)
-        expected_output = "G((((b=true|(PREV(a=true)&next(d=true)))|(PREV(a=true)&PREV(e=true)))->c=true))"
+        expected_output = "G((((b=true|(next(d=true)&PREV(a=true)))|PREV((a=true&e=true)))->c=true))"
         self.assertEqual(expected_output, output)
 
     def test_integrate_adaptation_to_formula_antecedent_exception_8(self):
@@ -399,4 +399,21 @@ class TestGR1Formula(TestCase):
         formula.integrate(adaptation)
         output = formula.to_str(self.formatter)
         expected_output = "G((a=false->F((r1=false|(g1=false&g2=false)))))"
+        self.assertEqual(expected_output, output)
+
+    def test_integrate_justice_implication_normalised(self):
+        formula = GR1Formula(
+            temp_type=GR1TemporalType.JUSTICE,
+            antecedent=None,
+            consequent=AtomicProposition("car", False)
+        )
+        adaptation = Adaptation(
+            type="antecedent_exception",
+            formula_name="no_car_often",
+            disjunction_index=0,
+            atom_temporal_operators=[('current', 'emergency=false')]
+        )
+        formula.integrate(adaptation)
+        output = formula.to_str(self.formatter)
+        expected_output = "GF((!(emergency=true)|car=false))"
         self.assertEqual(expected_output, output)
