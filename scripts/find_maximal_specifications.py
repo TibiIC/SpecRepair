@@ -2,6 +2,7 @@ import argparse
 import os
 from typing import Optional
 
+from scripts.util import print_spec_names
 from util import make_plural, find_maximal_specifications_from_folder
 from spec_repair.ltl_types import GR1FormulaType
 
@@ -50,7 +51,4 @@ if __name__ == '__main__':
     print(
         f"Found {len(maximal_specs)} maximal specification{make_plural(maximal_specs)} in the directory: {spec_directory_path}")
     print(f"Maximal specification{make_plural(maximal_specs)} found in file{make_plural(maximal_specs)}:")
-    for file_path, spec in maximal_specs:
-        print(f"{file_path}")
-        # print(spec.to_str())
-        # print("-" * 40)
+    print_spec_names(maximal_specs)
