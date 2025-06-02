@@ -1,6 +1,6 @@
 from unittest import TestCase
 
-from scripts.choices_walker import ChoicesWalker
+from scripts.old_scripts.choices_walker import ChoicesWalker
 
 
 class TestChoicesWalker(TestCase):

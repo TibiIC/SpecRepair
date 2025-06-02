@@ -2,12 +2,13 @@ import argparse
 import os
 from typing import Optional
 
-from util import find_semantically_unique_specifications_from_directory, make_plural
+from util import make_plural, find_maximal_specifications_from_folder
 from spec_repair.ltl_types import GR1FormulaType
 
 _description = """
-This script finds all semantically unique specifications in a given directory.
+This script finds all maximal specifications in a given directory.
 """
+
 
 def _get_arguments_from_cmd_line():
     parser = argparse.ArgumentParser(description=_description)
@@ -44,12 +45,12 @@ def _get_arguments_from_cmd_line():
 
 if __name__ == '__main__':
     spec_directory_path, comparison_type = _get_arguments_from_cmd_line()
-    print("Finding unique specs in directory: ", spec_directory_path)
-    unique_specs = find_semantically_unique_specifications_from_directory(spec_directory_path, comparison_type)
-    print(f"Found {len(unique_specs)} semantically unique specification{make_plural(unique_specs)} in the directory: {spec_directory_path}")
-    print(f"Unique specification{make_plural(unique_specs)} found in file{make_plural(unique_specs)}:")
-    for file_path, spec in unique_specs:
+    print("Finding maximal specs in directory: ", spec_directory_path)
+    maximal_specs = find_maximal_specifications_from_folder(spec_directory_path, comparison_type)
+    print(
+        f"Found {len(maximal_specs)} maximal specification{make_plural(maximal_specs)} in the directory: {spec_directory_path}")
+    print(f"Maximal specification{make_plural(maximal_specs)} found in file{make_plural(maximal_specs)}:")
+    for file_path, spec in maximal_specs:
         print(f"{file_path}")
         # print(spec.to_str())
         # print("-" * 40)
-
