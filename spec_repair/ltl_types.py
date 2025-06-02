@@ -43,9 +43,9 @@ class GR1FormulaType(Enum):
 
     @staticmethod
     def from_str(value: str) -> "GR1FormulaType":
-        if value in ["assumption", "asm"]:
+        if value.lower() in ["assumption", "asm"]:
             return GR1FormulaType.ASM
-        elif value in ["guarantee", "gar"]:
+        elif value.lower() in ["guarantee", "gar"]:
             return GR1FormulaType.GAR
         raise ValueError(f"Unsupported value: {value}")
 
