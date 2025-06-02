@@ -2,8 +2,9 @@ import argparse
 import os
 import pandas as pd
 
+from spec_repair.helpers.spectra_specification import SpectraSpecification
 from util import filter_maximal_specifications, get_files_with_specs_from_directory, \
-    filter_semantically_unique_specifications, print_spec_names
+    filter_semantically_unique_specifications, print_spec_names, ComparisonType, filter_compared_specifications
 
 _description = """
 This script generates a table composed of all statistics relevant for the journal paper.
@@ -82,8 +83,26 @@ if __name__ == '__main__':
         print_spec_names(maximal_specs)
 
     experiment_name = os.path.basename(spec_directory_path)
-    df = pd.DataFrame(columns=['name_experiment', 'num_specs', 'num_unique_specs', 'num_unique_maximal_specs'])
-    df.loc[0] = [experiment_name, len(all_specs), len(unique_specs), len(maximal_specs)]
+    if not ideal_spec_path:
+        df = pd.DataFrame(columns=['name_experiment', 'num_specs', 'num_unique_specs', 'num_unique_maximal_specs'])
+        df.loc[0] = [experiment_name, len(all_specs), len(unique_specs), len(maximal_specs)]
+    else:
+        if is_verbose:
+            print(f"Comparing with ideal specification at: {ideal_spec_path}")
+        ideal_spec = SpectraSpecification.from_file(ideal_spec_path)
+        compared_specs = {}
+        comparisons = [ComparisonType.WEAKER, ComparisonType.EQUIVALENT, ComparisonType.STRONGER]
+        for asm_cmp in comparisons:
+            for gar_cmp in comparisons:
+                if is_verbose:
+                    print(f"Finding {asm_cmp.to_txt()} assumptions and {gar_cmp.to_txt()} guarantees compared to the ideal specification.")
+                compared_specs[f"A{asm_cmp.to_str()}G{gar_cmp.to_str()}"] = filter_compared_specifications(unique_specs, ideal_spec, asm_cmp, gar_cmp)
+                if is_verbose:
+                    print(f"Found {len(compared_specs[f'A{asm_cmp.to_str()}G{gar_cmp.to_str()}'])} {asm_cmp.to_txt()} assumptions and {gar_cmp.to_txt()} guarantees:")
+                    print_spec_names(compared_specs[f"A{asm_cmp.to_str()}G{gar_cmp.to_str()}"])
+
+        df = pd.DataFrame(columns=['name_experiment', 'num_specs', 'num_unique_specs', 'num_unique_maximal_specs', 'num_awgw', 'num_awge', 'num_awgs', 'num_aegw', 'num_aege', 'num_aegs', 'num_asgw', 'num_asge', 'num_asgs'])
+        df.loc[0] = [experiment_name, len(all_specs), len(unique_specs), len(maximal_specs), len(compared_specs["AwGw"]), len(compared_specs["AwGe"]),len(compared_specs["AwGs"]),len(compared_specs["AeGw"]),len(compared_specs["AeGe"]),len(compared_specs["AeGs"]),len(compared_specs["AsGw"]),len(compared_specs["AsGe"]),len(compared_specs["AsGs"])]
 
     print("\nStatistics Table:")
     if use_latex:
