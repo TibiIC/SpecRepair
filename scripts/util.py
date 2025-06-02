@@ -18,9 +18,10 @@ def find_semantically_unique_specifications_from_directory(
 def get_files_with_specs_from_directory(
         spec_directory_path: str
 ) -> List[Tuple[str, SpectraSpecification]]:
-    files_with_specs = [(spec_file_path, SpectraSpecification.from_file(spec_file_path)) for spec_file_path in
-                        os.listdir(spec_directory_path) if
-                        spec_file_path.endswith('.spectra')]
+    files_with_specs = [
+        (spec_file_path, SpectraSpecification.from_file(os.path.join(spec_directory_path, spec_file_path)))
+        for spec_file_path in os.listdir(spec_directory_path) if
+        spec_file_path.endswith('.spectra')]
     return files_with_specs
 
 
