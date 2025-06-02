@@ -20,6 +20,11 @@ def _get_arguments_from_cmd_line():
         help='Path to the directory with Spectra specifications. If no argument is given, it will attempt to perform its task inside the directory in which the script is run. All files should be named [0-9]+.spectra'
     )
     parser.add_argument(
+        '--ideal-spec',
+        type=str,
+        help='Path to an ideal specification file for comparison'
+    )
+    parser.add_argument(
         '-v', '--verbose',
         action='store_true',
         help='Enable verbose output'
@@ -47,11 +52,20 @@ def _get_arguments_from_cmd_line():
     if not spectra_files:
         raise ValueError(
             f"No Spectra files found in the directory: {spec_directory_path}. Please ensure the directory contains files with the '.spectra' extension.")
-    return spec_directory_path, args.verbose, args.output, args.latex
+    # Validate the ideal specification file path
+    if args.ideal_spec is not None:
+        ideal_spec_path = os.path.abspath(args.ideal_spec)
+        if not os.path.exists(ideal_spec_path):
+            raise FileNotFoundError(f"The specified ideal specification file does not exist: {ideal_spec_path}")
+        if not os.path.isfile(ideal_spec_path):
+            raise NotADirectoryError(f"The specified path is not a file: {ideal_spec_path}")
+    else:
+        ideal_spec_path = None
+    return spec_directory_path, args.verbose, args.output, args.latex, args.ideal_spec
 
 
 if __name__ == '__main__':
-    spec_directory_path, is_verbose, output_path, use_latex = _get_arguments_from_cmd_line()
+    spec_directory_path, is_verbose, output_path, use_latex, ideal_spec_path = _get_arguments_from_cmd_line()
     if is_verbose:
         print("Generating statistics from specs in directory: ", spec_directory_path)
     all_specs = get_files_with_specs_from_directory(spec_directory_path)
