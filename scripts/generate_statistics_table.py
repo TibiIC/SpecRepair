@@ -1,39 +1,29 @@
 import argparse
-import csv
 import os
 import sys
+import pandas as pd
 from typing import List, Dict
 
 
 def validate_headers(csv_files: List[str]) -> List[str]:
-    headers = None
-    for file_path in csv_files:
-        with open(file_path, 'r') as f:
-            reader = csv.reader(f)
-            current_headers = next(reader)
-            if headers is None:
-                headers = current_headers
-            elif headers != current_headers:
-                raise ValueError(f"Headers mismatch in {file_path}. Expected {headers}, got {current_headers}")
+    first_df = pd.read_csv(csv_files[0])
+    headers = list(first_df.columns)
+
+    for file_path in csv_files[1:]:
+        current_df = pd.read_csv(file_path)
+        current_headers = list(current_df.columns)
+        if headers != current_headers:
+            raise ValueError(f"Headers mismatch in {file_path}. Expected {headers}, got {current_headers}")
     return headers
 
 
-def combine_csv_files(csv_files: List[str]) -> List[Dict]:
-    combined_data = []
-    for file_path in csv_files:
-        with open(file_path, 'r') as f:
-            reader = csv.DictReader(f)
-            combined_data.extend(list(reader))
-    return combined_data
+def combine_csv_files(csv_files: List[str]) -> pd.DataFrame:
+    dfs = [pd.read_csv(file) for file in csv_files]
+    return pd.concat(dfs, ignore_index=True)
 
 
-def to_latex_table(data: List[Dict], headers: List[str]) -> str:
-    latex_table = "\\begin{tabular}{" + "c" * len(headers) + "}\n"
-    latex_table += " & ".join(headers) + " \\\\\n\\hline\n"
-    for row in data:
-        latex_table += " & ".join(str(row[h]) for h in headers) + " \\\\\n"
-    latex_table += "\\end{tabular}"
-    return latex_table
+def to_latex_table(data: pd.DataFrame) -> str:
+    return data.to_latex(index=False)
 
 
 def _get_arguments_from_cmd_line():
@@ -63,36 +53,22 @@ def _get_arguments_from_cmd_line():
             raise FileNotFoundError(f"CSV file not found: {csv_file}")
         if not os.path.isfile(csv_file):
             raise ValueError(f"Path is not a file: {csv_file}")
-    
+
     return args
 
 
 if __name__ == '__main__':
-    try:
-        args = _get_arguments_from_cmd_line()
+    args = _get_arguments_from_cmd_line()
+    headers = validate_headers(args.csv_files)
+    combined_data = combine_csv_files(args.csv_files)
 
-        try:
-            headers = validate_headers(args.csv_files)
-            combined_data = combine_csv_files(args.csv_files)
-
-            if args.latex:
-                output = to_latex_table(combined_data, headers)
-                if args.output:
-                    with open(args.output, 'w') as f:
-                        f.write(output)
-            else:
-                writer = csv.DictWriter(sys.stdout, fieldnames=headers)
-                writer.writeheader()
-                writer.writerows(combined_data)
-
-                if args.output:
-                    with open(args.output, 'w') as f:
-                        writer = csv.DictWriter(f, fieldnames=headers)
-                        writer.writeheader()
-                        writer.writerows(combined_data)
-        except Exception as e:
-            print(f"Error processing CSV files: {str(e)}", file=sys.stderr)
-            sys.exit(1)
-    except Exception as e:
-        print(f"Error parsing arguments: {str(e)}", file=sys.stderr)
-        sys.exit(1)
+    if args.latex:
+        output = to_latex_table(combined_data)
+        if args.output:
+            with open(args.output, 'w') as f:
+                f.write(output)
+    else:
+        if args.output:
+            combined_data.to_csv(args.output, index=False)
+        else:
+            combined_data.to_csv(sys.stdout, index=False)
