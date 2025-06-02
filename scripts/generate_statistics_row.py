@@ -7,7 +7,7 @@ from util import filter_maximal_specifications, get_files_with_specs_from_direct
     filter_semantically_unique_specifications, print_spec_names, ComparisonType, filter_compared_specifications
 
 _description = """
-This script generates a table composed of all statistics relevant for the journal paper.
+This script generates a row composed of all statistics relevant for the journal paper.
 """
 
 
@@ -62,7 +62,7 @@ def _get_arguments_from_cmd_line():
             raise NotADirectoryError(f"The specified path is not a file: {ideal_spec_path}")
     else:
         ideal_spec_path = None
-    return spec_directory_path, args.verbose, args.output, args.latex, args.ideal_spec
+    return spec_directory_path, args.verbose, args.output, args.latex, ideal_spec_path
 
 
 if __name__ == '__main__':
