@@ -43,6 +43,7 @@ class NewSpecEncoder:
         if learning_type == Learning.ASSUMPTION_WEAKENING:
             exp_names_to_learn = get_violated_expression_names_of_type(violations, learning_type.exp_type_str())
         else:
+            # TODO: only weaken unrealisable core of guarantees
             exp_names_to_learn = get_expression_names_of_type(violations, learning_type.exp_type_str())
         expressions_to_weaken = sub_spec.to_asp(learning_names=exp_names_to_learn, for_clingo=False, hm=self._hm)
         signature_string = create_atom_signature_asp(spec.get_atoms())
