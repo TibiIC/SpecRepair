@@ -11,7 +11,7 @@ from spec_repair.helpers.spectra_atom import SpectraAtom
 from spec_repair.heuristics import choose_one_with_heuristic, manual_choice, HeuristicType
 from spec_repair.ltl_types import CounterStrategy
 from spec_repair.old.patterns import PRS_REG
-from spec_repair.config import PROJECT_PATH, FASTLAS, PATH_TO_CLI
+from spec_repair.config import PROJECT_PATH, FASTLAS, PATH_TO_CLI, PATH_TO_ALL_CORES
 from spec_repair.old.specification_helper import strip_vars, assign_equalities, create_cmd, run_subprocess
 from spec_repair.special_types import HoldsAtAtom
 from spec_repair.util.file_util import read_file_lines, write_file
@@ -1171,6 +1171,13 @@ def aspify(expressions):
 def run_clingo_raw(filename, n_models: int = 1) -> str:
     filepath = f"{filename}"
     cmd = create_cmd(['clingo', f'--models={n_models}', filepath])
+    output = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE).communicate()[0]
+    return output.decode('utf-8')
+
+
+def run_all_unrealisable_cores_raw(filename) -> str:
+    filepath = f"{filename}"
+    cmd = create_cmd(['java', '-jar', PATH_TO_ALL_CORES, filepath, '--jtlv'])
     output = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE).communicate()[0]
     return output.decode('utf-8')
 

@@ -2,6 +2,7 @@ import os.path
 
 PATH_TO_CLI = os.path.expanduser("~/Tools/spectra-cli/tau.smlab.syntech.Spectra.cli/lib/spectra-cli.jar")
 PATH_TO_CORES = os.path.expanduser("~/Tools/spectra_unrealizable_cores.jar")
+PATH_TO_ALL_CORES = os.path.expanduser("~/Tools/spectra_all_unrealisable_cores.jar")
 PATH_TO_ILASP = os.path.expanduser('~/Tools/bin/ILASP')
 PATH_TO_FASTLAS = os.path.expanduser('~/Tools/bin/FastLAS')
 PRINT_CS = False
@@ -14,7 +15,8 @@ SETUP_DICT = {'wsl': False,
               'clingo': 'clingo',
               'ILASP': PATH_TO_ILASP,
               'FastLAS': PATH_TO_FASTLAS,
-              'ltlfilt': 'ltlfilt'
+              'ltlfilt': 'ltlfilt',
+              'java': 'java',
               }
 
 PROJECT_PATH: str = os.path.expanduser("~/Documents/PhD/SpecRepair")

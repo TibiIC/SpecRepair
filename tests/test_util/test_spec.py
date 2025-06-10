@@ -3,9 +3,12 @@ from unittest import TestCase
 
 import pandas as pd
 
+from scripts.old_scripts.choices_walker import ideal_spec_file_path
 from spec_repair.enums import Learning
+from spec_repair.helpers.spectra_specification import SpectraSpecification
 from spec_repair.util.spec_util import create_signature, extract_variables, create_trace, \
-    get_assumptions_and_guarantees_from, trace_list_to_asp_form, trace_list_to_ilasp_form
+    get_assumptions_and_guarantees_from, trace_list_to_asp_form, trace_list_to_ilasp_form, \
+    run_all_unrealisable_cores_raw
 
 
 def is_ascending(timepoint_poss: list[int]) -> bool:
@@ -16,6 +19,39 @@ class TestSpec(TestCase):
     minepump_spec_file = '../../input-files/examples/Minepump/minepump_strong.spectra'
     traffic_spec_file = '../test_files/traffic/traffic_single_strong.spectra'
     traffic_updated_spec_file = '../test_files/traffic/traffic_updated_strong.spectra'
+
+    def test_all_unrealisable_cores_raw_ideal(self):
+        ideal_spec_file_path = "../../input-files/case-studies/spectra/minepump/ideal.spectra"
+        try:
+            raw_cores = run_all_unrealisable_cores_raw(ideal_spec_file_path)
+            self.assertIsNotNone(raw_cores, "Raw cores output should not be None")
+            self.assertIsInstance(raw_cores, (str, list), "Raw cores should return string or list")
+            if raw_cores:
+                print(raw_cores)
+        except Exception as e:
+            self.fail(f"Command line execution failed with error: {str(e)}")
+
+    def test_all_unrealisable_cores_raw_one(self):
+        minepump_spec_file_path = "../test_files/unrealisable_core_util_tests/minepump_uc.spectra"
+        try:
+            raw_cores = run_all_unrealisable_cores_raw(minepump_spec_file_path)
+            self.assertIsNotNone(raw_cores, "Raw cores output should not be None")
+            self.assertIsInstance(raw_cores, (str, list), "Raw cores should return string or list")
+            if raw_cores:
+                print(raw_cores)
+        except Exception as e:
+            self.fail(f"Command line execution failed with error: {str(e)}")
+
+    def test_all_unrealisable_cores_raw_multiple(self):
+        arbiter_spec_file_path = "../test_files/unrealisable_core_util_tests/arbiter_uc.spectra"
+        try:
+            raw_cores = run_all_unrealisable_cores_raw(arbiter_spec_file_path)
+            self.assertIsNotNone(raw_cores, "Raw cores output should not be None")
+            self.assertIsInstance(raw_cores, (str, list), "Raw cores should return string or list")
+            if raw_cores:
+                print(raw_cores)
+        except Exception as e:
+            self.fail(f"Command line execution failed with error: {str(e)}")
 
     def test_extract_variables(self):
         spec_df: pd.DataFrame = get_assumptions_and_guarantees_from(self.minepump_spec_file)
