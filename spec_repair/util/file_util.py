@@ -3,6 +3,7 @@ import random
 import re
 import string
 from pathlib import Path
+from typing import Optional
 
 # Custom type definitions
 Log = str
@@ -16,6 +17,18 @@ def validate_spectra_file(file_path: str) -> None:
         raise FileNotFoundError(f"File not found: {file_path}")
     if path.suffix.lower() != ".spectra":
         raise ValueError(f"Invalid file type: {file_path}. Expected a '.spectra' file.")
+
+
+def get_line_from_file(filepath: FilePath, line_number: int) -> Optional[str]:
+    try:
+        with open(filepath, 'r') as f:
+            for current_line_num, line in enumerate(f, start=1):
+                if current_line_num == line_number:
+                    return line.rstrip('\n')
+        return None  # If line_number is beyond end of file
+    except FileNotFoundError:
+        print(f"File not found: {filepath}")
+        return None
 
 
 def write_file(filename: FilePath, content: list[str]):

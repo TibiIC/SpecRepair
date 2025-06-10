@@ -14,7 +14,8 @@ from spec_repair.old.patterns import PRS_REG
 from spec_repair.config import PROJECT_PATH, FASTLAS, PATH_TO_CLI, PATH_TO_ALL_CORES
 from spec_repair.old.specification_helper import strip_vars, assign_equalities, create_cmd, run_subprocess
 from spec_repair.special_types import HoldsAtAtom
-from spec_repair.util.file_util import read_file_lines, write_file
+from spec_repair.util.file_util import read_file_lines, write_file, generate_temp_filename, write_to_file, \
+    get_line_from_file
 
 
 def pRespondsToS_substitution(output_filename):
@@ -1173,6 +1174,46 @@ def run_clingo_raw(filename, n_models: int = 1) -> str:
     cmd = create_cmd(['clingo', f'--models={n_models}', filepath])
     output = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE).communicate()[0]
     return output.decode('utf-8')
+
+
+def run_all_unrealisable_cores(spectra_str: str) -> List[Set[str]]:
+    """
+    Gets the names of all unrealisable cores from a given spectra specification as string.
+    """
+    temp_spectra_file = generate_temp_filename(ext=".spectra")
+    write_to_file(temp_spectra_file, spectra_str)
+    pRespondsToS_substitution(temp_spectra_file)
+    output = run_all_unrealisable_cores_raw(temp_spectra_file)
+    core_nums_list: List[Set[int]] = _extract_cores(output)
+    core_names_list = []
+    for core_nums in core_nums_list:
+        core_names = set()
+        for core_num in core_nums:
+            line_with_name = get_line_from_file(temp_spectra_file, core_num)
+            name = line_with_name.split("--")[1].strip()
+            core_names.add(name)
+        core_names_list.append(core_names)
+    return core_names_list
+
+def _extract_cores(text) -> List[Set[int]]:
+    # Split to get the part after "Final results:"
+    parts = text.split("Final results:")
+    if len(parts) < 2:
+        return []
+
+    final_section = parts[1]
+
+    # Pattern to match lines like "Core #1 at lines < 12 15 >"
+    pattern = re.compile(r'Core\s+#\d+\s+at\s+lines\s+<\s*([\d\s]*)\s*>')
+
+    results = []
+    for match in pattern.finditer(final_section):
+        numbers = match.group(1).strip()
+        if numbers:  # Only add non-empty sets
+            num_set = {int(n) for n in numbers.split()}
+            results.append(num_set)
+
+    return results
 
 
 def run_all_unrealisable_cores_raw(filename) -> str:

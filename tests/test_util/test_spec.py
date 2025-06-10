@@ -8,7 +8,7 @@ from spec_repair.enums import Learning
 from spec_repair.helpers.spectra_specification import SpectraSpecification
 from spec_repair.util.spec_util import create_signature, extract_variables, create_trace, \
     get_assumptions_and_guarantees_from, trace_list_to_asp_form, trace_list_to_ilasp_form, \
-    run_all_unrealisable_cores_raw
+    run_all_unrealisable_cores_raw, run_all_unrealisable_cores
 
 
 def is_ascending(timepoint_poss: list[int]) -> bool:
@@ -43,7 +43,7 @@ class TestSpec(TestCase):
             self.fail(f"Command line execution failed with error: {str(e)}")
 
     def test_all_unrealisable_cores_raw_multiple(self):
-        arbiter_spec_file_path = "../test_files/unrealisable_core_util_tests/arbiter_uc.spectra"
+        arbiter_spec_file_path = "../test_files/unrealisable_core_util_tests/arbiter_uc_pRespondsToS.spectra"
         try:
             raw_cores = run_all_unrealisable_cores_raw(arbiter_spec_file_path)
             self.assertIsNotNone(raw_cores, "Raw cores output should not be None")
@@ -52,6 +52,24 @@ class TestSpec(TestCase):
                 print(raw_cores)
         except Exception as e:
             self.fail(f"Command line execution failed with error: {str(e)}")
+
+    def test_all_unrealisable_cores_ideal(self):
+        ideal_spec_file_path = "../../input-files/case-studies/spectra/minepump/ideal.spectra"
+        spec = SpectraSpecification.from_file(ideal_spec_file_path)
+        cores = run_all_unrealisable_cores(spec.to_str(is_to_compile=True))
+        self.assertEqual([], cores)
+
+    def test_all_unrealisable_cores_one(self):
+        minepump_spec_file_path = "../test_files/unrealisable_core_util_tests/minepump_uc.spectra"
+        spec = SpectraSpecification.from_file(minepump_spec_file_path)
+        cores = run_all_unrealisable_cores(spec.to_str(is_to_compile=True))
+        self.assertEqual([{"guarantee1_1", "guarantee2_1"}], cores)
+
+    def test_all_unrealisable_cores_multiple(self):
+        arbiter_spec_file_path = "../test_files/unrealisable_core_util_tests/arbiter_uc.spectra"
+        spec = SpectraSpecification.from_file(arbiter_spec_file_path)
+        cores = run_all_unrealisable_cores(spec.to_str(is_to_compile=True))
+        self.assertEqual([{"guarantee3_1", "guarantee2_1"}, {"guarantee1_1", "guarantee3_1"}], cores)
 
     def test_extract_variables(self):
         spec_df: pd.DataFrame = get_assumptions_and_guarantees_from(self.minepump_spec_file)
@@ -235,7 +253,8 @@ class TestSpec(TestCase):
 
         trace_as_asp: str = trace_list_to_asp_form(trace)
         trace_as_ilasp: str = trace_list_to_ilasp_form(trace_as_asp, learning=learning)
-        self.assert_ILASP_equivalent(trace_as_ilasp, trace, trace_name, is_positive=True, timepoints=[0, 1, 2], is_loop=True)
+        self.assert_ILASP_equivalent(trace_as_ilasp, trace, trace_name, is_positive=True, timepoints=[0, 1, 2],
+                                     is_loop=True)
 
     def assert_ILASP_equivalent(self, trace_as_ilasp: str, trace: list[str], trace_name: str,
                                 is_positive: bool, timepoints: list[int], is_loop: bool = False) -> None:
