@@ -137,15 +137,15 @@ def is_compared_specifications(spec, ideal_spec, cmp_type, formula_type):
         return True
     match cmp_type:
         case ComparisonType.WEAKER:
-            return spec.implies(ideal_spec, formula_type) and not ideal_spec.implies(spec, formula_type)
+            return spec.implied_by(ideal_spec, formula_type) and not ideal_spec.implied_by(spec, formula_type)
         case ComparisonType.WEAKER_OR_EQUIVALENT:
-            return spec.implies(ideal_spec, formula_type)
+            return spec.implied_by(ideal_spec, formula_type)
         case ComparisonType.EQUIVALENT:
             return spec.implies(ideal_spec, formula_type) and ideal_spec.implies(spec, formula_type)
         case ComparisonType.STRONGER_OR_EQUIVALENT:
-            return spec.implied_by(ideal_spec, formula_type)
+            return spec.implies(ideal_spec, formula_type)
         case ComparisonType.STRONGER:
-            return spec.implied_by(ideal_spec, formula_type) and not ideal_spec.implied_by(spec, formula_type)
+            return spec.implies(ideal_spec, formula_type) and not ideal_spec.implies(spec, formula_type)
 
 
 def is_compared_specification(spec, ideal_spec, asm_cmp_type, gar_cmp_type):
