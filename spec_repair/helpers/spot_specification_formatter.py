@@ -36,4 +36,6 @@ class SpotSpecificationFormatter:
             formulas_str = asms
         else:
             formulas_str = gars
+        if not formulas_str:
+            return "true"
         return formulas_str

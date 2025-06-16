@@ -356,6 +356,14 @@ root_consequent_holds(OP,guarantee4,1,T1,S):-
         f2 = spot.formula(formula2)
         return spot.are_equivalent(f1, f2)
 
+    def test_arbiter_compare(self):
+        spec_ideal: SpectraSpecification = SpectraSpecification.from_file(
+            "../input-files/case-studies/spectra/arbiter/ideal.spectra")
+        spec_trivial: SpectraSpecification = SpectraSpecification.from_file(
+            "./test_files/out/trivial_solutions/arbiter.spectra")
+        self.assertTrue(spec_ideal.implies(spec_trivial, GR1FormulaType.GAR))
+        self.assertTrue(spec_ideal.implies(spec_trivial, GR1FormulaType.ASM))
+
     def test_minepump_compare(self):
         spec_ideal: SpectraSpecification = SpectraSpecification.from_file(
             "../input-files/case-studies/spectra/minepump/ideal.spectra")
