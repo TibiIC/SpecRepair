@@ -98,6 +98,7 @@ def print_spec_names(maximal_specs):
 
 
 class ComparisonType(Enum):
+    UNRELATED = 'u'
     WEAKER = 'w'
     WEAKER_OR_EQUIVALENT = 'we'
     EQUIVALENT = 'e'
@@ -130,6 +131,8 @@ class ComparisonType(Enum):
                 return 'stronger or equivalent to'
             case ComparisonType.STRONGER:
                 return 'stronger than'
+            case ComparisonType.UNRELATED:
+                return 'unrelated to'
 
 
 def is_compared_specifications(spec, ideal_spec, cmp_type, formula_type):
@@ -146,6 +149,22 @@ def is_compared_specifications(spec, ideal_spec, cmp_type, formula_type):
             return spec.implies(ideal_spec, formula_type)
         case ComparisonType.STRONGER:
             return spec.implies(ideal_spec, formula_type) and not ideal_spec.implies(spec, formula_type)
+        case ComparisonType.UNRELATED:
+            return not spec.implies(ideal_spec, formula_type) and not ideal_spec.implies(spec, formula_type)
+
+def compare_specifications(spec, ideal_spec, formula_type) -> ComparisonType:
+    is_spec_weaker_than_ideal = spec.implied_by(ideal_spec, formula_type)
+    is_spec_stronger_than_ideal = spec.implies(ideal_spec, formula_type)
+    match is_spec_weaker_than_ideal, is_spec_stronger_than_ideal:
+        case True, True:
+            return ComparisonType.EQUIVALENT
+        case True, False:
+            return ComparisonType.WEAKER
+        case False, True:
+            return ComparisonType.STRONGER
+        case False, False:
+            return ComparisonType.UNRELATED
+    return ComparisonType.UNRELATED
 
 
 def is_compared_specification(spec, ideal_spec, asm_cmp_type, gar_cmp_type):

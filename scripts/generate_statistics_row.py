@@ -91,7 +91,7 @@ if __name__ == '__main__':
             print(f"Comparing with ideal specification at: {ideal_spec_path}")
         ideal_spec = SpectraSpecification.from_file(ideal_spec_path)
         compared_specs = {}
-        comparisons = [ComparisonType.WEAKER, ComparisonType.EQUIVALENT, ComparisonType.STRONGER]
+        comparisons = [ComparisonType.WEAKER, ComparisonType.EQUIVALENT, ComparisonType.STRONGER, ComparisonType.UNRELATED]
         for asm_cmp in comparisons:
             for gar_cmp in comparisons:
                 if is_verbose:
