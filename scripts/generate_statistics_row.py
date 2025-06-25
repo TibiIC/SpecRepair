@@ -101,8 +101,8 @@ if __name__ == '__main__':
                     print(f"Found {len(compared_specs[f'A{asm_cmp.to_str()}G{gar_cmp.to_str()}'])} {asm_cmp.to_txt()} assumptions and {gar_cmp.to_txt()} guarantees:")
                     print_spec_names(compared_specs[f"A{asm_cmp.to_str()}G{gar_cmp.to_str()}"])
 
-        df = pd.DataFrame(columns=['name_experiment', 'num_specs', 'num_unique_specs', 'num_unique_maximal_specs', 'num_awgw', 'num_awge', 'num_awgs', 'num_aegw', 'num_aege', 'num_aegs', 'num_asgw', 'num_asge', 'num_asgs'])
-        df.loc[0] = [experiment_name, len(all_specs), len(unique_specs), len(maximal_specs), len(compared_specs["AwGw"]), len(compared_specs["AwGe"]),len(compared_specs["AwGs"]),len(compared_specs["AeGw"]),len(compared_specs["AeGe"]),len(compared_specs["AeGs"]),len(compared_specs["AsGw"]),len(compared_specs["AsGe"]),len(compared_specs["AsGs"])]
+        df = pd.DataFrame(columns=['name_experiment', 'num_specs', 'num_unique_specs', 'num_unique_maximal_specs', 'num_awgw', 'num_awge', 'num_awgs', 'num_awgu', 'num_aegw', 'num_aege', 'num_aegs', 'num_aegu', 'num_asgw', 'num_asge', 'num_asgs', 'num_asgu', 'num_augw', 'num_auge', 'num_augs', 'num_augu'])
+        df.loc[0] = [experiment_name, len(all_specs), len(unique_specs), len(maximal_specs), len(compared_specs["AwGw"]), len(compared_specs["AwGe"]), len(compared_specs["AwGs"]), len(compared_specs["AwGu"]), len(compared_specs["AeGw"]), len(compared_specs["AeGe"]), len(compared_specs["AeGs"]), len(compared_specs["AeGu"]), len(compared_specs["AsGw"]), len(compared_specs["AsGe"]), len(compared_specs["AsGs"]), len(compared_specs["AsGu"]), len(compared_specs["AuGw"]), len(compared_specs["AuGe"]), len(compared_specs["AuGs"]), len(compared_specs["AuGu"])]
 
     print("\nStatistics Table:")
     if use_latex:
