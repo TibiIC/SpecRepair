@@ -1,4 +1,5 @@
 import copy
+import os.path
 import re
 import subprocess
 from collections import OrderedDict, defaultdict
@@ -37,7 +38,7 @@ def pRespondsToS_substitution(output_filename):
             spec[i] = replacement
     if found:
         spec.append(''.join(read_file_lines(f"{PROJECT_PATH}/files/pRespondsToS.txt")))
-        new_filename = output_filename.replace(".spectra", "_patterned.spectra")
+        new_filename = generate_temp_filename('.spectra')
         write_file(new_filename, spec)
         return new_filename
     return output_filename
@@ -1346,6 +1347,31 @@ def realizable(file, suppress=False):
     print("Spectra file in wrong format for CLI realizability check:")
     print(file)
     return None
+
+def synthesise_controller(spec_file_path, output_folder_path, suppress=False) -> bool:
+    if violations_in_initial_conditions(spec_file_path):
+        print("Spectra file in wrong format for CLI realizability check: (initial conditions)")
+        print(spec_file_path)
+        return False
+    # Check if parent directory exists
+    parent_dir = os.path.dirname(output_folder_path)
+    if not os.path.exists(parent_dir):
+        print(f"Error: Path to output folder does not exist: {parent_dir}")
+        return False
+
+    spec_file_path = pRespondsToS_substitution(spec_file_path)
+    cmd = ['java', '-jar', PATH_TO_CLI, '-i', spec_file_path, '--jtlv', '-s', '--static', '-o', output_folder_path]
+    output = run_subprocess(cmd, suppress=suppress)
+    if re.search("Error: Cannot synthesize an unrealizable specification", output):
+        print("Error: Cannot synthesize an unrealizable specification")
+        return False
+    elif re.search("Result: Specification is realizable", output):
+        return True
+    if not suppress:
+        print(output)
+    print("Spectra file in wrong format for CLI realizability check:")
+    print(spec_file_path)
+    return False
 
 
 def remove_double_outer_brackets(string):
