@@ -12,5 +12,5 @@ class HypothesesAndCounterTracesHeuristicManager(IHeuristicManager):
     def select_complete_counter_traces(self, ctss: List[List[CounterTrace]]) -> List[List[CounterTrace]]:
         return [choose_one_with_heuristic(ctss, first_choice)]
 
-    def select_weakening_hypotheses(self, hypotheses: List[List[str]]) -> List[List[str]]:
-        return hypotheses
+    def select_possible_learning_adaptations(self, adaptations: List[List[str]]) -> List[List[str]]:
+        return adaptations

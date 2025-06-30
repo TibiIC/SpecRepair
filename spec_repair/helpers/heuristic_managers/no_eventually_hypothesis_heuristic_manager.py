@@ -9,6 +9,6 @@ class NoEventuallyHypothesisHeuristicManager(NoFilterHeuristicManager):
         super().__init__()
         self._heuristics["INVARIANT_TO_RESPONSE_WEAKENING"] = False
 
-    def select_weakening_hypotheses(self, hypotheses: List[List[str]]) -> List[List[str]]:
-        hypotheses = super().select_weakening_hypotheses(hypotheses)
-        return [h for h in hypotheses if 'ev_temp_op' not in "".join(h)]
+    def select_possible_learning_adaptations(self, adaptations: List[List[str]]) -> List[List[str]]:
+        adaptations = super().select_possible_learning_adaptations(adaptations)
+        return [h for h in adaptations if 'ev_temp_op' not in "".join(h)]

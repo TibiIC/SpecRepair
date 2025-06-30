@@ -22,16 +22,18 @@ class NewSpecOracle(IOracle):
             new_spec: SpectraSpecification,
             data: Tuple[list[str], list[CounterTrace], Learning, list[SpectraSpecification], int, float]
     ) -> Optional[List[Tuple[CounterTrace, Tuple[list[str], list[CounterTrace], Learning, list[SpectraSpecification], int, float]]]]:
-        counter_strategy = self.synthesise_and_check(new_spec)
+        counter_strategy = self._synthesise_and_check(new_spec)
         if counter_strategy:
             possible_counter_traces = cts_from_cs(counter_strategy, cs_id=self._ct_cnt)
+            if self._hm:
+                possible_counter_traces = self._hm.select_counter_traces(possible_counter_traces)
             self._ct_cnt += 1
             possible_counter_traces_with_data = [(possible_counter_trace, deepcopy(data)) for possible_counter_trace in possible_counter_traces]
             return possible_counter_traces_with_data
         else:
             return None
 
-    def synthesise_and_check(self, spec: SpectraSpecification) -> Optional[CounterStrategy]:
+    def _synthesise_and_check(self, spec: SpectraSpecification) -> Optional[CounterStrategy]:
         """
         Uses Spectra under the hood to check whether specifcation is realisable.
         If it is, nothing is returned. Otherwise, it returns a CounterStrategy.

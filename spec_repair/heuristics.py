@@ -46,6 +46,6 @@ def last_choice(options_list: List[T]) -> T:
 
 
 def nth_choice(index: int, options_list: List[T]) -> T:
-    options_list.sort()
+    # options_list.sort()
     assert len(options_list) >= index + 1
     return options_list[index]

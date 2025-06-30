@@ -54,6 +54,8 @@ class SpecMitigator(IMitigator):
             new_learning_type = Learning.GUARANTEE_WEAKENING
             new_data = (trace, possible_cts, new_learning_type, deepcopy(spec_history), learning_steps, learning_time)
             alternative_learning_tasks.append((new_spec, new_data))
+        if self._hm:
+            alternative_learning_tasks = self._hm.select_complete_counter_traces(alternative_learning_tasks)
         return alternative_learning_tasks
 
     @staticmethod

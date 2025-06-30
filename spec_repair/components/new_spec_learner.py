@@ -22,7 +22,7 @@ class NewSpecLearner(ILearner):
             self,
             heuristic_manager: IHeuristicManager = NoFilterHeuristicManager(),
     ):
-        self.heuristic_manager = heuristic_manager
+        self._hm = heuristic_manager
         self.spec_encoder = NewSpecEncoder(heuristic_manager)
 
     # TODO: consider returning "data" instead of empty list when no learning is possible
@@ -34,6 +34,8 @@ class NewSpecLearner(ILearner):
         trace, cts, learning_type, spec_history, learning_steps, learning_time = data
         try:
             possible_adaptations: List[List[Adaptation]] = self.find_possible_adaptations(spec, trace, cts, learning_type)
+            if self._hm:
+                possible_adaptations = self._hm.select_possible_learning_adaptations(possible_adaptations)
             new_specs = [deepcopy(spec).integrate_multiple(adaptations) for adaptations in possible_adaptations]
             new_data = (trace, cts, learning_type, spec_history, learning_steps + 1, learning_time)
             new_tasks = [(new_spec, deepcopy(new_data)) for new_spec in new_specs]

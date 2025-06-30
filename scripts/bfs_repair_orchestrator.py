@@ -51,6 +51,10 @@ class BFSRepairOrchestrator:
         # Counter for recording counter-traces
         self._ct_cnt = 0
         self._hm.reset()
+        for learner in self._learners.values():
+            learner._hm = self._hm
+        self._mitigator._hm = self._hm
+        self._oracle._hm = self._hm
 
     def repair_bfs(
             self,

@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 from collections import defaultdict
-from typing import List
+from typing import List, Any
 
 from spec_repair.helpers.counter_trace import CounterTrace
 
@@ -21,7 +21,7 @@ class IHeuristicManager(ABC):
         pass
 
     @abstractmethod
-    def select_weakening_hypotheses(self, hypotheses: List[List[str]]) -> List[List[str]]:
+    def select_possible_learning_adaptations(self, adaptations: List[Any]) -> List[Any]:
         pass
 
     def is_enabled(self, param):

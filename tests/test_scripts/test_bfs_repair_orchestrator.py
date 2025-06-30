@@ -9,10 +9,12 @@ from spec_repair.components.new_spec_oracle import NewSpecOracle
 from spec_repair.components.spec_mitigator import SpecMitigator
 from spec_repair.components.spectra_discriminator import SpectraDiscriminator
 from spec_repair.enums import Learning
+from spec_repair.helpers.heuristic_managers.choose_first_heuristic_manager import ChooseFirstHeuristicManager
 from spec_repair.helpers.heuristic_managers.no_filter_heuristic_manager import NoFilterHeuristicManager
 from spec_repair.helpers.recorders.unique_spec_recorder import UniqueSpecRecorder
 from spec_repair.helpers.spectra_specification import SpectraSpecification
 from spec_repair.util.file_util import read_file_lines, write_to_file
+from spec_repair.util.spec_util import synthesise_controller
 
 
 class TestBFSRepairOrchestrator(TestCase):
@@ -80,6 +82,12 @@ class TestBFSRepairOrchestrator(TestCase):
             print(i)
             self.assertIn(expected_spec.to_str(), new_spec_strings)
 
+    def test_single_repair_spec_minepump(self):
+        case_study_name = 'minepump'
+        case_study_path = '../input-files/case-studies/spectra/minepump'
+        out_test_dir_name = "./test_files/out/minepump_single"
+        new_spec_strings = self.run_single_repair(case_study_name, case_study_path, out_test_dir_name)
+
     def test_bfs_repair_spec_minepump(self):
         case_study_name = 'minepump'
         case_study_path = '../input-files/case-studies/spectra/minepump'
@@ -132,4 +140,46 @@ class TestBFSRepairOrchestrator(TestCase):
         new_spec_strings: list[str] = [spec.to_str() for spec in recorder.get_all_values()]
         for i, new_spec in enumerate(new_spec_strings):
             write_to_file(f"{out_test_dir_name}/{case_study_name}_fix_{i}.spectra", new_spec)
+        return new_spec_strings
+
+    def run_single_repair(self, case_study_name, case_study_path, out_test_dir_name, is_debug=False):
+        transitions_file_path = f"{out_test_dir_name}/transitions.csv"
+        log_file = f"{out_test_dir_name}/log.txt"
+        if not os.path.exists(out_test_dir_name):
+            os.mkdir(out_test_dir_name)
+        if os.path.exists(transitions_file_path):
+            os.remove(transitions_file_path)
+        spec: SpectraSpecification = SpectraSpecification.from_file(f"{case_study_path}/strong.spectra")
+        trace: list[str] = read_file_lines(f"{case_study_path}/violation_trace.txt")
+        learners: Dict[str, ILearner] = {
+            "assumption_weakening": NewSpecLearner(
+                heuristic_manager=ChooseFirstHeuristicManager()
+            ),
+            "guarantee_weakening": NewSpecLearner(
+                heuristic_manager=ChooseFirstHeuristicManager()
+            )
+        }
+        if is_debug:
+            recorder = UniqueSpecRecorder(debug_folder=out_test_dir_name)
+        else:
+            recorder = UniqueSpecRecorder()
+        repairer: BFSRepairOrchestrator = BFSRepairOrchestrator(
+            learners,
+            NewSpecOracle(),
+            SpectraDiscriminator(),
+            SpecMitigator(),
+            ChooseFirstHeuristicManager(),
+            recorder,
+            SpecLogger(filename=log_file)
+        )
+        # Getting all possible repairs
+        repairer.repair_bfs(spec, (trace, [], Learning.ASSUMPTION_WEAKENING, [], 0, 0))
+        new_spec_strings: list[str] = [spec.to_str() for spec in recorder.get_all_values()]
+        for i, new_spec in enumerate(new_spec_strings):
+            write_to_file(f"{out_test_dir_name}/{case_study_name}_fix_{i}.spectra", new_spec)
+        assert len(new_spec_strings) == 1, "Expected exactly one new specification after single repair."
+        synthesise_controller(
+            f"{out_test_dir_name}/{case_study_name}_fix_0.spectra",
+            f"{out_test_dir_name}/{case_study_name}_controller",
+        )
         return new_spec_strings
