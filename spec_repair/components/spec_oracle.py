@@ -7,6 +7,7 @@ from spec_repair.ltl_types import CounterStrategy
 from spec_repair.old.patterns import PRS_REG
 from spec_repair.old.specification_helper import run_subprocess
 from spec_repair.util.file_util import generate_temp_filename, write_to_file
+from spec_repair.util.spec_util import synthesise_extract_counter_strategies
 
 
 class SpecOracle:
@@ -47,8 +48,7 @@ pattern pRespondsToS(s, p) {
         spec = self._pRespondsToS_substitution(spec)
         spectra_file: str = generate_temp_filename(ext=".spectra")
         write_to_file(spectra_file, '\n'.join(spec))
-        cmd = ['java', '-jar', PATH_TO_CLI, '-i', spectra_file, '--counter-strategy', '--jtlv']
-        return run_subprocess(cmd)
+        return synthesise_extract_counter_strategies(spectra_file)
 
     def _pRespondsToS_substitution(self, spec: list[str]) -> list[str]:
         spec = copy.deepcopy(spec)

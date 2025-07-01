@@ -25,12 +25,11 @@ import atexit
 from jpype.types import *
 
 if not jpype.isJVMStarted():
-    jpype.startJVM(PATH_TO_JVM, "-ea", classpath=[PATH_TO_TOOLBOX])
+    jpype.startJVM(PATH_TO_JVM, "-ea", classpath=[f"{PATH_TO_TOOLBOX}:{PATH_TO_CLI}"])
     print("JVM started successfully")
 
-
 SpectraToolbox = jpype.JClass('cores.SpectraToolbox')
-
+SpectraCLI = jpype.JClass('tau.smlab.syntech.Spectra.cli.SpectraCliTool')
 
 def pRespondsToS_substitution(output_filename):
     spec = read_file_lines(output_filename)
@@ -1350,8 +1349,8 @@ def realizable(file, suppress=False):
         print(file)
         return None
     file = pRespondsToS_substitution(file)
-    cmd = ['java', '-jar', PATH_TO_CLI, '-i', file, '--jtlv']
-    output = run_subprocess(cmd, suppress=suppress)
+    args = ["-i", file, "--jtlv"]
+    output = run_spectra_cli(args)
     if re.search("Result: Specification is unrealizable", output):
         return False
     elif re.search("Result: Specification is realizable", output):
@@ -1362,6 +1361,15 @@ def realizable(file, suppress=False):
     print(file)
     return None
 
+def synthesise_extract_counter_strategies(file):
+    if violations_in_initial_conditions(file):
+        print("Spectra file in wrong format for CLI realizability check: (initial conditions)")
+        print(file)
+        return None
+    file = pRespondsToS_substitution(file)
+    args = ["-i", file, "--counter-strategy", "--jtlv"]
+    output = run_spectra_cli(args)
+    return output
 
 def synthesise_controller(spec_file_path, output_folder_path, suppress=False) -> bool:
     if violations_in_initial_conditions(spec_file_path):
@@ -1375,8 +1383,8 @@ def synthesise_controller(spec_file_path, output_folder_path, suppress=False) ->
         return False
 
     spec_file_path = pRespondsToS_substitution(spec_file_path)
-    cmd = ['java', '-jar', PATH_TO_CLI, '-i', spec_file_path, '--jtlv', '-s', '--static', '-o', output_folder_path]
-    output = run_subprocess(cmd, suppress=suppress)
+    args = ["-i", spec_file_path, "--jtlv", '-s', '--static', '-o', output_folder_path]
+    output = run_spectra_cli(args)
     if re.search("Error: Cannot synthesize an unrealizable specification", output):
         print("Error: Cannot synthesize an unrealizable specification")
         return False
@@ -1388,6 +1396,53 @@ def synthesise_controller(spec_file_path, output_folder_path, suppress=False) ->
     print(spec_file_path)
     return False
 
+def run_spectra_cli(args: list[str]) -> str:
+    """
+    Run a Java main method and capture its printed output as a string.
+
+    Parameters:
+    - args: list of string arguments to pass to main()
+
+    Returns:
+    - Captured standard output as a Python string.
+    """
+    if not jpype.isJVMStarted():
+        raise RuntimeError("JVM is not started. Start it with jpype.startJVM() before calling this function.")
+
+    # Import Java system classes
+    java_lang_System = jpype.JPackage("java.lang").System
+    java_io_ByteArrayOutputStream = jpype.JPackage("java.io").ByteArrayOutputStream
+    java_io_PrintStream = jpype.JPackage("java.io").PrintStream
+
+    # Backup original System.out
+    original_out = java_lang_System.out
+
+    # Prepare streams to capture output
+    baos = java_io_ByteArrayOutputStream()
+    ps = java_io_PrintStream(baos)
+
+    # Redirect System.out to our PrintStream
+    java_lang_System.setOut(ps)
+
+    try:
+        # Load the Java class and convert args to Java String[]
+        java_args = JArray(JString)(args)
+
+        # Call the main method
+        SpectraCLI.main(java_args)
+
+        # Flush and get captured output as bytes
+        ps.flush()
+        output_bytes = baos.toByteArray()
+
+        # Decode bytes to Python string
+        output_str = bytes(output_bytes).decode("utf-8")
+
+    finally:
+        # Restore original System.out no matter what
+        java_lang_System.setOut(original_out)
+
+    return output_str
 
 def remove_double_outer_brackets(string):
     if string[0:2] == "((" and string[-3:-1] == "))":
@@ -1517,7 +1572,7 @@ def shutdown():
         print("Shutdown taking too long, forcing exit.")
         os._exit(1)
 
-    print("Shutting down SpectraTool...")
+    print("Shutting down SpectraTool and SpectraCLI...")
     timer = threading.Timer(10, force_exit)
     timer.start()
 

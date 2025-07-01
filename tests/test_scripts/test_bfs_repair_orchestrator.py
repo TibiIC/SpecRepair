@@ -179,7 +179,7 @@ class TestBFSRepairOrchestrator(TestCase):
             write_to_file(f"{out_test_dir_name}/{case_study_name}_fix_{i}.spectra", new_spec)
         assert len(new_spec_strings) == 1, "Expected exactly one new specification after single repair."
         synthesise_controller(
-            f"{out_test_dir_name}/{case_study_name}_fix_0.spectra",
-            f"{out_test_dir_name}/{case_study_name}_controller",
+            f"{os.getcwd()}/{out_test_dir_name}/{case_study_name}_fix_0.spectra",
+            f"{os.getcwd()}/{out_test_dir_name}/{case_study_name}_controller",
         )
         return new_spec_strings

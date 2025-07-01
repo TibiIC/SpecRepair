@@ -11,6 +11,7 @@ from spec_repair.helpers.spectra_specification import SpectraSpecification
 from spec_repair.ltl_types import CounterStrategy
 from spec_repair.old.specification_helper import run_subprocess
 from spec_repair.util.file_util import generate_temp_filename, write_to_file
+from spec_repair.util.spec_util import synthesise_extract_counter_strategies
 
 
 class NewSpecOracle(IOracle):
@@ -52,5 +53,4 @@ class NewSpecOracle(IOracle):
         spec_str = spec.to_str(is_to_compile=True)
         spectra_file: str = generate_temp_filename(ext=".spectra")
         write_to_file(spectra_file, spec_str)
-        cmd = ['java', '-jar', PATH_TO_CLI, '-i', spectra_file, '--counter-strategy', '--jtlv']
-        return run_subprocess(cmd)
+        return synthesise_extract_counter_strategies(spectra_file)
