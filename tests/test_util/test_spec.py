@@ -3,7 +3,6 @@ from unittest import TestCase
 
 import pandas as pd
 
-from scripts.old_scripts.choices_walker import ideal_spec_file_path
 from spec_repair.enums import Learning
 from spec_repair.helpers.spectra_specification import SpectraSpecification
 from spec_repair.util.spec_util import create_signature, extract_variables, create_trace, \

@@ -12,11 +12,24 @@ from spec_repair.helpers.spectra_atom import SpectraAtom
 from spec_repair.heuristics import choose_one_with_heuristic, manual_choice, HeuristicType
 from spec_repair.ltl_types import CounterStrategy
 from spec_repair.old.patterns import PRS_REG
-from spec_repair.config import PROJECT_PATH, FASTLAS, PATH_TO_CLI, PATH_TO_ALL_CORES
+from spec_repair.config import PROJECT_PATH, FASTLAS, PATH_TO_CLI, PATH_TO_TOOLBOX, PATH_TO_JVM
 from spec_repair.old.specification_helper import strip_vars, assign_equalities, create_cmd, run_subprocess
 from spec_repair.special_types import HoldsAtAtom
 from spec_repair.util.file_util import read_file_lines, write_file, generate_temp_filename, write_to_file, \
     get_line_from_file
+
+import threading
+import jpype
+import jpype.imports
+import atexit
+from jpype.types import *
+
+if not jpype.isJVMStarted():
+    jpype.startJVM(PATH_TO_JVM, "-ea", classpath=[PATH_TO_TOOLBOX])
+    print("JVM started successfully")
+
+
+SpectraToolbox = jpype.JClass('cores.SpectraToolbox')
 
 
 def pRespondsToS_substitution(output_filename):
@@ -1196,6 +1209,7 @@ def run_all_unrealisable_cores(spectra_str: str) -> List[Set[str]]:
         core_names_list.append(core_names)
     return core_names_list
 
+
 def _extract_cores(text) -> List[Set[int]]:
     # Split to get the part after "Final results:"
     parts = text.split("Final results:")
@@ -1219,9 +1233,9 @@ def _extract_cores(text) -> List[Set[int]]:
 
 def run_all_unrealisable_cores_raw(filename) -> str:
     filepath = f"{filename}"
-    cmd = create_cmd(['java', '-jar', PATH_TO_ALL_CORES, filepath, '--jtlv'])
-    output = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE).communicate()[0]
-    return output.decode('utf-8')
+    args = jpype.JArray(JString)([filepath, "--jtlv"])
+    output = SpectraToolbox.exploreAllCores(args)
+    return str(output)
 
 
 def shift_prev_to_next(formula, variables):
@@ -1347,6 +1361,7 @@ def realizable(file, suppress=False):
     print("Spectra file in wrong format for CLI realizability check:")
     print(file)
     return None
+
 
 def synthesise_controller(spec_file_path, output_folder_path, suppress=False) -> bool:
     if violations_in_initial_conditions(spec_file_path):
@@ -1495,3 +1510,23 @@ def re_line_spec(spec: list[str]) -> list[str]:
     :return: new_spec: Specification reformatted as explained above
     """
     return [line + '\n' for line in ''.join(spec).split("\n")]
+
+
+def shutdown():
+    def force_exit():
+        print("Shutdown taking too long, forcing exit.")
+        os._exit(1)
+
+    print("Shutting down SpectraTool...")
+    timer = threading.Timer(10, force_exit)
+    timer.start()
+
+    # SpectraToolbox.shutdownNow()
+    jpype.shutdownJVM()
+
+    print("JVM shutdown initiated...")
+    timer.cancel()
+    print("JVM shutdown complete.")
+
+
+atexit.register(shutdown)
