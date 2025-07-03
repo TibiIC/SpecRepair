@@ -92,6 +92,10 @@ class NewSpecEncoder:
             output += f":- head(antecedent_exception(_,_,V1,V2)), body(timepoint_of_op(_,V3,_,V4)), (V1, V2) != (V3, V4).\n"
             output += f":- head(antecedent_exception(_,_,_,V1)), body(holds_at(_,_,V2)), V1 != V2.\n"
             output += f":- head(antecedent_exception(_,_,_,V1)), body(not_holds_at(_,_,V2)), V1 != V2.\n"
+            output += f":- body(holds_at(E1, _, _)), body(holds_at(E2, _, _)), E1 != E2.\n"
+            output += f":- body(holds_at(E1, _, _)), body(not_holds_at(E2, _, _)), E1 != E2.\n"
+            output += f":- body(not_holds_at(E1, _, _)), body(holds_at(E2, _, _)), E1 != E2.\n"
+            output += f":- body(not_holds_at(E1, _, _)), body(not_holds_at(E2, _, _)), E1 != E2.\n"
         if self._hm.is_enabled("CONSEQUENT_WEAKENING"):
             output += f":- head(consequent_exception(_,V1,V2)), body(timepoint_of_op(_,V3,_,V4)), (V1, V2) != (V3, V4).\n"
             output += f":- head(consequent_exception(_,_,V1)), body(holds_at(_,_,V2)), V1 != V2.\n"
