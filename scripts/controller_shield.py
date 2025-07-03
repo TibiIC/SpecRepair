@@ -7,7 +7,7 @@ import jpype.imports
 import atexit
 from jpype.types import *
 
-from spec_repair.config import PATH_TO_JVM
+from spec_repair.config import PATH_TO_JVM, PATH_TO_TOOLBOX, PATH_TO_CLI
 
 PATH_TO_CONTROLLER = "/Users/tg4018/Documents/PhD/spectra-executor/bdd_files/static/Minepump"
 PATH_TO_SHIELD = "/Users/tg4018/Documents/PhD/SpecRepair/easy-downloads/spectra-executor.jar"
@@ -43,13 +43,13 @@ def dict_to_java_hashmap(py_dict):
         jmap.put(str(k), str(v))  # convert keys/values to strings explicitly
     return jmap
 
-def java_hashmap_to_dict(safe_output_java):
+def java_hashmap_to_dict(safe_output_java) -> Dict[str, str]:
     # Convert Java Map<String, String> back to Python dict
     py_safe_output = {}
     iterator = safe_output_java.entrySet().iterator()
     while iterator.hasNext():
         entry = iterator.next()
-        py_safe_output[entry.getKey()] = entry.getValue()
+        py_safe_output[str(entry.getKey())] = str(entry.getValue())
     return py_safe_output
 
 class ControllerShield:
@@ -66,7 +66,7 @@ class ControllerShield:
         current_state = dict_to_java_hashmap(state)
         return self._shield.initialiseStartingState(current_state)
 
-    def get_safe_action(self, state, action):
+    def get_safe_action(self, state, action) -> Dict[str, str]:
         current_inputs = dict_to_java_hashmap(state)
         current_outputs = dict_to_java_hashmap(action)
 
