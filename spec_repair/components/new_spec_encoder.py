@@ -71,7 +71,9 @@ class NewSpecEncoder:
         for atom in sorted(spec.get_atoms()):
             output += f"#constant(usable_atom,{atom.name}).\n"
         # TODO: find a way to provide the correct end index value
-        output += f"#constant(index,0..1).\n"
+        if self._hm.is_enabled("ANTECEDENT_WEAKENING"):
+            # Index number multiplies the search space, so we limit it to the maximum number of disjuncts in the antecedent
+            output += f"#constant(index,0..{max(0, spec.get_max_disjuncts_in_antecedent() - 1)}).\n"
         for temp_op in ["current", "next", "prev", "eventually"]:
             output += f"#constant(temp_op_v,{temp_op}).\n"
 
@@ -93,8 +95,8 @@ class NewSpecEncoder:
             output += f":- head(antecedent_exception(_,_,_,V1)), body(holds_at(_,_,V2)), V1 != V2.\n"
             output += f":- head(antecedent_exception(_,_,_,V1)), body(not_holds_at(_,_,V2)), V1 != V2.\n"
             output += f":- body(holds_at(E1, _, _)), body(holds_at(E2, _, _)), E1 != E2.\n"
-            output += f":- body(holds_at(E1, _, _)), body(not_holds_at(E2, _, _)), E1 != E2.\n"
-            output += f":- body(not_holds_at(E1, _, _)), body(holds_at(E2, _, _)), E1 != E2.\n"
+            output += f":- body(holds_at(_, _, _)), body(not_holds_at(_, _, _)).\n"
+            output += f":- body(not_holds_at(_, _, _)), body(holds_at(_, _, _)).\n"
             output += f":- body(not_holds_at(E1, _, _)), body(not_holds_at(E2, _, _)), E1 != E2.\n"
         if self._hm.is_enabled("CONSEQUENT_WEAKENING"):
             output += f":- head(consequent_exception(_,V1,V2)), body(timepoint_of_op(_,V3,_,V4)), (V1, V2) != (V3, V4).\n"

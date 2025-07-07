@@ -87,6 +87,7 @@ class TestBFSRepairOrchestrator(TestCase):
         case_study_path = '../input-files/case-studies/spectra/minepump'
         out_test_dir_name = "./test_files/out/minepump_single"
         new_spec_strings = self.run_single_repair(case_study_name, case_study_path, out_test_dir_name)
+        print(new_spec_strings)
 
     def test_bfs_repair_spec_minepump(self):
         case_study_name = 'minepump'

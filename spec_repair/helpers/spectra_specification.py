@@ -20,6 +20,7 @@ from spec_repair.helpers.spectra_formula_parser import SpectraFormulaParser
 from spec_repair.helpers.spot_specification_formatter import SpotSpecificationFormatter
 from spec_repair.ltl_types import GR1FormulaType, GR1TemporalType
 from spec_repair.util.file_util import read_file_lines, validate_spectra_file
+from spec_repair.util.formula_util import get_disjuncts_from_disjunction
 from spec_repair.util.spec_util import format_spec
 
 
@@ -108,6 +109,20 @@ class SpectraSpecification(ISpecification):
         formula: GR1Formula = \
             self._formulas_df.loc[self._formulas_df["name"] == name, "formula"].iloc[0]
         return formula
+
+# TODO: make it count the amount of conjunctions with different temporal operators (max=3/disjunct)
+    def get_max_disjuncts_in_antecedent(self) -> int:
+        """
+        Get the maximum number of conjunctions in the antecedent of any formula.
+        """
+        max_disjuncts = 0
+        for _, row in self._formulas_df.iterrows():
+            if row['type'] == GR1FormulaType.ASM:
+                formula = row.formula
+                antecedent = formula.antecedent
+                disjuncts = get_disjuncts_from_disjunction(antecedent)
+                max_disjuncts = max(max_disjuncts, len(disjuncts))
+        return max_disjuncts
 
     @staticmethod
     def from_file(spec_file: str) -> Self:
