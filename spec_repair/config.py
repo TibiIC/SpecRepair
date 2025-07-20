@@ -21,6 +21,7 @@ SETUP_DICT = {'wsl': False,
               'java': 'java',
               }
 
+
 PROJECT_PATH: str = os.path.expanduser("~/Documents/PhD/SpecRepair")
 GENERATE_MULTIPLE_TRACES = False
 
