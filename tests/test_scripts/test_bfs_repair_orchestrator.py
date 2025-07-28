@@ -3,6 +3,7 @@ from typing import Dict
 from unittest import TestCase
 
 from scripts.bfs_repair_orchestrator import BFSRepairOrchestrator, SpecLogger
+from spec_repair.components.arca_learner import ARCALearner
 from spec_repair.components.interfaces.ilearner import ILearner
 from spec_repair.components.new_spec_learner import NewSpecLearner
 from spec_repair.components.new_spec_oracle import NewSpecOracle
@@ -92,7 +93,7 @@ class TestBFSRepairOrchestrator(TestCase):
     def test_bfs_repair_spec_minepump(self):
         case_study_name = 'minepump'
         case_study_path = '../input-files/case-studies/spectra/minepump'
-        out_test_dir_name = "./test_files/out/minepump_all_bfs"
+        out_test_dir_name = "./test_files/out/minepump_arca_bfs"
         new_spec_strings = self.run_bfs_repair(case_study_name, case_study_path, out_test_dir_name)
 
         expected_specs_files: list[str] = os.listdir('./test_files/minepump_weakenings')
@@ -116,7 +117,7 @@ class TestBFSRepairOrchestrator(TestCase):
         spec: SpectraSpecification = SpectraSpecification.from_file(f"{case_study_path}/strong.spectra")
         trace: list[str] = read_file_lines(f"{case_study_path}/violation_trace.txt")
         learners: Dict[str, ILearner] = {
-            "assumption_weakening": NewSpecLearner(
+            "assumption_weakening": ARCALearner(
                 heuristic_manager=NoFilterHeuristicManager()
             ),
             "guarantee_weakening": NewSpecLearner(
@@ -153,7 +154,7 @@ class TestBFSRepairOrchestrator(TestCase):
         spec: SpectraSpecification = SpectraSpecification.from_file(f"{case_study_path}/strong.spectra")
         trace: list[str] = read_file_lines(f"{case_study_path}/violation_trace.txt")
         learners: Dict[str, ILearner] = {
-            "assumption_weakening": NewSpecLearner(
+            "assumption_weakening": ARCALearner(
                 heuristic_manager=ChooseFirstHeuristicManager()
             ),
             "guarantee_weakening": NewSpecLearner(
