@@ -415,7 +415,18 @@ class TestGR1Formula(TestCase):
         )
         formula.integrate(adaptation)
         output = formula.to_str(self.formatter)
-        expected_output = "GF((!(emergency=true)|car=false))"
+        expected_output = "G((emergency=true->F(car=false)))"
+        self.assertEqual(expected_output, output)
+        self.assertEqual(GR1TemporalType.INVARIANT, formula.temp_type)
+
+    def test_justice_implication_formula(self):
+        formula = GR1Formula(
+            temp_type=GR1TemporalType.JUSTICE,
+            antecedent=AtomicProposition("a", True),
+            consequent=AtomicProposition("b", False)
+        )
+        output = formula.to_str(self.formatter)
+        expected_output = "GF((a=true->b=false))"
         self.assertEqual(expected_output, output)
 
     def test_integrate_justice_implication_normalised_2(self):

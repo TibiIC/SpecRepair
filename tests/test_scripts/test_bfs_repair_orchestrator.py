@@ -48,7 +48,7 @@ class TestBFSRepairOrchestrator(TestCase):
     def test_bfs_repair_spec_traffic_single(self):
         case_study_name = 'traffic_single'
         case_study_path = '../input-files/case-studies/spectra/traffic-single'
-        out_test_dir_name = "./test_files/out/traffic_single_2025_08_07"
+        out_test_dir_name = "./test_files/out/traffic_single_2025_08_08"
         new_spec_strings = self.run_bfs_repair(
             case_study_name,
             case_study_path,

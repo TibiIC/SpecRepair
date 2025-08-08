@@ -107,6 +107,7 @@ class GR1Formula:
                 raise ValueError(f"Unsupported temporal type: {self.temp_type}")
 
     def integrate(self, adaptation: Adaptation):
+        # TODO: move this to adaptation_learned.py
         match adaptation.type:
             case "antecedent_exception":
                 self._integrate_antecedent_exception(adaptation)
@@ -137,6 +138,9 @@ class GR1Formula:
         self.consequent = Or(self.consequent, new_disjunct)
 
     def _integrate_antecedent_exception(self, adaptation: Adaptation):
+        if self.temp_type == GR1TemporalType.JUSTICE:
+            self.temp_type = GR1TemporalType.INVARIANT
+            self.consequent = Eventually(self.consequent)
         if self.antecedent is None:
             first_temp_op, first_atom_assignment = adaptation.atom_temporal_operators[0]
             first_atom_assignment = replace_false_true(first_atom_assignment)
