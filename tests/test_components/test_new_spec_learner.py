@@ -3,7 +3,7 @@ from typing import Any, Tuple
 from unittest import TestCase
 
 from spec_repair.components.interfaces.ispecification import ISpecification
-from spec_repair.components.new_spec_learner import NewSpecLearner
+from spec_repair.components.optimising_final_spec_learner import OptimisingSpecLearner
 from spec_repair.enums import Learning
 from spec_repair.helpers.heuristic_managers.no_filter_heuristic_manager import NoFilterHeuristicManager
 from spec_repair.helpers.spectra_specification import SpectraSpecification
@@ -25,7 +25,7 @@ class TestNewSpecLearner(TestCase):
         os.chdir(cls.original_working_directory)
 
     def test_learn_spec_asm_1(self):
-        spec_learner = NewSpecLearner(NoFilterHeuristicManager())
+        spec_learner = OptimisingSpecLearner(NoFilterHeuristicManager())
 
         spec: SpectraSpecification = SpectraSpecification.from_file(
             '../input-files/case-studies/spectra/minepump/strong.spectra')

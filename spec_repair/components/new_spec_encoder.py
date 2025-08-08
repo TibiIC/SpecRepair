@@ -18,7 +18,8 @@ class NewSpecEncoder:
             self._hm = NoFilterHeuristicManager()
         self._hm = heuristic_manager
 
-    def encode_ASP(self, spec: SpectraSpecification, trace: list[str], ct_list: List[CounterTrace]) -> str:
+    @staticmethod
+    def encode_ASP(spec: SpectraSpecification, trace: list[str], ct_list: List[CounterTrace]) -> str:
         """
         ASSUMES LEARNING ASSUMPTION WEAKENING ONLY
         """

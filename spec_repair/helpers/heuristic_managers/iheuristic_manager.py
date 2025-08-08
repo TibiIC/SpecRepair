@@ -17,7 +17,7 @@ class IHeuristicManager(ABC):
         pass
 
     @abstractmethod
-    def select_complete_counter_traces(self, ctss: List[List[CounterTrace]]) -> List[List[CounterTrace]]:
+    def select_alternative_learning_tasks(self, ctss: List[List[CounterTrace]]) -> List[List[CounterTrace]]:
         pass
 
     @abstractmethod

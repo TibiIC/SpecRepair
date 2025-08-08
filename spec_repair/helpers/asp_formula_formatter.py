@@ -1,3 +1,4 @@
+from copy import deepcopy
 from typing import List, Dict, Optional
 
 from py_ltl.formatter import ILTLFormatter
@@ -30,6 +31,8 @@ def header_boilerplate(time, ops: Optional[List[str]], implication_type: str, st
 
 class ASPFormulaFormatter(ILTLFormatter):
     def format(self, formula: LTLFormula) -> str:
+        # Never risk modifying the original formula
+        formula = deepcopy(formula)
         if isinstance(formula, Top) or isinstance(formula, Bottom):
             raise ValueError("Top and Bottom are not supported in this formula")
         elif not isinstance(formula, Globally):

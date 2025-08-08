@@ -5,9 +5,9 @@ from unittest import TestCase
 from scripts.bfs_repair_orchestrator import BFSRepairOrchestrator, SpecLogger
 from spec_repair.components.arca_learner import ARCALearner
 from spec_repair.components.interfaces.ilearner import ILearner
-from spec_repair.components.new_spec_learner import NewSpecLearner
+from spec_repair.components.optimising_final_spec_learner import OptimisingSpecLearner
 from spec_repair.components.new_spec_oracle import NewSpecOracle
-from spec_repair.components.spec_mitigator import SpecMitigator
+from spec_repair.components.learning_type_spec_mitigator import LearningTypeSpecMitigator
 from spec_repair.components.spectra_discriminator import SpectraDiscriminator
 from spec_repair.enums import Learning
 from spec_repair.helpers.heuristic_managers.choose_first_heuristic_manager import ChooseFirstHeuristicManager
@@ -15,6 +15,8 @@ from spec_repair.helpers.heuristic_managers.no_filter_heuristic_manager import N
 from spec_repair.helpers.recorders.unique_spec_recorder import UniqueSpecRecorder
 from spec_repair.helpers.spectra_specification import SpectraSpecification
 from spec_repair.util.file_util import read_file_lines, write_to_file
+from spec_repair.util.mittigation_strategies import move_one_to_guarantee_weakening, complete_counter_traces, \
+    move_all_to_guarantee_weakening
 from spec_repair.util.spec_util import synthesise_controller
 
 
@@ -46,7 +48,7 @@ class TestBFSRepairOrchestrator(TestCase):
     def test_bfs_repair_spec_traffic_single(self):
         case_study_name = 'traffic_single'
         case_study_path = '../input-files/case-studies/spectra/traffic-single'
-        out_test_dir_name = "./test_files/out/new_traffic_single_test_bfs"
+        out_test_dir_name = "./test_files/out/traffic_single_2025_08_07"
         new_spec_strings = self.run_bfs_repair(
             case_study_name,
             case_study_path,
@@ -117,10 +119,10 @@ class TestBFSRepairOrchestrator(TestCase):
         spec: SpectraSpecification = SpectraSpecification.from_file(f"{case_study_path}/strong.spectra")
         trace: list[str] = read_file_lines(f"{case_study_path}/violation_trace.txt")
         learners: Dict[str, ILearner] = {
-            "assumption_weakening": ARCALearner(
+            "assumption_weakening": OptimisingSpecLearner(
                 heuristic_manager=NoFilterHeuristicManager()
             ),
-            "guarantee_weakening": NewSpecLearner(
+            "guarantee_weakening": OptimisingSpecLearner(
                 heuristic_manager=NoFilterHeuristicManager()
             )
         }
@@ -132,7 +134,10 @@ class TestBFSRepairOrchestrator(TestCase):
             learners,
             NewSpecOracle(),
             SpectraDiscriminator(),
-            SpecMitigator(),
+            LearningTypeSpecMitigator({
+                Learning.ASSUMPTION_WEAKENING: move_one_to_guarantee_weakening,
+                Learning.GUARANTEE_WEAKENING: complete_counter_traces
+            }),
             NoFilterHeuristicManager(),
             recorder,
             SpecLogger(filename=log_file)
@@ -157,7 +162,7 @@ class TestBFSRepairOrchestrator(TestCase):
             "assumption_weakening": ARCALearner(
                 heuristic_manager=ChooseFirstHeuristicManager()
             ),
-            "guarantee_weakening": NewSpecLearner(
+            "guarantee_weakening": OptimisingSpecLearner(
                 heuristic_manager=ChooseFirstHeuristicManager()
             )
         }
@@ -169,7 +174,10 @@ class TestBFSRepairOrchestrator(TestCase):
             learners,
             NewSpecOracle(),
             SpectraDiscriminator(),
-            SpecMitigator(),
+            LearningTypeSpecMitigator({
+                Learning.ASSUMPTION_WEAKENING: move_one_to_guarantee_weakening,
+                Learning.GUARANTEE_WEAKENING: complete_counter_traces
+            }),
             ChooseFirstHeuristicManager(),
             recorder,
             SpecLogger(filename=log_file)

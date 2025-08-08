@@ -1,5 +1,5 @@
 from spec_repair.components.new_spec_encoder import get_violated_expression_names_of_type
-from spec_repair.components.new_spec_learner import NewSpecLearner
+from spec_repair.components.optimising_final_spec_learner import OptimisingSpecLearner
 from spec_repair.enums import Learning
 from spec_repair.helpers.spectra_specification import SpectraSpecification
 from spec_repair.ltl_types import GR1FormulaType
@@ -26,7 +26,7 @@ def get_trivial_solution(spec: SpectraSpecification, violation_trace: list[str])
         raise ValueError("Specification and violation trace must not be None")
 
     # Step 1: Remove violated assumptions
-    learner = NewSpecLearner()
+    learner = OptimisingSpecLearner()
     violated_assumptions = get_violated_expression_names_of_type(
         learner.get_spec_violations(spec, violation_trace, [], Learning.ASSUMPTION_WEAKENING),
         'assumption'
@@ -70,7 +70,7 @@ def get_all_trivial_solution(spec: SpectraSpecification, violation_trace: list[s
         raise ValueError("Specification and violation trace must not be None")
 
     # Step 1: Remove violated assumptions
-    learner = NewSpecLearner()
+    learner = OptimisingSpecLearner()
     violated_assumptions = get_violated_expression_names_of_type(
         learner.get_spec_violations(spec, violation_trace, [], Learning.ASSUMPTION_WEAKENING),
         'assumption'

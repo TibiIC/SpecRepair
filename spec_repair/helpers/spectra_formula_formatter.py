@@ -1,3 +1,5 @@
+from copy import deepcopy
+
 from py_ltl.formatter import ILTLFormatter
 from py_ltl.formula import LTLFormula, AtomicProposition, Not, And, Or, Until, Next, Globally, Eventually, Implies, Prev, Top, Bottom
 
@@ -7,6 +9,8 @@ class SpectraFormulaFormatter(ILTLFormatter):
         self.is_response_pattern = False
 
     def format(self, formula: LTLFormula) -> str:
+        # Never risk modifying the original formula
+        formula = deepcopy(formula)
         match formula:
             case AtomicProposition(name=name, value=value):
                 return f"{name}={str(value).lower()}"

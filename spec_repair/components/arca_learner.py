@@ -1,6 +1,6 @@
 import re
-from copy import copy, deepcopy
-from typing import Set, List, Tuple, Optional
+from copy import deepcopy
+from typing import List, Tuple, Optional
 
 from spec_repair.components.interfaces.ilearner import ILearner
 from spec_repair.components.new_spec_encoder import NewSpecEncoder
@@ -38,6 +38,7 @@ class ARCALearner(ILearner):
             if self._hm:
                 possible_adaptations = self._hm.select_possible_learning_adaptations(possible_adaptations)
             new_specs = [deepcopy(spec).integrate_multiple(adaptations) for adaptations in possible_adaptations]
+            # Moves straight to guarantee weakening after the first try
             new_data = (trace, cts, Learning.GUARANTEE_WEAKENING, spec_history, learning_steps + 1, learning_time)
             new_tasks = [(new_spec, deepcopy(new_data)) for new_spec in new_specs]
             return new_tasks

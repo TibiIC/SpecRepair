@@ -1,3 +1,4 @@
+from copy import deepcopy
 from typing import Optional
 
 from spec_repair.helpers.spot_formula_formatter import SpotFormulaFormatter
@@ -18,6 +19,8 @@ class SpotSpecificationFormatter:
         Returns:
             Formatted string of formulas joined with '&'
         """
+        # Never risk modifying the original spec
+        spec = deepcopy(spec)
         asm_formulas = []
         gar_formulas = []
         if self._type is not GR1FormulaType.GAR:

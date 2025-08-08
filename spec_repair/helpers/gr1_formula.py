@@ -93,9 +93,9 @@ class GR1Formula:
 
     def to_str(self, formatter: ILTLFormatter) -> str:
         if self.antecedent is None:
-            implication = self.consequent
+            implication = deepcopy(self.consequent)
         else:
-            implication = Implies(self.antecedent, self.consequent)
+            implication = deepcopy(Implies(self.antecedent, self.consequent))
         match self.temp_type:
             case GR1TemporalType.INITIAL:
                 return implication.format(formatter=formatter)

@@ -1,3 +1,4 @@
+from copy import deepcopy
 from typing import Tuple
 
 from py_ltl.formatter import ILTLFormatter
@@ -14,6 +15,8 @@ class SpotFormulaFormatter(ILTLFormatter):
         return cls._instance
 
     def format(self, this_formula: LTLFormula) -> str:
+        # Never risk modifying the original formula
+        this_formula = deepcopy(this_formula)
         spot_formula, shift = self._format(this_formula, shift_in=0)
         return spot_formula
 

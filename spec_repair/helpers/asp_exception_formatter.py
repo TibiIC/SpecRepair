@@ -1,3 +1,4 @@
+from copy import deepcopy
 from typing import List, Dict, Optional
 
 from py_ltl.formatter import ILTLFormatter
@@ -21,6 +22,8 @@ class ASPExceptionFormatter(ILTLFormatter):
         self.is_eventually_exception = is_eventually_exception
 
     def format(self, formula: LTLFormula) -> str:
+        # Never risk modifying the original formula
+        formula = deepcopy(formula)
         if isinstance(formula, Top) or isinstance(formula, Bottom):
             raise ValueError("Top and Bottom are not supported in this formula")
         elif not isinstance(formula, Globally):

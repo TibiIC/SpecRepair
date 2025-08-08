@@ -3,9 +3,9 @@ from typing import Dict, Optional, Tuple
 
 from scripts.bfs_repair_orchestrator import BFSRepairOrchestrator, SpecLogger
 from spec_repair.components.interfaces.ilearner import ILearner
-from spec_repair.components.new_spec_learner import NewSpecLearner
+from spec_repair.components.optimising_final_spec_learner import OptimisingSpecLearner
 from spec_repair.components.new_spec_oracle import NewSpecOracle
-from spec_repair.components.spec_mitigator import SpecMitigator
+from spec_repair.components.learning_type_spec_mitigator import LearningTypeSpecMitigator
 from spec_repair.components.spectra_discriminator import SpectraDiscriminator
 from spec_repair.enums import Learning
 from spec_repair.helpers.heuristic_managers.choose_first_heuristic_manager import ChooseFirstHeuristicManager
@@ -15,14 +15,17 @@ from spec_repair.util.file_util import write_to_file, read_file, read_file_lines
 
 from typing import List, Tuple, Dict
 
-def run_single_repair(spec_path: str, trace_path: str, out_spec_path, out_test_dir_name: Optional[str]=None):
+from spec_repair.util.mittigation_strategies import move_one_to_guarantee_weakening, complete_counter_traces
+
+
+def run_single_repair(spec_path: str, trace_path: str, out_spec_path, out_test_dir_name: Optional[str] = None):
     spec: SpectraSpecification = SpectraSpecification.from_file(spec_path)
     trace: list[str] = read_file_lines(trace_path)
     learners: Dict[str, ILearner] = {
-        "assumption_weakening": NewSpecLearner(
+        "assumption_weakening": OptimisingSpecLearner(
             heuristic_manager=ChooseFirstHeuristicManager()
         ),
-        "guarantee_weakening": NewSpecLearner(
+        "guarantee_weakening": OptimisingSpecLearner(
             heuristic_manager=ChooseFirstHeuristicManager()
         )
     }
@@ -34,7 +37,10 @@ def run_single_repair(spec_path: str, trace_path: str, out_spec_path, out_test_d
         learners,
         NewSpecOracle(),
         SpectraDiscriminator(),
-        SpecMitigator(),
+        LearningTypeSpecMitigator({
+            Learning.ASSUMPTION_WEAKENING: move_one_to_guarantee_weakening,
+            Learning.GUARANTEE_WEAKENING: complete_counter_traces
+        }),
         ChooseFirstHeuristicManager(),
         recorder,
         SpecLogger()
@@ -46,6 +52,7 @@ def run_single_repair(spec_path: str, trace_path: str, out_spec_path, out_test_d
     write_to_file(out_spec_path, new_spec_strings[0])
     return new_spec_strings
 
+
 def main():
     parser = argparse.ArgumentParser(description='Run single repair on specification')
     parser.add_argument('spec_path', help='Path to the specification file')
@@ -54,6 +61,7 @@ def main():
     args = parser.parse_args()
 
     run_single_repair(args.spec_path, args.trace, args.out_spec_path)
+
 
 if __name__ == "__main__":
     run_single_repair(

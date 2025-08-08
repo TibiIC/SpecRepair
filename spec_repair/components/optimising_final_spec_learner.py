@@ -17,7 +17,7 @@ from spec_repair.helpers.spectra_specification import SpectraSpecification
 from spec_repair.wrappers.asp_wrappers import get_violations, run_ILASP
 
 
-class NewSpecLearner(ILearner):
+class OptimisingSpecLearner(ILearner):
     def __init__(
             self,
             heuristic_manager: IHeuristicManager = NoFilterHeuristicManager(),

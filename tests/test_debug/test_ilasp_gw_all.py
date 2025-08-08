@@ -3,7 +3,7 @@ from unittest import TestCase
 
 import dill
 
-from spec_repair.components.new_spec_learner import NewSpecLearner
+from spec_repair.components.optimising_final_spec_learner import OptimisingSpecLearner
 from spec_repair.enums import Learning
 
 
@@ -24,13 +24,13 @@ class TestILASPGWAll(TestCase):
     def test_ilasp_gw_all_minepump(self):
         with open('./test_debug/ilasp_gw_all_helper_files/minepump_debug_vars.dill', 'rb') as f:
             spec, trace, cts, learning_type, violations = dill.load(f)
-        learner = NewSpecLearner()
+        learner = OptimisingSpecLearner()
         learner.find_all_exception_adaptations(spec, trace, cts, learning_type, violations)
 
     def test_ilasp_gw_all_arbiter(self):
         with open('./test_debug/ilasp_gw_all_helper_files/arbiter_debug_vars.dill', 'rb') as f:
             spec, trace, cts, learning_type, violations = dill.load(f)
-        learner = NewSpecLearner()
+        learner = OptimisingSpecLearner()
         adaptations = learner.find_all_exception_adaptations(spec, trace, cts, learning_type, violations)
 
         spec.integrate_multiple(adaptations[0][1])

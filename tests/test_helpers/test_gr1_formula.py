@@ -417,3 +417,20 @@ class TestGR1Formula(TestCase):
         output = formula.to_str(self.formatter)
         expected_output = "GF((!(emergency=true)|car=false))"
         self.assertEqual(expected_output, output)
+
+    def test_integrate_justice_implication_normalised_2(self):
+        formula = GR1Formula(
+            temp_type=GR1TemporalType.JUSTICE,
+            antecedent=None,
+            consequent=Or(Not(AtomicProposition("emergency", True)), AtomicProposition("car", False))
+        )
+        adaptation = Adaptation(
+            type="consequent_exception",
+            formula_name="no_car_often",
+            disjunction_index=0,
+            atom_temporal_operators=[('current', 'emergency=true')]
+        )
+        formula.integrate(adaptation)
+        output = formula.to_str(self.formatter)
+        expected_output = "GF(((!(emergency=true)|car=false)|emergency=true))"
+        self.assertEqual(expected_output, output)
