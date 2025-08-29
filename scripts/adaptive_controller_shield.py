@@ -136,7 +136,7 @@ class AdaptiveShield:
             assert {k: v for k, v in safe_action.items() if k in action} == action, f"Safe action {safe_action} at timepoint {i} does not match proposed action {action}"
 
 
-PATH_TO_SPEC = "/Users/tg4018/Documents/PhD/SpecRepair/tests/test_files/out/shield_test/minepump_strong.spectra"
+PATH_TO_SPEC = "/Users/tg4018/Documents/PhD/SpecRepair/tests/test_files/shield_test/minepump_strong.spectra"
 
 if __name__ == "__main__":
     shield = AdaptiveShield(spec_path=PATH_TO_SPEC)

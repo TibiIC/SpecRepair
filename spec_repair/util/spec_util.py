@@ -1110,7 +1110,7 @@ def generate_model(expressions, neg_expressions, variables, scratch=False, asp_r
     clingo_out = run_clingo_raw(file, n_models=0)
     violation = True
 
-    matches = re.findall(r'Answer: \d+\n([^\n]*)', clingo_out)
+    matches = re.findall(r'Answer:\s*\d+(?:.*)?\r?\n([^\r\n]*)', clingo_out)
 
     if not matches:
         # print(clingo_out)

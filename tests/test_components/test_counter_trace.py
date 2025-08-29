@@ -118,6 +118,8 @@ not_holds_at(pump,2,counter_strat_1_1).
         expected_ct_asp = """\
 %---*** Violation Trace ***---
 
+% CS_Path: ini_S0_DEAD
+
 trace(counter_strat_0_0).
 
 timepoint(0,counter_strat_0_0).
@@ -137,6 +139,8 @@ holds_at(pump,1,counter_strat_0_0).
         ct = ct_from_cs(cs2, heuristic=first_choice, cs_id=1)
         expected_ct_asp = """\
 %---*** Violation Trace ***---
+
+% CS_Path: ini_S0_S1_DEAD
 
 trace(counter_strat_1_0).
 
@@ -256,6 +260,8 @@ not_holds_at(pump,3,counter_strat_1_1).\
         expected_ct_asp = """\
 %---*** Violation Trace ***---
 
+% CS_Path: ini_S0_DEAD
+
 trace(counter_strat_0_0).
 
 timepoint(0,counter_strat_0_0).
@@ -283,6 +289,8 @@ not_holds_at(pump,2,counter_strat_0_0).
         ct = complete_cts_from_ct(ct, spec, ["counter_strat_1_1"])[0]
         expected_ct_asp = """\
 %---*** Violation Trace ***---
+
+% CS_Path: ini_S0_S1_DEAD
 
 trace(counter_strat_1_1).
 

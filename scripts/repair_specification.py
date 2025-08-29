@@ -65,8 +65,8 @@ def main():
 
 if __name__ == "__main__":
     run_single_repair(
-        "/Users/tg4018/Documents/PhD/SpecRepair/tests/test_files/out/shield_test/specs/spec_0.spectra",
-        "/Users/tg4018/Documents/PhD/SpecRepair/tests/test_files/out/shield_test/specs/violation_trace_0.txt",
-        "/Users/tg4018/Documents/PhD/SpecRepair/tests/test_files/out/shield_test/specs/spec_1.spectra"
+        "/Users/tg4018/Documents/PhD/SpecRepair/tests/test_files/shield_test/specs/spec_0.spectra",
+        "/Users/tg4018/Documents/PhD/SpecRepair/tests/test_files/shield_test/specs/violation_trace_0.txt",
+        "/Users/tg4018/Documents/PhD/SpecRepair/tests/test_files/shield_test/specs/spec_1.spectra"
     )
     # main()
