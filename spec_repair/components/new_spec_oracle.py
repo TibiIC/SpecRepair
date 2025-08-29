@@ -7,7 +7,7 @@ from spec_repair.components.spec_oracle import SpecOracle
 from spec_repair.config import PATH_TO_CLI
 from spec_repair.enums import Learning
 from spec_repair.helpers.counter_trace import cts_from_cs, CounterTrace
-from spec_repair.helpers.spectra_specification import SpectraSpecification
+from spec_repair.helpers.spectra_boolean_specification import SpectraBooleanSpecification
 from spec_repair.ltl_types import CounterStrategy
 from spec_repair.old.specification_helper import run_subprocess
 from spec_repair.util.file_util import generate_temp_filename, write_to_file
@@ -20,9 +20,9 @@ class NewSpecOracle(IOracle):
 
     def is_valid_or_counter_arguments(
             self,
-            new_spec: SpectraSpecification,
-            data: Tuple[list[str], list[CounterTrace], Learning, list[SpectraSpecification], int, float]
-    ) -> Optional[List[Tuple[CounterTrace, Tuple[list[str], list[CounterTrace], Learning, list[SpectraSpecification], int, float]]]]:
+            new_spec: SpectraBooleanSpecification,
+            data: Tuple[list[str], list[CounterTrace], Learning, list[SpectraBooleanSpecification], int, float]
+    ) -> Optional[List[Tuple[CounterTrace, Tuple[list[str], list[CounterTrace], Learning, list[SpectraBooleanSpecification], int, float]]]]:
         counter_strategy = self._synthesise_and_check(new_spec)
         if counter_strategy:
             possible_counter_traces = cts_from_cs(counter_strategy, cs_id=self._ct_cnt)
@@ -34,7 +34,7 @@ class NewSpecOracle(IOracle):
         else:
             return None
 
-    def _synthesise_and_check(self, spec: SpectraSpecification) -> Optional[CounterStrategy]:
+    def _synthesise_and_check(self, spec: SpectraBooleanSpecification) -> Optional[CounterStrategy]:
         """
         Uses Spectra under the hood to check whether specifcation is realisable.
         If it is, nothing is returned. Otherwise, it returns a CounterStrategy.
@@ -49,7 +49,7 @@ class NewSpecOracle(IOracle):
         else:
             raise Exception(output)
 
-    def _synthesise(self, spec: SpectraSpecification):
+    def _synthesise(self, spec: SpectraBooleanSpecification):
         spec_str = spec.to_str(is_to_compile=True)
         spectra_file: str = generate_temp_filename(ext=".spectra")
         write_to_file(spectra_file, spec_str)

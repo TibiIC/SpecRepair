@@ -6,7 +6,7 @@ from spec_repair.components.interfaces.ispecification import ISpecification
 from spec_repair.enums import Learning
 from spec_repair.helpers.counter_trace import CounterTrace
 from spec_repair.helpers.heuristic_managers.no_filter_heuristic_manager import NoFilterHeuristicManager
-from spec_repair.helpers.spectra_specification import SpectraSpecification
+from spec_repair.helpers.spectra_boolean_specification import SpectraBooleanSpecification
 
 
 class LearningTypeSpecMitigator(IMitigator):
@@ -21,8 +21,8 @@ class LearningTypeSpecMitigator(IMitigator):
 
     def prepare_alternative_learning_tasks(
             self,
-            spec: SpectraSpecification,
-            data: Tuple[list[str], list[CounterTrace], Learning, list[SpectraSpecification], int, float]
+            spec: SpectraBooleanSpecification,
+            data: Tuple[list[str], list[CounterTrace], Learning, list[SpectraBooleanSpecification], int, float]
     ) -> List[Tuple[ISpecification, Tuple[list[str], list[CounterTrace], Learning, list[ISpecification], int, float]]]:
         trace, cts, learning_type, spec_history, learning_steps, learning_time = data
         return self._hm.select_alternative_learning_tasks(self._mitigation_strategies[learning_type](spec, trace, cts, spec_history, learning_steps, learning_time))
@@ -30,9 +30,9 @@ class LearningTypeSpecMitigator(IMitigator):
 
     def prepare_learning_task(
             self,
-            spec: SpectraSpecification,
-            data: Tuple[list[str], list[CounterTrace], Learning, list[SpectraSpecification], int, float],
-            learned_spec: SpectraSpecification,
+            spec: SpectraBooleanSpecification,
+            data: Tuple[list[str], list[CounterTrace], Learning, list[SpectraBooleanSpecification], int, float],
+            learned_spec: SpectraBooleanSpecification,
             counter_argument
     ) -> Tuple[ISpecification, Tuple[list[str], list[CounterTrace], Learning, list[ISpecification], int, float]]:
         trace, cts, learning_type, spec_history, learning_steps, learning_time = data

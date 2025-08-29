@@ -10,7 +10,7 @@ from spec_repair.components.spectra_discriminator import SpectraDiscriminator
 from spec_repair.enums import Learning
 from spec_repair.helpers.heuristic_managers.choose_first_heuristic_manager import ChooseFirstHeuristicManager
 from spec_repair.helpers.recorders.unique_spec_recorder import UniqueSpecRecorder
-from spec_repair.helpers.spectra_specification import SpectraSpecification
+from spec_repair.helpers.spectra_boolean_specification import SpectraBooleanSpecification
 from spec_repair.util.file_util import write_to_file, read_file, read_file_lines
 
 from typing import List, Tuple, Dict
@@ -19,7 +19,7 @@ from spec_repair.util.mittigation_strategies import move_one_to_guarantee_weaken
 
 
 def run_single_repair(spec_path: str, trace_path: str, out_spec_path, out_test_dir_name: Optional[str] = None):
-    spec: SpectraSpecification = SpectraSpecification.from_file(spec_path)
+    spec: SpectraBooleanSpecification = SpectraBooleanSpecification.from_file(spec_path)
     trace: list[str] = read_file_lines(trace_path)
     learners: Dict[str, ILearner] = {
         "assumption_weakening": OptimisingSpecLearner(

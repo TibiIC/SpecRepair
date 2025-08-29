@@ -7,7 +7,7 @@ from spec_repair.components.new_spec_encoder import NewSpecEncoder
 from spec_repair.enums import Learning
 from spec_repair.exceptions import NoViolationException
 from spec_repair.helpers.counter_trace import CounterTrace, complete_cts_from_ct
-from spec_repair.helpers.spectra_specification import SpectraSpecification
+from spec_repair.helpers.spectra_boolean_specification import SpectraBooleanSpecification
 from spec_repair.wrappers.asp_wrappers import get_violations
 
 
@@ -57,7 +57,7 @@ def complete_counter_traces(
     while not unchanged:
         unchanged = True
         for cts in deepcopy(ctss):
-            asp: str = NewSpecEncoder.encode_ASP(cast(SpectraSpecification, spec), trace, list(cts))
+            asp: str = NewSpecEncoder.encode_ASP(cast(SpectraBooleanSpecification, spec), trace, list(cts))
             violations = get_violations(asp, exp_type=Learning.GUARANTEE_WEAKENING.exp_type())
             if not violations:
                 raise NoViolationException("Violation trace is not violating!")

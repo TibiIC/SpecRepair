@@ -2,7 +2,7 @@ import argparse
 import os
 import pandas as pd
 
-from spec_repair.helpers.spectra_specification import SpectraSpecification
+from spec_repair.helpers.spectra_boolean_specification import SpectraBooleanSpecification
 from util import filter_maximal_specifications, get_files_with_specs_from_directory, \
     filter_semantically_unique_specifications, print_spec_names, ComparisonType, filter_compared_specifications
 
@@ -89,7 +89,7 @@ if __name__ == '__main__':
     else:
         if is_verbose:
             print(f"Comparing with ideal specification at: {ideal_spec_path}")
-        ideal_spec = SpectraSpecification.from_file(ideal_spec_path)
+        ideal_spec = SpectraBooleanSpecification.from_file(ideal_spec_path)
         compared_specs = {}
         comparisons = [ComparisonType.WEAKER, ComparisonType.EQUIVALENT, ComparisonType.STRONGER, ComparisonType.UNRELATED]
         for asm_cmp in comparisons:

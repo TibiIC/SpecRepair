@@ -1,0 +1,8 @@
+holds_at(highwater,LOW,0,trace_name_0).
+holds_at(methane,LOW,0,trace_name_0).
+holds_at(pump,false,0,trace_name_0).
+
+holds_at(highwater,HIGH,1,trace_name_0).
+holds_at(methane,HIGH,1,trace_name_0).
+holds_at(pump,false,1,trace_name_0).
+

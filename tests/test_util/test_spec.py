@@ -4,7 +4,7 @@ from unittest import TestCase
 import pandas as pd
 
 from spec_repair.enums import Learning
-from spec_repair.helpers.spectra_specification import SpectraSpecification
+from spec_repair.helpers.spectra_boolean_specification import SpectraBooleanSpecification
 from spec_repair.util.spec_util import create_signature, extract_variables, create_trace, \
     get_assumptions_and_guarantees_from, trace_list_to_asp_form, trace_list_to_ilasp_form, \
     run_all_unrealisable_cores_raw, run_all_unrealisable_cores
@@ -54,19 +54,19 @@ class TestSpec(TestCase):
 
     def test_all_unrealisable_cores_ideal(self):
         ideal_spec_file_path = "../../input-files/case-studies/spectra/minepump/ideal.spectra"
-        spec = SpectraSpecification.from_file(ideal_spec_file_path)
+        spec = SpectraBooleanSpecification.from_file(ideal_spec_file_path)
         cores = run_all_unrealisable_cores(spec.to_str(is_to_compile=True))
         self.assertEqual([], cores)
 
     def test_all_unrealisable_cores_one(self):
         minepump_spec_file_path = "../test_files/unrealisable_core_util_tests/minepump_uc.spectra"
-        spec = SpectraSpecification.from_file(minepump_spec_file_path)
+        spec = SpectraBooleanSpecification.from_file(minepump_spec_file_path)
         cores = run_all_unrealisable_cores(spec.to_str(is_to_compile=True))
         self.assertEqual([{"guarantee1_1", "guarantee2_1"}], cores)
 
     def test_all_unrealisable_cores_multiple(self):
         arbiter_spec_file_path = "../test_files/unrealisable_core_util_tests/arbiter_uc.spectra"
-        spec = SpectraSpecification.from_file(arbiter_spec_file_path)
+        spec = SpectraBooleanSpecification.from_file(arbiter_spec_file_path)
         cores = run_all_unrealisable_cores(spec.to_str(is_to_compile=True))
         self.assertEqual([{"guarantee3_1", "guarantee2_1"}, {"guarantee1_1", "guarantee3_1"}], cores)
 

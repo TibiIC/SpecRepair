@@ -4,7 +4,7 @@ from spec_repair.components.interfaces.idiscriminator import IDiscriminator
 from spec_repair.components.interfaces.ispecification import ISpecification
 from spec_repair.enums import Learning
 from spec_repair.helpers.counter_trace import CounterTrace
-from spec_repair.helpers.spectra_specification import SpectraSpecification
+from spec_repair.helpers.spectra_boolean_specification import SpectraBooleanSpecification
 
 
 class SpectraDiscriminator(IDiscriminator):
@@ -12,7 +12,7 @@ class SpectraDiscriminator(IDiscriminator):
     def get_learning_strategy(
             self,
             spec: ISpecification,
-            data: Tuple[list[str], list[CounterTrace], Learning, list[SpectraSpecification], int, float]
+            data: Tuple[list[str], list[CounterTrace], Learning, list[SpectraBooleanSpecification], int, float]
     ) -> str:
         """
         Given a specification and data, return the learning strategy.

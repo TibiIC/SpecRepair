@@ -13,7 +13,7 @@ from spec_repair.enums import Learning
 from spec_repair.helpers.heuristic_managers.choose_first_heuristic_manager import ChooseFirstHeuristicManager
 from spec_repair.helpers.heuristic_managers.no_filter_heuristic_manager import NoFilterHeuristicManager
 from spec_repair.helpers.recorders.unique_spec_recorder import UniqueSpecRecorder
-from spec_repair.helpers.spectra_specification import SpectraSpecification
+from spec_repair.helpers.spectra_boolean_specification import SpectraBooleanSpecification
 from spec_repair.util.file_util import read_file_lines, write_to_file
 from spec_repair.util.mittigation_strategies import move_one_to_guarantee_weakening, complete_counter_traces, \
     move_all_to_guarantee_weakening
@@ -73,8 +73,8 @@ class TestBFSRepairOrchestrator(TestCase):
         new_spec_strings = self.run_bfs_repair(case_study_name, case_study_path, out_test_dir_name)
 
         expected_specs_files: list[str] = os.listdir('./test_files/lift_weakenings')
-        expected_spec_strings: list[SpectraSpecification] = [
-            SpectraSpecification.from_file(f"./test_files/lift_weakenings/{spec_file}")
+        expected_spec_strings: list[SpectraBooleanSpecification] = [
+            SpectraBooleanSpecification.from_file(f"./test_files/lift_weakenings/{spec_file}")
             for spec_file in expected_specs_files
         ]
 
@@ -99,8 +99,8 @@ class TestBFSRepairOrchestrator(TestCase):
         new_spec_strings = self.run_bfs_repair(case_study_name, case_study_path, out_test_dir_name)
 
         expected_specs_files: list[str] = os.listdir('./test_files/minepump_weakenings')
-        expected_spec_strings: list[SpectraSpecification] = [
-            SpectraSpecification.from_file(f"./test_files/minepump_weakenings/{spec_file}")
+        expected_spec_strings: list[SpectraBooleanSpecification] = [
+            SpectraBooleanSpecification.from_file(f"./test_files/minepump_weakenings/{spec_file}")
             for spec_file in expected_specs_files
         ]
 
@@ -116,7 +116,7 @@ class TestBFSRepairOrchestrator(TestCase):
             os.mkdir(out_test_dir_name)
         if os.path.exists(transitions_file_path):
             os.remove(transitions_file_path)
-        spec: SpectraSpecification = SpectraSpecification.from_file(f"{case_study_path}/strong.spectra")
+        spec: SpectraBooleanSpecification = SpectraBooleanSpecification.from_file(f"{case_study_path}/strong.spectra")
         trace: list[str] = read_file_lines(f"{case_study_path}/violation_trace.txt")
         learners: Dict[str, ILearner] = {
             "assumption_weakening": OptimisingSpecLearner(
@@ -156,7 +156,7 @@ class TestBFSRepairOrchestrator(TestCase):
             os.mkdir(out_test_dir_name)
         if os.path.exists(transitions_file_path):
             os.remove(transitions_file_path)
-        spec: SpectraSpecification = SpectraSpecification.from_file(f"{case_study_path}/strong.spectra")
+        spec: SpectraBooleanSpecification = SpectraBooleanSpecification.from_file(f"{case_study_path}/strong.spectra")
         trace: list[str] = read_file_lines(f"{case_study_path}/violation_trace.txt")
         learners: Dict[str, ILearner] = {
             "assumption_weakening": ARCALearner(

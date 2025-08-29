@@ -5,12 +5,12 @@ import glob
 from typing import Dict, Optional, Set, Tuple
 
 from compare_specialised import print_comparison_results_one_to_many
-from spec_repair.helpers.spectra_specification import SpectraSpecification
+from spec_repair.helpers.spectra_boolean_specification import SpectraBooleanSpecification
 from spec_repair.util.file_util import read_file
 from spec_repair.ltl_types import GR1FormulaType
 
 
-def filter_duplicates(specs: Set[SpectraSpecification]) -> Set[SpectraSpecification]:
+def filter_duplicates(specs: Set[SpectraBooleanSpecification]) -> Set[SpectraBooleanSpecification]:
     unique_specs = set()
     for spec in specs:
         is_unique = True
@@ -23,7 +23,7 @@ def filter_duplicates(specs: Set[SpectraSpecification]) -> Set[SpectraSpecificat
     return unique_specs
 
 # filter_duplicates but for the values of a dictionary
-def filter_duplicate_values(specs: Dict[str, SpectraSpecification]) -> Dict[str, SpectraSpecification]:
+def filter_duplicate_values(specs: Dict[str, SpectraBooleanSpecification]) -> Dict[str, SpectraBooleanSpecification]:
     unique_specs = {}
     for spec_name, spec in specs.items():
         is_unique = True
@@ -35,20 +35,20 @@ def filter_duplicate_values(specs: Dict[str, SpectraSpecification]) -> Dict[str,
             unique_specs[spec_name] = spec
     return unique_specs
 
-def find_maximal_specs(spec_directory_path: str) -> Tuple[Dict[str, SpectraSpecification], Dict[str, SpectraSpecification], Dict[str, SpectraSpecification]]:
+def find_maximal_specs(spec_directory_path: str) -> Tuple[Dict[str, SpectraBooleanSpecification], Dict[str, SpectraBooleanSpecification], Dict[str, SpectraBooleanSpecification]]:
     # Use the glob module to find all .spectra files in the specified directory
     spec_abs_paths = glob.glob(os.path.join(spec_directory_path, '*.spectra'))
     spec_abs_paths = [os.path.abspath(file_path) for file_path in spec_abs_paths]
 
-    specs: Dict[str, SpectraSpecification] = {}
+    specs: Dict[str, SpectraBooleanSpecification] = {}
     for spec_abs_path in spec_abs_paths:
         spec_name: str = os.path.splitext(os.path.basename(spec_abs_path))[0]
-        spec: SpectraSpecification = SpectraSpecification.from_file(spec_abs_path)
+        spec: SpectraBooleanSpecification = SpectraBooleanSpecification.from_file(spec_abs_path)
         specs[spec_name] = spec
 
-    semantically_unique_specs: Dict[str, SpectraSpecification] = filter_duplicate_values(specs)
+    semantically_unique_specs: Dict[str, SpectraBooleanSpecification] = filter_duplicate_values(specs)
 
-    maximal_asm_specs: Dict[str, SpectraSpecification] = {}
+    maximal_asm_specs: Dict[str, SpectraBooleanSpecification] = {}
     for spec_name, spec in semantically_unique_specs.items():
         is_maximal = True
         for other_spec_name, other_spec in semantically_unique_specs.items():
@@ -185,7 +185,7 @@ if __name__ == '__main__':
     print("Comparing specs in directory: ", spec_directory_path)
     print("with ideal spec: ", ideal_spec_file_path)
     max_asm_specs, max_gar_specs, max_both_specs = find_maximal_specs(spec_directory_path)
-    ideal_spec = SpectraSpecification.from_file(ideal_spec_file_path)
+    ideal_spec = SpectraBooleanSpecification.from_file(ideal_spec_file_path)
     print("Comparing ideal spec with maximal assumption specs")
     print_comparison_results_one_to_many(ideal_spec, max_asm_specs)
     print("Comparing ideal spec with maximal guarantee specs")

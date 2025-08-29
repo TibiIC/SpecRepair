@@ -2,7 +2,7 @@ import os
 from unittest import TestCase
 
 from spec_repair.helpers.heuristic_managers.no_filter_heuristic_manager import NoFilterHeuristicManager
-from spec_repair.helpers.spectra_specification import SpectraSpecification
+from spec_repair.helpers.spectra_boolean_specification import SpectraBooleanSpecification
 from spec_repair.util.spec_util import generate_trace_asp
 
 
@@ -21,7 +21,7 @@ class TestASP(TestCase):
         os.chdir(cls.original_working_directory)
 
     def test_asp(self):
-        spec = SpectraSpecification.from_file("./debug_logs/specification.spectra")
+        spec = SpectraBooleanSpecification.from_file("./debug_logs/specification.spectra")
         spec.to_asp(for_clingo=True, hm=NoFilterHeuristicManager())
 
     def test_hongbo(self):

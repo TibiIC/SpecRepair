@@ -34,7 +34,7 @@ class FormulaDataPoint(TypedDict):
 Self = TypeVar('T', bound='SpectraSpecification')
 
 
-class SpectraSpecification(ISpecification):
+class SpectraBooleanSpecification(ISpecification):
     _response_pattern = """\
     pattern pRespondsToS(s, p) {
       var { S0, S1} state;
@@ -128,12 +128,12 @@ class SpectraSpecification(ISpecification):
     def from_file(spec_file: str) -> Self:
         validate_spectra_file(spec_file)
         spec_txt: str = "".join(format_spec(read_file_lines(spec_file)))
-        return SpectraSpecification(spec_txt)
+        return SpectraBooleanSpecification(spec_txt)
 
     @staticmethod
     def from_str(spec_text: str) -> Self:
         spec_txt: str = "".join(format_spec(spec_text.splitlines(keepends=True)))
-        return SpectraSpecification(spec_txt)
+        return SpectraBooleanSpecification(spec_txt)
 
     def get_atoms(self):
         return deepcopy(self._atoms)
@@ -204,7 +204,7 @@ class SpectraSpecification(ISpecification):
         return spec_str
 
     def __deepcopy__(self, memo):
-        new_spec = SpectraSpecification("")
+        new_spec = SpectraBooleanSpecification("")
         new_spec._module_name = self._module_name
         new_spec._formulas_df = self._formulas_df.copy(deep=True)
         for col in new_spec._formulas_df.columns:

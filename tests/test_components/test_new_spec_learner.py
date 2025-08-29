@@ -6,7 +6,7 @@ from spec_repair.components.interfaces.ispecification import ISpecification
 from spec_repair.components.optimising_final_spec_learner import OptimisingSpecLearner
 from spec_repair.enums import Learning
 from spec_repair.helpers.heuristic_managers.no_filter_heuristic_manager import NoFilterHeuristicManager
-from spec_repair.helpers.spectra_specification import SpectraSpecification
+from spec_repair.helpers.spectra_boolean_specification import SpectraBooleanSpecification
 from spec_repair.util.file_util import read_file_lines
 
 
@@ -27,16 +27,16 @@ class TestNewSpecLearner(TestCase):
     def test_learn_spec_asm_1(self):
         spec_learner = OptimisingSpecLearner(NoFilterHeuristicManager())
 
-        spec: SpectraSpecification = SpectraSpecification.from_file(
+        spec: SpectraBooleanSpecification = SpectraBooleanSpecification.from_file(
             '../input-files/case-studies/spectra/minepump/strong.spectra')
         trace: list[str] = read_file_lines(
             "./test_files/minepump_strong_auto_violation.txt")
 
         expected_specs: list[ISpecification] = []
-        expected_specs.append(SpectraSpecification.from_file('./test_files/minepump_aw_methane.spectra'))
-        expected_specs.append(SpectraSpecification.from_file('./test_files/minepump_aw_highwater.spectra'))
-        expected_specs.append(SpectraSpecification.from_file('./test_files/minepump_aw_pump.spectra'))
-        expected_specs.append(SpectraSpecification.from_file('./test_files/minepump_aw_ev.spectra'))
+        expected_specs.append(SpectraBooleanSpecification.from_file('./test_files/minepump_aw_methane.spectra'))
+        expected_specs.append(SpectraBooleanSpecification.from_file('./test_files/minepump_aw_highwater.spectra'))
+        expected_specs.append(SpectraBooleanSpecification.from_file('./test_files/minepump_aw_pump.spectra'))
+        expected_specs.append(SpectraBooleanSpecification.from_file('./test_files/minepump_aw_ev.spectra'))
 
         new_tasks: list[Tuple[ISpecification, Any]]
         new_tasks = spec_learner.learn_new(spec, (trace, [], Learning.ASSUMPTION_WEAKENING, [], 0, 0))

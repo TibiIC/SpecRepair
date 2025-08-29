@@ -6,7 +6,7 @@ from unittest import TestCase
 from spec_repair.components.learning_type_spec_mitigator import LearningTypeSpecMitigator
 from spec_repair.enums import Learning
 from spec_repair.helpers.counter_trace import cts_from_cs, CounterTrace
-from spec_repair.helpers.spectra_specification import SpectraSpecification
+from spec_repair.helpers.spectra_boolean_specification import SpectraBooleanSpecification
 from spec_repair.ltl_types import CounterStrategy
 from spec_repair.util.mittigation_strategies import move_one_to_guarantee_weakening, complete_counter_traces
 
@@ -31,7 +31,7 @@ class TestSpecMittigator(TestCase):
         os.chdir(cls.original_working_directory)
 
     def test_mitigate_assumption_learning(self):
-        spec = SpectraSpecification.from_file("./test_files/minepump_aw_pump.spectra")
+        spec = SpectraBooleanSpecification.from_file("./test_files/minepump_aw_pump.spectra")
         trace = [
             'not_holds_at(highwater,0,trace_name_0).\n',
             'not_holds_at(methane,0,trace_name_0).\n',
@@ -54,7 +54,7 @@ class TestSpecMittigator(TestCase):
         new_ctss = set()
         for new_learning_task in new_learning_tasks:
             new_spec, new_data = new_learning_task
-            self.assertIsInstance(new_spec, SpectraSpecification)
+            self.assertIsInstance(new_spec, SpectraBooleanSpecification)
             self.assertEqual(new_spec.to_str(), spec.to_str())
             self.assertIsInstance(new_data, Tuple)
             self.assertEqual(len(new_data), 6)
@@ -75,7 +75,7 @@ class TestSpecMittigator(TestCase):
         self.assertEqual(len(expected_ctss), 0)
 
     def test_mitigate_guarantee_learning_complete_deadlocks(self):
-        spec = SpectraSpecification.from_file("./test_files/minepump_aw_pump.spectra")
+        spec = SpectraBooleanSpecification.from_file("./test_files/minepump_aw_pump.spectra")
         trace = [
             'not_holds_at(highwater,0,trace_name_0).\n',
             'not_holds_at(methane,0,trace_name_0).\n',
@@ -98,7 +98,7 @@ class TestSpecMittigator(TestCase):
         new_ctss = set()
         for new_learning_task in new_learning_tasks:
             new_spec, new_data = new_learning_task
-            self.assertIsInstance(new_spec, SpectraSpecification)
+            self.assertIsInstance(new_spec, SpectraBooleanSpecification)
             self.assertEqual(new_spec.to_str(), spec.to_str())
             self.assertIsInstance(new_data, Tuple)
             self.assertEqual(len(new_data), 6)

@@ -12,7 +12,7 @@ from spec_repair.exceptions import NoViolationException, NoWeakeningException, D
 from spec_repair.helpers.heuristic_managers.iheuristic_manager import IHeuristicManager
 from spec_repair.helpers.heuristic_managers.no_filter_heuristic_manager import NoFilterHeuristicManager
 from spec_repair.helpers.ilasp_interpreter import ILASPInterpreter
-from spec_repair.helpers.spectra_specification import SpectraSpecification
+from spec_repair.helpers.spectra_boolean_specification import SpectraBooleanSpecification
 
 from spec_repair.wrappers.asp_wrappers import get_violations, run_ILASP
 
@@ -28,9 +28,9 @@ class OptimisingSpecLearner(ILearner):
     # TODO: consider returning "data" instead of empty list when no learning is possible
     def learn_new(
             self,
-            spec: SpectraSpecification,
-            data: Tuple[list[str], list[CounterTrace], Learning, list[SpectraSpecification], int, float]
-    ) -> List[Tuple[SpectraSpecification, Tuple[list[str], list[CounterTrace], Learning, list[SpectraSpecification], int, float]]]:
+            spec: SpectraBooleanSpecification,
+            data: Tuple[list[str], list[CounterTrace], Learning, list[SpectraBooleanSpecification], int, float]
+    ) -> List[Tuple[SpectraBooleanSpecification, Tuple[list[str], list[CounterTrace], Learning, list[SpectraBooleanSpecification], int, float]]]:
         trace, cts, learning_type, spec_history, learning_steps, learning_time = data
         try:
             possible_adaptations: List[List[Adaptation]] = self.find_possible_adaptations(spec, trace, cts, learning_type)
@@ -50,7 +50,7 @@ class OptimisingSpecLearner(ILearner):
             print(f"Weakening failed: {e}")
             return []
 
-    def find_possible_adaptations(self, spec: SpectraSpecification, trace, cts, learning_type) -> List[
+    def find_possible_adaptations(self, spec: SpectraBooleanSpecification, trace, cts, learning_type) -> List[
         List[Adaptation]]:
         violations = self.get_spec_violations(spec, trace, cts, learning_type)
         ant_adaptations = self.find_antecedent_exception_adaptations(spec, trace, cts, learning_type, violations)
@@ -108,7 +108,7 @@ class OptimisingSpecLearner(ILearner):
             return []
         return adaptations
 
-    def get_spec_violations(self, spec: SpectraSpecification, trace, cts, learning_type) -> List[str]:
+    def get_spec_violations(self, spec: SpectraBooleanSpecification, trace, cts, learning_type) -> List[str]:
         asp: str = self.spec_encoder.encode_ASP(spec, trace, cts)
         violations = get_violations(asp, exp_type=learning_type.exp_type())
         if not violations:

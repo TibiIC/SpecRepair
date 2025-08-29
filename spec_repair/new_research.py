@@ -1,13 +1,13 @@
 from spec_repair.components.new_spec_encoder import get_violated_expression_names_of_type
 from spec_repair.components.optimising_final_spec_learner import OptimisingSpecLearner
 from spec_repair.enums import Learning
-from spec_repair.helpers.spectra_specification import SpectraSpecification
+from spec_repair.helpers.spectra_boolean_specification import SpectraBooleanSpecification
 from spec_repair.ltl_types import GR1FormulaType
 from spec_repair.util.set_util import first_minimal_hitting_set, all_minimal_hitting_sets
 from spec_repair.util.spec_util import run_all_unrealisable_cores_raw, run_all_unrealisable_cores
 
 
-def get_trivial_solution(spec: SpectraSpecification, violation_trace: list[str]) -> SpectraSpecification:
+def get_trivial_solution(spec: SpectraBooleanSpecification, violation_trace: list[str]) -> SpectraBooleanSpecification:
     """
     Generate a trivial solution for a given specification and violation trace.
 
@@ -51,7 +51,7 @@ def get_trivial_solution(spec: SpectraSpecification, violation_trace: list[str])
 
     return trivial_spec
 
-def get_all_trivial_solution(spec: SpectraSpecification, violation_trace: list[str]) -> list[SpectraSpecification]:
+def get_all_trivial_solution(spec: SpectraBooleanSpecification, violation_trace: list[str]) -> list[SpectraBooleanSpecification]:
     """
     Generate a trivial solution for a given specification and violation trace.
 

@@ -1,7 +1,7 @@
 import argparse
 import os
 
-from spec_repair.helpers.spectra_specification import SpectraSpecification
+from spec_repair.helpers.spectra_boolean_specification import SpectraBooleanSpecification
 from util import ComparisonType, filter_compared_specifications, make_plural, print_spec_names, \
     get_files_with_specs_from_directory
 
@@ -66,7 +66,7 @@ def _get_arguments_from_cmd_line():
 
 def find_compared_specifications_from_folder(spec_directory_path, ideal_spec_path, asm_cmp_type, gar_cmp_type):
     files_with_specs = get_files_with_specs_from_directory(spec_directory_path)
-    ideal_spec = SpectraSpecification.from_file(ideal_spec_path)
+    ideal_spec = SpectraBooleanSpecification.from_file(ideal_spec_path)
     return filter_compared_specifications(files_with_specs, ideal_spec, asm_cmp_type, gar_cmp_type)
 
 

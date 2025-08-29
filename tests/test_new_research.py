@@ -1,6 +1,6 @@
 from unittest import TestCase
 
-from spec_repair.helpers.spectra_specification import SpectraSpecification
+from spec_repair.helpers.spectra_boolean_specification import SpectraBooleanSpecification
 from spec_repair.new_research import get_trivial_solution, get_all_trivial_solution
 from spec_repair.util.file_util import read_file_lines, write_to_file
 
@@ -62,7 +62,7 @@ class TestNewResearch(TestCase):
             write_to_file(f'test_files/out/trivial_solutions/traffic-updated_{i}.spectra', trivial_spec.to_str())
 
     def get_trivial_spec(self, dir):
-        spec = SpectraSpecification.from_file(
+        spec = SpectraBooleanSpecification.from_file(
             f'{dir}/strong.spectra'
         )
         trace: list[str] = read_file_lines(
@@ -72,7 +72,7 @@ class TestNewResearch(TestCase):
         return trivial_spec
 
     def get_all_trivial_specs(self, dir):
-        spec = SpectraSpecification.from_file(
+        spec = SpectraBooleanSpecification.from_file(
             f'{dir}/strong.spectra'
         )
         trace: list[str] = read_file_lines(

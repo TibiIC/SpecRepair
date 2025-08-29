@@ -4,7 +4,7 @@ from unittest import TestCase
 
 from spec_repair.helpers.counter_trace import CounterTrace, ct_from_cs, complete_cts_from_ct
 from spec_repair.enums import Learning
-from spec_repair.helpers.spectra_specification import SpectraSpecification
+from spec_repair.helpers.spectra_boolean_specification import SpectraBooleanSpecification
 from spec_repair.heuristics import first_choice, last_choice, nth_choice
 from spec_repair.ltl_types import CounterStrategy
 from spec_repair.util.file_util import read_file_lines
@@ -215,7 +215,7 @@ not_holds_at(pump,2,counter_strat_1_0).
 
     def test_ct_deadlock_completion(self):
         ct = ct_from_cs(cs1, heuristic=first_choice, cs_id=0)
-        spec: list[str] = SpectraSpecification.from_file(
+        spec: list[str] = SpectraBooleanSpecification.from_file(
             './test_files/minepump_aw_methane.spectra').to_str().split('\n')
         ct = complete_cts_from_ct(ct, spec, ["counter_strat_0_0"])[0]
         expected_ct_raw = """\

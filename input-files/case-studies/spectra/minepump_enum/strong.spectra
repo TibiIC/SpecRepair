@@ -1,0 +1,25 @@
+module Minepump
+
+type VALUE = {HIGH, LOW};
+
+env VALUE water;
+env VALUE methane;
+sys boolean pump;
+
+assumption -- initial_assumption
+	ini(water=LOW & methane=LOW);
+
+guarantee -- initial_guarantee
+	ini(!pump);
+
+guarantee -- guarantee1_1
+	alw(water=HIGH->next(pump));
+
+guarantee -- guarantee2_1
+	alw(methane=HIGH->next(!pump));
+
+assumption -- assumption1_1
+	alw(PREV(pump)&pump->next(water=LOW));
+
+assumption -- assumption2_1
+	alw(water=LOW | methane=LOW);

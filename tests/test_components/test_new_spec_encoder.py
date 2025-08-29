@@ -5,7 +5,7 @@ from spec_repair.enums import Learning, ExpType
 from spec_repair.helpers.heuristic_managers.no_eventually_hypothesis_heuristic_manager import \
     NoEventuallyHypothesisHeuristicManager
 from spec_repair.helpers.heuristic_managers.no_filter_heuristic_manager import NoFilterHeuristicManager
-from spec_repair.helpers.spectra_specification import SpectraSpecification
+from spec_repair.helpers.spectra_boolean_specification import SpectraBooleanSpecification
 from spec_repair.util.file_util import read_file
 from spec_repair.wrappers.asp_wrappers import get_violations
 
@@ -26,7 +26,7 @@ class TestNewSpecEncoder(TestCase):
         super().__init__(methodName)
 
     def test_encode_asp(self):
-        spec: SpectraSpecification = SpectraSpecification.from_file(self.minepump_spec_file)
+        spec: SpectraBooleanSpecification = SpectraBooleanSpecification.from_file(self.minepump_spec_file)
         trace_name = "trace_name_0"
         trace = [
             f'not_holds_at(highwater,0,{trace_name}).\n',
@@ -45,7 +45,7 @@ class TestNewSpecEncoder(TestCase):
         self.assertEqual(expected_clingo_str, clingo_str)
 
     def test_encode_ilasp(self):
-        spec: SpectraSpecification = SpectraSpecification.from_file(self.minepump_spec_file)
+        spec: SpectraBooleanSpecification = SpectraBooleanSpecification.from_file(self.minepump_spec_file)
         trace_name = "trace_name_0"
         trace = [
             f'not_holds_at(highwater,0,{trace_name}).\n',
@@ -67,7 +67,7 @@ class TestNewSpecEncoder(TestCase):
         self.assertEqual(expected_las_str, las_str)
 
     def test_create_mode_bias_aw(self):
-        spec: SpectraSpecification = SpectraSpecification.from_file(self.minepump_spec_file)
+        spec: SpectraBooleanSpecification = SpectraBooleanSpecification.from_file(self.minepump_spec_file)
         violations: list[str] = [
             """\
     assumption(initial_assumption)
@@ -87,7 +87,7 @@ class TestNewSpecEncoder(TestCase):
         self.assertEqual(expected_mode_bias, mode_bias)
 
     def test_create_mode_bias_aw_traffic_updated(self):
-        spec: SpectraSpecification = SpectraSpecification.from_file(self.traffic_updated_spec_file)
+        spec: SpectraBooleanSpecification = SpectraBooleanSpecification.from_file(self.traffic_updated_spec_file)
         violations: list[str] = [
             """\
     assumption(no_emergency_often)
@@ -110,7 +110,7 @@ class TestNewSpecEncoder(TestCase):
         self.assertEqual(expected_mode_bias, mode_bias)
 
     def test_create_mode_bias_aw_traffic_updated_no_ev(self):
-        spec: SpectraSpecification = SpectraSpecification.from_file(self.traffic_updated_spec_file)
+        spec: SpectraBooleanSpecification = SpectraBooleanSpecification.from_file(self.traffic_updated_spec_file)
         violations: list[str] = [
             """\
     assumption(no_emergency_often)
@@ -133,7 +133,7 @@ class TestNewSpecEncoder(TestCase):
         self.assertEqual(expected_mode_bias, mode_bias)
 
     def test_create_mode_bias_gw(self):
-        spec: SpectraSpecification = SpectraSpecification.from_file(self.minepump_spec_1_aw_step)
+        spec: SpectraBooleanSpecification = SpectraBooleanSpecification.from_file(self.minepump_spec_1_aw_step)
         violations: list[str] = [
             """\
     assumption(initial_assumption)
