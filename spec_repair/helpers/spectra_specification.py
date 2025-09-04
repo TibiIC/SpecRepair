@@ -2,7 +2,7 @@ import copy
 import re
 import subprocess
 from copy import deepcopy
-from typing import TypedDict, Optional, TypeVar, List, Set, Any, Callable
+from typing import TypedDict, Optional, TypeVar, List, Set, Any, Callable, Dict
 
 import pandas as pd
 import spot
@@ -18,6 +18,7 @@ from spec_repair.helpers.spectra_formula_formatter import SpectraFormulaFormatte
 from spec_repair.helpers.spectra_formula_parser import SpectraFormulaParser
 from spec_repair.helpers.spot_specification_formatter import SpotSpecificationFormatter
 from spec_repair.ltl_types import GR1FormulaType, GR1TemporalType
+from spec_repair.special_types import SpectraTypeValue
 from spec_repair.util.file_util import read_file_lines, validate_spectra_file
 from spec_repair.util.formula_util import get_disjuncts_from_disjunction
 from spec_repair.util.spec_util import format_spec
@@ -30,10 +31,10 @@ class FormulaDataPoint(TypedDict):
     formula: "GR1Formula"  # Use the class name as a string for forward declaration
 
 
-Self = TypeVar('T', bound='SpectraBooleanSpecification')
+Self = TypeVar('T', bound='SpectraSpecification')
 
 
-class SpectraBooleanSpecification(ISpecification):
+class SpectraSpecification(ISpecification):
     _response_pattern = """\
     pattern pRespondsToS(s, p) {
       var { S0, S1} state;
@@ -56,6 +57,7 @@ class SpectraBooleanSpecification(ISpecification):
         self._formulas_df: pd.DataFrame = None
         self._module_name: str
         self._atoms: Set[SpectraAtom] = set()
+        self._type_values: Dict[str, List[str]] = {}
         self._parser = SpectraFormulaParser()
         self._formater = SpectraFormulaFormatter()
         self._asp_formatter = ASPExceptionFormatter()
@@ -77,6 +79,11 @@ class SpectraBooleanSpecification(ISpecification):
                     atom: Optional[SpectraAtom] = SpectraAtom.from_str(line)
                     if atom:
                         self._atoms.add(atom)
+                    type_definition: Optional[re.Match] = SpectraTypeValue.pattern.match(line)
+                    if type_definition:
+                        name = type_definition.group(SpectraTypeValue.NAME)
+                        values = type_definition.group(SpectraTypeValue.VALUES)
+                        self._type_values[name] = [value.strip() for value in values.split(",")]
 
         except AttributeError as e:
             raise e
@@ -109,7 +116,7 @@ class SpectraBooleanSpecification(ISpecification):
             self._formulas_df.loc[self._formulas_df["name"] == name, "formula"].iloc[0]
         return formula
 
-# TODO: make it count the amount of conjunctions with different temporal operators (max=3/disjunct)
+    # TODO: make it count the amount of conjunctions with different temporal operators (max=3/disjunct)
     def get_max_disjuncts_in_antecedent(self) -> int:
         """
         Get the maximum number of conjunctions in the antecedent of any formula.
@@ -127,12 +134,12 @@ class SpectraBooleanSpecification(ISpecification):
     def from_file(spec_file: str) -> Self:
         validate_spectra_file(spec_file)
         spec_txt: str = "".join(format_spec(read_file_lines(spec_file)))
-        return SpectraBooleanSpecification(spec_txt)
+        return SpectraSpecification(spec_txt)
 
     @staticmethod
     def from_str(spec_text: str) -> Self:
         spec_txt: str = "".join(format_spec(spec_text.splitlines(keepends=True)))
-        return SpectraBooleanSpecification(spec_txt)
+        return SpectraSpecification(spec_txt)
 
     def get_atoms(self):
         return deepcopy(self._atoms)
@@ -187,6 +194,8 @@ class SpectraBooleanSpecification(ISpecification):
         Convert the specification to a string representation.
         """
         spec_str = f"module {self._module_name}\n\n"
+        for type_name, values in self._type_values.items():
+            spec_str += f"type {type_name} = {{{', '.join(values)}}};\n"
         for atom in sorted(self._atoms):
             spec_str += f"{atom.atom_type} {atom.value_type} {atom.name};\n"
         spec_str += "\n\n"
@@ -203,7 +212,7 @@ class SpectraBooleanSpecification(ISpecification):
         return spec_str
 
     def __deepcopy__(self, memo):
-        new_spec = SpectraBooleanSpecification("")
+        new_spec = SpectraSpecification("")
         new_spec._module_name = self._module_name
         new_spec._formulas_df = self._formulas_df.copy(deep=True)
         for col in new_spec._formulas_df.columns:

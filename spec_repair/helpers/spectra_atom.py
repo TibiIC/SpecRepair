@@ -33,4 +33,6 @@ class SpectraAtom:
         return hash((self.name, self.value_type, self.atom_type))
 
     def __lt__(self, other):
-        return self.name < other.name
+        return (self.atom_type < other.atom_type or
+                (self.atom_type == other.atom_type and self.value_type < other.value_type) or
+                (self.atom_type == other.atom_type and self.value_type == other.value_type and self.name < other.name))

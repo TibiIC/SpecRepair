@@ -6,7 +6,7 @@ from spec_repair.helpers.spectra_formula_parser import SpectraFormulaParser
 from spec_repair.ltl_types import GR1TemporalType
 from spec_repair.util.formula_util import disjoin_all, get_disjuncts_from_disjunction
 from spec_repair.util.ltl_formula_util import normalize_to_pattern
-from spec_repair.util.spec_util import replace_false_true
+from spec_repair.util.spec_util import flip_assignment
 
 from py_ltl.parser import ILTLParser
 from py_ltl.formatter import ILTLFormatter
@@ -143,10 +143,10 @@ class GR1Formula:
             self.consequent = Eventually(self.consequent)
         if self.antecedent is None:
             first_temp_op, first_atom_assignment = adaptation.atom_temporal_operators[0]
-            first_atom_assignment = replace_false_true(first_atom_assignment)
+            first_atom_assignment = flip_assignment(first_atom_assignment)
             self.antecedent = self._generate_literal(first_atom_assignment, first_temp_op)
             for op, atom in adaptation.atom_temporal_operators[1:]:
-                atom = replace_false_true(atom)
+                atom = flip_assignment(atom)
                 new_disjunct = self._generate_literal(atom, op)
                 self.antecedent = Or(self.antecedent, new_disjunct)
         else:
@@ -154,7 +154,7 @@ class GR1Formula:
             disjunct = disjuncts[adaptation.disjunction_index]
             disjuncts.remove(disjunct)
             for op, atom in adaptation.atom_temporal_operators:
-                atom = replace_false_true(atom)
+                atom = flip_assignment(atom)
                 new_disjunct = self._generate_literal(atom, op)
                 new_disjunct = And(deepcopy(disjunct), new_disjunct)
                 disjuncts.append(new_disjunct)

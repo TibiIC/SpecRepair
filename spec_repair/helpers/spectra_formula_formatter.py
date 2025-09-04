@@ -13,7 +13,14 @@ class SpectraFormulaFormatter(ILTLFormatter):
         formula = deepcopy(formula)
         match formula:
             case AtomicProposition(name=name, value=value):
-                return f"{name}={str(value).lower()}"
+                match value:
+                    case bool():
+                        value_str = "true" if value else "false"
+                    case str():
+                        value_str = str(value)
+                    case _:
+                        value_str = str(value).lower()
+                return f"{name}={value_str}"
             case Not(formula=formula):
                 return f"!({self.format(formula)})"
             case And(left=lhs, right=rhs):

@@ -73,6 +73,11 @@ class GR1AtomType(Enum):
             return GR1AtomType.ENV
         raise ValueError(f"Unsupported value: {value}")
 
+    def __lt__(self, other):
+        if not isinstance(other, GR1AtomType):
+            return NotImplemented
+        return self == GR1AtomType.ENV and other == GR1AtomType.SYS
+
 
 class GR1TemporalType(Enum):
     INITIAL = "ini"

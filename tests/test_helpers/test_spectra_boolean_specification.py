@@ -421,16 +421,6 @@ root_consequent_holds(OP,guarantee4,1,T1,S):-
         spec_2 = SpectraBooleanSpecification.from_str(spec_fixed_perf)
         self.assertNotEquals(spec_1, spec_2)
 
-    @unittest.skip("To be considered at a later date")
-    def test_swap_rule_1(self):
-        spec = Spec(copy.deepcopy(spec_strong))
-        new_spec = Spec(copy.deepcopy(spec_strong_asm_w))
-        spec.swap_rule(
-            name="assumption2_1",
-            new_rule="G(highwater=false-> highwater=false|methane=false);",
-        )
-        self.assertEqual(spec, new_spec)
-
     def test_asm_eq_gar_weaker(self):
         spec_1: SpectraBooleanSpecification = SpectraBooleanSpecification.from_str(spec_perf)
         spec_2: SpectraBooleanSpecification = SpectraBooleanSpecification.from_str(spec_asm_eq_gar_weaker)

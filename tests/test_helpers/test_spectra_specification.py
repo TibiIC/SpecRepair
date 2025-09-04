@@ -11,6 +11,7 @@ from spec_repair.helpers.heuristic_managers.no_filter_heuristic_manager import N
 from spec_repair.helpers.spectra_formula_formatter import SpectraFormulaFormatter
 from spec_repair.helpers.spectra_formula_parser import SpectraFormulaParser
 from spec_repair.helpers.spectra_atom import SpectraAtom
+from spec_repair.helpers.spectra_specification import SpectraSpecification
 from spec_repair.helpers.spot_specification_formatter import SpotSpecificationFormatter
 from spec_repair.ltl_types import GR1FormulaType, GR1TemporalType
 from tests.test_common_utility_strings.specs import spec_perf, spec_fixed_perf, spec_fixed_imperf, \
@@ -60,9 +61,9 @@ class TestSpectraSpecification(TestCase):
 
         print(spec._atoms)
         expected_atoms_str: set[str] = {
-            str(SpectraAtom.from_str("env VALUE highwater;")),
+            str(SpectraAtom.from_str("env VALUE water;")),
             str(SpectraAtom.from_str("env VALUE methane;")),
-            str(SpectraAtom.from_str("sys VALUE pump;")),
+            str(SpectraAtom.from_str("sys boolean pump;")),
         }
         for atom in spec._atoms:
             self.assertIn(str(atom), expected_atoms_str)
@@ -86,19 +87,19 @@ class TestSpectraSpecification(TestCase):
             GR1Formula.from_str("G(methane=HIGH->next(pump=false));", self.parser).to_str(self.formatter),
             GR1Formula.from_str("G(PREV(pump=true)&pump=true->next(water=LOW));", self.parser).to_str(
                 self.formatter),
-            GR1Formula.from_str("G(methane=LOW->water=LOW|methane=LOW)", self.parser).to_str(self.formatter),
+            GR1Formula.from_str("G(!(methane=HIGH)->water=LOW|methane=LOW)", self.parser).to_str(self.formatter),
         }
         for formula in formulas:
             self.assertIn(formula.to_str(self.formatter), expected_formulas)
 
     def test_integrate_learning_rule_multiple(self):
-        spec_file = "./test_files/minepump_strong.spectra"
+        spec_file = "../input-files/case-studies/spectra/minepump_enum/strong.spectra"
         spec = SpectraSpecification.from_file(spec_file)
         adaptation = Adaptation(
             type='antecedent_exception',
             formula_name='assumption2_1',
             disjunction_index=0,
-            atom_temporal_operators=[('current', 'methane=LOW')]
+            atom_temporal_operators=[('current', 'methane=HIGH')]
         )
         adaptation_2 = Adaptation(
             type="consequent_exception",
@@ -124,19 +125,19 @@ class TestSpectraSpecification(TestCase):
             GR1Formula.from_str("G(methane=HIGH->next(pump=false)|pump=false);", self.parser).to_str(self.formatter),
             GR1Formula.from_str("G(PREV(pump=true)&pump=true->next(water=LOW));", self.parser).to_str(
                 self.formatter),
-            GR1Formula.from_str("G(methane=LOW->water=LOW|methane=LOW)", self.parser).to_str(self.formatter),
+            GR1Formula.from_str("G(!(methane=HIGH)->water=LOW|methane=LOW)", self.parser).to_str(self.formatter),
         }
         for formula in formulas:
             self.assertIn(formula.to_str(self.formatter), expected_formulas)
 
     def test_to_str(self):
-        spec_file = "./test_files/minepump_strong.spectra"
+        spec_file = "../input-files/case-studies/spectra/minepump_enum/strong.spectra"
         spec = SpectraSpecification.from_file(spec_file)
         expected_str = (
             "module Minepump\n"
             "type VALUE = {HIGH, LOW};\n"
-            "env VALUE highwater;\n"
             "env VALUE methane;\n"
+            "env VALUE water;\n"
             "sys boolean pump;\n"
             "assumption -- initial_assumption\n"
             "\t(water=LOW&methane=LOW);\n"

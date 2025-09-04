@@ -40,5 +40,11 @@ class GR1Atom:
     NAME = 3
     pattern = re.compile(r'^\s*(env|sys)\s+([a-zA-Z0-9_-]+)\s+([a-zA-Z0-9_-]+);?\s*$')
 
+class SpectraTypeValue:
+    NAME = 1
+    VALUES = 2
+
+    pattern = re.compile(r'^\s*type\s+([a-zA-Z0-9_-]+)\s*=\s*\{([^}]*)};?\s*$')
+
 # StopHeuristicType = Callable[[List[str], List[CounterTrace]], bool]
 StopHeuristicType = Callable[[List[str], List[Any]], bool]

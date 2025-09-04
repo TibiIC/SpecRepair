@@ -542,12 +542,17 @@ def remove_multiple_newlines(text):
     return re.sub("\n+", "\n", '\n'.join(text)).split("\n")
 
 
-def replace_false_true(string):
+def flip_boolean_assignment(string):
     return string.replace("false", "__PLACEHOLDER__").replace("true", "false").replace("__PLACEHOLDER__", "true")
 
+def flip_assignment(string):
+    if "true" in string.lower() or "false" in string.lower():
+        return flip_boolean_assignment(string)
+    else:
+        return f"!({string})"
 
 def flip_assignments(assignments: list[str]) -> list[str]:
-    return [replace_false_true(assignment) for assignment in assignments]
+    return [flip_assignment(assignment) for assignment in assignments]
 
 
 def integrate_rule(temp_op, conjunct, learning_type, line: str):
