@@ -73,6 +73,32 @@ def create_atom_signature_asp(spec_atoms: Set[SpectraAtom]):
     output += "\n\n"
     return output
 
+def create_atom_signature_asp_with_enums(spec_atoms: Set[SpectraAtom], type_dict: Dict[str, List[str]]):
+    output = "%---*** Signature  ***---\n\n"
+    for atom in sorted(spec_atoms):
+        output += f"atom({atom.name}).\n"
+    output += "\n"
+    for atom in sorted(spec_atoms):
+        if atom.value_type == "boolean":
+            output += f"atom_type({atom.name},bool).\n"
+        else:
+            output += f"atom_type({atom.name},{str(atom.value_type).lower()}_enum_t).\n"
+    output += "\n"
+    all_values = {"true", "false"}
+    value_types_output = ""
+    for enum_name, enum_values in type_dict.items():
+        for value in enum_values:
+            value_types_output  += f"val_type({value.lower()},{enum_name.lower()}_enum_t).\n"
+            all_values.add(value.lower())
+    for value in sorted(all_values):
+        output += f"value({value}).\n"
+    output += "\n"
+    if "bool)." in output:
+        value_types_output += "val_type(false,bool).\n"
+        value_types_output += "val_type(true,bool).\n"
+    output += value_types_output
+    output += "\n"
+    return output
 
 def extract_variables(spec_df: pd.DataFrame) -> List[str]:
     variables = set()

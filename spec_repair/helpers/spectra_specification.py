@@ -9,6 +9,7 @@ import spot
 
 from spec_repair.components.interfaces.ispecification import ISpecification
 from spec_repair.helpers.adaptation_learned import Adaptation
+from spec_repair.helpers.asp_enum_exception_formatter import ASPEnumExceptionFormatter
 from spec_repair.helpers.asp_exception_formatter import ASPExceptionFormatter
 from spec_repair.helpers.heuristic_managers.iheuristic_manager import IHeuristicManager
 from spec_repair.helpers.heuristic_managers.no_filter_heuristic_manager import NoFilterHeuristicManager
@@ -60,7 +61,7 @@ class SpectraSpecification(ISpecification):
         self._type_values: Dict[str, List[str]] = {}
         self._parser = SpectraFormulaParser()
         self._formater = SpectraFormulaFormatter()
-        self._asp_formatter = ASPExceptionFormatter()
+        self._asp_formatter = ASPEnumExceptionFormatter()
         formula_list = []
         spec_lines = spec_txt.splitlines()
         try:

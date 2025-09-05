@@ -7,11 +7,13 @@ from spec_repair.util.spec_util import create_signature
 
 class SpecGenerator:
     background_file_path = f"{PROJECT_PATH}/files/background_knowledge.txt"
+    background_with_enum_file_path = f"{PROJECT_PATH}/files/enum/background_knowledge.txt"
     background_knowledge = ''.join(read_file_lines(background_file_path))
+    background_enum_knowledge = ''.join(read_file_lines(background_with_enum_file_path))
 
     @staticmethod
     def generate_clingo(assumptions: str, guarantees: str, signature: str, violation_trace: str,
-                        cs_trace: str) -> str:
+                        cs_trace: str, does_encode_enum: bool = False) -> str:
         """
         Generate the contents of the .lp file to be run in Clingo.
         Running this file will generate the violations that hold, given the problem statement
@@ -22,7 +24,8 @@ class SpecGenerator:
         :param cs_trace: Traces from counter-strategies, which are supposed to violate current specification
         :return:
         """
-        lp = SpecGenerator.background_knowledge + \
+        background_knowledge = SpecGenerator.background_enum_knowledge if does_encode_enum else SpecGenerator.background_knowledge
+        lp = background_knowledge + \
              assumptions + \
              guarantees + \
              signature + \
@@ -34,7 +37,7 @@ class SpecGenerator:
 
     @staticmethod
     def generate_ilasp(mode_declaration: str, expressions: str, signature: str, violation_trace: str,
-                       cs_trace: str) -> str:
+                       cs_trace: str, does_encode_enum: bool = False) -> str:
         '''
         Generate the contents of the .las file to be run in Clingo.
         Running this file will generate the violations that hold, given the problem statement
@@ -45,8 +48,9 @@ class SpecGenerator:
         :param cs_trace: Traces from counter-strategies, which are supposed to violate current specification
         :return:
         '''
+        background_knowledge = SpecGenerator.background_enum_knowledge if does_encode_enum else SpecGenerator.background_knowledge
         las = mode_declaration + \
-              SpecGenerator.background_knowledge + \
+              background_knowledge + \
               expressions + \
               signature + \
               violation_trace + \

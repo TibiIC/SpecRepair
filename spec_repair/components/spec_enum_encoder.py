@@ -6,32 +6,33 @@ from spec_repair.helpers.counter_trace import CounterTrace
 from spec_repair.enums import Learning, When
 from spec_repair.helpers.heuristic_managers.iheuristic_manager import IHeuristicManager
 from spec_repair.helpers.heuristic_managers.no_filter_heuristic_manager import NoFilterHeuristicManager
-from spec_repair.helpers.spectra_boolean_specification import SpectraBooleanSpecification
+from spec_repair.helpers.spectra_specification import SpectraSpecification
 from spec_repair.ltl_types import GR1FormulaType
-from spec_repair.util.spec_util import trace_list_to_asp_form, trace_list_to_ilasp_form, parse_formula_str, create_atom_signature_asp
+from spec_repair.util.spec_util import trace_list_to_asp_form, trace_list_to_ilasp_form, parse_formula_str, \
+    create_atom_signature_asp, create_atom_signature_asp_with_enums
 from spec_repair.components.spec_generator import SpecGenerator
 
 
-class NewSpecEncoder:
+class SpecEnumEncoder:
     def __init__(self, heuristic_manager: Optional[IHeuristicManager]):
         if heuristic_manager is None:
             self._hm = NoFilterHeuristicManager()
         self._hm = heuristic_manager
 
     @staticmethod
-    def encode_ASP(spec: SpectraBooleanSpecification, trace: list[str], ct_list: List[CounterTrace]) -> str:
+    def encode_ASP(spec: SpectraSpecification, trace: list[str], ct_list: List[CounterTrace]) -> str:
         """
         ASSUMES LEARNING ASSUMPTION WEAKENING ONLY
         """
         # Generate first Clingo file to find violating assumptions/guarantees
         formulas_string = spec.to_asp(for_clingo=True)
-        signature_string = create_atom_signature_asp(spec.get_atoms())
+        signature_string = create_atom_signature_asp_with_enums(spec.get_atoms(), spec._type_values)
         violation_trace = trace_list_to_asp_form(trace)
         cs_trace_string: str = ''.join([cs_trace.get_asp_form() for cs_trace in ct_list])
         return SpecGenerator.generate_clingo(formulas_string, "", signature_string, violation_trace,
-                                             cs_trace_string)
+                                             cs_trace_string, does_encode_enum=True)
 
-    def encode_ILASP(self, spec: SpectraBooleanSpecification, trace: List[str], ct_list: List[CounterTrace],
+    def encode_ILASP(self, spec: SpectraSpecification, trace: List[str], ct_list: List[CounterTrace],
                      violations: list[str],
                      learning_type: Learning):
         mode_declaration = self._create_mode_bias(spec, violations, learning_type)
@@ -49,10 +50,10 @@ class NewSpecEncoder:
         expressions_to_weaken = sub_spec.to_asp(learning_names=exp_names_to_learn, for_clingo=False, hm=self._hm)
         signature_string = create_atom_signature_asp(spec.get_atoms())
         las = SpecGenerator.generate_ilasp(mode_declaration, expressions_to_weaken, signature_string, trace_ilasp,
-                                           ct_list_ilasp)
+                                           ct_list_ilasp, does_encode_enum=True)
         return las
 
-    def _create_mode_bias(self, spec: SpectraBooleanSpecification, violations: list[str], learning_type) -> str:
+    def _create_mode_bias(self, spec: SpectraSpecification, violations: list[str], learning_type) -> str:
         output = "%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%\n" \
                  "%% Mode Declaration\n" \
                  "%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%\n\n"
