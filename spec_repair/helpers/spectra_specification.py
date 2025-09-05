@@ -101,6 +101,7 @@ class SpectraSpecification(ISpecification):
         print("Rule:")
         print(f'\t{formula.to_str(self._formater)}')
         print("Hypothesis:")
+        adaptation.atom_temporal_operators = self._normalize_facts(adaptation.atom_temporal_operators)
         print(
             f'\t{adaptation.type}({adaptation.formula_name},{adaptation.disjunction_index},{adaptation.atom_temporal_operators})')
         formula.integrate(adaptation)
@@ -216,6 +217,7 @@ class SpectraSpecification(ISpecification):
         new_spec = SpectraSpecification("")
         new_spec._module_name = self._module_name
         new_spec._formulas_df = self._formulas_df.copy(deep=True)
+        new_spec._type_values = deepcopy(self._type_values, memo)
         for col in new_spec._formulas_df.columns:
             if new_spec._formulas_df[col].dtype == 'O':  # Object dtype means it might contain class instances
                 new_spec._formulas_df[col] = new_spec._formulas_df[col].apply(lambda x: deepcopy(x, memo))
@@ -285,6 +287,33 @@ class SpectraSpecification(ISpecification):
         f2 = spot.formula(formula)
         return spot.are_equivalent(f1, f2)
 
+    def _normalize_facts(self, facts):
+        # Build dict: atom -> type
+        atom_to_type = dict([(atom.name, atom.value_type) for atom in self._atoms])
+
+        renamed = []
+        for time, fact in facts:
+            if "=" not in fact:
+                renamed.append((time, fact))
+                continue
+
+            atom, value = fact.split("=", 1)
+            atom_type = atom_to_type.get(atom)
+
+            if atom_type is None:
+                # Unknown atom, leave unchanged
+                renamed.append((time, fact))
+                continue
+
+            allowed = self._type_values.get(atom_type, [])
+            # Find canonical match (case-insensitive)
+            new_value = next(
+                (val for val in allowed if val.lower() == value.lower()),
+                value  # fallback
+            )
+
+            renamed.append((time, f"{atom}={new_value}"))
+        return renamed
 
 def does_left_imply_right(left_exp: str, right_exp: str) -> bool:
     # TODO: introduce an assertion against ltl_ops which do not exist yet

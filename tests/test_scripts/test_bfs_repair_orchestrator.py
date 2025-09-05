@@ -8,6 +8,7 @@ from spec_repair.components.interfaces.ilearner import ILearner
 from spec_repair.components.optimising_final_spec_learner import OptimisingSpecLearner
 from spec_repair.components.new_spec_oracle import NewSpecOracle
 from spec_repair.components.learning_type_spec_mitigator import LearningTypeSpecMitigator
+from spec_repair.components.spec_enum_encoder import SpecEnumEncoder
 from spec_repair.components.spectra_discriminator import SpectraDiscriminator
 from spec_repair.enums import Learning
 from spec_repair.helpers.heuristic_managers.choose_first_heuristic_manager import ChooseFirstHeuristicManager
@@ -17,7 +18,7 @@ from spec_repair.helpers.spectra_boolean_specification import SpectraBooleanSpec
 from spec_repair.helpers.spectra_specification import SpectraSpecification
 from spec_repair.util.file_util import read_file_lines, write_to_file
 from spec_repair.util.mittigation_strategies import move_one_to_guarantee_weakening, complete_counter_traces, \
-    move_all_to_guarantee_weakening
+    move_all_to_guarantee_weakening, complete_counter_traces_enum_compatible
 from spec_repair.util.spec_util import synthesise_controller
 
 
@@ -161,10 +162,12 @@ class TestBFSRepairOrchestrator(TestCase):
         trace: list[str] = read_file_lines(f"{case_study_path}/violation_trace.txt")
         learners: Dict[str, ILearner] = {
             "assumption_weakening": ARCALearner(
-                heuristic_manager=ChooseFirstHeuristicManager()
+                heuristic_manager=ChooseFirstHeuristicManager(),
+                encoder_class=SpecEnumEncoder
             ),
             "guarantee_weakening": OptimisingSpecLearner(
-                heuristic_manager=ChooseFirstHeuristicManager()
+                heuristic_manager=ChooseFirstHeuristicManager(),
+                encoder_class=SpecEnumEncoder
             )
         }
         if is_debug:
@@ -177,7 +180,7 @@ class TestBFSRepairOrchestrator(TestCase):
             SpectraDiscriminator(),
             LearningTypeSpecMitigator({
                 Learning.ASSUMPTION_WEAKENING: move_one_to_guarantee_weakening,
-                Learning.GUARANTEE_WEAKENING: complete_counter_traces
+                Learning.GUARANTEE_WEAKENING: complete_counter_traces_enum_compatible
             }),
             ChooseFirstHeuristicManager(),
             recorder,

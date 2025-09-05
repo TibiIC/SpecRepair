@@ -445,3 +445,55 @@ class TestGR1Formula(TestCase):
         output = formula.to_str(self.formatter)
         expected_output = "GF(((!(emergency=true)|car=false)|emergency=true))"
         self.assertEqual(expected_output, output)
+
+
+    def test_integrate_adaptation_to_formula_antecedent_exception_enum(self):
+        formula = GR1Formula(
+            temp_type=GR1TemporalType.INVARIANT,
+            antecedent=None,
+            consequent=Or(AtomicProposition("water", "HIGH"), AtomicProposition("methane", "LOW"))
+        )  # formula === G(highwater=false|methane=false)
+        adaptation = Adaptation(
+            type='antecedent_exception',
+            formula_name='assumption2_1',
+            disjunction_index=0,
+            atom_temporal_operators=[('current', 'pump=false')]
+        )
+        formula.integrate(adaptation)
+        output = formula.to_str(self.formatter)
+        expected_output = "G((pump=true->(water=HIGH|methane=LOW)))"
+        self.assertEqual(expected_output, output)
+
+    def test_integrate_adaptation_to_formula_consequent_exception_enum_2(self):
+        formula = GR1Formula(
+            temp_type=GR1TemporalType.INVARIANT,
+            antecedent=AtomicProposition("water", "HIGH"),
+            consequent=Next(AtomicProposition("pump", True))
+        )  # formula === G(highwater=true->next(pump=true))
+        adaptation = Adaptation(
+            type='consequent_exception',
+            formula_name='consequent2_1',
+            disjunction_index=0,
+            atom_temporal_operators=[('current', 'methane=HIGH')]
+        )
+        formula.integrate(adaptation)
+        output = formula.to_str(self.formatter)
+        expected_output = "G((water=HIGH->(next(pump=true)|methane=HIGH)))"
+        self.assertEqual(expected_output, output)
+
+    def test_integrate_adaptation_to_formula_antecedent_exception_enum_3(self):
+        formula = GR1Formula(
+            temp_type=GR1TemporalType.INVARIANT,
+            antecedent=None,
+            consequent=Or(AtomicProposition("water", "LOW"), AtomicProposition("methane", "LOW"))
+        )  # formula === G(water=LOW|methane=LOW)
+        adaptation = Adaptation(
+            type='antecedent_exception',
+            formula_name='assumption2_1',
+            disjunction_index=0,
+            atom_temporal_operators=[('current', 'methane=LOW')]
+        )
+        formula.integrate(adaptation)
+        output = formula.to_str(self.formatter)
+        expected_output = "G((!(methane=LOW)->(water=LOW|methane=LOW)))"
+        self.assertEqual(expected_output, output)

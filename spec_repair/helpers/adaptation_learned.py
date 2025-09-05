@@ -53,16 +53,31 @@ class Adaptation:
         variable_to_operator = {var: op for op, var in timepoint_op_args}
 
         # Step 5: Extract both "holds_at" and "not_holds_at" calls with first and second arguments
-        holds_at_args = re.findall(r'(not_)?holds_at\((\w+),\s*(\w+)', rule)
+        holds_at_args = re.findall(r'(not_)?holds_at\((\w+),\s*(\w+),\s*(\w+)', rule)
 
-        # Construct atom string with truth values and replaced variables
-        replaced_holds_at_args = [
-            (
-                variable_to_operator.get(arg2, arg2),
-                f"{atom}={'false' if prefix == 'not_' else 'true'}"
-            )
-            for prefix, atom, arg2 in holds_at_args
-        ]
+        if holds_at_args:
+            if count_arguments(rule) == 3:
+                # Construct atom string with truth values and replaced variables
+                replaced_holds_at_args = [
+                    (
+                        variable_to_operator.get(arg1, arg1),
+                        f"{atom}={'false' if prefix == 'not_' else 'true'}"
+                    )
+                    for prefix, atom, arg1, arg2 in holds_at_args
+                ]
+            elif count_arguments(rule) == 4:
+                # Construct atom string with truth values and replaced variables
+                replaced_holds_at_args = [
+                    (
+                        variable_to_operator.get(arg2, arg2),
+                        f"{atom}={arg1}"
+                    )
+                    for prefix, atom, arg1, arg2 in holds_at_args
+                ]
+            else:
+                raise ValueError(f"Unexpected number of arguments in rule: {count_arguments(rule)}")
+        else:
+            replaced_holds_at_args = []
 
         return Adaptation(
             type=function_name,
@@ -70,3 +85,10 @@ class Adaptation:
             disjunction_index=disjunction_index,
             atom_temporal_operators=replaced_holds_at_args
         )
+
+def count_arguments(text: str):
+    counts = []
+    for m in re.finditer(r'(?:not_)?holds_at\(([^)]*)\)', text):
+        args = [a.strip() for a in m.group(1).split(',') if a.strip()]
+        counts.append(len(args))
+    return counts[0]

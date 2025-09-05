@@ -21,9 +21,10 @@ class ARCALearner(ILearner):
     def __init__(
             self,
             heuristic_manager: IHeuristicManager = NoFilterHeuristicManager(),
+            encoder_class=NewSpecEncoder
     ):
         self._hm = heuristic_manager
-        self.spec_encoder = NewSpecEncoder(heuristic_manager)
+        self.spec_encoder = encoder_class(heuristic_manager)
 
     # TODO: consider returning "data" instead of empty list when no learning is possible
     def learn_new(
