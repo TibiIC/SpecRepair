@@ -14,6 +14,7 @@ from spec_repair.helpers.heuristic_managers.choose_first_heuristic_manager impor
 from spec_repair.helpers.heuristic_managers.no_filter_heuristic_manager import NoFilterHeuristicManager
 from spec_repair.helpers.recorders.unique_spec_recorder import UniqueSpecRecorder
 from spec_repair.helpers.spectra_boolean_specification import SpectraBooleanSpecification
+from spec_repair.helpers.spectra_specification import SpectraSpecification
 from spec_repair.util.file_util import read_file_lines, write_to_file
 from spec_repair.util.mittigation_strategies import move_one_to_guarantee_weakening, complete_counter_traces, \
     move_all_to_guarantee_weakening
@@ -87,8 +88,8 @@ class TestBFSRepairOrchestrator(TestCase):
 
     def test_single_repair_spec_minepump(self):
         case_study_name = 'minepump'
-        case_study_path = '../input-files/case-studies/spectra/minepump'
-        out_test_dir_name = "./test_files/out/minepump_single"
+        case_study_path = '../input-files/case-studies/spectra/minepump_enum'
+        out_test_dir_name = "./test_files/out/minepump_enum_single"
         new_spec_strings = self.run_single_repair(case_study_name, case_study_path, out_test_dir_name)
         print(new_spec_strings)
 
@@ -156,7 +157,7 @@ class TestBFSRepairOrchestrator(TestCase):
             os.mkdir(out_test_dir_name)
         if os.path.exists(transitions_file_path):
             os.remove(transitions_file_path)
-        spec: SpectraBooleanSpecification = SpectraBooleanSpecification.from_file(f"{case_study_path}/strong.spectra")
+        spec: SpectraSpecification = SpectraSpecification.from_file(f"{case_study_path}/strong.spectra")
         trace: list[str] = read_file_lines(f"{case_study_path}/violation_trace.txt")
         learners: Dict[str, ILearner] = {
             "assumption_weakening": ARCALearner(

@@ -3,15 +3,14 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 #modeh(antecedent_exception(const(expression_v), const(index), var(time), var(trace))).
-#modeh(consequent_exception(const(expression_v), var(time), var(trace))).
-#modeh(ev_temp_op(const(expression_v))).
 #modeb(2,timepoint_of_op(const(temp_op_v), var(time), var(time), var(trace)), (positive)).
 #modeb(2,holds_at(const(usable_atom), var(time), var(trace)), (positive)).
 #modeb(2,not_holds_at(const(usable_atom), var(time), var(trace)), (positive)).
+#modeh(ev_temp_op(const(expression_v))).
 #constant(usable_atom,highwater).
 #constant(usable_atom,methane).
 #constant(usable_atom,pump).
-#constant(index,0..0).
+#constant(index,0..1).
 #constant(temp_op_v,current).
 #constant(temp_op_v,next).
 #constant(temp_op_v,prev).
@@ -22,13 +21,6 @@
 :- head(antecedent_exception(_,_,V1,V2)), body(timepoint_of_op(_,V3,_,V4)), (V1, V2) != (V3, V4).
 :- head(antecedent_exception(_,_,_,V1)), body(holds_at(_,_,V2)), V1 != V2.
 :- head(antecedent_exception(_,_,_,V1)), body(not_holds_at(_,_,V2)), V1 != V2.
-:- body(holds_at(E1,_,_)), body(holds_at(E2,_,_)), E1 != E2.
-:- body(holds_at(_,_,_)), body(not_holds_at(_,_,_)).
-:- body(not_holds_at(_,_,_)), body(holds_at(_,_,_)).
-:- body(not_holds_at(E1,_,_)), body(not_holds_at(E2,_,_)), E1 != E2.
-:- head(consequent_exception(_,V1,V2)), body(timepoint_of_op(_,V3,_,V4)), (V1, V2) != (V3, V4).
-:- head(consequent_exception(_,_,V1)), body(holds_at(_,_,V2)), V1 != V2.
-:- head(consequent_exception(_,_,V1)), body(not_holds_at(_,_,V2)), V1 != V2.
 :- body(timepoint_of_op(_,_,V1,_)), body(holds_at(_,V2,_)), V1 != V2.
 :- body(timepoint_of_op(_,_,V1,_)), body(not_holds_at(_,V2,_)), V1 != V2.
 :- body(timepoint_of_op(_,_,_,_)), not body(not_holds_at(_,_,_)), not body(holds_at(_,_,_)).
@@ -39,11 +31,8 @@
 :- body(holds_at(_,V1,V2)), not body(timepoint_of_op(_,_,V1,V2)).
 :- body(not_holds_at(_,V1,V2)), not body(timepoint_of_op(_,_,V1,V2)).
 :- head(antecedent_exception(_,_,_,_)), body(timepoint_of_op(next,_,_,_)).
-:- head(consequent_exception(_,_,_)), body(timepoint_of_op(next,_,_,_)).
 :- head(antecedent_exception(_,_,_,_)), body(timepoint_of_op(prev,_,_,_)).
-:- head(consequent_exception(_,_,_)), body(timepoint_of_op(prev,_,_,_)).
 :- head(antecedent_exception(_,_,_,_)), body(timepoint_of_op(eventually,_,_,_)).
-:- head(consequent_exception(_,_,_)), body(timepoint_of_op(eventually,_,_,_)).
 :- head(ev_temp_op(_)), body(timepoint_of_op(_,_,_,_)).
 :- head(ev_temp_op(_)), body(holds_at(_,_,_)).
 :- head(ev_temp_op(_)), body(not_holds_at(_,_,_)).
@@ -329,11 +318,6 @@ root_consequent_holds(OP,assumption2_1,1,T1,S):-
 	temporal_operator(OP),
 	timepoint_of_op(OP,T1,T2,S),
 	not_holds_at(methane,T2,S).
-
-consequent_holds(assumption2_1,T,S):-
-	trace(S),
-	timepoint(T,S),
-	consequent_exception(assumption2_1,T,S).
 
 %---*** Signature  ***---
 

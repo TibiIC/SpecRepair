@@ -10,16 +10,16 @@ from spec_repair.util.file_util import read_file
 from spec_repair.wrappers.asp_wrappers import get_violations
 
 
-class TestNewSpecEncoder(TestCase):
-    minepump_spec_file = './input-files/case-studies/spectra/minepump/strong.spectra'
-    minepump_spec_1_aw_step = './tests/test_files/minepump_aw_methane.spectra'
-    minepump_clingo_file = './tests/test_files/test_components/minepump_strong_WA_no_cs.lp'
-    minepump_ilasp_file = './tests/test_files/test_components/minepump_strong_WA_no_cs.las'
-    minepump_mode_bias_aw_file = './tests/test_files/mode_bias/minepump_1_aw_step.txt'
-    minepump_mode_bias_gw_file = './tests/test_files/mode_bias/minepump_1_gw_step.txt'
-    traffic_updated_spec_file = './input-files/case-studies/spectra/traffic-updated/strong.spectra'
-    traffic_updated_mode_bias_aw_file = './tests/test_files/mode_bias/traffic_updated_aw.txt'
-    traffic_updated_mode_bias_aw_file_no_ev = './tests/test_files/mode_bias/traffic_updated_aw_no_ev.txt'
+class TestSpecEncoder(TestCase):
+    minepump_spec_file  = '../../input-files/case-studies/spectra/minepump_enum/strong.spectra'
+    minepump_spec_1_aw_step = '../test_files/test_components/test_spec_encoder/minepump_enum_aw_methane.spectra'
+    minepump_clingo_file = '../test_files/test_components/test_spec_encoder/minepump_enum_strong_WA_no_cs.lp'
+    minepump_ilasp_file = '../test_files/test_components/test_spec_encoder/minepump_enum_strong_WA_no_cs.las'
+    minepump_mode_bias_aw_file = '../test_files/mode_bias/minepump_1_aw_step.txt'
+    minepump_mode_bias_gw_file = '../test_files/mode_bias/minepump_1_gw_step.txt'
+    traffic_updated_spec_file = '../../input-files/case-studies/spectra/traffic-updated/strong.spectra'
+    traffic_updated_mode_bias_aw_file = '../test_files/mode_bias/traffic_updated_aw.txt'
+    traffic_updated_mode_bias_aw_file_no_ev = '../test_files/mode_bias/traffic_updated_aw_no_ev.txt'
     maxDiff = None
 
     def __init__(self, methodName: str = "runTest"):
@@ -147,7 +147,6 @@ class TestNewSpecEncoder(TestCase):
     """
         ]
         encoder: NewSpecEncoder = NewSpecEncoder(NoFilterHeuristicManager())
-        encoder._hm.set_disabled("ANTECEDENT_WEAKENING")
         mode_bias: str = encoder._create_mode_bias(spec, violations, Learning.GUARANTEE_WEAKENING)
 
         expected_mode_bias: str = read_file(self.minepump_mode_bias_gw_file)

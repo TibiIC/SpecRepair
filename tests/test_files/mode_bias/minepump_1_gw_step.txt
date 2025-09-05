@@ -3,14 +3,13 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 #modeh(consequent_exception(const(expression_v), var(time), var(trace))).
+#modeh(ev_temp_op(const(expression_v))).
 #modeb(2,timepoint_of_op(const(temp_op_v), var(time), var(time), var(trace)), (positive)).
 #modeb(2,holds_at(const(usable_atom), var(time), var(trace)), (positive)).
 #modeb(2,not_holds_at(const(usable_atom), var(time), var(trace)), (positive)).
-#modeh(ev_temp_op(const(expression_v))).
 #constant(usable_atom,highwater).
 #constant(usable_atom,methane).
 #constant(usable_atom,pump).
-#constant(index,0..1).
 #constant(temp_op_v,current).
 #constant(temp_op_v,next).
 #constant(temp_op_v,prev).
