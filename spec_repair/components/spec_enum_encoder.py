@@ -9,7 +9,7 @@ from spec_repair.helpers.heuristic_managers.no_filter_heuristic_manager import N
 from spec_repair.helpers.spectra_specification import SpectraSpecification
 from spec_repair.ltl_types import GR1FormulaType
 from spec_repair.util.spec_util import trace_list_to_asp_form, trace_list_to_ilasp_form, parse_formula_str, \
-    create_atom_signature_asp, create_atom_signature_asp_with_enums
+    create_atom_signature_asp_with_enums
 from spec_repair.components.spec_generator import SpecGenerator
 
 
@@ -48,7 +48,7 @@ class SpecEnumEncoder:
             # TODO: only weaken unrealisable core of guarantees
             exp_names_to_learn = get_expression_names_of_type(violations, learning_type.exp_type_str())
         expressions_to_weaken = sub_spec.to_asp(learning_names=exp_names_to_learn, for_clingo=False, hm=self._hm)
-        signature_string = create_atom_signature_asp(spec.get_atoms())
+        signature_string = create_atom_signature_asp_with_enums(spec.get_atoms(), spec._type_values)
         las = SpecGenerator.generate_ilasp(mode_declaration, expressions_to_weaken, signature_string, trace_ilasp,
                                            ct_list_ilasp, does_encode_enum=True)
         return las
@@ -67,11 +67,15 @@ class SpecEnumEncoder:
 
         restriction = ", (positive)"
         output += f"#modeb(2,timepoint_of_op(const(temp_op_v), var(time), var(time), var(trace)){restriction}).\n"
-        output += f"#modeb(2,holds_at(const(usable_atom), var(time), var(trace)){restriction}).\n"
-        output += f"#modeb(2,not_holds_at(const(usable_atom), var(time), var(trace)){restriction}).\n"
+        output += f"#modeb(2,holds_at(const(usable_atom), const(usable_value), var(time), var(trace)){restriction}).\n"
 
         for atom in sorted(spec.get_atoms()):
             output += f"#constant(usable_atom,{atom.name}).\n"
+        for value in ["false", "true"]:
+            output += f"#constant(usable_value,{value.lower()}).\n"
+        for type_values in spec._type_values.values():
+            for value in sorted(type_values):
+                output += f"#constant(usable_value,{value.lower()}).\n"
         # TODO: find a way to provide the correct end index value
         if self._hm.is_enabled("ANTECEDENT_WEAKENING"):
             # Index number multiplies the search space, so we limit it to the maximum number of disjuncts in the antecedent
@@ -94,25 +98,18 @@ class SpecEnumEncoder:
         output += f":- constraint.\n"
         if self._hm.is_enabled("ANTECEDENT_WEAKENING"):
             output += f":- head(antecedent_exception(_,_,V1,V2)), body(timepoint_of_op(_,V3,_,V4)), (V1, V2) != (V3, V4).\n"
-            output += f":- head(antecedent_exception(_,_,_,V1)), body(holds_at(_,_,V2)), V1 != V2.\n"
-            output += f":- head(antecedent_exception(_,_,_,V1)), body(not_holds_at(_,_,V2)), V1 != V2.\n"
-            output += f":- body(holds_at(E1, _, _)), body(holds_at(E2, _, _)), E1 != E2.\n"
-            output += f":- body(holds_at(_, _, _)), body(not_holds_at(_, _, _)).\n"
-            output += f":- body(not_holds_at(_, _, _)), body(holds_at(_, _, _)).\n"
-            output += f":- body(not_holds_at(E1, _, _)), body(not_holds_at(E2, _, _)), E1 != E2.\n"
+            output += f":- head(antecedent_exception(_,_,_,V1)), body(holds_at(_,_,_,V2)), V1 != V2.\n"
+            output += f":- head(antecedent_exception(_,_,_,V1)), body(holds_at(E1,_,_,V1)), body(holds_at(E2,_,_,V1)), E1 != E2.\n"
         if self._hm.is_enabled("CONSEQUENT_WEAKENING"):
             output += f":- head(consequent_exception(_,V1,V2)), body(timepoint_of_op(_,V3,_,V4)), (V1, V2) != (V3, V4).\n"
-            output += f":- head(consequent_exception(_,_,V1)), body(holds_at(_,_,V2)), V1 != V2.\n"
-            output += f":- head(consequent_exception(_,_,V1)), body(not_holds_at(_,_,V2)), V1 != V2.\n"
-        output += f":- body(timepoint_of_op(_,_,V1,_)), body(holds_at(_,V2,_)), V1 != V2.\n"
-        output += f":- body(timepoint_of_op(_,_,V1,_)), body(not_holds_at(_,V2,_)), V1 != V2.\n"
-        output += f":- body(timepoint_of_op(_,_,_,_)), not body(not_holds_at(_,_,_)), not body(holds_at(_,_,_)).\n"
+            output += f":- head(consequent_exception(_,_,V1)), body(holds_at(_,_,_,V2)), V1 != V2.\n"
+        output += f":- body(timepoint_of_op(_,_,V1,_)), body(holds_at(_,_,V2,_)), V1 != V2.\n"
+        output += f":- body(timepoint_of_op(_,_,V1,V2)), not body(holds_at(_,_,V1,V2)).\n"
+        output += f":- body(holds_at(_,_,V1,V2)), not body(timepoint_of_op(_,_,V1,V2)).\n"
         output += f":- body(timepoint_of_op(current,V1,V2,_)), V1 != V2.\n"
         output += f":- body(timepoint_of_op(next,V1,V2,_)), V1 == V2.\n"
         output += f":- body(timepoint_of_op(prev,V1,V2,_)), V1 == V2.\n"
         output += f":- body(timepoint_of_op(eventually,V1,V2,_)), V1 == V2.\n"
-        output += f":- body(holds_at(_,V1,V2)), not body(timepoint_of_op(_,_,V1,V2)).\n"
-        output += f":- body(not_holds_at(_,V1,V2)), not body(timepoint_of_op(_,_,V1,V2)).\n"
 
         if not self._hm.is_enabled("INCLUDE_NEXT"):
             if self._hm.is_enabled("ANTECEDENT_WEAKENING"):
@@ -132,8 +129,7 @@ class SpecEnumEncoder:
             output += f":- head(consequent_exception(_,_,_)), body(timepoint_of_op(eventually,_,_,_)).\n"
         if self._hm.is_enabled("INVARIANT_TO_RESPONSE_WEAKENING"):
             output += f":- head(ev_temp_op(_)), body(timepoint_of_op(_,_,_,_)).\n"
-            output += f":- head(ev_temp_op(_)), body(holds_at(_,_,_)).\n"
-            output += f":- head(ev_temp_op(_)), body(not_holds_at(_,_,_)).\n"
+            output += f":- head(ev_temp_op(_)), body(holds_at(_,_,_,_)).\n"
         output += "\").\n\n"
         return output
 

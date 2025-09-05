@@ -3,14 +3,18 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 #modeh(antecedent_exception(const(expression_v), const(index), var(time), var(trace))).
-#modeb(2,timepoint_of_op(const(temp_op_v), var(time), var(time), var(trace)), (positive)).
-#modeb(2,holds_at(const(usable_atom), var(time), var(trace)), (positive)).
-#modeb(2,not_holds_at(const(usable_atom), var(time), var(trace)), (positive)).
+#modeh(consequent_exception(const(expression_v), var(time), var(trace))).
 #modeh(ev_temp_op(const(expression_v))).
-#constant(usable_atom,highwater).
+#modeb(2,timepoint_of_op(const(temp_op_v), var(time), var(time), var(trace)), (positive)).
+#modeb(2,holds_at(const(usable_atom), const(usable_value), var(time), var(trace)), (positive)).
 #constant(usable_atom,methane).
+#constant(usable_atom,water).
 #constant(usable_atom,pump).
-#constant(index,0..1).
+#constant(usable_value,false).
+#constant(usable_value,true).
+#constant(usable_value,high).
+#constant(usable_value,low).
+#constant(index,0..0).
 #constant(temp_op_v,current).
 #constant(temp_op_v,next).
 #constant(temp_op_v,prev).
@@ -19,23 +23,25 @@
 #bias("
 :- constraint.
 :- head(antecedent_exception(_,_,V1,V2)), body(timepoint_of_op(_,V3,_,V4)), (V1, V2) != (V3, V4).
-:- head(antecedent_exception(_,_,_,V1)), body(holds_at(_,_,V2)), V1 != V2.
-:- head(antecedent_exception(_,_,_,V1)), body(not_holds_at(_,_,V2)), V1 != V2.
-:- body(timepoint_of_op(_,_,V1,_)), body(holds_at(_,V2,_)), V1 != V2.
-:- body(timepoint_of_op(_,_,V1,_)), body(not_holds_at(_,V2,_)), V1 != V2.
-:- body(timepoint_of_op(_,_,_,_)), not body(not_holds_at(_,_,_)), not body(holds_at(_,_,_)).
+:- head(antecedent_exception(_,_,_,V1)), body(holds_at(_,_,_,V2)), V1 != V2.
+:- head(antecedent_exception(_,_,_,V1)), body(holds_at(E1,_,_,V1)), body(holds_at(E2,_,_,V1)), E1 != E2.
+:- head(consequent_exception(_,V1,V2)), body(timepoint_of_op(_,V3,_,V4)), (V1, V2) != (V3, V4).
+:- head(consequent_exception(_,_,V1)), body(holds_at(_,_,_,V2)), V1 != V2.
+:- body(timepoint_of_op(_,_,V1,_)), body(holds_at(_,_,V2,_)), V1 != V2.
+:- body(timepoint_of_op(_,_,V1,V2)), not body(holds_at(_,_,V1,V2)).
+:- body(holds_at(_,_,V1,V2)), not body(timepoint_of_op(_,_,V1,V2)).
 :- body(timepoint_of_op(current,V1,V2,_)), V1 != V2.
 :- body(timepoint_of_op(next,V1,V2,_)), V1 == V2.
 :- body(timepoint_of_op(prev,V1,V2,_)), V1 == V2.
 :- body(timepoint_of_op(eventually,V1,V2,_)), V1 == V2.
-:- body(holds_at(_,V1,V2)), not body(timepoint_of_op(_,_,V1,V2)).
-:- body(not_holds_at(_,V1,V2)), not body(timepoint_of_op(_,_,V1,V2)).
 :- head(antecedent_exception(_,_,_,_)), body(timepoint_of_op(next,_,_,_)).
+:- head(consequent_exception(_,_,_)), body(timepoint_of_op(next,_,_,_)).
 :- head(antecedent_exception(_,_,_,_)), body(timepoint_of_op(prev,_,_,_)).
+:- head(consequent_exception(_,_,_)), body(timepoint_of_op(prev,_,_,_)).
 :- head(antecedent_exception(_,_,_,_)), body(timepoint_of_op(eventually,_,_,_)).
+:- head(consequent_exception(_,_,_)), body(timepoint_of_op(eventually,_,_,_)).
 :- head(ev_temp_op(_)), body(timepoint_of_op(_,_,_,_)).
-:- head(ev_temp_op(_)), body(holds_at(_,_,_)).
-:- head(ev_temp_op(_)), body(not_holds_at(_,_,_)).
+:- head(ev_temp_op(_)), body(holds_at(_,_,_,_)).
 ").
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -120,13 +126,11 @@ next(X,T,S):-
     not weak_timepoint(T,S),
     not next_timepoint_exists(T,S).
 
-holds_at(A,T,S):-
+holds_at(A,V,T,S):-
     atom(A),
-    weak_timepoint(T,S),
-    trace(S).
-
-not_holds_at(A,T,S):-
-    atom(A),
+    value(V),
+    atom_type(A,TY),
+    val_type(V,TY),
     weak_timepoint(T,S),
     trace(S).
 
@@ -142,8 +146,9 @@ contradiction_holds(A,T,S) :-
 	trace(S),
 	timepoint(T,S),
 	not weak_timepoint(T,S),
-    not_holds_at(A,T,S),
-    holds_at(A,T,S).
+    holds_at(A,V1,T,S),
+    holds_at(A,V2,T,S),
+    V1 != V2.
 
 holds_non_vacuously(E, T, S):-
 	exp(E),
@@ -201,7 +206,7 @@ exp(E):-
 % ---*** Domain dependent Axioms ***---
 
 %assumption -- initial_assumption
-%	(highwater=false&methane=false)
+%	(water=LOW&methane=LOW)
 
 assumption(initial_assumption).
 
@@ -221,11 +226,11 @@ root_consequent_holds(OP,initial_assumption,0,T1,S):-
 	timepoint(T2,S),
 	temporal_operator(OP),
 	timepoint_of_op(OP,T1,T2,S),
-	not_holds_at(highwater,T2,S),
-	not_holds_at(methane,T2,S).
+	holds_at(water,low,T2,S),
+	holds_at(methane,low,T2,S).
 
 %assumption -- assumption1_1
-%	G(((PREV(pump=true)&pump=true)->next(highwater=false)))
+%	G(((PREV(pump=true)&pump=true)->next(water=LOW)))
 
 assumption(assumption1_1).
 
@@ -242,7 +247,7 @@ root_antecedent_holds(OP,assumption1_1,0,T1,S):-
 	timepoint(T2,S),
 	temporal_operator(OP),
 	timepoint_of_op(OP,T1,T2,S),
-	holds_at(pump,T2,S).
+	holds_at(pump,true,T2,S).
 
 root_antecedent_holds(OP,assumption1_1,1,T1,S):-
 	trace(S),
@@ -251,7 +256,7 @@ root_antecedent_holds(OP,assumption1_1,1,T1,S):-
 	timepoint(T2,S),
 	temporal_operator(OP),
 	timepoint_of_op(OP,T1,T2,S),
-	holds_at(pump,T2,S).
+	holds_at(pump,true,T2,S).
 
 consequent_holds(assumption1_1,T,S):-
 	trace(S),
@@ -265,10 +270,10 @@ root_consequent_holds(OP,assumption1_1,0,T1,S):-
 	timepoint(T2,S),
 	temporal_operator(OP),
 	timepoint_of_op(OP,T1,T2,S),
-	not_holds_at(highwater,T2,S).
+	holds_at(water,low,T2,S).
 
 %assumption -- assumption2_1
-%	G((highwater=false|methane=false))
+%	G((water=LOW|methane=LOW))
 
 assumption(assumption2_1).
 
@@ -296,7 +301,7 @@ root_consequent_holds(OP,assumption2_1,0,T1,S):-
 	timepoint(T2,S),
 	temporal_operator(OP),
 	timepoint_of_op(OP,T1,T2,S),
-	not_holds_at(highwater,T2,S).
+	holds_at(water,low,T2,S).
 
 consequent_holds(assumption2_1,T,S):-
 	trace(S),
@@ -317,14 +322,32 @@ root_consequent_holds(OP,assumption2_1,1,T1,S):-
 	timepoint(T2,S),
 	temporal_operator(OP),
 	timepoint_of_op(OP,T1,T2,S),
-	not_holds_at(methane,T2,S).
+	holds_at(methane,low,T2,S).
+
+consequent_holds(assumption2_1,T,S):-
+	trace(S),
+	timepoint(T,S),
+	consequent_exception(assumption2_1,T,S).
 
 %---*** Signature  ***---
 
-atom(highwater).
 atom(methane).
+atom(water).
 atom(pump).
 
+atom_type(methane,value_enum_t).
+atom_type(water,value_enum_t).
+atom_type(pump,bool).
+
+value(false).
+value(high).
+value(low).
+value(true).
+
+val_type(high,value_enum_t).
+val_type(low,value_enum_t).
+val_type(false,bool).
+val_type(true,bool).
 
 %---*** Violation Trace ***---
 
@@ -334,10 +357,10 @@ trace(trace_name_0).
 timepoint(0,trace_name_0).
 timepoint(1,trace_name_0).
 next(1,0,trace_name_0).
-not_holds_at(highwater,0,trace_name_0).
-not_holds_at(methane,0,trace_name_0).
-not_holds_at(pump,0,trace_name_0).
-holds_at(highwater,1,trace_name_0).
-holds_at(methane,1,trace_name_0).
-not_holds_at(pump,1,trace_name_0).
+holds_at(water,low,0,trace_name_0).
+holds_at(methane,low,0,trace_name_0).
+holds_at(pump,false,0,trace_name_0).
+holds_at(water,high,1,trace_name_0).
+holds_at(methane,high,1,trace_name_0).
+holds_at(pump,false,1,trace_name_0).
 }).

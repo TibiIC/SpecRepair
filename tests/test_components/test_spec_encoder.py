@@ -1,6 +1,5 @@
 from unittest import TestCase
 
-from spec_repair.components.new_spec_encoder import NewSpecEncoder
 from spec_repair.components.spec_enum_encoder import SpecEnumEncoder
 from spec_repair.enums import Learning, ExpType
 from spec_repair.helpers.heuristic_managers.no_eventually_hypothesis_heuristic_manager import \
@@ -49,17 +48,17 @@ class TestSpecEncoder(TestCase):
         spec: SpectraSpecification = SpectraSpecification.from_file(self.minepump_spec_file)
         trace_name = "trace_name_0"
         trace = [
-            f'not_holds_at(highwater,0,{trace_name}).\n',
-            f'not_holds_at(methane,0,{trace_name}).\n',
-            f'not_holds_at(pump,0,{trace_name}).\n',
+            f'holds_at(water,low,0,{trace_name}).\n',
+            f'holds_at(methane,low,0,{trace_name}).\n',
+            f'holds_at(pump,false,0,{trace_name}).\n',
             '\n',
-            f'holds_at(highwater,1,{trace_name}).\n',
-            f'holds_at(methane,1,{trace_name}).\n',
-            f'not_holds_at(pump,1,{trace_name}).\n',
+            f'holds_at(water,high,1,{trace_name}).\n',
+            f'holds_at(methane,high,1,{trace_name}).\n',
+            f'holds_at(pump,false,1,{trace_name}).\n',
             '\n'
         ]
         cts = list()
-        encoder: NewSpecEncoder = NewSpecEncoder(NoFilterHeuristicManager())
+        encoder: SpecEnumEncoder = SpecEnumEncoder(NoFilterHeuristicManager())
         asp: str = read_file(self.minepump_clingo_file)
         violations = get_violations(asp, exp_type=ExpType.ASSUMPTION)
         las_str: str = encoder.encode_ILASP(spec, trace, cts, violations, Learning.ASSUMPTION_WEAKENING)
@@ -81,7 +80,7 @@ class TestSpecEncoder(TestCase):
     violation_holds(guarantee1_1,1,trace_name_0)\
     """
         ]
-        encoder: NewSpecEncoder = NewSpecEncoder(NoFilterHeuristicManager())
+        encoder: SpecEnumEncoder = SpecEnumEncoder(NoFilterHeuristicManager())
         mode_bias: str = encoder._create_mode_bias(spec, violations, Learning.ASSUMPTION_WEAKENING)
 
         expected_mode_bias: str = read_file(self.minepump_mode_bias_aw_file)
@@ -104,7 +103,7 @@ class TestSpecEncoder(TestCase):
     violation_holds(carB_idle_when_red,0,trace_name_0)\
     """
         ]
-        encoder: NewSpecEncoder = NewSpecEncoder(NoFilterHeuristicManager())
+        encoder: SpecEnumEncoder = SpecEnumEncoder(NoFilterHeuristicManager())
         mode_bias: str = encoder._create_mode_bias(spec, violations, Learning.ASSUMPTION_WEAKENING)
 
         expected_mode_bias: str = read_file(self.traffic_updated_mode_bias_aw_file)
@@ -127,7 +126,7 @@ class TestSpecEncoder(TestCase):
     violation_holds(carB_idle_when_red,0,trace_name_0)\
     """
         ]
-        encoder: NewSpecEncoder = NewSpecEncoder(NoEventuallyHypothesisHeuristicManager())
+        encoder: SpecEnumEncoder = SpecEnumEncoder(NoEventuallyHypothesisHeuristicManager())
         mode_bias: str = encoder._create_mode_bias(spec, violations, Learning.ASSUMPTION_WEAKENING)
 
         expected_mode_bias: str = read_file(self.traffic_updated_mode_bias_aw_file_no_ev)
@@ -147,7 +146,7 @@ class TestSpecEncoder(TestCase):
     violation_holds(guarantee1_1,1,counter_strat_0)\
     """
         ]
-        encoder: NewSpecEncoder = NewSpecEncoder(NoFilterHeuristicManager())
+        encoder: SpecEnumEncoder = SpecEnumEncoder(NoFilterHeuristicManager())
         encoder._hm.set_disabled("ANTECEDENT_WEAKENING")
         mode_bias: str = encoder._create_mode_bias(spec, violations, Learning.GUARANTEE_WEAKENING)
 
