@@ -6,6 +6,7 @@ from collections import defaultdict
 from copy import deepcopy
 from typing import Optional
 
+from spec_repair.config import IS_ENUM_ACTIVE
 from spec_repair.enums import Learning
 from spec_repair.heuristics import choose_one_with_heuristic, HeuristicType, random_choice
 from spec_repair.ltl_types import CounterStrategy
@@ -139,20 +140,34 @@ def last_state(trace, prevs, offset=0):
     if last_timepoint == 0 and offset != 0:
         return ()
     last_timepoint: int = last_timepoint - offset
-    absent = re.findall(rf"not_holds_at\((.*),{last_timepoint}", trace)
-    atoms = re.findall(rf"holds_at\((.*),{last_timepoint}", trace)
-    assignments = [f"!{x}" if x in absent else x for x in atoms]
-    if last_timepoint == 0:
-        prev_assign = [f"!{x}" for x in prevs]
+    if IS_ENUM_ACTIVE:
+        atom_comma_values = re.findall(rf"holds_at\((.*),{last_timepoint}", trace)
+        assignments = [f"{atom_value.replace(',','=')}" for atom_value in atom_comma_values]
+        if last_timepoint == 0:
+            # TODO: WARNING!!! Very strong assumption that previous assignments are booleans.
+            # TODO: include information about types in the spec to avoid this assumption
+            prev_assign = [f"{x}=false" for x in prevs]
+        else:
+            prev_timepoint: int = last_timepoint - 1
+            atom_comma_values = re.findall(rf"holds_at\((.*),{prev_timepoint}", trace)
+            atom_value_tuples = [tuple(atom_comma_value.split(",")) for atom_comma_value in atom_comma_values]
+            prev_assign = [f"prev_{atom}={value}" for atom, value in atom_value_tuples if f"prev_{atom}" in prevs]
+        return tuple(sorted(assignments + prev_assign))
     else:
-        prev_timepoint: int = last_timepoint - 1
-        absent = re.findall(rf"not_holds_at\((.*),{prev_timepoint}", trace)
-        prev_absent = [f"prev_{x}" for x in absent]
-        prev_assign = [f"!{x}" if x in prev_absent else x for x in prevs]
-    assignments += prev_assign
-    variables = [re.sub(r"!", "", x) for x in assignments]
-    assignments = [i for _, i in sorted(zip(variables, assignments))]
-    return tuple(assignments)
+        absent = re.findall(rf"not_holds_at\((.*),{last_timepoint}", trace)
+        atoms = re.findall(rf"holds_at\((.*),{last_timepoint}", trace)
+        assignments = [f"!{x}" if x in absent else x for x in atoms]
+        if last_timepoint == 0:
+            prev_assign = [f"!{x}" for x in prevs]
+        else:
+            prev_timepoint: int = last_timepoint - 1
+            absent = re.findall(rf"not_holds_at\((.*),{prev_timepoint}", trace)
+            prev_absent = [f"prev_{x}" for x in absent]
+            prev_assign = [f"!{x}" if x in prev_absent else x for x in prevs]
+        assignments += prev_assign
+        variables = [re.sub(r"!", "", x) for x in assignments]
+        assignments = [i for _, i in sorted(zip(variables, assignments))]
+        return tuple(assignments)
 
 
 def complete_ct_with_deadlock_assignment(ct: CounterTrace, assignment: list[str]):

@@ -12,7 +12,7 @@ from spec_repair.helpers.spectra_atom import SpectraAtom
 from spec_repair.heuristics import choose_one_with_heuristic, manual_choice, HeuristicType
 from spec_repair.ltl_types import CounterStrategy
 from spec_repair.old.patterns import PRS_REG
-from spec_repair.config import PROJECT_PATH, FASTLAS, PATH_TO_CLI, PATH_TO_TOOLBOX, PATH_TO_JVM
+from spec_repair.config import PROJECT_PATH, FASTLAS, PATH_TO_CLI, PATH_TO_TOOLBOX, PATH_TO_JVM, IS_ENUM_ACTIVE
 from spec_repair.old.specification_helper import strip_vars, assign_equalities, create_cmd, run_subprocess
 from spec_repair.special_types import HoldsAtAtom
 from spec_repair.util.file_util import read_file_lines, write_file, generate_temp_filename, write_to_file, \
@@ -388,14 +388,17 @@ def vars_to_asp(sys, timepoint) -> str:
     output += "\n"  # TODO: consider removing this last line
     return output
 
-
 def var_to_asp(var, timepoint) -> str:
     parts = var.split(":")
     suffix = ""
-    if parts[1] == "false":
-        suffix = "not_"
-    params = [parts[0], str(timepoint), "trace_name"]
-    return f"{suffix}holds_at({','.join(params)})."
+    if IS_ENUM_ACTIVE:
+        params = [parts[0], parts[1].lower(), str(timepoint), "trace_name"]
+        return f"holds_at({','.join(params)})."
+    else:
+        if parts[1] == "false":
+            suffix = "not_"
+        params = [parts[0], str(timepoint), "trace_name"]
+        return f"{suffix}holds_at({','.join(params)})."
 
 
 def extract_string_within(pattern, line, strip_whitespace=False):

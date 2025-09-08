@@ -1,4 +1,5 @@
 import re
+import textwrap
 
 from spec_repair.config import FASTLAS, MAX_ASP_HYPOTHESES, PROJECT_PATH
 from spec_repair.enums import ExpType
@@ -74,9 +75,10 @@ def run_clingo(asp: str) -> list[str]:
     write_to_file(asp_file, asp)
     output = run_clingo_raw(asp_file)
     output = output.split("\n")
-    for i, line in enumerate(output):
-        if len(line) > 100:
-            output[i] = '\n'.join(line.split(" "))
+    output = [
+        textwrap.fill(line, width=100) if len(line) > 100 else line
+        for line in output
+    ]
     return output
 
 

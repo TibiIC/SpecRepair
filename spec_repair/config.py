@@ -10,6 +10,7 @@ PATH_TO_FASTLAS = os.path.expanduser('~/Tools/bin/FastLAS')
 PRINT_CS = False
 FASTLAS = False  # TODO: modify into enum (inductive ASP tool)
 RESTORE_FIRST_HYPOTHESIS = True
+IS_ENUM_ACTIVE = True
 
 # This determines the paths for running clingo and ILASP and whether to use
 # Windows Subsystem for Linux (WSL):
