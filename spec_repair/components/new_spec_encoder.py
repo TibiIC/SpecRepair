@@ -8,7 +8,8 @@ from spec_repair.helpers.heuristic_managers.iheuristic_manager import IHeuristic
 from spec_repair.helpers.heuristic_managers.no_filter_heuristic_manager import NoFilterHeuristicManager
 from spec_repair.helpers.spectra_specification import SpectraSpecification
 from spec_repair.ltl_types import GR1FormulaType
-from spec_repair.util.spec_util import trace_list_to_asp_form, trace_list_to_ilasp_form, parse_formula_str, create_atom_signature_asp
+from spec_repair.util.spec_util import trace_list_to_asp_form, trace_list_to_ilasp_form, parse_formula_str, \
+    create_atom_signature_asp, run_all_unrealisable_cores
 from spec_repair.components.spec_generator import SpecGenerator
 
 
@@ -44,8 +45,7 @@ class NewSpecEncoder:
         if learning_type == Learning.ASSUMPTION_WEAKENING:
             exp_names_to_learn = get_violated_expression_names_of_type(violations, learning_type.exp_type_str())
         else:
-            # TODO: only weaken unrealisable core of guarantees
-            exp_names_to_learn = get_expression_names_of_type(violations, learning_type.exp_type_str())
+            exp_names_to_learn = get_unrealisable_core_expression_names(spec)
         expressions_to_weaken = sub_spec.to_asp(learning_names=exp_names_to_learn, for_clingo=False, hm=self._hm)
         signature_string = create_atom_signature_asp(spec.get_atoms())
         las = SpecGenerator.generate_ilasp(mode_declaration, expressions_to_weaken, signature_string, trace_ilasp,
@@ -150,6 +150,11 @@ def get_violated_expression_names_of_type(violations: list[str], exp_type: str) 
 def get_expression_names_of_type(asp_text: list[str], exp_type: str):
     assert exp_type in ["assumption", "guarantee"]
     return re.findall(rf"{exp_type}\(\b([^,^)]*)", ''.join(asp_text))
+
+
+def get_unrealisable_core_expression_names(spec: SpectraSpecification) -> List[str]:
+    unrealisable_cores = run_all_unrealisable_cores(spec.to_str(is_to_compile=True))
+    return list(unrealisable_cores[0])
 
 
 def get_violated_expression_names(violations: list[str]) -> list[str]:
