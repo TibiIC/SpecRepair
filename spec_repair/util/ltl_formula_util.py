@@ -1,5 +1,7 @@
+from typing import List, Set
+
 from py_ltl.formula import LTLFormula, Globally, Implies, AtomicProposition, Not, Top, Bottom, Eventually, And, Or, \
-    Next, Prev
+    Next, Prev, Until
 from functools import reduce
 
 
@@ -222,8 +224,10 @@ def is_ednf(f: LTLFormula) -> bool:
     disjuncts = list(flatten_or(f))
     return all(is_conjunction_of_literals_and_temporals(d) for d in disjuncts)
 
+
 def fold_or(formulas):
     return reduce(lambda x, y: Or(x, y), formulas)
+
 
 def group_temporals_in_and(f: LTLFormula) -> LTLFormula:
     items = list(flatten_and(f))
@@ -258,3 +262,40 @@ def to_ednf(f: LTLFormula) -> LTLFormula:
     disjuncts = list(flatten_or(f))
     grouped = [group_temporals_in_and(d) for d in disjuncts]
     return fold_or(grouped) if len(grouped) > 1 else grouped[0]
+
+
+def satisfies_ltl_formula(this_formula: LTLFormula, trace: List[Set[str]], t: int = 0) -> bool:
+    match this_formula:
+        case AtomicProposition(name=name, value=value):
+            return name in trace[t]
+        case Not(formula=formula):
+            return not satisfies_ltl_formula(formula, trace, t)
+        case And(left=lhs, right=rhs):
+            return all(satisfies_ltl_formula(sub, trace, t) for sub in [lhs, rhs])
+        case Or(left=lhs, right=rhs):
+            return any(satisfies_ltl_formula(sub, trace, t) for sub in [lhs, rhs])
+        case Implies(left=lhs, right=rhs):
+            return any(satisfies_ltl_formula(sub, trace, t) for sub in [Not(formula=lhs), rhs])
+        case Next(formula=formula):
+            if t + 1 >= len(trace):
+                return False
+            return satisfies_ltl_formula(formula, trace, t + 1)
+        case Prev(formula=formula):
+            if t - 1 >= 0:
+                satisfies_ltl_formula(formula, trace, t - 1)
+            return False
+        case Eventually(formula=formula):
+            return any(satisfies_ltl_formula(formula, trace, j) for j in range(t, len(trace)))
+        case Until(left=lhs, right=rhs):
+            for j in range(t, len(trace)):
+                if satisfies_ltl_formula(rhs, trace, j):
+                    return all(satisfies_ltl_formula(lhs, trace, k) for k in range(t, j))
+            return False
+        case Globally(formula=formula):
+            return all(satisfies_ltl_formula(formula, trace, j) for j in range(t, len(trace)))
+        case Top():
+            return True
+        case Bottom():
+            return False
+        case _:
+            raise NotImplementedError(f"Unsupported operator: {formula}")

@@ -6,9 +6,14 @@ from collections import defaultdict
 from copy import deepcopy
 from typing import Optional
 
+import spot
+
+from build.lib.spec_repair.ltl import LTLFormula
 from spec_repair.enums import Learning
+from spec_repair.helpers.spectra_formula_parser import SpectraFormulaParser
 from spec_repair.heuristics import choose_one_with_heuristic, HeuristicType, random_choice
 from spec_repair.ltl_types import CounterStrategy
+from spec_repair.util.ltl_formula_util import satisfies_ltl_formula
 from spec_repair.util.spec_util import cs_to_named_cs_traces, trace_replace_name, trace_list_to_asp_form, \
     trace_list_to_ilasp_form, extract_expressions_from_spec, generate_model
 
@@ -38,7 +43,8 @@ class CounterTrace:
 
     def get_ilasp_form(self, learning: Learning, is_named=True):
         # TODO: remove "trace_replace_name" as a method for adding the "CS_PATH: self._path" comment to the trace
-        return trace_replace_name(trace_list_to_ilasp_form(self.get_asp_form(is_named=is_named), learning), self._path, self._name)
+        return trace_replace_name(trace_list_to_ilasp_form(self.get_asp_form(is_named=is_named), learning), self._path,
+                                  self._name)
 
     def __eq__(self, other: CounterTrace) -> bool:
         return self._raw_trace == other._raw_trace
@@ -219,9 +225,8 @@ def no_next(dis):
 
 
 def satisfies(expression, state):
-    disjuncts = expression.split("|")
-    for disjunct in disjuncts:
-        conjuncts = disjunct.split("&")
-        if all([conjunct in state for conjunct in conjuncts]):
-            return True
-    return False
+    parser = SpectraFormulaParser()
+    expression = parser.parse(expression)
+    state = [set([atom for atom in state if "!" not in atom])]
+    is_sat = satisfies_ltl_formula(expression, state)
+    return is_sat

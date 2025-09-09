@@ -1,0 +1,33 @@
+module Minepump
+
+env boolean highwater;
+env boolean methane;
+sys boolean pump;
+sys boolean water_flag;
+
+assumption -- initial_assumption
+    !highwater & !methane;
+
+guarantee -- initial_guarantee
+    !pump;
+
+guarantee -- guarantee1_1
+	G(highwater->next(pump));
+
+guarantee -- guarantee2_1
+	G(methane->next(!pump));
+
+assumption -- assumption1_1
+	G(PREV(pump)&pump->next(!highwater));
+
+guarantee -- guarantee3_1
+	alwEv(!water_flag);
+
+guarantee -- guarantee4_1
+	alw(highwater->water_flag);
+
+assumption -- assumption2_1
+	alw(highwater & !(PREV(pump)&pump) -> next(highwater));
+
+assumption -- assumption3_1
+	alwEv(!methane&next(!methane));
