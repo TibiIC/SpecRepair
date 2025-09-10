@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from collections import defaultdict
-from typing import Set, List, Any, TypeVar, Generic, Optional, Tuple, Iterator
+from typing import Set, List, TypeVar, Optional, Tuple, Iterator
 
 from py_ltl.formula import AtomicProposition
 

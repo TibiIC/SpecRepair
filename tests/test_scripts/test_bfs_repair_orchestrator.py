@@ -86,6 +86,13 @@ class TestBFSRepairOrchestrator(TestCase):
             self.assertIn(expected_spec.to_str(), new_spec_strings)
 
     def test_single_repair_spec_minepump(self):
+        case_study_name = 'minepump'
+        case_study_path = '../input-files/case-studies/spectra/minepump'
+        out_test_dir_name = "./test_files/out/minepump_single"
+        new_spec_strings = self.run_single_repair(case_study_name, case_study_path, out_test_dir_name)
+        print(new_spec_strings)
+
+    def test_single_repair_spec_minepump_liveness(self):
         case_study_name = 'minepump_liveness'
         case_study_path = '../input-files/case-studies/spectra/minepump_liveness'
         out_test_dir_name = "./test_files/out/minepump_liveness_single"

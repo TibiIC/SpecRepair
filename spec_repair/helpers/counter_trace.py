@@ -120,6 +120,7 @@ def complete_cts_from_ct(ct: CounterTrace, spec: list[str], entailed_list: list[
     return [ct]
 
 
+# TODO: rework this to not force breakings on guarantees outside of unrealisable cores
 def find_all_possible_deadlock_completion_assignments(ct: CounterTrace, spec: list[str]):
     initial_expressions, prevs, primed_expressions, unprimed_expressions, variables = extract_expressions_from_spec(
         spec, counter_strat=True)

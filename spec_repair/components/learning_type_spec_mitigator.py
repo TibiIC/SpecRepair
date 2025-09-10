@@ -25,6 +25,8 @@ class LearningTypeSpecMitigator(IMitigator):
             data: Tuple[list[str], list[CounterTrace], Learning, list[SpectraSpecification], int, float]
     ) -> List[Tuple[ISpecification, Tuple[list[str], list[CounterTrace], Learning, list[ISpecification], int, float]]]:
         trace, cts, learning_type, spec_history, learning_steps, learning_time = data
+        # TODO: find way to continue from "Weakening failed: No guarantee weakening produces realizable spec (las file UNSAT)"
+        # TODO: because atm, it loops infinitely on the same task
         return self._hm.select_alternative_learning_tasks(self._mitigation_strategies[learning_type](spec, trace, cts, spec_history, learning_steps, learning_time))
 
 
