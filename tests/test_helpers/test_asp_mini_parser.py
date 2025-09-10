@@ -17,7 +17,7 @@ class TestASPMiniParser(TestCase):
         ]
         for line, expected in test_cases:
             with self.subTest(line=line):
-                result = ASPMiniParser.parse(line)
+                result = ASPMiniParser.parse_ap(line)
                 self.assertEqual(result, expected)
 
     def test_parse_adv(self):
@@ -31,5 +31,5 @@ class TestASPMiniParser(TestCase):
         ]
         for line, expected in test_cases:
             with self.subTest(line=line):
-                result = ASPMiniParser.parse_adv(line)
+                result = ASPMiniParser.parse_ap_adv(line)
                 self.assertEqual(result, expected)

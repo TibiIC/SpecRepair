@@ -6,7 +6,7 @@ from py_ltl.formula import AtomicProposition
 
 class ASPMiniParser:
     @staticmethod
-    def parse(line: str) -> Optional[AtomicProposition]:
+    def parse_ap(line: str) -> Optional[AtomicProposition]:
         if (line.startswith("#") or
                 "\n" in line and
                 "\r" in line or
@@ -21,7 +21,7 @@ class ASPMiniParser:
             return None
 
     @staticmethod
-    def parse_adv(line: str) -> Optional[Tuple[AtomicProposition, int, str]]:
+    def parse_ap_adv(line: str) -> Optional[Tuple[AtomicProposition, int, str]]:
         if (line.startswith("#") or
                 "\n" in line and
                 "\r" in line or
