@@ -3,26 +3,8 @@ from typing import Set, List
 
 import pandas as pd
 
-class Trace:
-    variables: Set[str]
-    path: List[Set[str]]
-
-    def __init__(self, file_name: str):
-        raise NotImplemented
-
-    def __iter__(self):
-        self.index = 0
-        return self
-
-    def __next__(self):
-        if self.index >= len(self.path):
-            raise StopIteration
-        value = self.path[self.index]
-        self.index += 1
-        return value
 
 
-Trace = str
 CounterStrategy = List[str]
 Spec = pd.DataFrame
 
