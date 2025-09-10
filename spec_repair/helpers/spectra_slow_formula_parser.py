@@ -62,7 +62,7 @@ class SpectraSlowFormulaParser(ILTLParser):
             return AtomicProposition(tokens[0], True)  # Default value is True
         elif len(tokens) == 3 and tokens[1] == "=":
             if isinstance(tokens[0], AtomicProposition):
-                atom_name = tokens[0].name
+                atom_name = tokens[0]._name
             else:
                 atom_name = tokens[0]
             value = tokens[2].lower()

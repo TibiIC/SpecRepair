@@ -70,7 +70,7 @@ class NewSpecEncoder:
         output += f"#modeb(2,not_holds_at(const(usable_atom), var(time), var(trace)){restriction}).\n"
 
         for atom in sorted(spec.get_atoms()):
-            output += f"#constant(usable_atom,{atom.name}).\n"
+            output += f"#constant(usable_atom,{atom._name}).\n"
         # TODO: find a way to provide the correct end index value
         if self._hm.is_enabled("ANTECEDENT_WEAKENING"):
             # Index number multiplies the search space, so we limit it to the maximum number of disjuncts in the antecedent

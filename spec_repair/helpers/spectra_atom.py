@@ -25,7 +25,7 @@ class SpectraAtom:
         return self.__str__()
 
     def __eq__(self, other):
-        return (self.name == other.name and
+        return (self.name == other._name and
                 self.value_type == other.value_type and
                 self.atom_type == other.atom_type)
 
@@ -33,4 +33,4 @@ class SpectraAtom:
         return hash((self.name, self.value_type, self.atom_type))
 
     def __lt__(self, other):
-        return self.name < other.name
+        return self.name < other._name

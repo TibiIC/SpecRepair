@@ -14,10 +14,13 @@ class Trace:
     def __init__(self, values: List[Tuple[AtomicProposition, ...]], name: Optional[str] = None,
                  loop_index: Optional[int] = None) -> None:
         self.values: List[Tuple[AtomicProposition, ...]] = values
-        self.name: Optional[str] = name
+        self._name: Optional[str] = name
         self.loop_index: Optional[int] = loop_index
         if loop_index is not None and not (0 <= loop_index < len(values)):
             raise ValueError("loop_index must be a valid index in values")
+
+    def set_name(self, name: str) -> None:
+        self._name = name
 
     def __len__(self) -> int:
         if self.loop_index is None:
@@ -59,3 +62,19 @@ class Trace:
         values = [values_dict[i] for i in sorted(values_dict.keys())]
         trace_name = trace_names.pop() if len(trace_names) == 1 else None
         return Trace(values=values, name=trace_name, loop_index=None)
+
+    def to_asp_str(self):
+        output = ""
+        output += f"trace({self._name}).\n\n"
+        for i in range(len(self.values)):
+            output += f"timepoint({i},{self._name}).\n"
+        for i in range(len(self.values) - 1):
+            output += f"next({i+1},{i},{self._name}).\n"
+        if self.loop_index is not None:
+            output += f"next({self.loop_index},{len(self.values) - 1},{self._name}).\n"
+        output += "\n"
+        for i, v in enumerate(self.values):
+            for ap in v:
+                prefix = "not_" if ap.value == False else ""
+                output += f"{prefix}holds_at({ap.name},{i},{self._name}).\n"
+        return output

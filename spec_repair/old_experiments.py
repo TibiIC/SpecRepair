@@ -990,8 +990,8 @@ def save_copy_to(end_file, folder):
 
 def extract_stats_rq(end_file, learning_time, name, self, random_hypothesis):
     dest_file = save_copy_to(self.fixed_spec_file, "output-files/rq_files")
-    assumptions = self.orig_formula_df.name.loc[self.orig_formula_df["type"] == "assumption"]
-    guarantees = self.orig_formula_df.name.loc[self.orig_formula_df["type"] == "guarantee"]
+    assumptions = self.orig_formula_df._name.loc[self.orig_formula_df["type"] == "assumption"]
+    guarantees = self.orig_formula_df._name.loc[self.orig_formula_df["type"] == "guarantee"]
     n_assumptions = len(assumptions)
     n_guarantees = len(guarantees)
     n_violations = len(self.violation_list)
@@ -1350,11 +1350,11 @@ def check_trivial_rq():
     triv_guar = {}
     by_name = {}
 
-    for name in df.name.unique():
+    for name in df._name.unique():
         by_name[name] = 0
 
     for file in df.file:
-        name = list(df.loc[df.file == file].name)[0]
+        name = list(df.loc[df.file == file]._name)[0]
         triv_guar[file] = n_trivial_guarantees(file)
         by_name[name] += triv_guar[file]
         by_name[name] += triv_guar[file]
@@ -1543,7 +1543,7 @@ def summarize_rq():
     res = res.fillna(0)
     res = res.astype(int)
     res = res.rename(columns=col_map)
-    res.columns.name = "Case-Study"
+    res.columns._name = "Case-Study"
     res.index.names = ["Case-Study"]
 
     res_string = res.to_latex(caption="Results of Algorithm", position="bottom")
