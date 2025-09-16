@@ -215,7 +215,7 @@ not_holds_at(pump,2,counter_strat_1_0).
 
     def test_ct_deadlock_completion(self):
         ct = ct_from_cs(cs1, heuristic=first_choice, cs_id=0)
-        spec: list[str] = SpectraSpecification.from_file(
+        spec: SpectraSpecification = SpectraSpecification.from_file(
             './test_files/minepump_aw_methane.spectra')
         ct = complete_cts_from_ct(ct, spec, ["counter_strat_0_0"])[0]
         expected_ct_raw = """\
@@ -225,16 +225,16 @@ not_holds_at(pump,0,counter_strat_0_0).
 holds_at(highwater,1,counter_strat_0_0).
 holds_at(methane,1,counter_strat_0_0).
 holds_at(pump,1,counter_strat_0_0).
-not_holds_at(highwater,2,counter_strat_0_0).
-not_holds_at(methane,2,counter_strat_0_0).
-not_holds_at(pump,2,counter_strat_0_0).\
+not_holds_at(pump,2,counter_strat_0_0).
+holds_at(highwater,2,counter_strat_0_0).
+holds_at(methane,2,counter_strat_0_0).\
 """
         self.assertEqual(expected_ct_raw, ct.get_raw_trace())
 
     def test_ct_deadlock_completion_2(self):
         ct = ct_from_cs(cs2, heuristic=partial(nth_choice, 1), cs_id=1)
-        spec: list[str] = format_spec(read_file_lines(
-            './test_files/minepump_aw_pump.spectra'))
+        spec: SpectraSpecification = SpectraSpecification.from_file(
+            './test_files/minepump_aw_pump.spectra')
         ct = complete_cts_from_ct(ct, spec, ["counter_strat_1_1"])[0]
         expected_ct_raw = """\
 not_holds_at(highwater,0,counter_strat_1_1).
@@ -246,16 +246,16 @@ not_holds_at(pump,1,counter_strat_1_1).
 holds_at(highwater,2,counter_strat_1_1).
 holds_at(methane,2,counter_strat_1_1).
 not_holds_at(pump,2,counter_strat_1_1).
-not_holds_at(highwater,3,counter_strat_1_1).
-not_holds_at(methane,3,counter_strat_1_1).
-not_holds_at(pump,3,counter_strat_1_1).\
+not_holds_at(pump,3,counter_strat_1_1).
+holds_at(highwater,3,counter_strat_1_1).
+holds_at(methane,3,counter_strat_1_1).\
 """
         self.assertEqual(expected_ct_raw, ct.get_raw_trace())
 
     def test_ct_deadlock_completion_asp(self):
         ct = ct_from_cs(cs1, heuristic=first_choice, cs_id=0)
-        spec: list[str] = format_spec(read_file_lines(
-            './test_files/minepump_aw_methane.spectra'))
+        spec: SpectraSpecification = SpectraSpecification.from_file(
+            './test_files/minepump_aw_methane.spectra')
         ct = complete_cts_from_ct(ct, spec, ["counter_strat_0_0"])[0]
         expected_ct_asp = """\
 %---*** Violation Trace ***---
@@ -276,16 +276,16 @@ not_holds_at(pump,0,counter_strat_0_0).
 holds_at(highwater,1,counter_strat_0_0).
 holds_at(methane,1,counter_strat_0_0).
 holds_at(pump,1,counter_strat_0_0).
-not_holds_at(highwater,2,counter_strat_0_0).
-not_holds_at(methane,2,counter_strat_0_0).
 not_holds_at(pump,2,counter_strat_0_0).
+holds_at(highwater,2,counter_strat_0_0).
+holds_at(methane,2,counter_strat_0_0).
 """
         self.assertEqual(expected_ct_asp, ct.get_asp_form())
 
     def test_ct_deadlock_completion_asp_2(self):
         ct = ct_from_cs(cs2, heuristic=partial(nth_choice, 1), cs_id=1)
-        spec: list[str] = format_spec(read_file_lines(
-            './test_files/minepump_aw_pump.spectra'))
+        spec: SpectraSpecification = SpectraSpecification.from_file(
+            './test_files/minepump_aw_pump.spectra')
         ct = complete_cts_from_ct(ct, spec, ["counter_strat_1_1"])[0]
         expected_ct_asp = """\
 %---*** Violation Trace ***---
@@ -311,9 +311,9 @@ not_holds_at(pump,1,counter_strat_1_1).
 holds_at(highwater,2,counter_strat_1_1).
 holds_at(methane,2,counter_strat_1_1).
 not_holds_at(pump,2,counter_strat_1_1).
-not_holds_at(highwater,3,counter_strat_1_1).
-not_holds_at(methane,3,counter_strat_1_1).
 not_holds_at(pump,3,counter_strat_1_1).
+holds_at(highwater,3,counter_strat_1_1).
+holds_at(methane,3,counter_strat_1_1).
 """
         self.assertEqual(expected_ct_asp, ct.get_asp_form())
 
