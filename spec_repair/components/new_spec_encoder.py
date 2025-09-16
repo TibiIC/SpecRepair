@@ -1,8 +1,8 @@
+from __future__ import annotations
 import re
 from collections import defaultdict
-from typing import List, Optional
+from typing import List, Optional, TYPE_CHECKING
 
-from spec_repair.helpers.counter_trace import CounterTrace
 from spec_repair.enums import Learning, When
 from spec_repair.helpers.heuristic_managers.iheuristic_manager import IHeuristicManager
 from spec_repair.helpers.heuristic_managers.no_filter_heuristic_manager import NoFilterHeuristicManager
@@ -11,6 +11,9 @@ from spec_repair.ltl_types import GR1FormulaType
 from spec_repair.util.spec_util import trace_list_to_asp_form, trace_list_to_ilasp_form, parse_formula_str, \
     create_atom_signature_asp, run_all_unrealisable_cores
 from spec_repair.components.spec_generator import SpecGenerator
+
+if TYPE_CHECKING:
+    from spec_repair.helpers.counter_trace import CounterTrace
 
 
 class NewSpecEncoder:
@@ -31,6 +34,19 @@ class NewSpecEncoder:
         cs_trace_string: str = ''.join([cs_trace.get_asp_form() for cs_trace in ct_list])
         return SpecGenerator.generate_clingo(formulas_string, "", signature_string, violation_trace,
                                              cs_trace_string)
+
+    @staticmethod
+    def encode_ASP_deadlock_extension(spec: SpectraSpecification, ct_to_extend: CounterTrace) -> str:
+        """
+        ASSUMES LEARNING ASSUMPTION WEAKENING ONLY
+        """
+        # Generate first Clingo file to find violating assumptions/guarantees
+        formulas_string = spec.to_asp(for_clingo=True)
+        signature_string = create_atom_signature_asp(spec.get_atoms())
+        cs_trace_string: str = ct_to_extend.get_asp_form_awaiting_deadlock()
+        elements_to_show = ["violation_holds/3", "entailed/1", "atom_set_to/2"]
+        return SpecGenerator.generate_clingo(formulas_string, "", signature_string, "",
+                                             cs_trace_string, elements_to_show)
 
     def encode_ILASP(self, spec: SpectraSpecification, trace: List[str], ct_list: List[CounterTrace],
                      violations: list[str],
@@ -80,7 +96,7 @@ class NewSpecEncoder:
 
         # This determines which rules can be weakened.
         if learning_type == Learning.GUARANTEE_WEAKENING:
-            formula_names = spec.filter(lambda x: x['type'] == GR1FormulaType.GAR)["name"]
+            formula_names = get_unrealisable_core_expression_names(spec)
         elif not violations:
             formula_names = spec.filter(lambda x: x['type'] == GR1FormulaType.ASM)["name"]
         else:

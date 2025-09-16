@@ -4,18 +4,22 @@ import random
 import re
 from collections import defaultdict
 from copy import deepcopy
-from typing import Optional
+from typing import Optional, List, Set, Tuple
 
-import spot
+from py_ltl.formula import AtomicProposition
 
-from build.lib.spec_repair.ltl import LTLFormula
+from spec_repair.components.interfaces.ispecification import ISpecification
+from spec_repair.components.new_spec_encoder import NewSpecEncoder
 from spec_repair.enums import Learning
 from spec_repair.helpers.spectra_formula_parser import SpectraFormulaParser
+from spec_repair.helpers.spectra_specification import SpectraSpecification
 from spec_repair.heuristics import choose_one_with_heuristic, HeuristicType, random_choice
 from spec_repair.ltl_types import CounterStrategy
+from spec_repair.special_types import DeadlockAtomSet, DeadlockViolations
 from spec_repair.util.ltl_formula_util import satisfies_ltl_formula
 from spec_repair.util.spec_util import cs_to_named_cs_traces, trace_replace_name, trace_list_to_asp_form, \
-    trace_list_to_ilasp_form, extract_expressions_from_spec, generate_model
+    trace_list_to_ilasp_form, extract_expressions_from_spec, generate_model, run_clingo_raw, run_all_unrealisable_cores
+from spec_repair.wrappers.asp_wrappers import run_clingo
 
 
 class CounterTrace:
@@ -40,6 +44,23 @@ class CounterTrace:
         if is_named:
             return trace_replace_name(raw_asp_form, self._path, self._name)
         return raw_asp_form
+
+    def get_max_timepoint(self, asp_form: str) -> int:
+        timepoints = map(int, re.findall(r"timepoint\((\d+),", asp_form))
+        return max(timepoints) if timepoints else 0
+
+    def get_asp_form_awaiting_deadlock(self):
+        asp_form = self.get_asp_form()
+        max_timepoint = self.get_max_timepoint(asp_form)
+        asp_form += f"\n% Extension awaiting deadlock resolution\n"
+        asp_form += f"timepoint({max_timepoint + 1},{self._name}).\n"
+        asp_form += f"next({max_timepoint + 1},{max_timepoint},{self._name}).\n"
+        asp_form += f"\n"
+        asp_form += f"1 {{ holds_at(A,{max_timepoint + 1},{self._name}); not_holds_at(A,{max_timepoint + 1},{self._name}) }} 1 :- atom(A).\n\n"
+        asp_form += f"atom_set_to(A,true) :- holds_at(A,{max_timepoint + 1},{self._name}), atom(A).\n"
+        asp_form += f"atom_set_to(A,false) :- not_holds_at(A,{max_timepoint + 1},{self._name}), atom(A).\n"
+
+        return asp_form
 
     def get_ilasp_form(self, learning: Learning, is_named=True):
         # TODO: remove "trace_replace_name" as a method for adding the "CS_PATH: self._path" comment to the trace
@@ -110,7 +131,7 @@ def complete_ct_from_ct(ct: CounterTrace, spec: list[str], entailed_list: list[s
     return choose_one_with_heuristic(complete_cts_from_ct(ct, spec, entailed_list), heuristic)
 
 
-def complete_cts_from_ct(ct: CounterTrace, spec: list[str], entailed_list: list[str]) -> list[CounterTrace]:
+def complete_cts_from_ct(ct: CounterTrace, spec: ISpecification, entailed_list: list[str]) -> list[CounterTrace]:
     if ct.is_deadlock() and ct.get_name() in entailed_list:
         assignments = find_all_possible_deadlock_completion_assignments(ct, spec)
         complete_cts = [complete_ct_with_deadlock_assignment(ct, assignment) for assignment in assignments]
@@ -121,22 +142,54 @@ def complete_cts_from_ct(ct: CounterTrace, spec: list[str], entailed_list: list[
 
 
 # TODO: rework this to not force breakings on guarantees outside of unrealisable cores
-def find_all_possible_deadlock_completion_assignments(ct: CounterTrace, spec: list[str]):
-    initial_expressions, prevs, primed_expressions, unprimed_expressions, variables = extract_expressions_from_spec(
-        spec, counter_strat=True)
-    initial_expressions_s, prevs_s, primed_expressions_s, unprimed_expressions_s, variables_s = extract_expressions_from_spec(
-        spec, guarantee_only=True)
-    primed_expressions_cleaned = [re.sub(r"PREV\((!*)([^|^(]*)\)", r"\1prev_\2", x) for x in primed_expressions]
-    primed_expressions_cleaned_s = [re.sub(r"PREV\((!*)([^|^(]*)\)", r"\1prev_\2", x) for x in
-                                    primed_expressions_s]
-    final_state = last_state(ct._raw_trace, prevs)
-    assignments, is_violating = next_possible_assignments(final_state, primed_expressions_cleaned,
-                                                          primed_expressions_cleaned_s, unprimed_expressions,
-                                                          unprimed_expressions_s, variables)
-    if assignments is None:
+def find_all_possible_deadlock_completion_assignments(ct: CounterTrace, spec: SpectraSpecification) -> List[List[AtomicProposition]]:
+    asp = NewSpecEncoder.encode_ASP_deadlock_extension(spec, ct)
+    out = run_clingo(asp, n_models=0)
+    assignments = extract_answers("\n".join(out))
+    if not assignments:
         raise ValueError("Not possible to complete the deadlock! There is no valid assignment that may "
                          "continue the trace. Some error must have occurred!")
-    return assignments
+    unrealisable_cores = get_unrealisable_core_expression_names(spec)
+    possible_assignments = [(atom_assignments, violated_expressions) for atom_assignments, violated_expressions in assignments if violated_expressions.issubset(unrealisable_cores)]
+    sorted_possible_assignments = sorted(possible_assignments, key=lambda x: len(x[0]))
+    # TODO: introduce heuristic to enforce specific violation
+    return [atom_assignments for atom_assignments, _ in sorted_possible_assignments]
+
+
+
+def get_unrealisable_core_expression_names(spec: SpectraSpecification) -> Set[str]:
+    unrealisable_cores = run_all_unrealisable_cores(spec.to_str(is_to_compile=True))
+    return set().union(*unrealisable_cores)
+
+
+def extract_answers(clingo_output: str) -> List[Tuple[List[AtomicProposition], Set[str]]]:
+    answers = {}
+    current_answer = None
+
+    for line in clingo_output.splitlines():
+        # Detect start of an Answer block
+        match = re.match(r"Answer:\s+(\d+)", line)
+        if match:
+            current_answer = int(match.group(1))
+            answers[current_answer] = (list(), set())
+            continue
+
+        # Collect atoms for current answer
+        if current_answer is not None:
+            line = line.strip()
+            if line and not line.startswith(("SATISFIABLE", "Models", "Calls", "Time", "CPU Time")):
+                atom_set_to = DeadlockAtomSet.pattern.match(line)
+                if atom_set_to:
+                    atom_name = atom_set_to.group(DeadlockAtomSet.ATOM_NAME)
+                    atom_value = atom_set_to.group(DeadlockAtomSet.ATOM_VALUE).lower() == "true"
+                    answers[current_answer][0].append(AtomicProposition(name=atom_name, value=atom_value))
+                else:
+                    violation_holds = DeadlockViolations.pattern.match(line)
+                    if violation_holds:
+                        violated_exp_name = violation_holds.group(DeadlockViolations.VIOLATED_EXP_NAME)
+                        answers[current_answer][1].add(violated_exp_name)
+
+    return list(answers.values())
 
 
 # TODO: test prev_pump setting
@@ -162,15 +215,12 @@ def last_state(trace, prevs, offset=0):
     return tuple(assignments)
 
 
-def complete_ct_with_deadlock_assignment(ct: CounterTrace, assignment: list[str]):
+def complete_ct_with_deadlock_assignment(ct: CounterTrace, assignment: list[AtomicProposition]):
     ct = deepcopy(ct)
-    end = f",{ct.get_name()})."
     last_timepoint = max(re.findall(r",(\d*),", ct._raw_trace))
     timepoint = str(int(last_timepoint) + 1)
-    variables = [s for s in assignment if not re.search("prev_", s)]
-    asp = ["not_holds_at(" + v[1:] if re.search("!", v) else "holds_at(" + v for v in variables]
-    asp = [f"{x},{timepoint}{end}" for x in asp]
-    ct._raw_trace = re.sub(r",[^,]*\)\.", end, ct._raw_trace) + '\n'.join(asp)
+    asp = [f"{'' if atom_value.value else 'not_'}holds_at({atom_value.name},{timepoint},{ct._path})." for atom_value in assignment]
+    ct._raw_trace = ct._raw_trace + '\n'.join(asp)
     ct._is_deadlock = False
     return ct
 

@@ -69,7 +69,7 @@ def complete_counter_traces(
                         new_set_cts = copy(set_cts)
                         new_set_cts.remove(ct)
                         ctss |= set([tuple(new_set_cts | {complete_ct}) for complete_ct in
-                                     complete_cts_from_ct(ct, spec.to_str().split('\n'), deadlock_required)])
+                                     complete_cts_from_ct(ct, spec, deadlock_required)])
                         unchanged = False
                 if not unchanged:
                     ctss.remove(cts)

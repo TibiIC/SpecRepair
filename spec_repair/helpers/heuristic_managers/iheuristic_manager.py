@@ -2,7 +2,6 @@ from abc import ABC, abstractmethod
 from collections import defaultdict
 from typing import List, Any
 
-from spec_repair.helpers.counter_trace import CounterTrace
 
 
 class IHeuristicManager(ABC):
@@ -13,11 +12,11 @@ class IHeuristicManager(ABC):
         self._heuristics["INVARIANT_TO_RESPONSE_WEAKENING"] = True
 
     @abstractmethod
-    def select_counter_traces(self, cts: List[CounterTrace]) -> List[CounterTrace]:
+    def select_counter_traces(self, cts: List[Any]) -> List[Any]:
         pass
 
     @abstractmethod
-    def select_alternative_learning_tasks(self, ctss: List[List[CounterTrace]]) -> List[List[CounterTrace]]:
+    def select_alternative_learning_tasks(self, ctss: List[List[Any]]) -> List[List[Any]]:
         pass
 
     @abstractmethod

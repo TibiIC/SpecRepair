@@ -1,3 +1,5 @@
+from typing import Optional
+
 import pandas as pd
 
 from spec_repair.config import PROJECT_PATH
@@ -11,7 +13,7 @@ class SpecGenerator:
 
     @staticmethod
     def generate_clingo(assumptions: str, guarantees: str, signature: str, violation_trace: str,
-                        cs_trace: str) -> str:
+                        cs_trace: str, elements_to_show: Optional[list[str]] = None) -> str:
         """
         Generate the contents of the .lp file to be run in Clingo.
         Running this file will generate the violations that hold, given the problem statement
@@ -22,13 +24,15 @@ class SpecGenerator:
         :param cs_trace: Traces from counter-strategies, which are supposed to violate current specification
         :return:
         """
+        if elements_to_show is None:
+            elements_to_show = ["violation_holds/3", "assumption/1", "guarantee/1", "entailed/1"]
         lp = SpecGenerator.background_knowledge + \
              assumptions + \
              guarantees + \
              signature + \
              violation_trace + \
              cs_trace
-        for element_to_show in ["violation_holds/3", "assumption/1", "guarantee/1", "entailed/1"]:
+        for element_to_show in elements_to_show:
             lp += f"\n#show {element_to_show}.\n"
         return lp
 

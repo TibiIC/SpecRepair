@@ -69,10 +69,10 @@ def error_check_ILASP_output(output):
 # TODO: Make it throw the error it returns on bad returns (i.e. syntax errors)
 # TODO: check if spectra_file provided should be original version or fixed version
 # TODO: don't rename inside of function, provide exact file names and assert their existence
-def run_clingo(asp: str) -> list[str]:
+def run_clingo(asp: str, n_models: int = 1) -> list[str]:
     asp_file = generate_temp_filename(ext=".lp")
     write_to_file(asp_file, asp)
-    output = run_clingo_raw(asp_file)
+    output = run_clingo_raw(asp_file, n_models=n_models)
     output = output.split("\n")
     for i, line in enumerate(output):
         if len(line) > 100:

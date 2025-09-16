@@ -40,5 +40,16 @@ class GR1Atom:
     NAME = 3
     pattern = re.compile(r'^\s*(env|sys)\s+([a-zA-Z0-9_-]+)\s+([a-zA-Z0-9_-]+);?\s*$')
 
+class DeadlockAtomSet:
+    ATOM_NAME = 1
+    ATOM_VALUE = 2
+    pattern = re.compile(r"^atom_set_to\(([^,]+),([^,]+)\).?$")
+
+class DeadlockViolations:
+    VIOLATED_EXP_NAME = 1
+    VIOLATED_TIMEPOINT = 2
+    VIOLATING_TRACE_NAME = 3
+    pattern = re.compile(r"^violation_holds\(([^,]+),([^,]+),([^,]+)\).?$")
+
 # StopHeuristicType = Callable[[List[str], List[CounterTrace]], bool]
 StopHeuristicType = Callable[[List[str], List[Any]], bool]
