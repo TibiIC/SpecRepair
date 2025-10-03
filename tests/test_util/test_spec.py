@@ -1,13 +1,13 @@
+import os
 import re
 from unittest import TestCase
 
-import pandas as pd
-
 from spec_repair.enums import Learning
+from spec_repair.helpers.spectra_atom import SpectraAtom
 from spec_repair.helpers.spectra_specification import SpectraSpecification
-from spec_repair.util.spec_util import create_signature, extract_variables, create_trace, \
-    get_assumptions_and_guarantees_from, trace_list_to_asp_form, trace_list_to_ilasp_form, \
-    run_all_unrealisable_cores_raw, run_all_unrealisable_cores
+from spec_repair.ltl_types import GR1AtomType
+from spec_repair.util.spec_util import create_trace, trace_list_to_asp_form, trace_list_to_ilasp_form, \
+    run_all_unrealisable_cores_raw, run_all_unrealisable_cores, create_atom_signature_asp
 
 
 def is_ascending(timepoint_poss: list[int]) -> bool:
@@ -15,12 +15,25 @@ def is_ascending(timepoint_poss: list[int]) -> bool:
 
 
 class TestSpec(TestCase):
-    minepump_spec_file = '../../input-files/examples/Minepump/minepump_strong.spectra'
-    traffic_spec_file = '../test_files/traffic/traffic_single_strong.spectra'
-    traffic_updated_spec_file = '../test_files/traffic/traffic_updated_strong.spectra'
+    minepump_spec_file = '../input-files/examples/Minepump/minepump_strong.spectra'
+    traffic_spec_file = '../input-files/case-studies/spectra/traffic-single/strong.spectra'
+    traffic_updated_spec_file = 'test_files/traffic/traffic_updated_strong.spectra'
+
+    @classmethod
+    def setUpClass(cls):
+        # Change the working directory to the script's directory
+        cls.original_working_directory = os.getcwd()
+        test_components_dir = os.path.dirname(os.path.abspath(__file__))
+        tests_dir = os.path.dirname(test_components_dir)
+        os.chdir(tests_dir)
+
+    @classmethod
+    def tearDownClass(cls):
+        # Restore the original working directory
+        os.chdir(cls.original_working_directory)
 
     def test_all_unrealisable_cores_raw_ideal(self):
-        ideal_spec_file_path = "../../input-files/case-studies/spectra/minepump/ideal.spectra"
+        ideal_spec_file_path = "input-files/case-studies/spectra/minepump/ideal.spectra"
         try:
             raw_cores = run_all_unrealisable_cores_raw(ideal_spec_file_path)
             self.assertIsNotNone(raw_cores, "Raw cores output should not be None")
@@ -31,7 +44,7 @@ class TestSpec(TestCase):
             self.fail(f"Command line execution failed with error: {str(e)}")
 
     def test_all_unrealisable_cores_raw_one(self):
-        minepump_spec_file_path = "../test_files/unrealisable_core_util_tests/minepump_uc.spectra"
+        minepump_spec_file_path = "tests/test_files/unrealisable_core_util_tests/minepump_uc.spectra"
         try:
             raw_cores = run_all_unrealisable_cores_raw(minepump_spec_file_path)
             self.assertIsNotNone(raw_cores, "Raw cores output should not be None")
@@ -42,7 +55,7 @@ class TestSpec(TestCase):
             self.fail(f"Command line execution failed with error: {str(e)}")
 
     def test_all_unrealisable_cores_raw_multiple(self):
-        arbiter_spec_file_path = "../test_files/unrealisable_core_util_tests/arbiter_uc_pRespondsToS.spectra"
+        arbiter_spec_file_path = "tests/test_files/unrealisable_core_util_tests/arbiter_uc_pRespondsToS.spectra"
         try:
             raw_cores = run_all_unrealisable_cores_raw(arbiter_spec_file_path)
             self.assertIsNotNone(raw_cores, "Raw cores output should not be None")
@@ -53,31 +66,35 @@ class TestSpec(TestCase):
             self.fail(f"Command line execution failed with error: {str(e)}")
 
     def test_all_unrealisable_cores_ideal(self):
-        ideal_spec_file_path = "../../input-files/case-studies/spectra/minepump/ideal.spectra"
+        ideal_spec_file_path = "../input-files/case-studies/spectra/minepump/ideal.spectra"
         spec = SpectraSpecification.from_file(ideal_spec_file_path)
         cores = run_all_unrealisable_cores(spec.to_str(is_to_compile=True))
         self.assertEqual([], cores)
 
     def test_all_unrealisable_cores_one(self):
-        minepump_spec_file_path = "../test_files/unrealisable_core_util_tests/minepump_uc.spectra"
+        minepump_spec_file_path = "test_files/unrealisable_core_util_tests/minepump_uc.spectra"
         spec = SpectraSpecification.from_file(minepump_spec_file_path)
         cores = run_all_unrealisable_cores(spec.to_str(is_to_compile=True))
         self.assertEqual([{"guarantee1_1", "guarantee2_1"}], cores)
 
     def test_all_unrealisable_cores_multiple(self):
-        arbiter_spec_file_path = "../test_files/unrealisable_core_util_tests/arbiter_uc.spectra"
+        arbiter_spec_file_path = "test_files/unrealisable_core_util_tests/arbiter_uc.spectra"
         spec = SpectraSpecification.from_file(arbiter_spec_file_path)
         cores = run_all_unrealisable_cores(spec.to_str(is_to_compile=True))
         self.assertEqual([{"guarantee3_1", "guarantee2_1"}, {"guarantee1_1", "guarantee3_1"}], cores)
 
     def test_extract_variables(self):
-        spec_df: pd.DataFrame = get_assumptions_and_guarantees_from(self.minepump_spec_file)
-        variables = extract_variables(spec_df)
-        self.assertListEqual(["highwater", "methane", "pump"], variables)
+        spec = SpectraSpecification.from_file(self.minepump_spec_file)
+        variables = spec.get_atoms()
+        self.assertSetEqual({
+            SpectraAtom("highwater", "boolean", GR1AtomType.ENV),
+            SpectraAtom("methane", "boolean", GR1AtomType.ENV),
+            SpectraAtom("pump", "boolean", GR1AtomType.SYS),
+        }, variables)
 
     def test_create_signature_methane(self):
-        spec_df: pd.DataFrame = get_assumptions_and_guarantees_from(self.minepump_spec_file)
-        signature: str = create_signature(spec_df)
+        spec = SpectraSpecification.from_file(self.minepump_spec_file)
+        signature: str = create_atom_signature_asp(spec.get_atoms())
         header_pattern: re.Pattern = re.compile(r"^%-{3}\*{3}\s*Signature\s*\*{3}-{3}$", flags=re.MULTILINE)
         self.assertRegex(signature, header_pattern)
         header_pos = header_pattern.search(signature).end()
@@ -88,8 +105,8 @@ class TestSpec(TestCase):
             self.assertLess(header_pos, atom_pos)
 
     def test_create_signature_traffic_single(self):
-        spec_df: pd.DataFrame = get_assumptions_and_guarantees_from(self.traffic_spec_file)
-        signature: str = create_signature(spec_df)
+        spec = SpectraSpecification.from_file(self.traffic_spec_file)
+        signature: str = create_atom_signature_asp(spec.get_atoms())
         header_pattern: re.Pattern = re.compile(r"^%-{3}\*{3}\s*Signature\s*\*{3}-{3}$", flags=re.MULTILINE)
         self.assertRegex(signature, header_pattern)
         header_pos = header_pattern.search(signature).end()
@@ -100,8 +117,8 @@ class TestSpec(TestCase):
             self.assertLess(header_pos, atom_pos)
 
     def test_create_signature_traffic_updated(self):
-        spec_df: pd.DataFrame = get_assumptions_and_guarantees_from(self.traffic_updated_spec_file)
-        signature: str = create_signature(spec_df)
+        spec = SpectraSpecification.from_file(self.traffic_updated_spec_file)
+        signature: str = create_atom_signature_asp(spec.get_atoms())
         header_pattern: re.Pattern = re.compile(r"^%-{3}\*{3}\s*Signature\s*\*{3}-{3}$", flags=re.MULTILINE)
         self.assertRegex(signature, header_pattern)
         header_pos = header_pattern.search(signature).end()
@@ -176,7 +193,8 @@ class TestSpec(TestCase):
         self.assertRegex(trace_in_file, header_pattern)
         header_pos = header_pattern.search(trace_in_file).end()
         timepoint_poss: list[int] = []
-        for timepoint in [0, 1]:
+        timepoints = [0, 1]
+        for timepoint in timepoints:
             timepoint_pattern = re.compile(rf"^timepoint\({timepoint},{trace_name}\).$", flags=re.MULTILINE)
             self.assertRegex(trace_in_file, timepoint_pattern)
             timepoint_pos: int = timepoint_pattern.search(trace_in_file).start()
@@ -187,6 +205,15 @@ class TestSpec(TestCase):
                 self.assertRegex(trace_in_file, next_pattern)
                 next_pos: int = next_pattern.search(trace_in_file).start()
                 self.assertLess(timepoint_pos, next_pos)
+        weak_timepoint_pattern = re.compile(rf"^weak_timepoint\(weak_t,{trace_name}\).$", flags=re.MULTILINE)
+        self.assertRegex(trace_in_file, weak_timepoint_pattern)
+        weak_timepoint_pos: int = weak_timepoint_pattern.search(trace_in_file).start()
+        timepoint_poss.append(weak_timepoint_pos)
+        self.assertLess(header_pos, weak_timepoint_pos)
+        next_pattern = re.compile(rf"^next\(weak_t,{timepoints[-1]},{trace_name}\).$", flags=re.MULTILINE)
+        self.assertRegex(trace_in_file, next_pattern)
+        next_pos: int = next_pattern.search(trace_in_file).start()
+        self.assertLess(weak_timepoint_pos, next_pos)
 
         self.assertTrue(is_ascending(timepoint_poss))
         for line in trace:
@@ -287,6 +314,16 @@ class TestSpec(TestCase):
             self.assertRegex(trace_as_ilasp, next_loop_pattern)
             loop_pos: int = next_loop_pattern.search(trace_as_ilasp).start()
             self.assertLess(next_pos, loop_pos)
+        else: # Is not loop, so weak timepoint should be present
+            weak_timepoint_pattern = re.compile(rf"^weak_timepoint\(weak_t,{trace_name}\).$", flags=re.MULTILINE)
+            self.assertRegex(trace_as_ilasp, weak_timepoint_pattern)
+            weak_timepoint_pos: int = weak_timepoint_pattern.search(trace_as_ilasp).start()
+            timepoint_poss.append(weak_timepoint_pos)
+            self.assertLess(header_pos, weak_timepoint_pos)
+            next_pattern = re.compile(rf"^next\(weak_t,{timepoints[-1]},{trace_name}\).$", flags=re.MULTILINE)
+            self.assertRegex(trace_as_ilasp, next_pattern)
+            next_pos: int = next_pattern.search(trace_as_ilasp).start()
+            self.assertLess(weak_timepoint_pos, next_pos)
         max_line_pos = 0
         self.assertTrue(is_ascending(timepoint_poss))
         for line in trace:

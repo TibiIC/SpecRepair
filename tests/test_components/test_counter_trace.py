@@ -7,8 +7,6 @@ from spec_repair.enums import Learning
 from spec_repair.helpers.spectra_specification import SpectraSpecification
 from spec_repair.heuristics import first_choice, last_choice, nth_choice
 from spec_repair.ltl_types import CounterStrategy
-from spec_repair.util.file_util import read_file_lines
-from spec_repair.util.spec_util import format_spec
 
 cs1: CounterStrategy = \
     ['INI -> S0 {highwater:false, methane:false} / {pump:false};',
@@ -124,7 +122,9 @@ trace(counter_strat_0_0).
 
 timepoint(0,counter_strat_0_0).
 timepoint(1,counter_strat_0_0).
+weak_timepoint(weak_t,counter_strat_0_0).
 next(1,0,counter_strat_0_0).
+next(weak_t,1,counter_strat_0_0).
 
 not_holds_at(highwater,0,counter_strat_0_0).
 not_holds_at(methane,0,counter_strat_0_0).
@@ -147,8 +147,10 @@ trace(counter_strat_1_0).
 timepoint(0,counter_strat_1_0).
 timepoint(1,counter_strat_1_0).
 timepoint(2,counter_strat_1_0).
+weak_timepoint(weak_t,counter_strat_1_0).
 next(1,0,counter_strat_1_0).
 next(2,1,counter_strat_1_0).
+next(weak_t,2,counter_strat_1_0).
 
 not_holds_at(highwater,0,counter_strat_1_0).
 not_holds_at(methane,0,counter_strat_1_0).
@@ -174,7 +176,9 @@ not_holds_at(pump,2,counter_strat_1_0).
 trace(counter_strat_0_0).
 timepoint(0,counter_strat_0_0).
 timepoint(1,counter_strat_0_0).
+weak_timepoint(weak_t,counter_strat_0_0).
 next(1,0,counter_strat_0_0).
+next(weak_t,1,counter_strat_0_0).
 not_holds_at(highwater,0,counter_strat_0_0).
 not_holds_at(methane,0,counter_strat_0_0).
 not_holds_at(pump,0,counter_strat_0_0).
@@ -198,8 +202,10 @@ trace(counter_strat_1_0).
 timepoint(0,counter_strat_1_0).
 timepoint(1,counter_strat_1_0).
 timepoint(2,counter_strat_1_0).
+weak_timepoint(weak_t,counter_strat_1_0).
 next(1,0,counter_strat_1_0).
 next(2,1,counter_strat_1_0).
+next(weak_t,2,counter_strat_1_0).
 not_holds_at(highwater,0,counter_strat_1_0).
 not_holds_at(methane,0,counter_strat_1_0).
 not_holds_at(pump,0,counter_strat_1_0).
@@ -267,8 +273,10 @@ trace(counter_strat_0_0).
 timepoint(0,counter_strat_0_0).
 timepoint(1,counter_strat_0_0).
 timepoint(2,counter_strat_0_0).
+weak_timepoint(weak_t,counter_strat_0_0).
 next(1,0,counter_strat_0_0).
 next(2,1,counter_strat_0_0).
+next(weak_t,2,counter_strat_0_0).
 
 not_holds_at(highwater,0,counter_strat_0_0).
 not_holds_at(methane,0,counter_strat_0_0).
@@ -298,9 +306,11 @@ timepoint(0,counter_strat_1_1).
 timepoint(1,counter_strat_1_1).
 timepoint(2,counter_strat_1_1).
 timepoint(3,counter_strat_1_1).
+weak_timepoint(weak_t,counter_strat_1_1).
 next(1,0,counter_strat_1_1).
 next(2,1,counter_strat_1_1).
 next(3,2,counter_strat_1_1).
+next(weak_t,3,counter_strat_1_1).
 
 not_holds_at(highwater,0,counter_strat_1_1).
 not_holds_at(methane,0,counter_strat_1_1).

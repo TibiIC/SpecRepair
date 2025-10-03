@@ -103,7 +103,7 @@ class TestBFSRepairOrchestrator(TestCase):
         case_study_name = 'minepump'
         case_study_path = '../input-files/case-studies/spectra/minepump'
         out_test_dir_name = "./test_files/out/minepump_arca_bfs"
-        new_spec_strings = self.run_bfs_repair(case_study_name, case_study_path, out_test_dir_name)
+        new_spec_strings = self.run_bfs_repair(case_study_name, case_study_path, out_test_dir_name, is_debug=True)
 
         expected_specs_files: list[str] = os.listdir('./test_files/minepump_weakenings')
         expected_spec_strings: list[SpectraSpecification] = [

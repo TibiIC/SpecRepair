@@ -1,0 +1,37 @@
+timepoint_of_op(current,T1,T1,S) :- not weak_timepoint(T1,S).
+
+timepoint_of_op(next,T1,T2,S) :- not weak_timepoint(T1,S).
+
+timepoint_of_op(prev,T1,T2,S) :- not weak_timepoint(T1,S).
+timepoint_of_op(prev,T1,T2,S) :- not weak_timepoint(T2,S).
+
+timepoint_of_op(eventually,T1,T1,S) :- not weak_timepoint(T1,S).
+
+timepoint_of_op(eventually,T1,T2,S) :- not weak_timepoint(T1,S).
+
+next_timepoint_exists(T1,S):- not weak_timepoint(T2,S).
+
+weak_timepoint(X,S):- not next_timepoint_exists(T,S).
+
+next(X,T,S):- not weak_timepoint(T,S).
+next(X,T,S):- not next_timepoint_exists(T,S).
+
+contradiction_holds(A,T,S) :- not weak_timepoint(T,S).
+contradiction_holds(A,T,S) :- not_holds_at(A,T,S).
+
+holds_non_vacuously(E, T, S):- not weak_timepoint(T,S).
+
+holds_vacuously(E, T, S):- not weak_timepoint(T,S).
+holds_vacuously(E, T, S):- not antecedent_holds(E, T, S).
+
+holds(G, T, S):- not weak_timepoint(T,S).
+
+holds(G, T, S):- not weak_timepoint(T,S).
+
+violation_holds(G,T,S):- not weak_timepoint(T,S).
+violation_holds(G,T,S):- not holds(G,T,S).
+
+violated(S):- not weak_timepoint(T,S).
+
+entailed(S):- not violated(S).
+

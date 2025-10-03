@@ -59,9 +59,26 @@ timepoint_of_op(eventually,T1,T2,S) :-
 
 weak_timepoint_atom(weak_t).
 
+next_timepoint_exists(T1,S):-
+    timepoint(T1,S),
+    timepoint(T2,S),
+    not weak_timepoint(T2,S),
+    next(T2,T1,S).
+
+weak_timepoint(X,S):-
+    weak_timepoint_atom(X),
+    timepoint(T,S),
+    not next_timepoint_exists(T,S).
+
 timepoint(T,S):-
     trace(S),
     weak_timepoint(T,S).
+
+next(X,T,S):-
+    weak_timepoint(X,S),
+    timepoint(T,S),
+    not weak_timepoint(T,S),
+    not next_timepoint_exists(T,S).
 
 holds_at(A,T,S):-
     atom(A),
@@ -72,6 +89,9 @@ not_holds_at(A,T,S):-
     atom(A),
     weak_timepoint(T,S),
     trace(S).
+
+root_consequent_holds(OP,E,T,S):-
+    root_consequent_holds(OP,E,I,T,S).
 
 % GR(1) Rules
 

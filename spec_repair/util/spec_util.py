@@ -275,11 +275,16 @@ def trace_single_to_asp_form(trace: List[str]) -> str:
         max_timepoint = max(max_timepoint, int(timepoint))
     # TODO: understand why violation name is the last line of the trace
     violation_name = trace[-1].split(",")[-1].replace(").", "")
+    loop_completion = complete_loop_if_necessary(violation_name, max_timepoint)
     output = f"trace({violation_name}).\n\n"
     output += create_time_fact(max_timepoint + 1, "timepoint", [0, violation_name])
+    if not loop_completion:
+        output += f"weak_timepoint(weak_t,{violation_name}).\n"
     output += create_time_fact(max_timepoint, "next", [1, 0, violation_name])
+    if not loop_completion:
+        output += f"next(weak_t,{max_timepoint},{violation_name}).\n"
 
-    output += complete_loop_if_necessary(violation_name, max_timepoint)
+    output += loop_completion
     output += '\n' + '\n'.join(trace) + '\n'
     return output
 

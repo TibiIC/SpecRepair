@@ -1,10 +1,7 @@
 from typing import Optional
 
-import pandas as pd
-
 from spec_repair.config import PROJECT_PATH
 from spec_repair.util.file_util import read_file_lines
-from spec_repair.util.spec_util import create_signature
 
 
 class SpecGenerator:
