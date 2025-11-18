@@ -53,7 +53,7 @@ class TestSpotFormatter(unittest.TestCase):
     def test_complex_prev_formula(self):
         f = Globally(Implies(And(And(AtomicProposition("pump", True), Prev(AtomicProposition("pump", True))), Prev(Prev(AtomicProposition("pump", True)))),
                              Next(AtomicProposition("highwater", False))))
-        self.assertEqual(self.formatter.format(f), "G(((X(X(pump) & X(pump) & pump) -> X(X(X(!highwater)))))")
+        self.assertEqual("G(((X((X(pump) & pump)) & pump) -> X(X(X(!highwater)))))", self.formatter.format(f))
 
 
 if __name__ == "__main__":

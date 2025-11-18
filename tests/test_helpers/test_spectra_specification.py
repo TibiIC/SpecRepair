@@ -418,17 +418,17 @@ root_consequent_holds(OP,guarantee4,1,T1,S):-
         spec_strong: SpectraSpecification = SpectraSpecification.from_file(
             "../input-files/case-studies/spectra/minepump/strong.spectra")
 
-        formatter = SpotSpecificationFormatter(GR1FormulaType.ASM)
+        formatter = SpotSpecificationFormatter(GR1FormulaType.ASM, not_initial=True)
         spec_ideal_spot: str = spec_ideal.to_formatted_string(formatter)
-        self.assertEqual("G(pump&X(pump)->XX(!highwater))", spec_ideal_spot)
+        self._equiv("G(pump&X(pump)->XX(!highwater))", spec_ideal_spot)
         spec_strong_spot: str = spec_strong.to_formatted_string(formatter)
-        self.assertEqual("G(pump&X(pump)->XX(!highwater))&G(!highwater|!methane)", spec_strong_spot)
+        self._equiv("G(pump&X(pump)->XX(!highwater))&G(!highwater|!methane)", spec_strong_spot)
 
-        formatter = SpotSpecificationFormatter(GR1FormulaType.GAR)
+        formatter = SpotSpecificationFormatter(GR1FormulaType.GAR, not_initial=True)
         spec_ideal_spot: str = spec_ideal.to_formatted_string(formatter)
-        self.assertEqual("G(highwater&!methane->X(pump))&G(methane->X(!pump))", spec_ideal_spot)
+        self._equiv("G(highwater&!methane->X(pump))&G(methane->X(!pump))", spec_ideal_spot)
         spec_strong_spot: str = spec_strong.to_formatted_string(formatter)
-        self.assertEqual("G(highwater->X(pump))&G(methane->X(!pump))", spec_strong_spot)
+        self._equiv("G(highwater->X(pump))&G(methane->X(!pump))", spec_strong_spot)
 
     def test_eq_identical_strings(self):
         spec_1 = SpectraSpecification.from_str(spec_perf)

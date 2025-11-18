@@ -2,13 +2,14 @@ from copy import deepcopy
 from typing import Optional
 
 from spec_repair.helpers.spot_formula_formatter import SpotFormulaFormatter
-from spec_repair.ltl_types import GR1FormulaType
+from spec_repair.ltl_types import GR1FormulaType, GR1TemporalType
 
 
 class SpotSpecificationFormatter:
-    def __init__(self, type: Optional[GR1FormulaType] = None):
+    def __init__(self, type: Optional[GR1FormulaType] = None, not_initial: bool = False):
         self._formula_formatter = SpotFormulaFormatter()
         self._type = type
+        self._not_initial = not_initial
 
     def format(self, spec) -> str:
         """Formats formulas from specification to SPOT format string.
@@ -25,10 +26,14 @@ class SpotSpecificationFormatter:
         gar_formulas = []
         if self._type is not GR1FormulaType.GAR:
             for _, row in spec._formulas_df[spec._formulas_df.type == GR1FormulaType.ASM].iterrows():
+                if self._not_initial and row.when == GR1TemporalType.INITIAL:
+                    continue
                 asm_formulas.append(row.formula)
 
         if self._type is not GR1FormulaType.ASM:
             for _, row in spec._formulas_df[spec._formulas_df.type == GR1FormulaType.GAR].iterrows():
+                if self._not_initial and row.when == GR1TemporalType.INITIAL:
+                    continue
                 gar_formulas.append(row.formula)
 
         asms = '&'.join([f.to_str(self._formula_formatter) for f in asm_formulas])
