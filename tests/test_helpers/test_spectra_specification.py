@@ -1,7 +1,11 @@
 import os
 import unittest
+from typing import Tuple
 from unittest import TestCase
+# import warnings
+# warnings.simplefilter('always', DeprecationWarning)
 
+import numpy as np
 import pandas as pd
 import spot
 
@@ -429,6 +433,16 @@ root_consequent_holds(OP,guarantee4,1,T1,S):-
         self._equiv("G(highwater&!methane->X(pump))&G(methane->X(!pump))", spec_ideal_spot)
         spec_strong_spot: str = spec_strong.to_formatted_string(formatter)
         self._equiv("G(highwater->X(pump))&G(methane->X(!pump))", spec_strong_spot)
+
+    def test_weakness_measurement(self):
+        spec_ideal: SpectraSpecification = SpectraSpecification.from_file(
+            "../input-files/case-studies/spectra/minepump/ideal.spectra")
+        spec_ideal_weakness: Tuple[np.float64, np.float64, int, np.float64] = spec_ideal.get_weakness(GR1FormulaType.ASM)
+        print(spec_ideal_weakness)
+        spec_strong: SpectraSpecification = SpectraSpecification.from_file(
+            "../input-files/case-studies/spectra/minepump/strong.spectra")
+        spec_strong_weakness: Tuple[np.float64, np.float64, int, np.float64] = spec_strong.get_weakness(GR1FormulaType.ASM)
+        print(spec_strong_weakness)
 
     def test_eq_identical_strings(self):
         spec_1 = SpectraSpecification.from_str(spec_perf)

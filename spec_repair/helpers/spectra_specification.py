@@ -3,8 +3,9 @@ import os
 import re
 import subprocess
 from copy import deepcopy
-from typing import TypedDict, Optional, TypeVar, List, Set, Any, Callable
+from typing import TypedDict, Optional, TypeVar, List, Set, Any, Callable, Tuple
 
+import numpy as np
 import pandas as pd
 import spot
 
@@ -22,6 +23,7 @@ from spec_repair.ltl_types import GR1FormulaType, GR1TemporalType
 from spec_repair.util.file_util import read_file_lines, validate_spectra_file
 from spec_repair.util.formula_util import get_disjuncts_from_disjunction
 from spec_repair.util.spec_util import format_spec
+from spec_repair.weakness_measurement_davide.weakness_user_friendly import computeWeakness
 
 
 class FormulaDataPoint(TypedDict):
@@ -275,6 +277,29 @@ class SpectraSpecification(ISpecification):
         f1 = spot.formula(self.to_formatted_string(SpotSpecificationFormatter(formula_type)))
         f2 = spot.formula(formula)
         return spot.are_equivalent(f1, f2)
+
+    def get_weakness(self, type: GR1FormulaType = GR1FormulaType.ASM) -> Tuple[np.float64, np.float64, int, np.float64]:
+        """
+        Calculate weakness measure between two specifications based on Davide Cavezza's paper
+        "A Weakness Measure for GR(1) Formulae". This method implements the quantitative
+        weakness relation where a higher value indicates a weaker (more permissive) specification.
+        The measure is calculated by comparing the traces accepted by both specifications.
+
+        Args:
+            type: The type of formulas to compare (assumptions or guarantees)
+
+        Returns:
+            Tuple containing:
+                - float: First component of the weakness measure (entropy-based)
+                - float: Second component of the weakness measure (Hausdorff distance-based)
+                - int: Third component indicating total number of traces
+                - float: Third component of the weakness measure (Hausdorff distance-based on Fairness formulas)
+        """
+
+        formatter = SpotSpecificationFormatter(type, not_initial=True)
+        this_spot: str = self.to_formatted_string(formatter)
+        signature: List[str] = [atom.name for atom in self.get_atoms()]
+        return computeWeakness(this_spot, signature)
 
 
 def does_left_imply_right(left_exp: str, right_exp: str) -> bool:
