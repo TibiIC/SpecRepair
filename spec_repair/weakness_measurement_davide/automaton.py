@@ -112,67 +112,102 @@ class Automaton:
 
 
     def _convertHOA2Automaton(self, hoa_stream):
-        """Converts Spot's text description format of a BA into an edge-labelled graph"""
-        # Regex patterns for file scanning
-        re_initstates = re.compile(r"Start: (\d+)")
-        re_numstates = re.compile(r"States: (\d+)")
-        re_srcstate = re.compile(r"State: (\d+)( \{\d+\})?")
-        re_edges = re.compile(r"\[(.+)\] (\d+)")
-        re_numbers = re.compile(r"([0-9]+)")
+        """Robust parsing of Spot's HOA format without relying on strict ordering."""
 
-        linematch = re.match(re_numstates, hoa_stream.readline().decode('utf-8'))
-        i = 1
-        while linematch is None:
-            i += 1
-            linematch = re.match(re_numstates, hoa_stream.readline().decode('utf-8'))
-        self.numstates = int(linematch.group(1))
+        # ---- Read and normalize entire HOA text ----
+        text = hoa_stream.read().decode('utf-8', errors='replace')
+        lines = [line.strip() for line in text.splitlines()]
 
-        # Finds the initial state's id. We are assuming a single initial state (deterministic automaton)
-        linematch = re.match(re_initstates, hoa_stream.readline().decode('utf-8'))
-        while linematch is None:
-            linematch = re.match(re_initstates, hoa_stream.readline().decode('utf-8'))
-        self.init_states.append(int(linematch.group(1)))
+        # ---- helpers ----
+        def find_line(prefix):
+            for line in lines:
+                if line.startswith(prefix):
+                    return line
+            return None
 
-        # Gets the set of variables used in the HOA
-        hoa_line = hoa_stream.readline().decode('utf-8')
-        while(not hoa_line.startswith("AP:")):
-            hoa_line = hoa_stream.readline().decode('utf-8')
-        try:
-            self.constrained_var_set = hoa_line[hoa_line.index("\"") + 1:-2].split("\" \"")
-        except ValueError:
-            # In case the formula is equivalent to FALSE, the formula is empty and the AP: line is "AP: 0".
-            # In this case the index("\"") function above raises an exception, and the automaton is empty.
-            # In case the formula is TRUE, it is written 't' in HOA syntax and again the AP: line is "AP: 0"
+        # -------------------------
+        # 1. Parse number of states
+        # -------------------------
+        m = re.search(r"States:\s*(\d+)", text)
+        if not m:
+            raise ValueError("Could not find 'States:' entry in HOA.")
+        self.numstates = int(m.group(1))
+
+        # -------------------------
+        # 2. Parse initial states
+        # -------------------------
+        m = re.search(r"Start:\s*([0-9 ]+)", text)
+        if not m:
+            raise ValueError("Could not find 'Start:' entry in HOA.")
+
+        init_list = [int(s) for s in m.group(1).split()]
+        if not init_list:
+            raise ValueError("HOA reports no initial states.")
+
+        self.init_states = init_list[:1]  # take first (Spot only uses one)
+
+        # -------------------------
+        # 3. Parse atomic propositions (AP section)
+        # -------------------------
+        ap_line = find_line("AP:")
+        if ap_line is None:
+            raise ValueError("Could not find AP: entry in HOA.")
+
+        # Example: AP: 3 "p" "q" "r"
+        m = re.match(r'AP:\s*(\d+)(.*)', ap_line)
+        ap_count = int(m.group(1))
+
+        if ap_count == 0:
+            # TRUE/FALSE case
             self.constrained_var_set = self.var_set
+        else:
+            # Extract strings inside quotes
+            props = re.findall(r'"([^"]+)"', ap_line)
+            self.constrained_var_set = props
 
-        # Finds all the transitions
-        inline = hoa_stream.readline().decode('utf-8')
-        #i = 1
-        while inline != "":
-            #print "spot_out transitions: Reading line "+str(i)
-            #i += 1
-            linematch = re.match(re_srcstate,inline)
-            if linematch is not None:
-                # cursrc contains the source state of each upcoming transition
-                cursrc = int(linematch.group(1))
-                if linematch.group(2) is not None:
-                    # The "{x}" string is contained in the line, therefore it is an accepting state
-                    self.accepting_states.append(cursrc)
+        # -------------------------
+        # 4. Parse all states and transitions
+        # -------------------------
+        self.accepting_states = []
+        self.edges = []
 
-            else:
-                linematch = re.match(re_edges,inline)
-                if linematch is not None:
-                    # Reformat edge formula so that it can be read by dd module
-                    # Replace variable id with name and replace negation symbol
-                    #formula = (re.sub(re_numbers,"var\g<1>",linematch.group(1))).replace("!","~")
-                    formula = re_numbers.sub(lambda x: self.constrained_var_set[int(x.group())],linematch.group(1))
-                    formula = re.sub(r"\bt\b","TRUE",formula)
-                    if self.reduced:
-                        self.edges.append([cursrc, formula, int(linematch.group(2)), self._getEdgeReducedMultiplicity(formula)])
-                    else:
-                        self.edges.append([cursrc, formula, int(linematch.group(2)), self._getEdgeMultiplicity(formula)])
+        # Regex patterns
+        state_header_re = re.compile(r"State:\s*(\d+)(?:\s*\{([^}]*)\})?")
+        edge_re = re.compile(r'\[(.*?)\]\s*([0-9]+)')
 
-            inline = hoa_stream.readline().decode('utf-8')
+        current_state = None
+
+        for line in lines:
+            # Match state headers
+            st = state_header_re.match(line)
+            if st:
+                current_state = int(st.group(1))
+                if st.group(2) is not None:
+                    # Accepting state
+                    self.accepting_states.append(current_state)
+                continue
+
+            # Match transitions
+            ed = edge_re.match(line)
+            if ed and current_state is not None:
+                raw_formula = ed.group(1)
+                dst = int(ed.group(2))
+
+                # Replace AP index numbers with actual variable names
+                def repl(m):
+                    idx = int(m.group())
+                    return self.constrained_var_set[idx]
+
+                formula = re.sub(r'\b[0-9]+\b', repl, raw_formula)
+                formula = formula.replace("!", "~")
+                formula = re.sub(r"\bt\b", "TRUE", formula)
+
+                if self.reduced:
+                    multiplicity = self._getEdgeReducedMultiplicity(formula)
+                else:
+                    multiplicity = self._getEdgeMultiplicity(formula)
+
+                self.edges.append([current_state, formula, dst, multiplicity])
 
     def _getEdgeMultiplicity(self,formula):
         """Returns the number of variable assignments satisfying the label formula in edge"""

@@ -439,6 +439,13 @@ root_consequent_holds(OP,guarantee4,1,T1,S):-
             "../input-files/case-studies/spectra/minepump/ideal.spectra")
         spec_strong: SpectraSpecification = SpectraSpecification.from_file(
             "../input-files/case-studies/spectra/minepump/strong.spectra")
+
+        spec_ideal_weakness: Tuple[np.float64, np.float64, int, np.float64] = spec_ideal.get_weakness(None)
+        print(spec_ideal_weakness)
+        spec_strong_weakness: Tuple[np.float64, np.float64, int, np.float64] = spec_strong.get_weakness(None)
+        print(spec_strong_weakness)
+        self.assertLessEqual(spec_strong_weakness, spec_ideal_weakness)
+
         spec_ideal_weakness_asm: Tuple[np.float64, np.float64, int, np.float64] = spec_ideal.get_weakness(GR1FormulaType.ASM)
         print(spec_ideal_weakness_asm)
         spec_strong_weakness_asm: Tuple[np.float64, np.float64, int, np.float64] = spec_strong.get_weakness(GR1FormulaType.ASM)

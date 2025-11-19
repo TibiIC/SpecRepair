@@ -80,19 +80,38 @@ if __name__ == '__main__':
         print(f"LaTeX output: {'enabled' if use_latex else 'disabled'}")
     if is_verbose:
         print("Starting weakness statistics generation...")
+        
     # Initialise statistics data structures
     weakness_statistics = defaultdict(int)
+    weakness_values = []
     # Get all specifications from the directory
     all_files_with_specs = get_files_with_specs_from_directory(spec_directory_path)
     for file_path, spec in all_files_with_specs:
         if is_verbose:
             print(f"Processing specification file: {file_path}")
-        weakness = spec.get_weakness(GR1FormulaType.GAR)
+        weakness = spec.get_weakness(GR1FormulaType.ASM)
         weakness_statistics[weakness] += 1
+        weakness_values.append(weakness)
+
+    # Create mapping of weakness to rank (1=weakest, max=strongest)
+    sorted_weakness = sorted(set(weakness_values))
+    weakness_to_rank = {w: i + 1 for i, w in enumerate(sorted_weakness)}
+
+    if is_verbose:
+        print("\nWeakness rankings:")
+        for file_path, spec in all_files_with_specs:
+            weakness = spec.get_weakness(GR1FormulaType.ASM)
+            rank = weakness_to_rank[weakness]
+            print(f"{file_path}: weakness {weakness} (rank {rank} of {len(sorted_weakness)})")
+
     # Plot distribution
     plt.figure(figsize=(10, 6))
     x_values = list(weakness_statistics.keys())
     y_values = list(weakness_statistics.values())
+
+    # Sort based on x values
+    sorted_pairs = sorted(zip(x_values, y_values))
+    x_values, y_values = zip(*sorted_pairs)
 
     plt.bar(range(len(x_values)), y_values)
     plt.xticks(range(len(x_values)), [str(x) for x in x_values], rotation=45)
