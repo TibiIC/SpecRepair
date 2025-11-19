@@ -5,14 +5,53 @@ from spec_repair.weakness_measurement_davide import syntax_utils as su
 
 
 class Weakness:
-    """Weakness measurement for a single GR(1) formula"""
-    def __init__(self, d1, d2, nummaxentropysccs=None, d3=None):
-        self.d1 = d1 or -np.inf
+    """This class is used to define the correct ordering of the weakness measure"""
+    def __init__(self, d1, d2, nummaxentropysccs, d3):
+        self.d1 = d1 if d1 is not None else -np.inf
         self.d2 = d2
         self.nummaxentropysccs = nummaxentropysccs
         self.d3 = d3
 
+    def __lt__(self, other):
+        if not np.isclose(self.d1, other.d1, 1e-9, 1e-9):
+            return self.d1 < other.d1
+        elif not np.isclose(self.d2, other.d2, 1e-9, 1e-9):
+            return self.d2 < other.d2
+        else:
+            return self.nummaxentropysccs < other.nummaxentropysccs \
+                or (self.nummaxentropysccs == other.nummaxentropysccs and self.d3 > other.d3)
+
+    def __gt__(self, other):
+        if not np.isclose(self.d1, other.d1, 1e-9, 1e-9):
+            return self.d1 > other.d1
+        elif not np.isclose(self.d2, other.d2, 1e-9, 1e-9):
+            return self.d2 > other.d2
+        else:
+            return self.nummaxentropysccs > other.nummaxentropysccs \
+                or (self.nummaxentropysccs == other.nummaxentropysccs and self.d3 < other.d3)
+
+    def __le__(self, other):
+        return not self > other
+
+    def __ge__(self, other):
+        return not self < other
+
+    def __eq__(self, other):
+        return (self >= other) and (self <= other)
+
+    def __hash__(self):
+        # Round floats to avoid tiny floating point differences affecting the hash
+        return hash((
+            round(self.d1, 9),
+            round(self.d2, 9),
+            self.nummaxentropysccs,
+            round(self.d3, 9)
+        ))
+
     def __str__(self):
+        return str((self.d1, self.d2, self.nummaxentropysccs, self.d3))
+
+    def __repr__(self):
         return str((self.d1, self.d2, self.nummaxentropysccs, self.d3))
 
 def computeWeakness(formula, var_set):

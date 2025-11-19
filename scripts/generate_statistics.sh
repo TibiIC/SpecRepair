@@ -1,15 +1,16 @@
 #!/bin/bash
 
+# Get current date in _YYYY-MM-DD format
+date=$(date +_%Y-%m-%d)
+
 # Define array of tuples (folder path and file path)
 declare -a experiments=(
     "tests/test_files/out/arbiter input-files/case-studies/spectra/arbiter/ideal.spectra"
     "tests/test_files/out/lift input-files/case-studies/spectra/lift/ideal.spectra"
     "tests/test_files/out/minepump input-files/case-studies/spectra/minepump/ideal.spectra"
-    "tests/test_files/out/traffic-single input-files/case-studies/spectra/traffic-single/ideal.spectra"
-    "tests/test_files/out/traffic-updated input-files/case-studies/spectra/traffic-updated/ideal.spectra"
+    "tests/test_files/out/traffic_single input-files/case-studies/spectra/traffic-single/ideal.spectra"
+    "tests/test_files/out/traffic_updated input-files/case-studies/spectra/traffic-updated/ideal.spectra"
 )
-
-date="_2025-06-01"
 
 for pair in "${experiments[@]}"; do
     # Split the pair into folder and file
