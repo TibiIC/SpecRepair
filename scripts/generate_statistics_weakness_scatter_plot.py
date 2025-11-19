@@ -29,7 +29,7 @@ def _get_arguments_from_cmd_line():
         type=str,
         help='Path to an ideal specification file for comparison'
     )
-    compare_type: Optional[GR1FormulaType] = GR1FormulaType.ASM
+    compare_type: Optional[GR1FormulaType] = GR1FormulaType.GAR
     parser.add_argument(
         '-v', '--verbose',
         action='store_true',
@@ -116,31 +116,45 @@ if __name__ == '__main__':
             rank = weakness_to_rank[weakness]
             print(f"{file_path}: weakness {weakness} (rank {rank} of {len(sorted_weakness)})")
 
-    # Plot distribution
-    plt.figure(figsize=(10, 6))
+    # Sort entries
     x_values = list(weakness_statistics.keys())
     y_values = list(weakness_statistics.values())
-
-    # Sort based on x values
     sorted_pairs = sorted(zip(x_values, y_values))
     x_values, y_values = zip(*sorted_pairs)
 
-    # Create regular specification bars
-    bars = plt.bar(range(len(x_values)), y_values, label='Regular Specifications', color='skyblue')
+    # Prepare figure
+    plt.figure(figsize=(10, 6))
 
-    # Add ideal specification if provided
+    # Map weakness → numeric index for x-axis
+    x_positions = range(len(x_values))
+
+    # Plot scatter points (one dot per spec)
+    plt.scatter(x_positions, y_values, label='Regular Specifications')
+
+    # Plot ideal specification if provided
     if ideal_spec_path:
         ideal_weakness = ideal_spec.get_weakness(compare_type)
-        ideal_x = list(x_values).index(ideal_weakness) if ideal_weakness in x_values else len(x_values)
-        plt.bar(ideal_x, weakness_statistics[ideal_weakness], color='red', label='Ideal Specification')
+        if ideal_weakness in x_values:
+            ideal_index = list(x_values).index(ideal_weakness)
+            plt.scatter([ideal_index], [weakness_statistics[ideal_weakness]],
+                        color='red', s=80, label='Ideal Specification')
+        else:
+            # Ideal is outside range → append on the right
+            ideal_index = len(x_values)
+            plt.scatter([ideal_index], [weakness_statistics[ideal_weakness]],
+                        color='red', s=80, label='Ideal Specification')
+            x_positions = list(x_positions) + [ideal_index]
+            x_values = list(x_values) + [ideal_weakness]
 
-    plt.xticks(range(len(x_values)), [f"{x.d1:.3f}" for x in x_values], rotation=45)
+    # Label the x-axis with a short representation of weakness (d1 only)
+    plt.xticks(x_positions, [f"{w.d2:.3f}" for w in x_values], rotation=45)
+
     plt.xlabel("Weakness (d1 component)")
-    plt.ylabel('Number of Specifications')
-    plt.title('Distribution of Specification Weaknesses')
+    plt.ylabel("Number of Specifications")
+    plt.title("Distribution of Specification Weaknesses (Scatter Plot)")
     plt.legend()
 
-    # plt.tight_layout()
+    # Save or show
     if output_path:
         plt.savefig(output_path, bbox_inches='tight')
         plt.close()
