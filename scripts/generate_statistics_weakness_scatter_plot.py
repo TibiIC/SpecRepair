@@ -116,45 +116,41 @@ if __name__ == '__main__':
             rank = weakness_to_rank[weakness]
             print(f"{file_path}: weakness {weakness} (rank {rank} of {len(sorted_weakness)})")
 
-    # Sort entries
+    # Sort entries by weakness
     x_values = list(weakness_statistics.keys())
     y_values = list(weakness_statistics.values())
     sorted_pairs = sorted(zip(x_values, y_values))
     x_values, y_values = zip(*sorted_pairs)
 
-    # Prepare figure
+    # Extract a numeric projection for the x-axis (choose d1 or d2)
+    xs = [w.d2 for w in x_values]  # ← change to w.d1 if you prefer
+    ys = list(y_values)
+
     plt.figure(figsize=(10, 6))
 
-    # Map weakness → numeric index for x-axis
-    x_positions = range(len(x_values))
+    # Plot actual numeric positions
+    plt.scatter(xs, ys, label='Regular Specifications')
 
-    # Plot scatter points (one dot per spec)
-    plt.scatter(x_positions, y_values, label='Regular Specifications')
-
-    # Plot ideal specification if provided
+    # Ideal specification
     if ideal_spec_path:
-        ideal_weakness = ideal_spec.get_weakness(compare_type)
-        if ideal_weakness in x_values:
-            ideal_index = list(x_values).index(ideal_weakness)
-            plt.scatter([ideal_index], [weakness_statistics[ideal_weakness]],
-                        color='red', s=80, label='Ideal Specification')
+        ideal = ideal_spec.get_weakness(compare_type)
+        ideal_x = ideal.d2  # <- must match the component chosen above
+        ideal_y = weakness_statistics.get(ideal, None)
+
+        if ideal_y is not None:
+            plt.scatter([ideal_x], [ideal_y], color='red', s=80, label='Ideal Specification')
         else:
-            # Ideal is outside range → append on the right
-            ideal_index = len(x_values)
-            plt.scatter([ideal_index], [weakness_statistics[ideal_weakness]],
-                        color='red', s=80, label='Ideal Specification')
-            x_positions = list(x_positions) + [ideal_index]
-            x_values = list(x_values) + [ideal_weakness]
+            # Add as extra point
+            plt.scatter([ideal.d2], [0], color='red', s=80, label='Ideal Specification')
 
-    # Label the x-axis with a short representation of weakness (d1 only)
-    plt.xticks(x_positions, [f"{w.d2:.3f}" for w in x_values], rotation=45)
+    # Tick labels = formatted numeric weakness values
+    plt.xticks(xs, [f"{w.d2:.3f}" for w in x_values], rotation=45)
 
-    plt.xlabel("Weakness (d1 component)")
+    plt.xlabel("Weakness (d2 component)")
     plt.ylabel("Number of Specifications")
     plt.title("Distribution of Specification Weaknesses (Scatter Plot)")
     plt.legend()
 
-    # Save or show
     if output_path:
         plt.savefig(output_path, bbox_inches='tight')
         plt.close()
