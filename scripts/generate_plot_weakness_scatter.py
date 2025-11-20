@@ -29,7 +29,13 @@ def _get_arguments_from_cmd_line():
         type=str,
         help='Path to an ideal specification file for comparison'
     )
-    compare_type: Optional[GR1FormulaType] = GR1FormulaType.ASM
+    parser.add_argument(
+        '--compare-type',
+        type=str,
+        choices=['ASM', 'GAR', 'NONE'],
+        default='GAR',
+        help='Type of formulas to compare: ASM (assumptions), GAR (guarantees), or NONE'
+    )
     parser.add_argument(
         '-v', '--verbose',
         action='store_true',
@@ -67,6 +73,7 @@ def _get_arguments_from_cmd_line():
             raise NotADirectoryError(f"The specified path is not a file: {ideal_spec_path}")
     else:
         ideal_spec_path = None
+    compare_type = None if args.compare_type == 'NONE' else getattr(GR1FormulaType, args.compare_type)
     return spec_directory_path, args.verbose, compare_type, args.output, args.latex, ideal_spec_path
 
 if __name__ == '__main__':
@@ -116,31 +123,41 @@ if __name__ == '__main__':
             rank = weakness_to_rank[weakness]
             print(f"{file_path}: weakness {weakness} (rank {rank} of {len(sorted_weakness)})")
 
-    # Plot distribution
-    plt.figure(figsize=(10, 6))
+    # Sort entries by weakness
     x_values = list(weakness_statistics.keys())
     y_values = list(weakness_statistics.values())
-
-    # Sort based on x values
     sorted_pairs = sorted(zip(x_values, y_values))
     x_values, y_values = zip(*sorted_pairs)
 
-    # Create regular specification bars
-    bars = plt.bar(range(len(x_values)), y_values, label='Regular Specifications', color='skyblue')
+    # Extract a numeric projection for the x-axis (choose d1 or d2)
+    xs = [w.d2 for w in x_values]  # ← change to w.d1 if you prefer
+    ys = list(y_values)
 
-    # Add ideal specification if provided
+    plt.figure(figsize=(10, 6))
+
+    # Plot actual numeric positions
+    plt.scatter(xs, ys, label='Regular Specifications')
+
+    # Ideal specification
     if ideal_spec_path:
-        ideal_weakness = ideal_spec.get_weakness(compare_type)
-        ideal_x = list(x_values).index(ideal_weakness) if ideal_weakness in x_values else len(x_values)
-        plt.bar(ideal_x, weakness_statistics[ideal_weakness], color='red', label='Ideal Specification')
+        ideal = ideal_spec.get_weakness(compare_type)
+        ideal_x = ideal.d2  # <- must match the component chosen above
+        ideal_y = weakness_statistics.get(ideal, None)
 
-    plt.xticks(range(len(x_values)), [f"{x.d1:.3f}" for x in x_values], rotation=45)
-    plt.xlabel("Weakness (d1 component)")
-    plt.ylabel('Number of Specifications')
-    plt.title('Distribution of Specification Weaknesses')
+        if ideal_y is not None:
+            plt.scatter([ideal_x], [ideal_y], color='red', s=80, label='Ideal Specification')
+        else:
+            # Add as extra point
+            plt.scatter([ideal.d2], [0], color='red', s=80, label='Ideal Specification')
+
+    # Tick labels = formatted numeric weakness values
+    plt.xticks(xs, [f"{w.d2:.3f}" for w in x_values], rotation=45)
+
+    plt.xlabel("Weakness (d2 component)")
+    plt.ylabel("Number of Specifications")
+    plt.title("Distribution of Specification Weaknesses (Scatter Plot)")
     plt.legend()
 
-    # plt.tight_layout()
     if output_path:
         plt.savefig(output_path, bbox_inches='tight')
         plt.close()
