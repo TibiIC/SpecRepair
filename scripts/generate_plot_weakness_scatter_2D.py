@@ -29,6 +29,9 @@ def _get_arguments_from_cmd_line():
     )
     parser.add_argument('--ideal-spec', type=str, help='Path to an ideal specification file for comparison')
     parser.add_argument('--original-spec', type=str, help='Path to the initial specification file for comparison')
+    parser.add_argument('--trivial-specs', type=str, nargs='+',
+                        help='Paths to trivial specification files for comparison')
+
     parser.add_argument(
         '--compare-type',
         type=str,
@@ -48,13 +51,14 @@ def _get_arguments_from_cmd_line():
 
     ideal_spec_path = os.path.abspath(args.ideal_spec) if args.ideal_spec else None
     original_spec_path = os.path.abspath(args.original_spec) if args.original_spec else None
+    trivial_spec_paths = [os.path.abspath(path) for path in args.trivial_specs] if args.trivial_specs else None
     compare_type = None if args.compare_type == 'NONE' else getattr(GR1FormulaType, args.compare_type)
 
-    return spec_directory_path, args.verbose, compare_type, args.output, args.latex, ideal_spec_path, original_spec_path
+    return spec_directory_path, args.verbose, compare_type, args.output, args.latex, ideal_spec_path, original_spec_path, trivial_spec_paths
 
 
 if __name__ == '__main__':
-    spec_directory_path, is_verbose, compare_type, output_path, use_latex, ideal_spec_path, original_spec_path = _get_arguments_from_cmd_line()
+    spec_directory_path, is_verbose, compare_type, output_path, use_latex, ideal_spec_path, original_spec_path, trivial_spec_paths = _get_arguments_from_cmd_line()
 
     if is_verbose:
         print(f"Specification directory: {spec_directory_path}")
@@ -99,6 +103,14 @@ if __name__ == '__main__':
                         round(original_spec.get_weakness(GR1FormulaType.GAR).d2, precision))
         points_counter[original_key] += 0
 
+    # Include trivial specifications as reference
+    if trivial_spec_paths:
+        for path in trivial_spec_paths:
+            trivial_spec = SpectraSpecification.from_file(path)
+            trivial_key = (round(trivial_spec.get_weakness(GR1FormulaType.ASM).d2, precision),
+                           round(trivial_spec.get_weakness(GR1FormulaType.GAR).d2, precision))
+            points_counter[trivial_key] += 0
+
     # -----------------------------
     # Plotting
     # -----------------------------
@@ -117,10 +129,18 @@ if __name__ == '__main__':
         original_gar = original_spec.get_weakness(GR1FormulaType.GAR)
         original_point = (round(original_asm.d2, precision), round(original_gar.d2, precision))
 
+    trivial_points = []
+    if trivial_spec_paths:
+        for path in trivial_spec_paths:
+            trivial_spec = SpectraSpecification.from_file(path)
+            trivial_asm = trivial_spec.get_weakness(GR1FormulaType.ASM)
+            trivial_gar = trivial_spec.get_weakness(GR1FormulaType.GAR)
+            trivial_points.append((round(trivial_asm.d2, precision), round(trivial_gar.d2, precision)))
+
     # Flags so legend entries appear only once
     drew_ideal_legend = False
     drew_original_legend = False
-
+    drew_trivial_legend = False
 
     for (x, y), count in points_counter.items():
         # CASE 1: Ideal specification
@@ -161,7 +181,26 @@ if __name__ == '__main__':
                 ])
             continue
 
-        # CASE 3: Standard point
+        # CASE 3: Trivial specifications
+        if trivial_points and (x, y) in trivial_points:
+            plt.scatter(
+                x, y, s=star_size, color='darkblue', marker='*', edgecolor='black',
+                zorder=4,
+                label='Trivial Specification' if not drew_trivial_legend else None
+            )
+            drew_trivial_legend = True
+
+            if count > 1:
+                txt = plt.text(x, y, str(count),
+                               color='white', fontsize=count_fontsize, ha='center', va='center',
+                               fontweight='bold', zorder=5)
+                txt.set_path_effects([
+                    path_effects.Stroke(linewidth=2, foreground='black'),
+                    path_effects.Normal()
+                ])
+            continue
+
+        # CASE 4: Standard point
         plt.scatter(x, y, s=circle_size, color='skyblue', edgecolor='black', zorder=2)
 
         if count > 1:
@@ -189,6 +228,11 @@ if __name__ == '__main__':
     if original_spec_path:
         legend_elements.append(
             Patch(facecolor='red', edgecolor='black', label='Original Specification')
+        )
+
+    if trivial_spec_paths:
+        legend_elements.append(
+            Patch(facecolor='darkblue', edgecolor='black', label='Trivial Specification')
         )
 
     plt.legend(
