@@ -1,8 +1,10 @@
 import argparse
-import numpy as np
 from collections import Counter
 import os
 import matplotlib.pyplot as plt
+import matplotlib.patheffects as path_effects
+from matplotlib.legend_handler import HandlerPatch
+from matplotlib.patches import Patch
 
 from spec_repair.helpers.spectra_specification import SpectraSpecification
 from util import get_files_with_specs_from_directory
@@ -63,8 +65,9 @@ if __name__ == '__main__':
     # -----------------------------
     # Parameters for plotting
     # -----------------------------
-    circle_size = 200  # Dot size
-    count_fontsize = 12  # Font size for count
+    circle_size = 600  # Bigger circles
+    star_size = 2000  # Bigger stars
+    count_fontsize = 14  # Larger count labels
     jitter_amount = 0.005  # Small jitter for overlapping special points
     precision = 6  # Number of decimals to round for counter keys
 
@@ -101,31 +104,103 @@ if __name__ == '__main__':
     # -----------------------------
     plt.figure(figsize=(12, 9))
 
-    for (x, y), count in points_counter.items():
-        plt.scatter(x, y, s=circle_size, color='skyblue', edgecolor='black', zorder=2)
-        if count >= 1:
-            plt.text(x, y, str(count), color='red', fontsize=count_fontsize,
-                     ha='center', va='center', fontweight='bold', zorder=3)
-
-    # Highlight ideal specification
+    # Extract ideal/original actual d2 values again (rounded for plotting comparisons)
+    ideal_point = None
     if ideal_spec_path:
-        plt.scatter(ideal_key[0] + np.random.uniform(-jitter_amount, jitter_amount),
-                    ideal_key[1] + np.random.uniform(-jitter_amount, jitter_amount),
-                    s=250, color='green', marker='*', label='Ideal Specification', zorder=4)
+        ideal_asm = ideal_spec.get_weakness(GR1FormulaType.ASM)
+        ideal_gar = ideal_spec.get_weakness(GR1FormulaType.GAR)
+        ideal_point = (round(ideal_asm.d2, precision), round(ideal_gar.d2, precision))
 
-    # Highlight original specification
+    original_point = None
     if original_spec_path:
-        plt.scatter(original_key[0] + np.random.uniform(-jitter_amount, jitter_amount),
-                    original_key[1] + np.random.uniform(-jitter_amount, jitter_amount),
-                    s=250, color='red', marker='*', label='Original Specification', zorder=4)
+        original_asm = original_spec.get_weakness(GR1FormulaType.ASM)
+        original_gar = original_spec.get_weakness(GR1FormulaType.GAR)
+        original_point = (round(original_asm.d2, precision), round(original_gar.d2, precision))
 
+    # Flags so legend entries appear only once
+    drew_ideal_legend = False
+    drew_original_legend = False
+
+
+    for (x, y), count in points_counter.items():
+        # CASE 1: Ideal specification
+        if ideal_point is not None and (x, y) == ideal_point:
+            plt.scatter(
+                x, y, s=star_size, color='green', marker='*', edgecolor='black',
+                zorder=4,
+                label='Ideal Specification' if not drew_ideal_legend else None
+            )
+            drew_ideal_legend = True
+
+            if count > 1:
+                txt = plt.text(x, y, str(count),
+                               color='white', fontsize=count_fontsize, ha='center', va='center',
+                               fontweight='bold', zorder=5)
+                txt.set_path_effects([
+                    path_effects.Stroke(linewidth=2, foreground='black'),
+                    path_effects.Normal()
+                ])
+            continue
+
+        # CASE 2: Original specification
+        if original_point is not None and (x, y) == original_point:
+            plt.scatter(
+                x, y, s=star_size, color='red', marker='*', edgecolor='black',
+                zorder=4,
+                label='Original Specification' if not drew_original_legend else None
+            )
+            drew_original_legend = True
+
+            if count > 1:
+                txt = plt.text(x, y, str(count),
+                               color='white', fontsize=count_fontsize, ha='center', va='center',
+                               fontweight='bold', zorder=5)
+                txt.set_path_effects([
+                    path_effects.Stroke(linewidth=2, foreground='black'),
+                    path_effects.Normal()
+                ])
+            continue
+
+        # CASE 3: Standard point
+        plt.scatter(x, y, s=circle_size, color='skyblue', edgecolor='black', zorder=2)
+
+        if count > 1:
+            txt = plt.text(x, y, str(count),
+                           color='white', fontsize=count_fontsize, ha='center', va='center',
+                           fontweight='bold', zorder=3)
+            txt.set_path_effects([
+                path_effects.Stroke(linewidth=2, foreground='black'),
+                path_effects.Normal()
+            ])
+
+    # Axis labels and decoration
     plt.xlabel("Assumption-based Weakness (ASM)", fontsize=14)
     plt.ylabel("Guarantee-based Weakness (GAR)", fontsize=14)
     plt.title("Specification Weakness: ASM vs GAR", fontsize=16)
     plt.grid(True, linestyle='--', alpha=0.6)
-    plt.legend(fontsize=12)
+    # --- Legend: use smaller stars ---
+    legend_elements = []
+
+    if ideal_spec_path:
+        legend_elements.append(
+            Patch(facecolor='green', edgecolor='black', label='Ideal Specification')
+        )
+
+    if original_spec_path:
+        legend_elements.append(
+            Patch(facecolor='red', edgecolor='black', label='Original Specification')
+        )
+
+    plt.legend(
+        handles=legend_elements,
+        loc='upper left',
+        markerscale=0.4,  # << smaller markers
+        fontsize=12,
+        frameon=True
+    )
     plt.tight_layout()
 
+    # Save or show plot
     if output_path:
         plt.savefig(output_path, bbox_inches='tight', dpi=300)
         plt.close()
