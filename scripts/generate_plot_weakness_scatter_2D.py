@@ -3,7 +3,6 @@ from collections import Counter
 import os
 import matplotlib.pyplot as plt
 import matplotlib.patheffects as path_effects
-from matplotlib.legend_handler import HandlerPatch
 from matplotlib.patches import Patch
 
 from spec_repair.helpers.spectra_specification import SpectraSpecification
@@ -31,7 +30,6 @@ def _get_arguments_from_cmd_line():
     parser.add_argument('--original-spec', type=str, help='Path to the initial specification file for comparison')
     parser.add_argument('--trivial-specs', type=str, nargs='+',
                         help='Paths to trivial specification files for comparison')
-
     parser.add_argument(
         '--compare-type',
         type=str,
