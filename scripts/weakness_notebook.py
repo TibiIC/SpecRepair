@@ -15,6 +15,16 @@ df = pd.read_csv(CSV_PATH)
 
 print("Loaded", len(df), "rows.")
 
+# %%
+# ===============================================
+# SECTION 2.1 — Rewrite the CSV if it has -inf values
+# ===============================================
+if (df == -np.inf).any().any():
+    print("Replacing -inf with 0 and rewriting CSV...")
+    df.replace(-np.inf, 0, inplace=True)
+    df.to_csv(CSV_PATH, index=False)
+    print("Rewritten.")
+
 
 # %%
 # ===============================================
@@ -212,21 +222,21 @@ else:
 
 if not original_df.empty:
     orig_row = original_df.iloc[0]
+    asm_d, gar_d = dist_to_single(trivial_df, orig_row)
+    both_d = dist_to_single_combined(trivial_df, orig_row)
+    print("\n=== Trivial to Original ===")
+    print("ASM mean:", asm_d.mean(), "max:", asm_d.max(), "min:", asm_d.min())
+    print("GAR mean:", gar_d.mean(), "max:", gar_d.max(), "min:", gar_d.min())
+    print("BOTH mean:", both_d.mean(), "max:", both_d.max(), "min:", both_d.min())
+    # print("Euclid mean:", euc_d.mean(), "max:", euc_d.max())
+
     asm_d, gar_d = dist_to_single(normal_df, orig_row)
     both_d = dist_to_single_combined(normal_df, orig_row)
 
     print("\n=== Distances to Original ===")
-    print("ASM mean:", asm_d.mean(), "max:", asm_d.max())
-    print("GAR mean:", gar_d.mean(), "max:", gar_d.max())
-    print("BOTH mean:", both_d.mean(), "max:", both_d.max())
-    # print("Euclid mean:", euc_d.mean(), "max:", euc_d.max())
-
-    asm_d, gar_d = dist_to_single(trivial_df, orig_row)
-    both_d = dist_to_single_combined(trivial_df, orig_row)
-    print("\n=== Trivial to Original ===")
-    print("ASM mean:", asm_d.mean(), "max:", asm_d.max())
-    print("GAR mean:", gar_d.mean(), "max:", gar_d.max())
-    print("BOTH mean:", both_d.mean(), "max:", both_d.max())
+    print("ASM mean:", asm_d.mean(), "max:", asm_d.max(), "min:", asm_d.min())
+    print("GAR mean:", gar_d.mean(), "max:", gar_d.max(), "min:", gar_d.min())
+    print("BOTH mean:", both_d.mean(), "max:", both_d.max(), "min:", both_d.min())
 else:
     print("No original spec found.")
 

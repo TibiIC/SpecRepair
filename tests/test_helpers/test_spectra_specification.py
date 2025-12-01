@@ -1,6 +1,5 @@
 import os
 import unittest
-from typing import Tuple
 from unittest import TestCase
 # import warnings
 # warnings.simplefilter('always', DeprecationWarning)
@@ -18,6 +17,7 @@ from spec_repair.helpers.spectra_specification import SpectraSpecification
 from spec_repair.helpers.spectra_atom import SpectraAtom
 from spec_repair.helpers.spot_specification_formatter import SpotSpecificationFormatter
 from spec_repair.ltl_types import GR1FormulaType, GR1TemporalType
+from spec_repair.weakness_measurement_davide.weakness_user_friendly import Weakness
 from tests.test_common_utility_strings.specs import spec_perf, spec_fixed_perf, spec_fixed_imperf, \
     spec_asm_eq_gar_weaker, spec_asm_stronger_gar_eq
 
@@ -440,29 +440,37 @@ root_consequent_holds(OP,guarantee4,1,T1,S):-
         spec_strong: SpectraSpecification = SpectraSpecification.from_file(
             "../input-files/case-studies/spectra/minepump/strong.spectra")
 
-        spec_ideal_weakness: Tuple[np.float64, np.float64, int, np.float64] = spec_ideal.get_weakness(None)
+        spec_ideal_weakness: Weakness = spec_ideal.get_weakness(None)
         print(spec_ideal_weakness)
-        spec_strong_weakness: Tuple[np.float64, np.float64, int, np.float64] = spec_strong.get_weakness(None)
+        spec_strong_weakness: Weakness = spec_strong.get_weakness(None)
         print(spec_strong_weakness)
         self.assertLessEqual(spec_strong_weakness, spec_ideal_weakness)
 
-        spec_ideal_weakness_asm: Tuple[np.float64, np.float64, int, np.float64] = spec_ideal.get_weakness(GR1FormulaType.ASM)
+        spec_ideal_weakness_asm: Weakness = spec_ideal.get_weakness(GR1FormulaType.ASM)
         print(spec_ideal_weakness_asm)
-        spec_strong_weakness_asm: Tuple[np.float64, np.float64, int, np.float64] = spec_strong.get_weakness(GR1FormulaType.ASM)
+        spec_strong_weakness_asm: Weakness = spec_strong.get_weakness(GR1FormulaType.ASM)
         print(spec_strong_weakness_asm)
         self.assertLessEqual(spec_strong_weakness_asm, spec_ideal_weakness_asm)
 
-        spec_ideal_weakness_gar: Tuple[np.float64, np.float64, int, np.float64] = spec_ideal.get_weakness(GR1FormulaType.GAR)
+        spec_ideal_weakness_gar: Weakness = spec_ideal.get_weakness(GR1FormulaType.GAR)
         print(spec_ideal_weakness_gar)
-        spec_strong_weakness_gar: Tuple[np.float64, np.float64, int, np.float64] = spec_strong.get_weakness(GR1FormulaType.GAR)
+        spec_strong_weakness_gar: Weakness = spec_strong.get_weakness(GR1FormulaType.GAR)
         print(spec_strong_weakness_gar)
         self.assertLessEqual(spec_strong_weakness_gar, spec_ideal_weakness_gar)
 
     def test_weakness_measurement_exception(self):
         spec_trivial: SpectraSpecification = SpectraSpecification.from_file(
             "test_files/out/trivial_solutions/lift_0.spectra")
-        spec_trivial_weakness_gar: Tuple[np.float64, np.float64, int, np.float64] = spec_trivial.get_weakness(GR1FormulaType.GAR)
+        spec_trivial_weakness_gar: Weakness = spec_trivial.get_weakness(GR1FormulaType.GAR)
         print(spec_trivial_weakness_gar)
+
+    def test_weakness_measurement_response(self):
+        spec_trivial: SpectraSpecification = SpectraSpecification.from_file(
+            "test_files/minepump_weakenings/minepump_test_fix_14.spectra")
+        spec_trivial_weakness_gar: Weakness = spec_trivial.get_weakness(GR1FormulaType.GAR)
+        print(spec_trivial_weakness_gar)
+        self.assertGreater(spec_trivial_weakness_gar.d3, 0)
+        self.assertIsInstance(spec_trivial_weakness_gar.d3, np.float64)
 
     def test_eq_identical_strings(self):
         spec_1 = SpectraSpecification.from_str(spec_perf)

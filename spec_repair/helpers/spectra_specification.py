@@ -23,7 +23,7 @@ from spec_repair.ltl_types import GR1FormulaType, GR1TemporalType
 from spec_repair.util.file_util import read_file_lines, validate_spectra_file
 from spec_repair.util.formula_util import get_disjuncts_from_disjunction
 from spec_repair.util.spec_util import format_spec
-from spec_repair.weakness_measurement_davide.weakness_user_friendly import computeWeakness
+from spec_repair.weakness_measurement_davide.weakness_user_friendly import computeWeakness, Weakness
 
 
 class FormulaDataPoint(TypedDict):
@@ -278,7 +278,7 @@ class SpectraSpecification(ISpecification):
         f2 = spot.formula(formula)
         return spot.are_equivalent(f1, f2)
 
-    def get_weakness(self, type: GR1FormulaType = GR1FormulaType.ASM) -> Tuple[np.float64, np.float64, int, np.float64]:
+    def get_weakness(self, type: GR1FormulaType = GR1FormulaType.ASM) -> Weakness:
         """
         Calculate weakness measure between two specifications based on Davide Cavezza's paper
         "A Weakness Measure for GR(1) Formulae". This method implements the quantitative
