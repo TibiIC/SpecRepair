@@ -458,6 +458,12 @@ root_consequent_holds(OP,guarantee4,1,T1,S):-
         print(spec_strong_weakness_gar)
         self.assertLessEqual(spec_strong_weakness_gar, spec_ideal_weakness_gar)
 
+    def test_weakness_measurement_exception(self):
+        spec_trivial: SpectraSpecification = SpectraSpecification.from_file(
+            "test_files/out/trivial_solutions/lift_0.spectra")
+        spec_trivial_weakness_gar: Tuple[np.float64, np.float64, int, np.float64] = spec_trivial.get_weakness(GR1FormulaType.GAR)
+        print(spec_trivial_weakness_gar)
+
     def test_eq_identical_strings(self):
         spec_1 = SpectraSpecification.from_str(spec_perf)
         spec_2 = SpectraSpecification.from_str(spec_perf)

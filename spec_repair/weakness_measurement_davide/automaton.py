@@ -328,7 +328,7 @@ class Automaton:
                 if self.reduced:
                     # Overflow avoidance (see Notebook 2 pag. 6)
                     if maxeig == 0:
-                        entropy = -np.inf
+                        entropy = 0
                     else:
                         entropy = (len(self.var_set) - len(self.constrained_var_set) + np.log2(maxeig)) / len(self.var_set)
 
@@ -339,14 +339,14 @@ class Automaton:
 
 
     def getEntropy(self):
-        return max(self.getEntropiesSCCs() or [-np.inf])
+        return max(self.getEntropiesSCCs() or [0])
 
 
     def getHausdorffDimension(self):
         """Computes the Hausdorff Dimension of the automaton's accepted language."""
 
         accepting_sccs = self.getAcceptingSCCs()
-        hausdim = max([self.getEntropiesSCCs()[i] for i in accepting_sccs] or [-np.inf])
+        hausdim = max([self.getEntropiesSCCs()[i] for i in accepting_sccs] or [0])
         self.sccs_maxentropy = [self.sccs[i] for i in range(len(self.sccs)) if self.sccs_entropies[i] == hausdim]
         return hausdim
 

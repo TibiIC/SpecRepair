@@ -7,7 +7,7 @@ from spec_repair.weakness_measurement_davide import syntax_utils as su
 class Weakness:
     """This class is used to define the correct ordering of the weakness measure"""
     def __init__(self, d1, d2, nummaxentropysccs, d3):
-        self.d1 = d1 if d1 is not None else -np.inf
+        self.d1 = d1 if d1 is not None else 0
         self.d2 = d2
         self.nummaxentropysccs = nummaxentropysccs
         self.d3 = d3
@@ -79,7 +79,7 @@ def computeWeakness(formula, var_set):
         cfairness_automata = [a.Automaton("ltl", ltlFormula=f"G({cf})", var_set=var_set)
                               for cf in cfairness]
 
-        max_entropy_deleted_language = -np.inf
+        max_entropy_deleted_language = 0
         for scc_automaton in sccs_automata:
             for cfair_automaton in cfairness_automata:
                 intersection = a.IntersectionAutomaton(scc_automaton, cfair_automaton)
@@ -87,6 +87,6 @@ def computeWeakness(formula, var_set):
                 if entropy > max_entropy_deleted_language:
                     max_entropy_deleted_language = entropy
     else:
-        max_entropy_deleted_language = -np.inf
+        max_entropy_deleted_language = 0
 
     return Weakness(d1, d2, num_max_entropy_sccs, max_entropy_deleted_language)
