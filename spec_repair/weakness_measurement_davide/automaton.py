@@ -347,7 +347,10 @@ class Automaton:
 
         accepting_sccs = self.getAcceptingSCCs()
         hausdim = max([self.getEntropiesSCCs()[i] for i in accepting_sccs] or [0])
-        self.sccs_maxentropy = [self.sccs[i] for i in range(len(self.sccs)) if self.sccs_entropies[i] == hausdim]
+        self.sccs_maxentropy = [
+            scc for scc, ent in zip(self.sccs, self.sccs_entropies)
+            if ent == hausdim
+        ]
         return hausdim
 
 
