@@ -9,7 +9,8 @@ import numpy as np
 # ===============================================
 # SECTION 2 — Load CSV Once
 # ===============================================
-CSV_PATH = "scripts/weakness_results/minepump_2025-11-19/weakness_table.csv"  # <-- edit if needed
+CSV_PATH = "scripts/weakness_results/arbiter_2025-11-19/weakness_table_2.csv"  # <-- edit if needed
+case_study_name="Arbiter"
 
 df = pd.read_csv(CSV_PATH)
 
@@ -70,8 +71,8 @@ def dist_4d(normal_df, ref_row):
     return diffs, euclid
 
 def dist_to_single(normal, ref_row):
-    asm_dims = ["asm_d0", "asm_d1", "asm_d2", "asm_d3"]
-    gar_dims = ["gar_d0", "gar_d1", "gar_d2", "gar_d3"]
+    asm_dims = ["asm_d0", "asm_d1", "asm_d3"]
+    gar_dims = ["gar_d0", "gar_d1", "gar_d3"]
 
     # Load
     asm_ref = ref_row[asm_dims].to_numpy(float)
@@ -197,6 +198,38 @@ def relationship_stats(values: np.ndarray, x: float):
         "dominance": dominance,
     }
 
+
+def create_latex_table(normal_to_orig, triv_to_orig, case_study_name):
+    """Create a LaTeX table showing distance statistics."""
+    latex = [
+        "\\begin{table}[h]",
+        "\\centering",
+        "\\begin{tabular}{lllrrrr}",
+        "\\toprule",
+        "Case Study & Metric & Type & Mean & Min & Max & Std \\\\",
+        "\\midrule"
+    ]
+
+    # Add normal to original distances
+    # Add trivial to original distances
+    for i, ((metric, stats_n),(_,stats_t)) in enumerate(zip(normal_to_orig.items(), triv_to_orig.items())):
+        latex.append(
+            f"{case_study_name if i==0 else ''} & {metric} & Learned to Original & {stats_n['mean']:.3f} & {stats_n['min']:.3f} & {stats_n['max']:.3f} & {stats_n['std']:.3f} \\\\")
+        latex.append(
+            f"& & Trivial to Original & {stats_t['mean']:.3f} & {stats_t['min']:.3f} & {stats_t['max']:.3f} & {stats_t['std']:.3f} \\\\")
+        latex.append("\\midrule")
+
+    latex.extend([
+        "\\bottomrule",
+        "\\end{tabular}",
+        "\\caption{Distance Statistics Between Specifications}",
+        "\\label{tab:distances}",
+        "\\end{table}"
+    ])
+
+    return "\n".join(latex)
+
+
 # %%
 # ===============================================
 # SECTION 5 — Example: Distances to Ideal Spec
@@ -206,10 +239,12 @@ def relationship_stats(values: np.ndarray, x: float):
 if not ideal_df.empty:
     ideal_row = ideal_df.iloc[0]
     asm_d, gar_d = dist_to_single(normal_df, ideal_row)
+    both_d = dist_to_single_combined(normal_df, ideal_row)
 
     print("\n=== Distances to Ideal ===")
-    print("ASM mean:", asm_d.mean(), "max:", asm_d.max())
-    print("GAR mean:", gar_d.mean(), "max:", gar_d.max())
+    print("ASM mean:", asm_d.mean(), "max:", asm_d.max(), "min:", asm_d.min(), "std:", asm_d.std())
+    print("GAR mean:", gar_d.mean(), "max:", gar_d.max(), "min:", gar_d.min(), "std:", gar_d.std())
+    print("BOTH mean:", both_d.mean(), "max:", both_d.max(), "min:", both_d.min(), "std:", both_d.std())
     # print("Euclid mean:", euc_d.mean(), "max:", euc_d.max())
 else:
     print("No ideal spec found.")
@@ -225,20 +260,36 @@ if not original_df.empty:
     asm_d, gar_d = dist_to_single(trivial_df, orig_row)
     both_d = dist_to_single_combined(trivial_df, orig_row)
     print("\n=== Trivial to Original ===")
-    print("ASM mean:", asm_d.mean(), "max:", asm_d.max(), "min:", asm_d.min())
-    print("GAR mean:", gar_d.mean(), "max:", gar_d.max(), "min:", gar_d.min())
-    print("BOTH mean:", both_d.mean(), "max:", both_d.max(), "min:", both_d.min())
-    # print("Euclid mean:", euc_d.mean(), "max:", euc_d.max())
+    print("ASM mean:", asm_d.mean(), "max:", asm_d.max(), "min:", asm_d.min(), "std:", asm_d.std())
+    print("GAR mean:", gar_d.mean(), "max:", gar_d.max(), "min:", gar_d.min(), "std:", gar_d.std())
+    print("BOTH mean:", both_d.mean(), "max:", both_d.max(), "min:", both_d.min(), "std:", both_d.std())
+
+    triv_to_orig = {
+        "ASM": {"mean": asm_d.mean(), "min": asm_d.min(), "max": asm_d.max(), "std": asm_d.std()},
+        "GAR": {"mean": gar_d.mean(), "min": gar_d.min(), "max": gar_d.max(), "std": gar_d.std()},
+        "BOTH": {"mean": both_d.mean(), "min": both_d.min(), "max": both_d.max(), "std": both_d.std()}
+    }
 
     asm_d, gar_d = dist_to_single(normal_df, orig_row)
     both_d = dist_to_single_combined(normal_df, orig_row)
 
     print("\n=== Distances to Original ===")
-    print("ASM mean:", asm_d.mean(), "max:", asm_d.max(), "min:", asm_d.min())
-    print("GAR mean:", gar_d.mean(), "max:", gar_d.max(), "min:", gar_d.min())
-    print("BOTH mean:", both_d.mean(), "max:", both_d.max(), "min:", both_d.min())
+    print("ASM mean:", asm_d.mean(), "max:", asm_d.max(), "min:", asm_d.min(), "std:", asm_d.std())
+    print("GAR mean:", gar_d.mean(), "max:", gar_d.max(), "min:", gar_d.min(), "std:", gar_d.std())
+    print("BOTH mean:", both_d.mean(), "max:", both_d.max(), "min:", both_d.min(), "std:", both_d.std())
+
+    normal_to_orig = {
+        "ASM": {"mean": asm_d.mean(), "min": asm_d.min(), "max": asm_d.max(), "std": asm_d.std()},
+        "GAR": {"mean": gar_d.mean(), "min": gar_d.min(), "max": gar_d.max(), "std": gar_d.std()},
+        "BOTH": {"mean": both_d.mean(), "min": both_d.min(), "max": both_d.max(), "std": both_d.std()}
+    }
+
+    latex_table = create_latex_table(normal_to_orig, triv_to_orig, case_study_name)
+    print("\nLaTeX Table:")
+    print(latex_table)
 else:
     print("No original spec found.")
+
 
 
 # %%
@@ -454,7 +505,7 @@ def plot_multi_scatter(
 # SECTION 10 — PLOTTING AREA
 # Plot any graphs here (scatter plots, histograms, etc.)
 # ===============================================
-dimension = "d0"
+dimension = "d1"
 fig, ax = plot_multi_scatter(
     datasets=[
         {
