@@ -1582,7 +1582,7 @@ root_consequent_holds(OP,{name},1,0,T1,S):-
 \tholds_at(b,T2,S),
 \tholds_at(c,T2,S).
 
-root_consequent_holds(OP,{name},0,1,T1,S):-
+root_consequent_holds(OP,{name},0,0,T1,S):-
 \ttrace(S),
 \ttimepoint(T1,S),
 \tnot weak_timepoint(T1,S),
@@ -1602,7 +1602,7 @@ root_consequent_holds(OP,{name},1,1,T1,S):-
 \tholds_at(e,T2,S),
 \tholds_at(f,T2,S).
 
-root_consequent_holds(OP,{name},0,2,T1,S):-
+root_consequent_holds(OP,{name},0,0,T1,S):-
 \ttrace(S),
 \ttimepoint(T1,S),
 \tnot weak_timepoint(T1,S),
@@ -1685,7 +1685,7 @@ root_consequent_holds(OP,{name},1,2,T1,S):-
 \ttimepoint_of_op(OP,T1,T2,S),
 \tholds_at(c,T2,S).
 
-root_consequent_holds(OP,{name},0,1,T1,S):-
+root_consequent_holds(OP,{name},0,0,T1,S):-
 \ttrace(S),
 \ttimepoint(T1,S),
 \tnot weak_timepoint(T1,S),
@@ -1723,7 +1723,7 @@ root_consequent_holds(OP,{name},1,5,T1,S):-
 \ttimepoint_of_op(OP,T1,T2,S),
 \tholds_at(f,T2,S).
 
-root_consequent_holds(OP,{name},0,2,T1,S):-
+root_consequent_holds(OP,{name},0,0,T1,S):-
 \ttrace(S),
 \ttimepoint(T1,S),
 \tnot weak_timepoint(T1,S),

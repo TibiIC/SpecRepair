@@ -2606,7 +2606,7 @@ root_consequent_holds(OP,{name},0,0,T1,S):-
 \ttimepoint(T2,S),
 \ttemporal_operator(OP),
 \ttimepoint_of_op(OP,T1,T2,S),
-\tconsequent_exception({name},T,S).\
+\tconsequent_exception({name},T2,S).\
 """)
 
 
@@ -2649,7 +2649,7 @@ root_consequent_holds(OP,{name},0,0,T1,S):-
 \ttimepoint(T2,S),
 \ttemporal_operator(OP),
 \ttimepoint_of_op(OP,T1,T2,S),
-\tconsequent_exception({name},T,S).\
+\tconsequent_exception({name},T2,S).\
 """)
 
 

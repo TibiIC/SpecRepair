@@ -76,11 +76,14 @@ class ASPExceptionFormatter(ILTLFormatter):
     def process_consequent(self, this_formula, depth_id, time):
         if isinstance(this_formula, Eventually):
             output = self.process_eventually_consequent(this_formula, depth_id)
+            if self.is_consequent_exception:
+                output += "\n\n"
+                output += self.root_consequent_exception_boilerplate(time="T2")
         else:
             output = self.process_dnf_consequent(this_formula, depth_id, time)
-        if self.is_consequent_exception:
-            output += "\n\n"
-            output += self.consequent_exception_boilerplate(time=time)
+            if self.is_consequent_exception:
+                output += "\n\n"
+                output += self.consequent_exception_boilerplate(time=time)
         return output
 
     def process_dnf_consequent(self, this_formula, depth_id, time):
@@ -269,6 +272,20 @@ consequent_holds({{name}},{time},S):-
 \ttimepoint({time},S),
 \tconsequent_exception({{name}},{time},S).\
 """
+
+    def root_consequent_exception_boilerplate(self, time):
+        depth_id = 0
+        i = 0
+        output = f"root_consequent_holds(OP,{{name}},{depth_id},{i},T1,S):-\n"
+        output += "\ttrace(S),\n"
+        output += "\ttimepoint(T1,S),\n"
+        output += "\tnot weak_timepoint(T1,S),\n"
+        output += "\ttimepoint(T2,S),\n"
+        output += "\ttemporal_operator(OP),\n"
+        output += "\ttimepoint_of_op(OP,T1,T2,S),"
+        output += f"\n\tconsequent_exception({{name}},{time},S)."
+        return output
+
 
 def reformat_conjunction_to_op_atom_conjunction(this_formula) -> Dict[str, List[LTLFormula]]:
     match this_formula:
