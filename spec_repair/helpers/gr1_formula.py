@@ -114,7 +114,6 @@ class GR1Formula:
             case "consequent_exception":
                 self._integrate_consequent_exception(adaptation)
             case "ev_temp_op":
-                self.consequent = self.remove_temporal_operators(self.consequent)
                 if not self.antecedent:
                     self.temp_type = GR1TemporalType.JUSTICE
                 else:
