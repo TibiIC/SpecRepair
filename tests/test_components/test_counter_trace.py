@@ -1,12 +1,12 @@
 import os
 from functools import partial
-from unittest import TestCase
 
 from spec_repair.helpers.counter_trace import CounterTrace, ct_from_cs, complete_cts_from_ct
 from spec_repair.enums import Learning
 from spec_repair.helpers.spectra_specification import SpectraSpecification
 from spec_repair.heuristics import first_choice, last_choice, nth_choice
 from spec_repair.ltl_types import CounterStrategy
+from tests.base_test_case import BaseTestCase
 
 cs1: CounterStrategy = \
     ['INI -> S0 {highwater:false, methane:false} / {pump:false};',
@@ -49,21 +49,8 @@ holds_at(methane,2,ini_S0_S1_DEAD).
 not_holds_at(pump,2,ini_S0_S1_DEAD).
 """
 
-class TestCounterTrace(TestCase):
+class TestCounterTrace(BaseTestCase):
     maxDiff = None
-
-    @classmethod
-    def setUpClass(cls):
-        # Change the working directory to the script's directory
-        cls.original_working_directory = os.getcwd()
-        test_components_dir = os.path.dirname(os.path.abspath(__file__))
-        tests_dir = os.path.dirname(test_components_dir)
-        os.chdir(tests_dir)
-
-    @classmethod
-    def tearDownClass(cls):
-        # Restore the original working directory
-        os.chdir(cls.original_working_directory)
 
     def test_get_raw_form_1(self):
         ct = ct_from_cs(cs1, heuristic=first_choice)
@@ -220,6 +207,7 @@ not_holds_at(pump,2,counter_strat_1_0).
         self.assertEqual(expected_ct_ilasp, ct.get_ilasp_form(learning=Learning.ASSUMPTION_WEAKENING))
 
     def test_ct_deadlock_completion(self):
+        print(os.getcwd())
         ct = ct_from_cs(cs1, heuristic=first_choice, cs_id=0)
         spec: SpectraSpecification = SpectraSpecification.from_file(
             './test_files/minepump_aw_methane.spectra')

@@ -2218,5 +2218,61 @@ root_consequent_holds(OP,{name},0,T1,S):-
         with self.assertRaises(ValueError):
             self.formatter.format(Globally(Eventually(Implies(a, b))))
 
+    def test_response_conjunction_with_next(self):
+        a = AtomicProposition("a", True)
+        b = AtomicProposition("b", True)
+        c = AtomicProposition("c", True)
+        formula = Globally(Implies(a, Eventually(And(b, Next(c)))))
+        self.assertEqual(
+            self.formatter.format(formula),
+            """\
+antecedent_holds({name},T,S):-
+\ttrace(S),
+\ttimepoint(T,S),
+\troot_antecedent_holds(current,{name},0,0,T,S).
+
+root_antecedent_holds(OP,{name},0,0,T1,S):-
+\ttrace(S),
+\ttimepoint(T1,S),
+\tnot weak_timepoint(T1,S),
+\ttimepoint(T2,S),
+\ttemporal_operator(OP),
+\ttimepoint_of_op(OP,T1,T2,S),
+\tholds_at(a,T2,S).
+
+consequent_holds({name},T,S):-
+\ttrace(S),
+\ttimepoint(T,S),
+\troot_consequent_holds(eventually,{name},0,0,T,S).
+
+root_consequent_holds(OP,{name},0,0,T1,S):-
+\ttrace(S),
+\ttimepoint(T1,S),
+\tnot weak_timepoint(T1,S),
+\ttimepoint(T2,S),
+\ttemporal_operator(OP),
+\ttimepoint_of_op(OP,T1,T2,S),
+\troot_consequent_holds(current,{name},1,0,T2,S),
+\troot_consequent_holds(next,{name},1,1,T2,S).
+
+root_consequent_holds(OP,{name},1,0,T1,S):-
+\ttrace(S),
+\ttimepoint(T1,S),
+\tnot weak_timepoint(T1,S),
+\ttimepoint(T2,S),
+\ttemporal_operator(OP),
+\ttimepoint_of_op(OP,T1,T2,S),
+\tholds_at(b,T2,S).\
+
+root_consequent_holds(OP,{name},1,1,T1,S):-
+\ttrace(S),
+\ttimepoint(T1,S),
+\tnot weak_timepoint(T1,S),
+\ttimepoint(T2,S),
+\ttemporal_operator(OP),
+\ttimepoint_of_op(OP,T1,T2,S),
+\tholds_at(c,T2,S).\
+""")
+
 if __name__ == '__main__':
     unittest.main()

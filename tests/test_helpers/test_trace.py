@@ -6,22 +6,10 @@ from py_ltl.formula import AtomicProposition
 
 from spec_repair.helpers.trace import Trace
 from spec_repair.util.file_util import read_file_lines
+from tests.base_test_case import BaseTestCase
 
 
-class TestTrace(TestCase):
-    @classmethod
-    def setUpClass(cls):
-        # Change the working directory to the script's directory
-        cls.original_working_directory = os.getcwd()
-        test_components_dir = os.path.dirname(os.path.abspath(__file__))
-        tests_dir = os.path.dirname(test_components_dir)
-        os.chdir(tests_dir)
-
-    @classmethod
-    def tearDownClass(cls):
-        # Restore the original working directory
-        os.chdir(cls.original_working_directory)
-
+class TestTrace(BaseTestCase):
     def test_from_str(self):
         case_study_path = '../input-files/case-studies/spectra/minepump'
         expected_sets = [(

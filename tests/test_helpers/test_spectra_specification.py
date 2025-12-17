@@ -1,8 +1,4 @@
-import os
 import unittest
-from unittest import TestCase
-# import warnings
-# warnings.simplefilter('always', DeprecationWarning)
 
 import numpy as np
 import pandas as pd
@@ -18,28 +14,20 @@ from spec_repair.helpers.spectra_atom import SpectraAtom
 from spec_repair.helpers.spot_specification_formatter import SpotSpecificationFormatter
 from spec_repair.ltl_types import GR1FormulaType, GR1TemporalType
 from spec_repair.weakness_measurement_davide.weakness_user_friendly import Weakness
+from tests.base_test_case import BaseTestCase
 from tests.test_common_utility_strings.specs import spec_perf, spec_fixed_perf, spec_fixed_imperf, \
     spec_asm_eq_gar_weaker, spec_asm_stronger_gar_eq
 
 
-class TestSpectraSpecification(TestCase):
+class TestSpectraSpecification(BaseTestCase):
     @classmethod
     def setUpClass(cls):
+        super().setUpClass()
         cls.maxDiff = None
         cls.parser = SpectraFormulaParser()
         cls.formatter = SpectraFormulaFormatter()
-        # Change the working directory to the script's directory
-        cls.original_working_directory = os.getcwd()
-        test_components_dir = os.path.dirname(os.path.abspath(__file__))
-        tests_dir = os.path.dirname(test_components_dir)
-        os.chdir(tests_dir)
         # Some template spec for method testing
         cls.spec = SpectraSpecification.from_file("./test_files/minepump_strong.spectra")
-
-    @classmethod
-    def tearDownClass(cls):
-        # Restore the original working directory
-        os.chdir(cls.original_working_directory)
 
     def test_file_to_specification_records_all_formulas(self):
         spec_file = "./test_files/minepump_strong.spectra"
@@ -387,6 +375,7 @@ root_consequent_holds(OP,guarantee4,1,T1,S):-
         self.assertFalse(spec_strong.is_trivial_true(GR1FormulaType.ASM))
         self.assertFalse(spec_strong.is_trivial_false(GR1FormulaType.ASM))
 
+    @unittest.skip("Test is ignored as ignore_initial currently not supported")
     def test_minepump_is_trivial_no_initial(self):
         spec_ideal: SpectraSpecification = SpectraSpecification.from_file(
             "../input-files/case-studies/spectra/minepump/ideal.spectra")

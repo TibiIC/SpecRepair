@@ -1,27 +1,13 @@
 import copy
-import os
-from unittest import TestCase
 
 from spec_repair.util.file_util import read_file
 from spec_repair.wrappers.spec import Spec, extract_GR1_expressions_of_type_spot
 from spec_repair.ltl_types import GR1FormulaType
+from tests.base_test_case import BaseTestCase
 from tests.test_common_utility_strings.specs import *
 
 
-class TestSpec(TestCase):
-    @classmethod
-    def setUpClass(cls):
-        # Change the working directory to the script's directory
-        cls.original_working_directory = os.getcwd()
-        test_components_dir = os.path.dirname(os.path.abspath(__file__))
-        tests_dir = os.path.dirname(test_components_dir)
-        os.chdir(tests_dir)
-
-    @classmethod
-    def tearDownClass(cls):
-        # Restore the original working directory
-        os.chdir(cls.original_working_directory)
-
+class TestSpec(BaseTestCase):
     def test_genbuf_conversion_ideal_normalised(self):
         spec_txt: str = read_file("../input-files/case-studies/spectra/genbuf/ideal_normalised.spectra")
         spec: Spec = Spec(spec_txt)

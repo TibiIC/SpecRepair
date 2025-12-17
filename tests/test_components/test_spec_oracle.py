@@ -1,28 +1,13 @@
-import os
 from typing import Optional
-from unittest import TestCase
 
+from tests.base_test_case import BaseTestCase
 from spec_repair.components.spec_oracle import SpecOracle
 from spec_repair.ltl_types import CounterStrategy
 from spec_repair.util.file_util import read_file_lines
 from spec_repair.util.spec_util import format_spec
 
 
-class TestSpecLearner(TestCase):
-    @classmethod
-    def setUpClass(cls):
-        # Change the working directory to the script's directory
-        cls.original_working_directory = os.getcwd()
-        test_components_dir = os.path.dirname(os.path.abspath(__file__))
-        tests_dir = os.path.dirname(test_components_dir)
-        print(tests_dir)
-        os.chdir(tests_dir)
-
-    @classmethod
-    def tearDownClass(cls):
-        # Restore the original working directory
-        os.chdir(cls.original_working_directory)
-
+class TestSpecLearner(BaseTestCase):
     def test_synthesise_and_check(self):
         spec_oracle = SpecOracle()
         weakened_spec: list[str] = format_spec(read_file_lines(

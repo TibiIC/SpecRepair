@@ -8,29 +8,17 @@ from spec_repair.helpers.spectra_specification import SpectraSpecification
 from spec_repair.ltl_types import GR1AtomType
 from spec_repair.util.spec_util import create_trace, trace_list_to_asp_form, trace_list_to_ilasp_form, \
     run_all_unrealisable_cores_raw, run_all_unrealisable_cores, create_atom_signature_asp
+from tests.base_test_case import BaseTestCase
 
 
 def is_ascending(timepoint_poss: list[int]) -> bool:
     return all([(timepoint_poss[k + 1] - timepoint_poss[k]) > 0 for k in range(len(timepoint_poss) - 1)])
 
 
-class TestSpec(TestCase):
+class TestSpec(BaseTestCase):
     minepump_spec_file = '../input-files/examples/Minepump/minepump_strong.spectra'
     traffic_spec_file = '../input-files/case-studies/spectra/traffic-single/strong.spectra'
     traffic_updated_spec_file = 'test_files/traffic/traffic_updated_strong.spectra'
-
-    @classmethod
-    def setUpClass(cls):
-        # Change the working directory to the script's directory
-        cls.original_working_directory = os.getcwd()
-        test_components_dir = os.path.dirname(os.path.abspath(__file__))
-        tests_dir = os.path.dirname(test_components_dir)
-        os.chdir(tests_dir)
-
-    @classmethod
-    def tearDownClass(cls):
-        # Restore the original working directory
-        os.chdir(cls.original_working_directory)
 
     def test_all_unrealisable_cores_raw_ideal(self):
         ideal_spec_file_path = "input-files/case-studies/spectra/minepump/ideal.spectra"

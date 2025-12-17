@@ -31,6 +31,7 @@ if not jpype.isJVMStarted():
 SpectraToolbox = jpype.JClass('cores.SpectraToolbox')
 SpectraCLI = jpype.JClass('tau.smlab.syntech.Spectra.cli.SpectraCliTool')
 
+
 def pRespondsToS_substitution(output_filename):
     spec = read_file_lines(output_filename)
     found = False
@@ -553,153 +554,6 @@ def replace_false_true(string):
 
 def flip_assignments(assignments: list[str]) -> list[str]:
     return [replace_false_true(assignment) for assignment in assignments]
-
-
-def integrate_rule(temp_op, conjunct, learning_type, line: str):
-    expression = extract_content_of_invariant(line)
-    antecedent, consequent = extract_antecedent_and_consequent(expression)
-    conjunct = re.sub("\s", "", conjunct)
-    facts = conjunct.split(";")
-    if FASTLAS:
-        facts = [x for x in facts if x != ""]
-    is_eventually_consequent = bool(re.match(r"^F\(.+\)", consequent))
-    flip = learning_type == Learning.ASSUMPTION_WEAKENING or is_eventually_consequent
-    assignments = extract_assignments_from_facts(facts, flip)
-
-    if learning_type == Learning.ASSUMPTION_WEAKENING or is_eventually_consequent:
-        return integrate_antecedent(temp_op, assignments, antecedent, consequent)
-
-    if learning_type == Learning.GUARANTEE_WEAKENING:
-        return integrate_consequent(temp_op, assignments, antecedent, consequent)
-
-
-def extract_content_of_invariant(line: str) -> str:
-    match = re.search(r'G\((.*)\);?', line)
-    assert match
-    content_inside = match.group(1).strip()
-    return content_inside
-
-
-def extract_antecedent_and_consequent(line: str) -> tuple[Optional[str], str]:
-    match = re.match(r'^(.*?)\s*->\s*(.*)$', line)
-    if match:
-        antecedent = match.group(1)
-        consequent = match.group(2)
-        return antecedent, consequent
-    else:
-        # If there's no "->", we assume content is just the consequent
-        return None, line
-
-
-def integrate_antecedent(temp_op, assignments, antecedent, consequent):
-    # next_assignments = [x for i, x in enumerate(assignments) if re.search("next", facts[i])]
-    # cur_assignments = [x for x in assignments if x not in next_assignments]
-    cur_assignments = assignments
-    if antecedent:
-        op = "G"
-        head = antecedent
-    else:
-        op = "G"
-        head = ""
-    disjuncts = get_disjuncts(head)
-    amended_disjuncts = []
-    for disjunct in disjuncts:
-        conjuncts = get_conjuncts(disjunct)
-        # next_conjuncts = [x for x in conjuncts if re.search("next", x)] + next_assignments
-        # cur_conjuncts = [x for x in conjuncts if x not in next_conjuncts] + cur_assignments
-        cur_conjuncts = conjuncts + cur_assignments
-
-        antecedent = ""
-        if cur_conjuncts:
-            antecedent += conjunct_assignments(cur_conjuncts)
-        """
-        if cur_conjuncts and next_conjuncts:
-            antecedent += "&"
-        if next_conjuncts:
-            antecedent += f"next({conjunct_assignments(next_conjuncts)})"
-        """
-        amended_disjuncts.append(antecedent)
-    antecedent_total = disjunct_assignments(amended_disjuncts)
-    output = f"{antecedent_total}->{consequent}"
-    # This is in case there was no antecedent to start with:
-    output = re.sub(r"\(\s*&", "(", output)
-    output = re.sub(r"\(\s*\|", "(", output)
-    output = re.sub(r"\(\s*->", "(", output)
-    output = re.sub(r"->\s*\|", "->", output)
-    if assignments == [] and FASTLAS:
-        return '\n'
-    return f"\t{op}({output});\n"
-
-
-def integrate_consequent(temp_op: str, assignments: list[str], antecedent: Optional[str], consequent: str):
-    # next_assignments = [x for i, x in enumerate(assignments) if re.search("next", facts[i])]
-    # ev_assignments = [x for i, x in enumerate(assignments) if re.search("eventually", facts[i])]
-    # cur_assignments = [x for x in assignments if x not in ev_assignments and x not in next_assignments]
-    cur = conjunct_assignments(assignments)
-    # next = conjunct_assignments(next_assignments)
-    # ev = conjunct_assignments(ev_assignments)
-    """
-    # This is for pRespondsToS patterns:
-    respond = re.search(r"F\(([^)]*)\)", consequent)
-    if respond:
-        ev = f"F({disjunct_assignments([ev, respond.group(1)])})"
-        consequent = consequent.replace(f"F({respond.group(1)})", '', 1)
-    elif re.search(r"GF\(", antecedent):
-        ev_old = consequent.replace(");", "")
-        ev = disjunct_assignments([ev, ev_old])
-        consequent = consequent.replace(ev_old, '', 1)
-    # This is for next patterns:
-    respond = re.search(r"next\(([^)]*)\)", consequent)
-    if respond:
-        next = f"next({disjunct_assignments([next, respond.group(1)])})"
-        consequent = consequent.replace(f"next({respond.group(1)})", '', 1)
-    elif next:
-        next = f"next({next})"
-    """
-    cur = disjunct_assignments([cur] + get_disjuncts(consequent))
-    # consequent = disjunct_assignments([cur, next, ev])
-    consequent = disjunct_assignments([cur])
-    if antecedent:
-        output = f"\tG({antecedent}->{consequent});"
-    else:
-        output = f"\tG({consequent});"
-    if assignments == [] and FASTLAS:
-        return '\n'
-    return f"{output}\n"
-
-
-def extract_assignments_from_facts(facts, flip: bool):
-    assignments = []
-    for fact in facts:
-        fact = fact.strip()
-        is_negation = HoldsAtAtom.pattern.match(fact).group(HoldsAtAtom.NEG_PREFIX)
-        atom = HoldsAtAtom.pattern.match(fact).group(HoldsAtAtom.ATOM).strip()
-        value: bool = not bool(is_negation)
-        value = not value if flip else value
-        atom_assignment = f"{atom}={str(value).lower()}"
-
-        assignments.append(atom_assignment)
-    return assignments
-
-
-def get_conjuncts(disjunct: str):
-    return disjunct.split("&")
-
-
-def get_disjuncts(conjunct: str):
-    return conjunct.split("|")
-
-
-def conjunct_assignments(assignments):
-    assignments = [assignment for assignment in assignments if assignment != ""]
-    output = '&'.join(assignments)
-    return output
-
-
-def disjunct_assignments(assignments):
-    assignments = [assignment for assignment in assignments if assignment != ""]
-    output = '|'.join(assignments)
-    return output
 
 
 def log_to_asp_trace(lines: str, trace_name: str = "trace_name_0") -> str:
@@ -1366,6 +1220,7 @@ def realizable(file, suppress=False):
     print(file)
     return None
 
+
 def synthesise_extract_counter_strategies(file):
     if violations_in_initial_conditions(file):
         print("Spectra file in wrong format for CLI realizability check: (initial conditions)")
@@ -1375,6 +1230,7 @@ def synthesise_extract_counter_strategies(file):
     args = ["-i", file, "--counter-strategy", "--jtlv"]
     output = run_spectra_cli(args)
     return output
+
 
 def synthesise_controller(spec_file_path, output_folder_path, suppress=False) -> bool:
     if violations_in_initial_conditions(spec_file_path):
@@ -1400,6 +1256,7 @@ def synthesise_controller(spec_file_path, output_folder_path, suppress=False) ->
     print("Spectra file in wrong format for CLI realizability check:")
     print(spec_file_path)
     return False
+
 
 def run_spectra_cli(args: list[str]) -> str:
     """
@@ -1448,6 +1305,7 @@ def run_spectra_cli(args: list[str]) -> str:
         java_lang_System.setOut(original_out)
 
     return output_str
+
 
 def remove_double_outer_brackets(string):
     if string[0:2] == "((" and string[-3:-1] == "))":

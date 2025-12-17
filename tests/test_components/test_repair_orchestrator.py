@@ -5,6 +5,8 @@ from concurrent.futures import ThreadPoolExecutor
 from unittest import TestCase
 from unittest.mock import patch
 
+from fontTools.ufoLib.utils import deprecated
+
 from spec_repair.components.repair_orchestrator import RepairOrchestrator
 from spec_repair.components.spec_learner import SpecLearner
 from spec_repair.components.spec_oracle import SpecOracle
@@ -12,6 +14,7 @@ from spec_repair.util.file_util import write_file, read_file_lines
 from spec_repair.util.spec_util import format_spec
 
 
+@deprecated
 class TestRepairOrchestrator(TestCase):
 
     @classmethod

@@ -1,5 +1,4 @@
-from unittest import TestCase
-
+from tests.base_test_case import BaseTestCase
 from spec_repair.components.new_spec_encoder import NewSpecEncoder
 from spec_repair.enums import Learning, ExpType
 from spec_repair.helpers.heuristic_managers.no_eventually_hypothesis_heuristic_manager import \
@@ -10,20 +9,17 @@ from spec_repair.util.file_util import read_file
 from spec_repair.wrappers.asp_wrappers import get_violations
 
 
-class TestNewSpecEncoder(TestCase):
-    minepump_spec_file = '../../input-files/examples/Minepump/minepump_strong.spectra'
-    minepump_spec_1_aw_step = '../test_files/minepump_aw_methane.spectra'
-    minepump_clingo_file = '../test_files/test_components/minepump_strong_WA_no_cs.lp'
-    minepump_ilasp_file = '../test_files/test_components/minepump_strong_WA_no_cs.las'
-    minepump_mode_bias_aw_file = '../test_files/mode_bias/minepump_1_aw_step.txt'
-    minepump_mode_bias_gw_file = '../test_files/mode_bias/minepump_1_gw_step.txt'
-    traffic_updated_spec_file = '../../input-files/case-studies/spectra/traffic-updated/strong.spectra'
-    traffic_updated_mode_bias_aw_file = '../test_files/mode_bias/traffic_updated_aw.txt'
-    traffic_updated_mode_bias_aw_file_no_ev = '../test_files/mode_bias/traffic_updated_aw_no_ev.txt'
+class TestNewSpecEncoder(BaseTestCase):
+    minepump_spec_file = '../input-files/examples/Minepump/minepump_strong.spectra'
+    minepump_spec_1_aw_step = 'test_files/minepump_aw_methane.spectra'
+    minepump_clingo_file = 'test_files/test_components/minepump_strong_WA_no_cs.lp'
+    minepump_ilasp_file = 'test_files/test_components/minepump_strong_WA_no_cs.las'
+    minepump_mode_bias_aw_file = 'test_files/mode_bias/minepump_1_aw_step.txt'
+    minepump_mode_bias_gw_file = 'test_files/mode_bias/minepump_1_gw_step.txt'
+    traffic_updated_spec_file = '../input-files/case-studies/spectra/traffic-updated/strong.spectra'
+    traffic_updated_mode_bias_aw_file = 'test_files/mode_bias/traffic_updated_aw.txt'
+    traffic_updated_mode_bias_aw_file_no_ev = 'test_files/mode_bias/traffic_updated_aw_no_ev.txt'
     maxDiff = None
-
-    def __init__(self, methodName: str = "runTest"):
-        super().__init__(methodName)
 
     def test_encode_asp(self):
         spec: SpectraSpecification = SpectraSpecification.from_file(self.minepump_spec_file)
@@ -151,5 +147,3 @@ class TestNewSpecEncoder(TestCase):
 
         expected_mode_bias: str = read_file(self.minepump_mode_bias_gw_file)
         self.assertEqual(expected_mode_bias, mode_bias)
-
-

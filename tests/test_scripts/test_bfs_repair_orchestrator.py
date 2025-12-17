@@ -1,6 +1,5 @@
 import os
 from typing import Dict
-from unittest import TestCase
 
 from scripts.bfs_repair_orchestrator import BFSRepairOrchestrator, SpecLogger
 from spec_repair.components.arca_learner import ARCALearner
@@ -15,25 +14,12 @@ from spec_repair.helpers.heuristic_managers.no_filter_heuristic_manager import N
 from spec_repair.helpers.recorders.unique_spec_recorder import UniqueSpecRecorder
 from spec_repair.helpers.spectra_specification import SpectraSpecification
 from spec_repair.util.file_util import read_file_lines, write_to_file
-from spec_repair.util.mittigation_strategies import move_one_to_guarantee_weakening, complete_counter_traces, \
-    move_all_to_guarantee_weakening
+from spec_repair.util.mittigation_strategies import move_one_to_guarantee_weakening, complete_counter_traces
 from spec_repair.util.spec_util import synthesise_controller
+from tests.base_test_case import BaseTestCase
 
 
-class TestBFSRepairOrchestrator(TestCase):
-    @classmethod
-    def setUpClass(cls):
-        # Change the working directory to the script's directory
-        cls.original_working_directory = os.getcwd()
-        test_components_dir = os.path.dirname(os.path.abspath(__file__))
-        tests_dir = os.path.dirname(test_components_dir)
-        os.chdir(tests_dir)
-
-    @classmethod
-    def tearDownClass(cls):
-        # Restore the original working directory
-        os.chdir(cls.original_working_directory)
-
+class TestBFSRepairOrchestrator(BaseTestCase):
     def test_bfs_repair_spec_arbiter(self):
         case_study_name = 'arbiter'
         case_study_path = '../input-files/case-studies/spectra/arbiter'

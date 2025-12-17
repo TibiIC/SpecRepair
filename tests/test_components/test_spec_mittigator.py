@@ -1,8 +1,7 @@
-import os
 from copy import deepcopy
 from typing import Tuple
-from unittest import TestCase
 
+from tests.base_test_case import BaseTestCase
 from spec_repair.components.learning_type_spec_mitigator import LearningTypeSpecMitigator
 from spec_repair.enums import Learning
 from spec_repair.helpers.counter_trace import cts_from_cs, CounterTrace
@@ -11,24 +10,15 @@ from spec_repair.ltl_types import CounterStrategy
 from spec_repair.util.mittigation_strategies import move_one_to_guarantee_weakening, complete_counter_traces
 
 
-class TestSpecMittigator(TestCase):
+class TestSpecMittigator(BaseTestCase):
     @classmethod
     def setUpClass(cls):
-        # Change the working directory to the script's directory
-        cls.original_working_directory = os.getcwd()
-        test_components_dir = os.path.dirname(os.path.abspath(__file__))
-        tests_dir = os.path.dirname(test_components_dir)
-        os.chdir(tests_dir)
+        super().setUpClass()
         # Set up the mitigator
         cls.mitigator = LearningTypeSpecMitigator({
             Learning.ASSUMPTION_WEAKENING: move_one_to_guarantee_weakening,
             Learning.GUARANTEE_WEAKENING: complete_counter_traces
         })
-
-    @classmethod
-    def tearDownClass(cls):
-        # Restore the original working directory
-        os.chdir(cls.original_working_directory)
 
     def test_mitigate_assumption_learning(self):
         spec = SpectraSpecification.from_file("./test_files/minepump_aw_pump.spectra")
@@ -109,10 +99,10 @@ class TestSpecMittigator(TestCase):
             self.assertIsInstance(new_cts[0], CounterTrace)
             new_ctss.add(new_cts[0])
         expected_ctss = {
-           'CT(!highwater,!methane,!pump;!highwater,methane,pump;highwater,methane,!pump;!highwater,methane,pump)',
-           'CT(!highwater,!methane,!pump;!highwater,methane,pump;highwater,methane,!pump;!highwater,methane,!pump)',
-           'CT(!highwater,!methane,!pump;!highwater,methane,pump;highwater,methane,!pump;!highwater,!methane,!pump)',
-           'CT(!highwater,!methane,!pump;!highwater,methane,pump;highwater,methane,!pump;!highwater,!methane,pump)'
+            'CT(!highwater,!methane,!pump;!highwater,methane,pump;highwater,methane,!pump;!highwater,methane,pump)',
+            'CT(!highwater,!methane,!pump;!highwater,methane,pump;highwater,methane,!pump;!highwater,methane,!pump)',
+            'CT(!highwater,!methane,!pump;!highwater,methane,pump;highwater,methane,!pump;!highwater,!methane,!pump)',
+            'CT(!highwater,!methane,!pump;!highwater,methane,pump;highwater,methane,!pump;!highwater,!methane,pump)'
         }
         for new_cts in new_ctss:
             self.assertIn(new_cts.print_one_line(), expected_ctss)
