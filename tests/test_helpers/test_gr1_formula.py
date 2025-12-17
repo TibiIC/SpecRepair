@@ -366,6 +366,40 @@ class TestGR1Formula(TestCase):
         expected_output = "G((a=true->((b=true|(c=true&d=true))|(e=true&f=true))))"
         self.assertEqual(expected_output, output)
 
+    def test_integrate_adaptation_to_formula_consequent_exception_7(self):
+        formula = GR1Formula(
+            temp_type=GR1TemporalType.INVARIANT,
+            antecedent=AtomicProposition("a", True),
+            consequent = Eventually(Next(AtomicProposition("c", False))),
+        )  # formula === G(a=true->next(c=true))
+        adaptation = Adaptation(
+            type='consequent_exception',
+            formula_name='consequent2_1',
+            disjunction_index=0,
+            atom_temporal_operators=[('current', 'b=true')]
+        )
+        formula.integrate(adaptation)
+        output = formula.to_str(self.formatter)
+        expected_output = "G((a=true->F((b=true|next(c=true)))"
+        self.assertEqual(expected_output, output)
+
+    def test_integrate_adaptation_to_formula_consequent_exception_8(self):
+        formula = GR1Formula(
+            temp_type=GR1TemporalType.INVARIANT,
+            antecedent=AtomicProposition("a", True),
+            consequent = Eventually(AtomicProposition("b", True)),
+        )  # formula === G(a=true->b=true)
+        adaptation = Adaptation(
+            type='consequent_exception',
+            formula_name='consequent2_1',
+            disjunction_index=0,
+            atom_temporal_operators=[('next', 'c=true')]
+        )
+        formula.integrate(adaptation)
+        output = formula.to_str(self.formatter)
+        expected_output = "G((a=true->F((b=true|next(c=true)))"
+        self.assertEqual(expected_output, output)
+
     def test_integrate_adaptation_to_formula_ev_temp_op(self):
         formula = GR1Formula(
             temp_type=GR1TemporalType.INVARIANT,
@@ -399,6 +433,24 @@ class TestGR1Formula(TestCase):
         formula.integrate(adaptation)
         output = formula.to_str(self.formatter)
         expected_output = "G((a=false->F((r1=false|(g1=false&g2=false)))))"
+        self.assertEqual(expected_output, output)
+
+    def test_integrate_eventualisation_adaptation_to_formula_3(self):
+        formula = GR1Formula(
+            temp_type=GR1TemporalType.INVARIANT,
+            antecedent=AtomicProposition("a", True),
+            consequent=And(AtomicProposition("b", True),
+                          Next(AtomicProposition("c", True)))
+        ) # formula === G(a=true->(b=true&next(c=true)))
+        adaptation = Adaptation(
+            type="ev_temp_op",
+            formula_name="guarantee3_1",
+            disjunction_index=None,
+            atom_temporal_operators=[]
+        )
+        formula.integrate(adaptation)
+        output = formula.to_str(self.formatter)
+        expected_output = "G((a=true->F((b=true&next(c=true)))))"
         self.assertEqual(expected_output, output)
 
     def test_integrate_justice_implication_normalised(self):
