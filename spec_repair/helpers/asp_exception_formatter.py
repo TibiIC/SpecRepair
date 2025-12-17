@@ -91,14 +91,14 @@ class ASPExceptionFormatter(ILTLFormatter):
         for disjunct in disjunction:
             output += "\n\n"
             ops_consequent_roots: Dict[str, List[LTLFormula]] = reformat_conjunction_to_op_atom_conjunction(disjunct)
-            output += self.consequent_boilerplate(time=time, ops=ops_consequent_roots.keys(), start_root_id=root_id)
+            output += self.consequent_boilerplate(time=time, ops=ops_consequent_roots.keys(), depth_id=depth_id, start_root_id=root_id)
             if time != 0 and self.is_eventually_exception:
                 output += "\n\n"
                 ops = ["eventually"] * len(ops_consequent_roots)
                 output += self.consequent_boilerplate(time=time, ops=ops, depth_id=depth_id, start_root_id=root_id)
             for i, (_, atoms) in enumerate(ops_consequent_roots.items()):
                 output += "\n\n"
-                output += self.format_boilerplate_root_consequent_holds(atoms, root_id + i)
+                output += self.format_boilerplate_root_consequent_holds(atoms, depth_id, root_id + i)
             root_id += len(ops_consequent_roots)
         return output
 
