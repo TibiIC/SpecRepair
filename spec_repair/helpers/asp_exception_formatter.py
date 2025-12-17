@@ -35,24 +35,24 @@ class ASPExceptionFormatter(ILTLFormatter):
         match this_formula:
             case Implies(left=lhs, right=rhs):
                 output = self.process_antecedent(lhs, time=0)
-                output += self.process_consequent(rhs, time=0)
+                output += self.process_consequent(rhs, depth_id=0, time=0)
                 return output
             case Globally(formula=formula):
                 raise ValueError("Globally operator not supported in this formula")
             case _:
                 output = self.antecedent_boilerplate(time=0, ops=None, antecedent_id=0)
-                output += self.process_consequent(this_formula, time=0)
+                output += self.process_consequent(this_formula, depth_id=0, time=0)
                 return output
 
     def format_invariant(self, this_formula: LTLFormula) -> str:
         match this_formula:
             case Implies(left=lhs, right=rhs):
                 output = self.process_antecedent(lhs, time="T")
-                output += self.process_consequent(rhs, time="T")
+                output += self.process_consequent(rhs, depth_id=0, time="T")
                 return output
             case _:
                 output = self.antecedent_boilerplate(time="T", ops=None, antecedent_id=0)
-                output += self.process_consequent(this_formula, time="T")
+                output += self.process_consequent(this_formula, depth_id=0, time="T")
                 return output
 
     def process_antecedent(self, this_formula, time):
@@ -73,17 +73,17 @@ class ASPExceptionFormatter(ILTLFormatter):
         output = "\n\n".join(sections)
         return output
 
-    def process_consequent(self, this_formula, time):
+    def process_consequent(self, this_formula, depth_id, time):
         if isinstance(this_formula, Eventually):
-            output = self.process_eventually_consequent(this_formula)
+            output = self.process_eventually_consequent(this_formula, depth_id)
         else:
-            output = self.process_dnf_consequent(this_formula, time)
+            output = self.process_dnf_consequent(this_formula, depth_id, time)
         if self.is_consequent_exception:
             output += "\n\n"
             output += self.consequent_exception_boilerplate(time=time)
         return output
 
-    def process_dnf_consequent(self, this_formula, time):
+    def process_dnf_consequent(self, this_formula, depth_id, time):
         assert not isinstance(this_formula, Eventually)
         output = ""
         disjunction = get_disjuncts_from_disjunction(this_formula)
@@ -95,27 +95,29 @@ class ASPExceptionFormatter(ILTLFormatter):
             if time != 0 and self.is_eventually_exception:
                 output += "\n\n"
                 ops = ["eventually"] * len(ops_consequent_roots)
-                output += self.consequent_boilerplate(time=time, ops=ops, start_root_id=root_id)
+                output += self.consequent_boilerplate(time=time, ops=ops, depth_id=depth_id, start_root_id=root_id)
             for i, (_, atoms) in enumerate(ops_consequent_roots.items()):
                 output += "\n\n"
                 output += self.format_boilerplate_root_consequent_holds(atoms, root_id + i)
             root_id += len(ops_consequent_roots)
         return output
 
-    def process_eventually_consequent(self, this_formula):
+    def process_eventually_consequent(self, this_formula, depth_id):
         assert isinstance(this_formula, Eventually)
         output = ""
         disjunction = get_disjuncts_from_disjunction(this_formula.formula)
+        output += "\n\n"
+        output += self.consequent_boilerplate(time="T", ops=["eventually"], depth_id=depth_id, start_root_id=0)
         root_id = 0
-        for disjunct in disjunction:
+        for inner_root_id, disjunct in enumerate(disjunction):
             output += "\n\n"
             ops_consequent_roots: Dict[str, List[LTLFormula]] = reformat_conjunction_to_op_atom_conjunction(disjunct)
-            ops = ["eventually"] * len(ops_consequent_roots)
-            output += self.consequent_boilerplate(time="T", ops=ops, start_root_id=root_id)
+            ops = ops_consequent_roots.keys()
+            output += self.format_boilerplate_inner_root_consequent_holds(ops=ops, depth_id=depth_id, i=inner_root_id, start_root_id=root_id)
             output = output.replace(",\n\tev_temp_op({name})","")
             for i, (_, atoms) in enumerate(ops_consequent_roots.items()):
                 output += "\n\n"
-                output += self.format_boilerplate_root_consequent_holds(atoms, root_id + i)
+                output += self.format_boilerplate_root_consequent_holds(atoms, depth_id + 1, root_id + i)
             root_id += len(ops_consequent_roots)
         return output
 
@@ -204,8 +206,8 @@ class ASPExceptionFormatter(ILTLFormatter):
         output += "."
         return output
 
-    def format_boilerplate_root_consequent_holds(self, atoms, i):
-        output = f"root_consequent_holds(OP,{{name}},{i},T1,S):-\n"
+    def format_boilerplate_root_consequent_holds(self, atoms, depth_id, i):
+        output = f"root_consequent_holds(OP,{{name}},{depth_id},{i},T1,S):-\n"
         output += "\ttrace(S),\n"
         output += "\ttimepoint(T1,S),\n"
         output += "\tnot weak_timepoint(T1,S),\n"
@@ -214,6 +216,20 @@ class ASPExceptionFormatter(ILTLFormatter):
         output += "\ttimepoint_of_op(OP,T1,T2,S)"
         for atom in atoms:
             output += f",\n\t{self.format_exp(atom)}"
+        output += "."
+        return output
+
+    def format_boilerplate_inner_root_consequent_holds(self, ops, depth_id, i, start_root_id):
+        output = f"root_consequent_holds(OP,{{name}},{depth_id},{i},T1,S):-\n"
+        output += "\ttrace(S),\n"
+        output += "\ttimepoint(T1,S),\n"
+        output += "\tnot weak_timepoint(T1,S),\n"
+        output += "\ttimepoint(T2,S),\n"
+        output += "\ttemporal_operator(OP),\n"
+        output += "\ttimepoint_of_op(OP,T1,T2,S)"
+        if ops is not None:
+            for i, op in enumerate(ops):
+                output += f",\n\troot_consequent_holds({op},{{name}},{depth_id + 1},{start_root_id + i},T2,S)"
         output += "."
         return output
 
@@ -230,7 +246,7 @@ antecedent_holds({{name}},{time},S):-
             output += f",\n\tnot antecedent_exception({{name}},{antecedent_id},{time},S)"
         return f"{output}."
 
-    def consequent_boilerplate(self, time, ops, start_root_id=0):
+    def consequent_boilerplate(self, time, ops, depth_id, start_root_id=0):
         output = f"""\
 consequent_holds({{name}},{time},S):-
 \ttrace(S),
@@ -238,7 +254,7 @@ consequent_holds({{name}},{time},S):-
 """
         if ops is not None:
             for i, op in enumerate(ops):
-                output += f",\n\troot_consequent_holds({op},{{name}},{start_root_id + i},{time},S)"
+                output += f",\n\troot_consequent_holds({op},{{name}},{depth_id},{start_root_id + i},{time},S)"
         if time != 0 and self.is_eventually_exception:
             if "eventually" not in ops:
                 output += f",\n\tnot ev_temp_op({{name}})"
