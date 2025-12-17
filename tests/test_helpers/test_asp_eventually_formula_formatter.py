@@ -20,9 +20,9 @@ antecedent_holds({name},0,S):-
 consequent_holds({name},0,S):-
 \ttrace(S),
 \ttimepoint(0,S),
-\troot_consequent_holds(current,{name},0,0,S).
+\troot_consequent_holds(current,{name},0,0,0,S).
 
-root_consequent_holds(OP,{name},0,T1,S):-
+root_consequent_holds(OP,{name},0,0,T1,S):-
 \ttrace(S),
 \ttimepoint(T1,S),
 \tnot weak_timepoint(T1,S),
@@ -43,9 +43,9 @@ antecedent_holds({name},0,S):-
 consequent_holds({name},0,S):-
 \ttrace(S),
 \ttimepoint(0,S),
-\troot_consequent_holds(current,{name},0,0,S).
+\troot_consequent_holds(current,{name},0,0,0,S).
 
-root_consequent_holds(OP,{name},0,T1,S):-
+root_consequent_holds(OP,{name},0,0,T1,S):-
 \ttrace(S),
 \ttimepoint(T1,S),
 \tnot weak_timepoint(T1,S),
@@ -77,9 +77,9 @@ antecedent_holds({name},0,S):-
 consequent_holds({name},0,S):-
 \ttrace(S),
 \ttimepoint(0,S),
-\troot_consequent_holds(current,{name},0,0,S).
+\troot_consequent_holds(current,{name},0,0,0,S).
 
-root_consequent_holds(OP,{name},0,T1,S):-
+root_consequent_holds(OP,{name},0,0,T1,S):-
 \ttrace(S),
 \ttimepoint(T1,S),
 \tnot weak_timepoint(T1,S),
@@ -99,9 +99,9 @@ antecedent_holds({name},0,S):-
 consequent_holds({name},0,S):-
 \ttrace(S),
 \ttimepoint(0,S),
-\troot_consequent_holds(current,{name},0,0,S).
+\troot_consequent_holds(current,{name},0,0,0,S).
 
-root_consequent_holds(OP,{name},0,T1,S):-
+root_consequent_holds(OP,{name},0,0,T1,S):-
 \ttrace(S),
 \ttimepoint(T1,S),
 \tnot weak_timepoint(T1,S),
@@ -127,9 +127,9 @@ antecedent_holds({name},0,S):-
 consequent_holds({name},0,S):-
 \ttrace(S),
 \ttimepoint(0,S),
-\troot_consequent_holds(current,{name},0,0,S).
+\troot_consequent_holds(current,{name},0,0,0,S).
 
-root_consequent_holds(OP,{name},0,T1,S):-
+root_consequent_holds(OP,{name},0,0,T1,S):-
 \ttrace(S),
 \ttimepoint(T1,S),
 \tnot weak_timepoint(T1,S),
@@ -152,10 +152,10 @@ antecedent_holds({name},0,S):-
 consequent_holds({name},0,S):-
 \ttrace(S),
 \ttimepoint(0,S),
-\troot_consequent_holds(prev,{name},0,0,S),
-\troot_consequent_holds(next,{name},1,0,S).
+\troot_consequent_holds(prev,{name},0,0,0,S),
+\troot_consequent_holds(next,{name},0,1,0,S).
 
-root_consequent_holds(OP,{name},0,T1,S):-
+root_consequent_holds(OP,{name},0,0,T1,S):-
 \ttrace(S),
 \ttimepoint(T1,S),
 \tnot weak_timepoint(T1,S),
@@ -164,7 +164,7 @@ root_consequent_holds(OP,{name},0,T1,S):-
 \ttimepoint_of_op(OP,T1,T2,S),
 \tholds_at(a,T2,S).
 
-root_consequent_holds(OP,{name},1,T1,S):-
+root_consequent_holds(OP,{name},0,1,T1,S):-
 \ttrace(S),
 \ttimepoint(T1,S),
 \tnot weak_timepoint(T1,S),
@@ -187,9 +187,9 @@ antecedent_holds({name},0,S):-
 consequent_holds({name},0,S):-
 \ttrace(S),
 \ttimepoint(0,S),
-\troot_consequent_holds(current,{name},0,0,S).
+\troot_consequent_holds(current,{name},0,0,0,S).
 
-root_consequent_holds(OP,{name},0,T1,S):-
+root_consequent_holds(OP,{name},0,0,T1,S):-
 \ttrace(S),
 \ttimepoint(T1,S),
 \tnot weak_timepoint(T1,S),
@@ -213,9 +213,9 @@ antecedent_holds({name},0,S):-
 consequent_holds({name},0,S):-
 \ttrace(S),
 \ttimepoint(0,S),
-\troot_consequent_holds(current,{name},0,0,S).
+\troot_consequent_holds(current,{name},0,0,0,S).
 
-root_consequent_holds(OP,{name},0,T1,S):-
+root_consequent_holds(OP,{name},0,0,T1,S):-
 \ttrace(S),
 \ttimepoint(T1,S),
 \tnot weak_timepoint(T1,S),
@@ -227,9 +227,9 @@ root_consequent_holds(OP,{name},0,T1,S):-
 consequent_holds({name},0,S):-
 \ttrace(S),
 \ttimepoint(0,S),
-\troot_consequent_holds(current,{name},1,0,S).
+\troot_consequent_holds(current,{name},0,1,0,S).
 
-root_consequent_holds(OP,{name},1,T1,S):-
+root_consequent_holds(OP,{name},0,1,T1,S):-
 \ttrace(S),
 \ttimepoint(T1,S),
 \tnot weak_timepoint(T1,S),
@@ -252,9 +252,9 @@ antecedent_holds({name},0,S):-
 consequent_holds({name},0,S):-
 \ttrace(S),
 \ttimepoint(0,S),
-\troot_consequent_holds(current,{name},0,0,S).
+\troot_consequent_holds(current,{name},0,0,0,S).
 
-root_consequent_holds(OP,{name},0,T1,S):-
+root_consequent_holds(OP,{name},0,0,T1,S):-
 \ttrace(S),
 \ttimepoint(T1,S),
 \tnot weak_timepoint(T1,S),
@@ -266,9 +266,9 @@ root_consequent_holds(OP,{name},0,T1,S):-
 consequent_holds({name},0,S):-
 \ttrace(S),
 \ttimepoint(0,S),
-\troot_consequent_holds(current,{name},1,0,S).
+\troot_consequent_holds(current,{name},0,1,0,S).
 
-root_consequent_holds(OP,{name},1,T1,S):-
+root_consequent_holds(OP,{name},0,1,T1,S):-
 \ttrace(S),
 \ttimepoint(T1,S),
 \tnot weak_timepoint(T1,S),
@@ -280,9 +280,9 @@ root_consequent_holds(OP,{name},1,T1,S):-
 consequent_holds({name},0,S):-
 \ttrace(S),
 \ttimepoint(0,S),
-\troot_consequent_holds(current,{name},2,0,S).
+\troot_consequent_holds(current,{name},0,2,0,S).
 
-root_consequent_holds(OP,{name},2,T1,S):-
+root_consequent_holds(OP,{name},0,2,T1,S):-
 \ttrace(S),
 \ttimepoint(T1,S),
 \tnot weak_timepoint(T1,S),
@@ -311,9 +311,9 @@ antecedent_holds({name},0,S):-
 consequent_holds({name},0,S):-
 \ttrace(S),
 \ttimepoint(0,S),
-\troot_consequent_holds(current,{name},0,0,S).
+\troot_consequent_holds(current,{name},0,0,0,S).
 
-root_consequent_holds(OP,{name},0,T1,S):-
+root_consequent_holds(OP,{name},0,0,T1,S):-
 \ttrace(S),
 \ttimepoint(T1,S),
 \tnot weak_timepoint(T1,S),
@@ -327,9 +327,9 @@ root_consequent_holds(OP,{name},0,T1,S):-
 consequent_holds({name},0,S):-
 \ttrace(S),
 \ttimepoint(0,S),
-\troot_consequent_holds(current,{name},1,0,S).
+\troot_consequent_holds(current,{name},0,1,0,S).
 
-root_consequent_holds(OP,{name},1,T1,S):-
+root_consequent_holds(OP,{name},0,1,T1,S):-
 \ttrace(S),
 \ttimepoint(T1,S),
 \tnot weak_timepoint(T1,S),
@@ -343,9 +343,9 @@ root_consequent_holds(OP,{name},1,T1,S):-
 consequent_holds({name},0,S):-
 \ttrace(S),
 \ttimepoint(0,S),
-\troot_consequent_holds(current,{name},2,0,S).
+\troot_consequent_holds(current,{name},0,2,0,S).
 
-root_consequent_holds(OP,{name},2,T1,S):-
+root_consequent_holds(OP,{name},0,2,T1,S):-
 \ttrace(S),
 \ttimepoint(T1,S),
 \tnot weak_timepoint(T1,S),
@@ -376,11 +376,11 @@ antecedent_holds({name},0,S):-
 consequent_holds({name},0,S):-
 \ttrace(S),
 \ttimepoint(0,S),
-\troot_consequent_holds(prev,{name},0,0,S),
-\troot_consequent_holds(current,{name},1,0,S),
-\troot_consequent_holds(next,{name},2,0,S).
+\troot_consequent_holds(prev,{name},0,0,0,S),
+\troot_consequent_holds(current,{name},0,1,0,S),
+\troot_consequent_holds(next,{name},0,2,0,S).
 
-root_consequent_holds(OP,{name},0,T1,S):-
+root_consequent_holds(OP,{name},0,0,T1,S):-
 \ttrace(S),
 \ttimepoint(T1,S),
 \tnot weak_timepoint(T1,S),
@@ -389,7 +389,7 @@ root_consequent_holds(OP,{name},0,T1,S):-
 \ttimepoint_of_op(OP,T1,T2,S),
 \tholds_at(a,T2,S).
 
-root_consequent_holds(OP,{name},1,T1,S):-
+root_consequent_holds(OP,{name},0,1,T1,S):-
 \ttrace(S),
 \ttimepoint(T1,S),
 \tnot weak_timepoint(T1,S),
@@ -398,7 +398,7 @@ root_consequent_holds(OP,{name},1,T1,S):-
 \ttimepoint_of_op(OP,T1,T2,S),
 \tholds_at(b,T2,S).
 
-root_consequent_holds(OP,{name},2,T1,S):-
+root_consequent_holds(OP,{name},0,2,T1,S):-
 \ttrace(S),
 \ttimepoint(T1,S),
 \tnot weak_timepoint(T1,S),
@@ -410,11 +410,11 @@ root_consequent_holds(OP,{name},2,T1,S):-
 consequent_holds({name},0,S):-
 \ttrace(S),
 \ttimepoint(0,S),
-\troot_consequent_holds(prev,{name},3,0,S),
-\troot_consequent_holds(current,{name},4,0,S),
-\troot_consequent_holds(next,{name},5,0,S).
+\troot_consequent_holds(prev,{name},0,3,0,S),
+\troot_consequent_holds(current,{name},0,4,0,S),
+\troot_consequent_holds(next,{name},0,5,0,S).
 
-root_consequent_holds(OP,{name},3,T1,S):-
+root_consequent_holds(OP,{name},0,3,T1,S):-
 \ttrace(S),
 \ttimepoint(T1,S),
 \tnot weak_timepoint(T1,S),
@@ -423,7 +423,7 @@ root_consequent_holds(OP,{name},3,T1,S):-
 \ttimepoint_of_op(OP,T1,T2,S),
 \tholds_at(d,T2,S).
 
-root_consequent_holds(OP,{name},4,T1,S):-
+root_consequent_holds(OP,{name},0,4,T1,S):-
 \ttrace(S),
 \ttimepoint(T1,S),
 \tnot weak_timepoint(T1,S),
@@ -432,7 +432,7 @@ root_consequent_holds(OP,{name},4,T1,S):-
 \ttimepoint_of_op(OP,T1,T2,S),
 \tholds_at(e,T2,S).
 
-root_consequent_holds(OP,{name},5,T1,S):-
+root_consequent_holds(OP,{name},0,5,T1,S):-
 \ttrace(S),
 \ttimepoint(T1,S),
 \tnot weak_timepoint(T1,S),
@@ -444,11 +444,11 @@ root_consequent_holds(OP,{name},5,T1,S):-
 consequent_holds({name},0,S):-
 \ttrace(S),
 \ttimepoint(0,S),
-\troot_consequent_holds(prev,{name},6,0,S),
-\troot_consequent_holds(current,{name},7,0,S),
-\troot_consequent_holds(next,{name},8,0,S).
+\troot_consequent_holds(prev,{name},0,6,0,S),
+\troot_consequent_holds(current,{name},0,7,0,S),
+\troot_consequent_holds(next,{name},0,8,0,S).
 
-root_consequent_holds(OP,{name},6,T1,S):-
+root_consequent_holds(OP,{name},0,6,T1,S):-
 \ttrace(S),
 \ttimepoint(T1,S),
 \tnot weak_timepoint(T1,S),
@@ -457,7 +457,7 @@ root_consequent_holds(OP,{name},6,T1,S):-
 \ttimepoint_of_op(OP,T1,T2,S),
 \tholds_at(g,T2,S).
 
-root_consequent_holds(OP,{name},7,T1,S):-
+root_consequent_holds(OP,{name},0,7,T1,S):-
 \ttrace(S),
 \ttimepoint(T1,S),
 \tnot weak_timepoint(T1,S),
@@ -466,7 +466,7 @@ root_consequent_holds(OP,{name},7,T1,S):-
 \ttimepoint_of_op(OP,T1,T2,S),
 \tholds_at(h,T2,S).
 
-root_consequent_holds(OP,{name},8,T1,S):-
+root_consequent_holds(OP,{name},0,8,T1,S):-
 \ttrace(S),
 \ttimepoint(T1,S),
 \tnot weak_timepoint(T1,S),
@@ -498,9 +498,9 @@ root_antecedent_holds(OP,{name},0,T1,S):-
 consequent_holds({name},0,S):-
 \ttrace(S),
 \ttimepoint(0,S),
-\troot_consequent_holds(current,{name},0,0,S).
+\troot_consequent_holds(current,{name},0,0,0,S).
 
-root_consequent_holds(OP,{name},0,T1,S):-
+root_consequent_holds(OP,{name},0,0,T1,S):-
 \ttrace(S),
 \ttimepoint(T1,S),
 \tnot weak_timepoint(T1,S),
@@ -532,9 +532,9 @@ root_antecedent_holds(OP,{name},0,T1,S):-
 consequent_holds({name},0,S):-
 \ttrace(S),
 \ttimepoint(0,S),
-\troot_consequent_holds(current,{name},0,0,S).
+\troot_consequent_holds(current,{name},0,0,0,S).
 
-root_consequent_holds(OP,{name},0,T1,S):-
+root_consequent_holds(OP,{name},0,0,T1,S):-
 \ttrace(S),
 \ttimepoint(T1,S),
 \tnot weak_timepoint(T1,S),
@@ -566,9 +566,9 @@ root_antecedent_holds(OP,{name},0,T1,S):-
 consequent_holds({name},0,S):-
 \ttrace(S),
 \ttimepoint(0,S),
-\troot_consequent_holds(current,{name},0,0,S).
+\troot_consequent_holds(current,{name},0,0,0,S).
 
-root_consequent_holds(OP,{name},0,T1,S):-
+root_consequent_holds(OP,{name},0,0,T1,S):-
 \ttrace(S),
 \ttimepoint(T1,S),
 \tnot weak_timepoint(T1,S),
@@ -598,9 +598,9 @@ root_antecedent_holds(OP,{name},0,T1,S):-
 consequent_holds({name},0,S):-
 \ttrace(S),
 \ttimepoint(0,S),
-\troot_consequent_holds(current,{name},0,0,S).
+\troot_consequent_holds(current,{name},0,0,0,S).
 
-root_consequent_holds(OP,{name},0,T1,S):-
+root_consequent_holds(OP,{name},0,0,T1,S):-
 \ttrace(S),
 \ttimepoint(T1,S),
 \tnot weak_timepoint(T1,S),
@@ -633,9 +633,9 @@ root_antecedent_holds(OP,{name},0,T1,S):-
 consequent_holds({name},0,S):-
 \ttrace(S),
 \ttimepoint(0,S),
-\troot_consequent_holds(current,{name},0,0,S).
+\troot_consequent_holds(current,{name},0,0,0,S).
 
-root_consequent_holds(OP,{name},0,T1,S):-
+root_consequent_holds(OP,{name},0,0,T1,S):-
 \ttrace(S),
 \ttimepoint(T1,S),
 \tnot weak_timepoint(T1,S),
@@ -678,9 +678,9 @@ root_antecedent_holds(OP,{name},1,T1,S):-
 consequent_holds({name},0,S):-
 \ttrace(S),
 \ttimepoint(0,S),
-\troot_consequent_holds(current,{name},0,0,S).
+\troot_consequent_holds(current,{name},0,0,0,S).
 
-root_consequent_holds(OP,{name},0,T1,S):-
+root_consequent_holds(OP,{name},0,0,T1,S):-
 \ttrace(S),
 \ttimepoint(T1,S),
 \tnot weak_timepoint(T1,S),
@@ -716,9 +716,9 @@ root_antecedent_holds(OP,{name},0,T1,S):-
 consequent_holds({name},0,S):-
 \ttrace(S),
 \ttimepoint(0,S),
-\troot_consequent_holds(current,{name},0,0,S).
+\troot_consequent_holds(current,{name},0,0,0,S).
 
-root_consequent_holds(OP,{name},0,T1,S):-
+root_consequent_holds(OP,{name},0,0,T1,S):-
 \ttrace(S),
 \ttimepoint(T1,S),
 \tnot weak_timepoint(T1,S),
@@ -765,9 +765,9 @@ root_antecedent_holds(OP,{name},1,T1,S):-
 consequent_holds({name},0,S):-
 \ttrace(S),
 \ttimepoint(0,S),
-\troot_consequent_holds(current,{name},0,0,S).
+\troot_consequent_holds(current,{name},0,0,0,S).
 
-root_consequent_holds(OP,{name},0,T1,S):-
+root_consequent_holds(OP,{name},0,0,T1,S):-
 \ttrace(S),
 \ttimepoint(T1,S),
 \tnot weak_timepoint(T1,S),
@@ -829,9 +829,9 @@ root_antecedent_holds(OP,{name},2,T1,S):-
 consequent_holds({name},0,S):-
 \ttrace(S),
 \ttimepoint(0,S),
-\troot_consequent_holds(current,{name},0,0,S).
+\troot_consequent_holds(current,{name},0,0,0,S).
 
-root_consequent_holds(OP,{name},0,T1,S):-
+root_consequent_holds(OP,{name},0,0,T1,S):-
 \ttrace(S),
 \ttimepoint(T1,S),
 \tnot weak_timepoint(T1,S),
@@ -905,9 +905,9 @@ root_antecedent_holds(OP,{name},2,T1,S):-
 consequent_holds({name},0,S):-
 \ttrace(S),
 \ttimepoint(0,S),
-\troot_consequent_holds(current,{name},0,0,S).
+\troot_consequent_holds(current,{name},0,0,0,S).
 
-root_consequent_holds(OP,{name},0,T1,S):-
+root_consequent_holds(OP,{name},0,0,T1,S):-
 \ttrace(S),
 \ttimepoint(T1,S),
 \tnot weak_timepoint(T1,S),
@@ -1035,9 +1035,9 @@ root_antecedent_holds(OP,{name},8,T1,S):-
 consequent_holds({name},0,S):-
 \ttrace(S),
 \ttimepoint(0,S),
-\troot_consequent_holds(current,{name},0,0,S).
+\troot_consequent_holds(current,{name},0,0,0,S).
 
-root_consequent_holds(OP,{name},0,T1,S):-
+root_consequent_holds(OP,{name},0,0,T1,S):-
 \ttrace(S),
 \ttimepoint(T1,S),
 \tnot weak_timepoint(T1,S),
@@ -1058,16 +1058,16 @@ antecedent_holds({name},T,S):-
 consequent_holds({name},T,S):-
 \ttrace(S),
 \ttimepoint(T,S),
-\troot_consequent_holds(current,{name},0,T,S),
+\troot_consequent_holds(current,{name},0,0,T,S),
 \tnot ev_temp_op({name}).
 
 consequent_holds({name},T,S):-
 \ttrace(S),
 \ttimepoint(T,S),
-\troot_consequent_holds(eventually,{name},0,T,S),
+\troot_consequent_holds(eventually,{name},0,0,T,S),
 \tev_temp_op({name}).
 
-root_consequent_holds(OP,{name},0,T1,S):-
+root_consequent_holds(OP,{name},0,0,T1,S):-
 \ttrace(S),
 \ttimepoint(T1,S),
 \tnot weak_timepoint(T1,S),
@@ -1088,16 +1088,16 @@ antecedent_holds({name},T,S):-
 consequent_holds({name},T,S):-
 \ttrace(S),
 \ttimepoint(T,S),
-\troot_consequent_holds(current,{name},0,T,S),
+\troot_consequent_holds(current,{name},0,0,T,S),
 \tnot ev_temp_op({name}).
 
 consequent_holds({name},T,S):-
 \ttrace(S),
 \ttimepoint(T,S),
-\troot_consequent_holds(eventually,{name},0,T,S),
+\troot_consequent_holds(eventually,{name},0,0,T,S),
 \tev_temp_op({name}).
 
-root_consequent_holds(OP,{name},0,T1,S):-
+root_consequent_holds(OP,{name},0,0,T1,S):-
 \ttrace(S),
 \ttimepoint(T1,S),
 \tnot weak_timepoint(T1,S),
@@ -1118,16 +1118,16 @@ antecedent_holds({name},T,S):-
 consequent_holds({name},T,S):-
 \ttrace(S),
 \ttimepoint(T,S),
-\troot_consequent_holds(current,{name},0,T,S),
+\troot_consequent_holds(current,{name},0,0,T,S),
 \tnot ev_temp_op({name}).
 
 consequent_holds({name},T,S):-
 \ttrace(S),
 \ttimepoint(T,S),
-\troot_consequent_holds(eventually,{name},0,T,S),
+\troot_consequent_holds(eventually,{name},0,0,T,S),
 \tev_temp_op({name}).
 
-root_consequent_holds(OP,{name},0,T1,S):-
+root_consequent_holds(OP,{name},0,0,T1,S):-
 \ttrace(S),
 \ttimepoint(T1,S),
 \tnot weak_timepoint(T1,S),
@@ -1147,16 +1147,16 @@ antecedent_holds({name},T,S):-
 consequent_holds({name},T,S):-
 \ttrace(S),
 \ttimepoint(T,S),
-\troot_consequent_holds(current,{name},0,T,S),
+\troot_consequent_holds(current,{name},0,0,T,S),
 \tnot ev_temp_op({name}).
 
 consequent_holds({name},T,S):-
 \ttrace(S),
 \ttimepoint(T,S),
-\troot_consequent_holds(eventually,{name},0,T,S),
+\troot_consequent_holds(eventually,{name},0,0,T,S),
 \tev_temp_op({name}).
 
-root_consequent_holds(OP,{name},0,T1,S):-
+root_consequent_holds(OP,{name},0,0,T1,S):-
 \ttrace(S),
 \ttimepoint(T1,S),
 \tnot weak_timepoint(T1,S),
@@ -1177,16 +1177,16 @@ antecedent_holds({name},T,S):-
 consequent_holds({name},T,S):-
 \ttrace(S),
 \ttimepoint(T,S),
-\troot_consequent_holds(current,{name},0,T,S),
+\troot_consequent_holds(current,{name},0,0,T,S),
 \tnot ev_temp_op({name}).
 
 consequent_holds({name},T,S):-
 \ttrace(S),
 \ttimepoint(T,S),
-\troot_consequent_holds(eventually,{name},0,T,S),
+\troot_consequent_holds(eventually,{name},0,0,T,S),
 \tev_temp_op({name}).
 
-root_consequent_holds(OP,{name},0,T1,S):-
+root_consequent_holds(OP,{name},0,0,T1,S):-
 \ttrace(S),
 \ttimepoint(T1,S),
 \tnot weak_timepoint(T1,S),
@@ -1209,18 +1209,18 @@ antecedent_holds({name},T,S):-
 consequent_holds({name},T,S):-
 \ttrace(S),
 \ttimepoint(T,S),
-\troot_consequent_holds(prev,{name},0,T,S),
-\troot_consequent_holds(next,{name},1,T,S),
+\troot_consequent_holds(prev,{name},0,0,T,S),
+\troot_consequent_holds(next,{name},0,1,T,S),
 \tnot ev_temp_op({name}).
 
 consequent_holds({name},T,S):-
 \ttrace(S),
 \ttimepoint(T,S),
-\troot_consequent_holds(eventually,{name},0,T,S),
-\troot_consequent_holds(eventually,{name},1,T,S),
+\troot_consequent_holds(eventually,{name},0,0,T,S),
+\troot_consequent_holds(eventually,{name},0,1,T,S),
 \tev_temp_op({name}).
 
-root_consequent_holds(OP,{name},0,T1,S):-
+root_consequent_holds(OP,{name},0,0,T1,S):-
 \ttrace(S),
 \ttimepoint(T1,S),
 \tnot weak_timepoint(T1,S),
@@ -1229,7 +1229,7 @@ root_consequent_holds(OP,{name},0,T1,S):-
 \ttimepoint_of_op(OP,T1,T2,S),
 \tholds_at(a,T2,S).
 
-root_consequent_holds(OP,{name},1,T1,S):-
+root_consequent_holds(OP,{name},0,1,T1,S):-
 \ttrace(S),
 \ttimepoint(T1,S),
 \tnot weak_timepoint(T1,S),
@@ -1252,16 +1252,16 @@ antecedent_holds({name},T,S):-
 consequent_holds({name},T,S):-
 \ttrace(S),
 \ttimepoint(T,S),
-\troot_consequent_holds(current,{name},0,T,S),
+\troot_consequent_holds(current,{name},0,0,T,S),
 \tnot ev_temp_op({name}).
 
 consequent_holds({name},T,S):-
 \ttrace(S),
 \ttimepoint(T,S),
-\troot_consequent_holds(eventually,{name},0,T,S),
+\troot_consequent_holds(eventually,{name},0,0,T,S),
 \tev_temp_op({name}).
 
-root_consequent_holds(OP,{name},0,T1,S):-
+root_consequent_holds(OP,{name},0,0,T1,S):-
 \ttrace(S),
 \ttimepoint(T1,S),
 \tnot weak_timepoint(T1,S),
@@ -1286,16 +1286,16 @@ antecedent_holds({name},T,S):-
 consequent_holds({name},T,S):-
 \ttrace(S),
 \ttimepoint(T,S),
-\troot_consequent_holds(current,{name},0,T,S),
+\troot_consequent_holds(current,{name},0,0,T,S),
 \tnot ev_temp_op({name}).
 
 consequent_holds({name},T,S):-
 \ttrace(S),
 \ttimepoint(T,S),
-\troot_consequent_holds(eventually,{name},0,T,S),
+\troot_consequent_holds(eventually,{name},0,0,T,S),
 \tev_temp_op({name}).
 
-root_consequent_holds(OP,{name},0,T1,S):-
+root_consequent_holds(OP,{name},0,0,T1,S):-
 \ttrace(S),
 \ttimepoint(T1,S),
 \tnot weak_timepoint(T1,S),
@@ -1307,16 +1307,16 @@ root_consequent_holds(OP,{name},0,T1,S):-
 consequent_holds({name},T,S):-
 \ttrace(S),
 \ttimepoint(T,S),
-\troot_consequent_holds(current,{name},1,T,S),
+\troot_consequent_holds(current,{name},0,1,T,S),
 \tnot ev_temp_op({name}).
 
 consequent_holds({name},T,S):-
 \ttrace(S),
 \ttimepoint(T,S),
-\troot_consequent_holds(eventually,{name},1,T,S),
+\troot_consequent_holds(eventually,{name},0,1,T,S),
 \tev_temp_op({name}).
 
-root_consequent_holds(OP,{name},1,T1,S):-
+root_consequent_holds(OP,{name},0,1,T1,S):-
 \ttrace(S),
 \ttimepoint(T1,S),
 \tnot weak_timepoint(T1,S),
@@ -1339,16 +1339,16 @@ antecedent_holds({name},T,S):-
 consequent_holds({name},T,S):-
 \ttrace(S),
 \ttimepoint(T,S),
-\troot_consequent_holds(current,{name},0,T,S),
+\troot_consequent_holds(current,{name},0,0,T,S),
 \tnot ev_temp_op({name}).
 
 consequent_holds({name},T,S):-
 \ttrace(S),
 \ttimepoint(T,S),
-\troot_consequent_holds(eventually,{name},0,T,S),
+\troot_consequent_holds(eventually,{name},0,0,T,S),
 \tev_temp_op({name}).
 
-root_consequent_holds(OP,{name},0,T1,S):-
+root_consequent_holds(OP,{name},0,0,T1,S):-
 \ttrace(S),
 \ttimepoint(T1,S),
 \tnot weak_timepoint(T1,S),
@@ -1360,16 +1360,16 @@ root_consequent_holds(OP,{name},0,T1,S):-
 consequent_holds({name},T,S):-
 \ttrace(S),
 \ttimepoint(T,S),
-\troot_consequent_holds(current,{name},1,T,S),
+\troot_consequent_holds(current,{name},0,1,T,S),
 \tnot ev_temp_op({name}).
 
 consequent_holds({name},T,S):-
 \ttrace(S),
 \ttimepoint(T,S),
-\troot_consequent_holds(eventually,{name},1,T,S),
+\troot_consequent_holds(eventually,{name},0,1,T,S),
 \tev_temp_op({name}).
 
-root_consequent_holds(OP,{name},1,T1,S):-
+root_consequent_holds(OP,{name},0,1,T1,S):-
 \ttrace(S),
 \ttimepoint(T1,S),
 \tnot weak_timepoint(T1,S),
@@ -1381,16 +1381,16 @@ root_consequent_holds(OP,{name},1,T1,S):-
 consequent_holds({name},T,S):-
 \ttrace(S),
 \ttimepoint(T,S),
-\troot_consequent_holds(current,{name},2,T,S),
+\troot_consequent_holds(current,{name},0,2,T,S),
 \tnot ev_temp_op({name}).
 
 consequent_holds({name},T,S):-
 \ttrace(S),
 \ttimepoint(T,S),
-\troot_consequent_holds(eventually,{name},2,T,S),
+\troot_consequent_holds(eventually,{name},0,2,T,S),
 \tev_temp_op({name}).
 
-root_consequent_holds(OP,{name},2,T1,S):-
+root_consequent_holds(OP,{name},0,2,T1,S):-
 \ttrace(S),
 \ttimepoint(T1,S),
 \tnot weak_timepoint(T1,S),
@@ -1419,16 +1419,16 @@ antecedent_holds({name},T,S):-
 consequent_holds({name},T,S):-
 \ttrace(S),
 \ttimepoint(T,S),
-\troot_consequent_holds(current,{name},0,T,S),
+\troot_consequent_holds(current,{name},0,0,T,S),
 \tnot ev_temp_op({name}).
 
 consequent_holds({name},T,S):-
 \ttrace(S),
 \ttimepoint(T,S),
-\troot_consequent_holds(eventually,{name},0,T,S),
+\troot_consequent_holds(eventually,{name},0,0,T,S),
 \tev_temp_op({name}).
 
-root_consequent_holds(OP,{name},0,T1,S):-
+root_consequent_holds(OP,{name},0,0,T1,S):-
 \ttrace(S),
 \ttimepoint(T1,S),
 \tnot weak_timepoint(T1,S),
@@ -1442,16 +1442,16 @@ root_consequent_holds(OP,{name},0,T1,S):-
 consequent_holds({name},T,S):-
 \ttrace(S),
 \ttimepoint(T,S),
-\troot_consequent_holds(current,{name},1,T,S),
+\troot_consequent_holds(current,{name},0,1,T,S),
 \tnot ev_temp_op({name}).
 
 consequent_holds({name},T,S):-
 \ttrace(S),
 \ttimepoint(T,S),
-\troot_consequent_holds(eventually,{name},1,T,S),
+\troot_consequent_holds(eventually,{name},0,1,T,S),
 \tev_temp_op({name}).
 
-root_consequent_holds(OP,{name},1,T1,S):-
+root_consequent_holds(OP,{name},0,1,T1,S):-
 \ttrace(S),
 \ttimepoint(T1,S),
 \tnot weak_timepoint(T1,S),
@@ -1465,16 +1465,16 @@ root_consequent_holds(OP,{name},1,T1,S):-
 consequent_holds({name},T,S):-
 \ttrace(S),
 \ttimepoint(T,S),
-\troot_consequent_holds(current,{name},2,T,S),
+\troot_consequent_holds(current,{name},0,2,T,S),
 \tnot ev_temp_op({name}).
 
 consequent_holds({name},T,S):-
 \ttrace(S),
 \ttimepoint(T,S),
-\troot_consequent_holds(eventually,{name},2,T,S),
+\troot_consequent_holds(eventually,{name},0,2,T,S),
 \tev_temp_op({name}).
 
-root_consequent_holds(OP,{name},2,T1,S):-
+root_consequent_holds(OP,{name},0,2,T1,S):-
 \ttrace(S),
 \ttimepoint(T1,S),
 \tnot weak_timepoint(T1,S),
@@ -1505,20 +1505,20 @@ antecedent_holds({name},T,S):-
 consequent_holds({name},T,S):-
 \ttrace(S),
 \ttimepoint(T,S),
-\troot_consequent_holds(prev,{name},0,T,S),
-\troot_consequent_holds(current,{name},1,T,S),
-\troot_consequent_holds(next,{name},2,T,S),
+\troot_consequent_holds(prev,{name},0,0,T,S),
+\troot_consequent_holds(current,{name},0,1,T,S),
+\troot_consequent_holds(next,{name},0,2,T,S),
 \tnot ev_temp_op({name}).
 
 consequent_holds({name},T,S):-
 \ttrace(S),
 \ttimepoint(T,S),
-\troot_consequent_holds(eventually,{name},0,T,S),
-\troot_consequent_holds(eventually,{name},1,T,S),
-\troot_consequent_holds(eventually,{name},2,T,S),
+\troot_consequent_holds(eventually,{name},0,0,T,S),
+\troot_consequent_holds(eventually,{name},0,1,T,S),
+\troot_consequent_holds(eventually,{name},0,2,T,S),
 \tev_temp_op({name}).
 
-root_consequent_holds(OP,{name},0,T1,S):-
+root_consequent_holds(OP,{name},0,0,T1,S):-
 \ttrace(S),
 \ttimepoint(T1,S),
 \tnot weak_timepoint(T1,S),
@@ -1527,7 +1527,7 @@ root_consequent_holds(OP,{name},0,T1,S):-
 \ttimepoint_of_op(OP,T1,T2,S),
 \tholds_at(a,T2,S).
 
-root_consequent_holds(OP,{name},1,T1,S):-
+root_consequent_holds(OP,{name},0,1,T1,S):-
 \ttrace(S),
 \ttimepoint(T1,S),
 \tnot weak_timepoint(T1,S),
@@ -1536,7 +1536,7 @@ root_consequent_holds(OP,{name},1,T1,S):-
 \ttimepoint_of_op(OP,T1,T2,S),
 \tholds_at(b,T2,S).
 
-root_consequent_holds(OP,{name},2,T1,S):-
+root_consequent_holds(OP,{name},0,2,T1,S):-
 \ttrace(S),
 \ttimepoint(T1,S),
 \tnot weak_timepoint(T1,S),
@@ -1548,20 +1548,20 @@ root_consequent_holds(OP,{name},2,T1,S):-
 consequent_holds({name},T,S):-
 \ttrace(S),
 \ttimepoint(T,S),
-\troot_consequent_holds(prev,{name},3,T,S),
-\troot_consequent_holds(current,{name},4,T,S),
-\troot_consequent_holds(next,{name},5,T,S),
+\troot_consequent_holds(prev,{name},0,3,T,S),
+\troot_consequent_holds(current,{name},0,4,T,S),
+\troot_consequent_holds(next,{name},0,5,T,S),
 \tnot ev_temp_op({name}).
 
 consequent_holds({name},T,S):-
 \ttrace(S),
 \ttimepoint(T,S),
-\troot_consequent_holds(eventually,{name},3,T,S),
-\troot_consequent_holds(eventually,{name},4,T,S),
-\troot_consequent_holds(eventually,{name},5,T,S),
+\troot_consequent_holds(eventually,{name},0,3,T,S),
+\troot_consequent_holds(eventually,{name},0,4,T,S),
+\troot_consequent_holds(eventually,{name},0,5,T,S),
 \tev_temp_op({name}).
 
-root_consequent_holds(OP,{name},3,T1,S):-
+root_consequent_holds(OP,{name},0,3,T1,S):-
 \ttrace(S),
 \ttimepoint(T1,S),
 \tnot weak_timepoint(T1,S),
@@ -1570,7 +1570,7 @@ root_consequent_holds(OP,{name},3,T1,S):-
 \ttimepoint_of_op(OP,T1,T2,S),
 \tholds_at(d,T2,S).
 
-root_consequent_holds(OP,{name},4,T1,S):-
+root_consequent_holds(OP,{name},0,4,T1,S):-
 \ttrace(S),
 \ttimepoint(T1,S),
 \tnot weak_timepoint(T1,S),
@@ -1579,7 +1579,7 @@ root_consequent_holds(OP,{name},4,T1,S):-
 \ttimepoint_of_op(OP,T1,T2,S),
 \tholds_at(e,T2,S).
 
-root_consequent_holds(OP,{name},5,T1,S):-
+root_consequent_holds(OP,{name},0,5,T1,S):-
 \ttrace(S),
 \ttimepoint(T1,S),
 \tnot weak_timepoint(T1,S),
@@ -1591,20 +1591,20 @@ root_consequent_holds(OP,{name},5,T1,S):-
 consequent_holds({name},T,S):-
 \ttrace(S),
 \ttimepoint(T,S),
-\troot_consequent_holds(prev,{name},6,T,S),
-\troot_consequent_holds(current,{name},7,T,S),
-\troot_consequent_holds(next,{name},8,T,S),
+\troot_consequent_holds(prev,{name},0,6,T,S),
+\troot_consequent_holds(current,{name},0,7,T,S),
+\troot_consequent_holds(next,{name},0,8,T,S),
 \tnot ev_temp_op({name}).
 
 consequent_holds({name},T,S):-
 \ttrace(S),
 \ttimepoint(T,S),
-\troot_consequent_holds(eventually,{name},6,T,S),
-\troot_consequent_holds(eventually,{name},7,T,S),
-\troot_consequent_holds(eventually,{name},8,T,S),
+\troot_consequent_holds(eventually,{name},0,6,T,S),
+\troot_consequent_holds(eventually,{name},0,7,T,S),
+\troot_consequent_holds(eventually,{name},0,8,T,S),
 \tev_temp_op({name}).
 
-root_consequent_holds(OP,{name},6,T1,S):-
+root_consequent_holds(OP,{name},0,6,T1,S):-
 \ttrace(S),
 \ttimepoint(T1,S),
 \tnot weak_timepoint(T1,S),
@@ -1613,7 +1613,7 @@ root_consequent_holds(OP,{name},6,T1,S):-
 \ttimepoint_of_op(OP,T1,T2,S),
 \tholds_at(g,T2,S).
 
-root_consequent_holds(OP,{name},7,T1,S):-
+root_consequent_holds(OP,{name},0,7,T1,S):-
 \ttrace(S),
 \ttimepoint(T1,S),
 \tnot weak_timepoint(T1,S),
@@ -1622,7 +1622,7 @@ root_consequent_holds(OP,{name},7,T1,S):-
 \ttimepoint_of_op(OP,T1,T2,S),
 \tholds_at(h,T2,S).
 
-root_consequent_holds(OP,{name},8,T1,S):-
+root_consequent_holds(OP,{name},0,8,T1,S):-
 \ttrace(S),
 \ttimepoint(T1,S),
 \tnot weak_timepoint(T1,S),
@@ -1652,9 +1652,18 @@ antecedent_holds({name},T,S):-
 consequent_holds({name},T,S):-
 \ttrace(S),
 \ttimepoint(T,S),
-\troot_consequent_holds(eventually,{name},0,T,S).
+\troot_consequent_holds(eventually,{name},0,0,T,S).
 
-root_consequent_holds(OP,{name},0,T1,S):-
+root_consequent_holds(OP,{name},0,0,T1,S):-
+\ttrace(S),
+\ttimepoint(T1,S),
+\tnot weak_timepoint(T1,S),
+\ttimepoint(T2,S),
+\ttemporal_operator(OP),
+\ttimepoint_of_op(OP,T1,T2,S),
+\troot_consequent_holds(current,{name},1,0,T2,S).
+
+root_consequent_holds(OP,{name},1,0,T1,S):-
 \ttrace(S),
 \ttimepoint(T1,S),
 \tnot weak_timepoint(T1,S),
@@ -1665,12 +1674,16 @@ root_consequent_holds(OP,{name},0,T1,S):-
 \tholds_at(b,T2,S),
 \tholds_at(c,T2,S).
 
-consequent_holds({name},T,S):-
+root_consequent_holds(OP,{name},0,0,T1,S):-
 \ttrace(S),
-\ttimepoint(T,S),
-\troot_consequent_holds(eventually,{name},1,T,S).
+\ttimepoint(T1,S),
+\tnot weak_timepoint(T1,S),
+\ttimepoint(T2,S),
+\ttemporal_operator(OP),
+\ttimepoint_of_op(OP,T1,T2,S),
+\troot_consequent_holds(current,{name},1,1,T2,S).
 
-root_consequent_holds(OP,{name},1,T1,S):-
+root_consequent_holds(OP,{name},1,1,T1,S):-
 \ttrace(S),
 \ttimepoint(T1,S),
 \tnot weak_timepoint(T1,S),
@@ -1681,12 +1694,16 @@ root_consequent_holds(OP,{name},1,T1,S):-
 \tholds_at(e,T2,S),
 \tholds_at(f,T2,S).
 
-consequent_holds({name},T,S):-
+root_consequent_holds(OP,{name},0,0,T1,S):-
 \ttrace(S),
-\ttimepoint(T,S),
-\troot_consequent_holds(eventually,{name},2,T,S).
+\ttimepoint(T1,S),
+\tnot weak_timepoint(T1,S),
+\ttimepoint(T2,S),
+\ttemporal_operator(OP),
+\ttimepoint_of_op(OP,T1,T2,S),
+\troot_consequent_holds(current,{name},1,2,T2,S).
 
-root_consequent_holds(OP,{name},2,T1,S):-
+root_consequent_holds(OP,{name},1,2,T1,S):-
 \ttrace(S),
 \ttimepoint(T1,S),
 \tnot weak_timepoint(T1,S),
@@ -1695,6 +1712,144 @@ root_consequent_holds(OP,{name},2,T1,S):-
 \ttimepoint_of_op(OP,T1,T2,S),
 \tholds_at(g,T2,S),
 \tholds_at(h,T2,S),
+\tholds_at(i,T2,S).\
+""")
+
+    def test_always_eventually_ops_dnf(self):
+        a = Prev(AtomicProposition("a", True))
+        b = AtomicProposition("b", True)
+        c = Next(AtomicProposition("c", True))
+        d = Prev(AtomicProposition("d", True))
+        e = AtomicProposition("e", True)
+        f = Next(AtomicProposition("f", True))
+        g = Prev(AtomicProposition("g", True))
+        h = AtomicProposition("h", True)
+        i = Next(AtomicProposition("i", True))
+        self.assertEqual(
+            self.formatter.format(
+                Globally(Eventually(Or(Or(And(And(a, b), c), And(And(d, e), f)), And(And(g, h), i))))),
+            """\
+antecedent_holds({name},T,S):-
+\ttrace(S),
+\ttimepoint(T,S).
+
+consequent_holds({name},T,S):-
+\ttrace(S),
+\ttimepoint(T,S),
+\troot_consequent_holds(eventually,{name},0,0,T,S).
+
+root_consequent_holds(OP,{name},0,0,T1,S):-
+\ttrace(S),
+\ttimepoint(T1,S),
+\tnot weak_timepoint(T1,S),
+\ttimepoint(T2,S),
+\ttemporal_operator(OP),
+\ttimepoint_of_op(OP,T1,T2,S),
+\troot_consequent_holds(prev,{name},1,0,T2,S),
+\troot_consequent_holds(current,{name},1,1,T2,S),
+\troot_consequent_holds(next,{name},1,2,T2,S).
+
+root_consequent_holds(OP,{name},1,0,T1,S):-
+\ttrace(S),
+\ttimepoint(T1,S),
+\tnot weak_timepoint(T1,S),
+\ttimepoint(T2,S),
+\ttemporal_operator(OP),
+\ttimepoint_of_op(OP,T1,T2,S),
+\tholds_at(a,T2,S).
+
+root_consequent_holds(OP,{name},1,1,T1,S):-
+\ttrace(S),
+\ttimepoint(T1,S),
+\tnot weak_timepoint(T1,S),
+\ttimepoint(T2,S),
+\ttemporal_operator(OP),
+\ttimepoint_of_op(OP,T1,T2,S),
+\tholds_at(b,T2,S).
+
+root_consequent_holds(OP,{name},1,2,T1,S):-
+\ttrace(S),
+\ttimepoint(T1,S),
+\tnot weak_timepoint(T1,S),
+\ttimepoint(T2,S),
+\ttemporal_operator(OP),
+\ttimepoint_of_op(OP,T1,T2,S),
+\tholds_at(c,T2,S).
+
+root_consequent_holds(OP,{name},0,0,T1,S):-
+\ttrace(S),
+\ttimepoint(T1,S),
+\tnot weak_timepoint(T1,S),
+\ttimepoint(T2,S),
+\ttemporal_operator(OP),
+\ttimepoint_of_op(OP,T1,T2,S),
+\troot_consequent_holds(prev,{name},1,3,T2,S),
+\troot_consequent_holds(current,{name},1,4,T2,S),
+\troot_consequent_holds(next,{name},1,5,T2,S).
+
+root_consequent_holds(OP,{name},1,3,T1,S):-
+\ttrace(S),
+\ttimepoint(T1,S),
+\tnot weak_timepoint(T1,S),
+\ttimepoint(T2,S),
+\ttemporal_operator(OP),
+\ttimepoint_of_op(OP,T1,T2,S),
+\tholds_at(d,T2,S).
+
+root_consequent_holds(OP,{name},1,4,T1,S):-
+\ttrace(S),
+\ttimepoint(T1,S),
+\tnot weak_timepoint(T1,S),
+\ttimepoint(T2,S),
+\ttemporal_operator(OP),
+\ttimepoint_of_op(OP,T1,T2,S),
+\tholds_at(e,T2,S).
+
+root_consequent_holds(OP,{name},1,5,T1,S):-
+\ttrace(S),
+\ttimepoint(T1,S),
+\tnot weak_timepoint(T1,S),
+\ttimepoint(T2,S),
+\ttemporal_operator(OP),
+\ttimepoint_of_op(OP,T1,T2,S),
+\tholds_at(f,T2,S).
+
+root_consequent_holds(OP,{name},0,0,T1,S):-
+\ttrace(S),
+\ttimepoint(T1,S),
+\tnot weak_timepoint(T1,S),
+\ttimepoint(T2,S),
+\ttemporal_operator(OP),
+\ttimepoint_of_op(OP,T1,T2,S),
+\troot_consequent_holds(prev,{name},1,6,T2,S),
+\troot_consequent_holds(current,{name},1,7,T2,S),
+\troot_consequent_holds(next,{name},1,8,T2,S).
+
+root_consequent_holds(OP,{name},1,6,T1,S):-
+\ttrace(S),
+\ttimepoint(T1,S),
+\tnot weak_timepoint(T1,S),
+\ttimepoint(T2,S),
+\ttemporal_operator(OP),
+\ttimepoint_of_op(OP,T1,T2,S),
+\tholds_at(g,T2,S).
+
+root_consequent_holds(OP,{name},1,7,T1,S):-
+\ttrace(S),
+\ttimepoint(T1,S),
+\tnot weak_timepoint(T1,S),
+\ttimepoint(T2,S),
+\ttemporal_operator(OP),
+\ttimepoint_of_op(OP,T1,T2,S),
+\tholds_at(h,T2,S).
+
+root_consequent_holds(OP,{name},1,8,T1,S):-
+\ttrace(S),
+\ttimepoint(T1,S),
+\tnot weak_timepoint(T1,S),
+\ttimepoint(T2,S),
+\ttemporal_operator(OP),
+\ttimepoint_of_op(OP,T1,T2,S),
 \tholds_at(i,T2,S).\
 """)
 
@@ -1720,16 +1875,16 @@ root_antecedent_holds(OP,{name},0,T1,S):-
 consequent_holds({name},T,S):-
 \ttrace(S),
 \ttimepoint(T,S),
-\troot_consequent_holds(current,{name},0,T,S),
+\troot_consequent_holds(current,{name},0,0,T,S),
 \tnot ev_temp_op({name}).
 
 consequent_holds({name},T,S):-
 \ttrace(S),
 \ttimepoint(T,S),
-\troot_consequent_holds(eventually,{name},0,T,S),
+\troot_consequent_holds(eventually,{name},0,0,T,S),
 \tev_temp_op({name}).
 
-root_consequent_holds(OP,{name},0,T1,S):-
+root_consequent_holds(OP,{name},0,0,T1,S):-
 \ttrace(S),
 \ttimepoint(T1,S),
 \tnot weak_timepoint(T1,S),
@@ -1761,16 +1916,16 @@ root_antecedent_holds(OP,{name},0,T1,S):-
 consequent_holds({name},T,S):-
 \ttrace(S),
 \ttimepoint(T,S),
-\troot_consequent_holds(current,{name},0,T,S),
+\troot_consequent_holds(current,{name},0,0,T,S),
 \tnot ev_temp_op({name}).
 
 consequent_holds({name},T,S):-
 \ttrace(S),
 \ttimepoint(T,S),
-\troot_consequent_holds(eventually,{name},0,T,S),
+\troot_consequent_holds(eventually,{name},0,0,T,S),
 \tev_temp_op({name}).
 
-root_consequent_holds(OP,{name},0,T1,S):-
+root_consequent_holds(OP,{name},0,0,T1,S):-
 \ttrace(S),
 \ttimepoint(T1,S),
 \tnot weak_timepoint(T1,S),
@@ -1802,16 +1957,16 @@ root_antecedent_holds(OP,{name},0,T1,S):-
 consequent_holds({name},T,S):-
 \ttrace(S),
 \ttimepoint(T,S),
-\troot_consequent_holds(current,{name},0,T,S),
+\troot_consequent_holds(current,{name},0,0,T,S),
 \tnot ev_temp_op({name}).
 
 consequent_holds({name},T,S):-
 \ttrace(S),
 \ttimepoint(T,S),
-\troot_consequent_holds(eventually,{name},0,T,S),
+\troot_consequent_holds(eventually,{name},0,0,T,S),
 \tev_temp_op({name}).
 
-root_consequent_holds(OP,{name},0,T1,S):-
+root_consequent_holds(OP,{name},0,0,T1,S):-
 \ttrace(S),
 \ttimepoint(T1,S),
 \tnot weak_timepoint(T1,S),
@@ -1841,16 +1996,16 @@ root_antecedent_holds(OP,{name},0,T1,S):-
 consequent_holds({name},T,S):-
 \ttrace(S),
 \ttimepoint(T,S),
-\troot_consequent_holds(current,{name},0,T,S),
+\troot_consequent_holds(current,{name},0,0,T,S),
 \tnot ev_temp_op({name}).
 
 consequent_holds({name},T,S):-
 \ttrace(S),
 \ttimepoint(T,S),
-\troot_consequent_holds(eventually,{name},0,T,S),
+\troot_consequent_holds(eventually,{name},0,0,T,S),
 \tev_temp_op({name}).
 
-root_consequent_holds(OP,{name},0,T1,S):-
+root_consequent_holds(OP,{name},0,0,T1,S):-
 \ttrace(S),
 \ttimepoint(T1,S),
 \tnot weak_timepoint(T1,S),
@@ -1883,16 +2038,16 @@ root_antecedent_holds(OP,{name},0,T1,S):-
 consequent_holds({name},T,S):-
 \ttrace(S),
 \ttimepoint(T,S),
-\troot_consequent_holds(current,{name},0,T,S),
+\troot_consequent_holds(current,{name},0,0,T,S),
 \tnot ev_temp_op({name}).
 
 consequent_holds({name},T,S):-
 \ttrace(S),
 \ttimepoint(T,S),
-\troot_consequent_holds(eventually,{name},0,T,S),
+\troot_consequent_holds(eventually,{name},0,0,T,S),
 \tev_temp_op({name}).
 
-root_consequent_holds(OP,{name},0,T1,S):-
+root_consequent_holds(OP,{name},0,0,T1,S):-
 \ttrace(S),
 \ttimepoint(T1,S),
 \tnot weak_timepoint(T1,S),
@@ -1935,16 +2090,16 @@ root_antecedent_holds(OP,{name},1,T1,S):-
 consequent_holds({name},T,S):-
 \ttrace(S),
 \ttimepoint(T,S),
-\troot_consequent_holds(current,{name},0,T,S),
+\troot_consequent_holds(current,{name},0,0,T,S),
 \tnot ev_temp_op({name}).
 
 consequent_holds({name},T,S):-
 \ttrace(S),
 \ttimepoint(T,S),
-\troot_consequent_holds(eventually,{name},0,T,S),
+\troot_consequent_holds(eventually,{name},0,0,T,S),
 \tev_temp_op({name}).
 
-root_consequent_holds(OP,{name},0,T1,S):-
+root_consequent_holds(OP,{name},0,0,T1,S):-
 \ttrace(S),
 \ttimepoint(T1,S),
 \tnot weak_timepoint(T1,S),
@@ -1980,16 +2135,16 @@ root_antecedent_holds(OP,{name},0,T1,S):-
 consequent_holds({name},T,S):-
 \ttrace(S),
 \ttimepoint(T,S),
-\troot_consequent_holds(current,{name},0,T,S),
+\troot_consequent_holds(current,{name},0,0,T,S),
 \tnot ev_temp_op({name}).
 
 consequent_holds({name},T,S):-
 \ttrace(S),
 \ttimepoint(T,S),
-\troot_consequent_holds(eventually,{name},0,T,S),
+\troot_consequent_holds(eventually,{name},0,0,T,S),
 \tev_temp_op({name}).
 
-root_consequent_holds(OP,{name},0,T1,S):-
+root_consequent_holds(OP,{name},0,0,T1,S):-
 \ttrace(S),
 \ttimepoint(T1,S),
 \tnot weak_timepoint(T1,S),
@@ -2036,16 +2191,16 @@ root_antecedent_holds(OP,{name},1,T1,S):-
 consequent_holds({name},T,S):-
 \ttrace(S),
 \ttimepoint(T,S),
-\troot_consequent_holds(current,{name},0,T,S),
+\troot_consequent_holds(current,{name},0,0,T,S),
 \tnot ev_temp_op({name}).
 
 consequent_holds({name},T,S):-
 \ttrace(S),
 \ttimepoint(T,S),
-\troot_consequent_holds(eventually,{name},0,T,S),
+\troot_consequent_holds(eventually,{name},0,0,T,S),
 \tev_temp_op({name}).
 
-root_consequent_holds(OP,{name},0,T1,S):-
+root_consequent_holds(OP,{name},0,0,T1,S):-
 \ttrace(S),
 \ttimepoint(T1,S),
 \tnot weak_timepoint(T1,S),
@@ -2107,16 +2262,16 @@ root_antecedent_holds(OP,{name},2,T1,S):-
 consequent_holds({name},T,S):-
 \ttrace(S),
 \ttimepoint(T,S),
-\troot_consequent_holds(current,{name},0,T,S),
+\troot_consequent_holds(current,{name},0,0,T,S),
 \tnot ev_temp_op({name}).
 
 consequent_holds({name},T,S):-
 \ttrace(S),
 \ttimepoint(T,S),
-\troot_consequent_holds(eventually,{name},0,T,S),
+\troot_consequent_holds(eventually,{name},0,0,T,S),
 \tev_temp_op({name}).
 
-root_consequent_holds(OP,{name},0,T1,S):-
+root_consequent_holds(OP,{name},0,0,T1,S):-
 \ttrace(S),
 \ttimepoint(T1,S),
 \tnot weak_timepoint(T1,S),
@@ -2191,16 +2346,16 @@ root_antecedent_holds(OP,{name},2,T1,S):-
 consequent_holds({name},T,S):-
 \ttrace(S),
 \ttimepoint(T,S),
-\troot_consequent_holds(current,{name},0,T,S),
+\troot_consequent_holds(current,{name},0,0,T,S),
 \tnot ev_temp_op({name}).
 
 consequent_holds({name},T,S):-
 \ttrace(S),
 \ttimepoint(T,S),
-\troot_consequent_holds(eventually,{name},0,T,S),
+\troot_consequent_holds(eventually,{name},0,0,T,S),
 \tev_temp_op({name}).
 
-root_consequent_holds(OP,{name},0,T1,S):-
+root_consequent_holds(OP,{name},0,0,T1,S):-
 \ttrace(S),
 \ttimepoint(T1,S),
 \tnot weak_timepoint(T1,S),
@@ -2329,16 +2484,16 @@ root_antecedent_holds(OP,{name},8,T1,S):-
 consequent_holds({name},T,S):-
 \ttrace(S),
 \ttimepoint(T,S),
-\troot_consequent_holds(current,{name},0,T,S),
+\troot_consequent_holds(current,{name},0,0,T,S),
 \tnot ev_temp_op({name}).
 
 consequent_holds({name},T,S):-
 \ttrace(S),
 \ttimepoint(T,S),
-\troot_consequent_holds(eventually,{name},0,T,S),
+\troot_consequent_holds(eventually,{name},0,0,T,S),
 \tev_temp_op({name}).
 
-root_consequent_holds(OP,{name},0,T1,S):-
+root_consequent_holds(OP,{name},0,0,T1,S):-
 \ttrace(S),
 \ttimepoint(T1,S),
 \tnot weak_timepoint(T1,S),
@@ -2360,9 +2515,18 @@ antecedent_holds({name},T,S):-
 consequent_holds({name},T,S):-
 \ttrace(S),
 \ttimepoint(T,S),
-\troot_consequent_holds(eventually,{name},0,T,S).
+\troot_consequent_holds(eventually,{name},0,0,T,S).
 
-root_consequent_holds(OP,{name},0,T1,S):-
+root_consequent_holds(OP,{name},0,0,T1,S):-
+\ttrace(S),
+\ttimepoint(T1,S),
+\tnot weak_timepoint(T1,S),
+\ttimepoint(T2,S),
+\ttemporal_operator(OP),
+\ttimepoint_of_op(OP,T1,T2,S),
+\troot_consequent_holds(current,{name},1,0,T2,S).
+
+root_consequent_holds(OP,{name},1,0,T1,S):-
 \ttrace(S),
 \ttimepoint(T1,S),
 \tnot weak_timepoint(T1,S),
@@ -2384,9 +2548,18 @@ antecedent_holds({name},T,S):-
 consequent_holds({name},T,S):-
 \ttrace(S),
 \ttimepoint(T,S),
-\troot_consequent_holds(eventually,{name},0,T,S).
+\troot_consequent_holds(eventually,{name},0,0,T,S).
 
-root_consequent_holds(OP,{name},0,T1,S):-
+root_consequent_holds(OP,{name},0,0,T1,S):-
+\ttrace(S),
+\ttimepoint(T1,S),
+\tnot weak_timepoint(T1,S),
+\ttimepoint(T2,S),
+\ttemporal_operator(OP),
+\ttimepoint_of_op(OP,T1,T2,S),
+\troot_consequent_holds(current,{name},1,0,T2,S).
+
+root_consequent_holds(OP,{name},1,0,T1,S):-
 \ttrace(S),
 \ttimepoint(T1,S),
 \tnot weak_timepoint(T1,S),
@@ -2409,9 +2582,9 @@ antecedent_holds({name},0,S):-
 consequent_holds({name},0,S):-
 \ttrace(S),
 \ttimepoint(0,S),
-\troot_consequent_holds(current,{name},0,0,S).
+\troot_consequent_holds(current,{name},0,0,0,S).
 
-root_consequent_holds(OP,{name},0,T1,S):-
+root_consequent_holds(OP,{name},0,0,T1,S):-
 \ttrace(S),
 \ttimepoint(T1,S),
 \tnot weak_timepoint(T1,S),

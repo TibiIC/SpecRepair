@@ -92,25 +92,25 @@ root_consequent_holds(OP,{name},0,0,T1,S):-
 
         g = Not(AtomicProposition("x", False))
         self.assertEqual(self.formatter.format(g),
-                         """\
-                         antecedent_holds({name},0,S):-
-                         \ttrace(S),
-                         \ttimepoint(0,S).
-                         
-                         consequent_holds({name},0,S):-
-                         \ttrace(S),
-                         \ttimepoint(0,S),
-                         \troot_consequent_holds(current,{name},0,0,0,S).
-                         
-                         root_consequent_holds(OP,{name},0,0,T1,S):-
-                         \ttrace(S),
-                         \ttimepoint(T1,S),
-                         \tnot weak_timepoint(T1,S),
-                         \ttimepoint(T2,S),
-                         \ttemporal_operator(OP),
-                         \ttimepoint_of_op(OP,T1,T2,S),
-                         \tholds_at(x,T2,S).\
-                         """)
+"""\
+antecedent_holds({name},0,S):-
+\ttrace(S),
+\ttimepoint(0,S).
+
+consequent_holds({name},0,S):-
+\ttrace(S),
+\ttimepoint(0,S),
+\troot_consequent_holds(current,{name},0,0,0,S).
+
+root_consequent_holds(OP,{name},0,0,T1,S):-
+\ttrace(S),
+\ttimepoint(T1,S),
+\tnot weak_timepoint(T1,S),
+\ttimepoint(T2,S),
+\ttemporal_operator(OP),
+\ttimepoint_of_op(OP,T1,T2,S),
+\tholds_at(x,T2,S).\
+""")
 
     def test_not_op(self):
         f = Not(Prev(AtomicProposition("x", True)))
@@ -1547,7 +1547,7 @@ root_consequent_holds(OP,{name},1,0,T1,S):-
 \tholds_at(b,T2,S),
 \tholds_at(c,T2,S).
 
-root_consequent_holds(OP,{name},0,1,T1,S):-
+root_consequent_holds(OP,{name},0,0,T1,S):-
 \ttrace(S),
 \ttimepoint(T1,S),
 \tnot weak_timepoint(T1,S),
@@ -1567,7 +1567,7 @@ root_consequent_holds(OP,{name},1,1,T1,S):-
 \tholds_at(e,T2,S),
 \tholds_at(f,T2,S).
 
-root_consequent_holds(OP,{name},0,2,T1,S):-
+root_consequent_holds(OP,{name},0,0,T1,S):-
 \ttrace(S),
 \ttimepoint(T1,S),
 \tnot weak_timepoint(T1,S),
@@ -1649,7 +1649,7 @@ root_consequent_holds(OP,{name},1,2,T1,S):-
 \ttimepoint_of_op(OP,T1,T2,S),
 \tholds_at(c,T2,S).
 
-root_consequent_holds(OP,{name},0,1,T1,S):-
+root_consequent_holds(OP,{name},0,0,T1,S):-
 \ttrace(S),
 \ttimepoint(T1,S),
 \tnot weak_timepoint(T1,S),
@@ -1687,7 +1687,7 @@ root_consequent_holds(OP,{name},1,5,T1,S):-
 \ttimepoint_of_op(OP,T1,T2,S),
 \tholds_at(f,T2,S).
 
-root_consequent_holds(OP,{name},0,2,T1,S):-
+root_consequent_holds(OP,{name},0,0,T1,S):-
 \ttrace(S),
 \ttimepoint(T1,S),
 \tnot weak_timepoint(T1,S),
