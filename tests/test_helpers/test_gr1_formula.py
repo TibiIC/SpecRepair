@@ -370,7 +370,7 @@ class TestGR1Formula(TestCase):
         formula = GR1Formula(
             temp_type=GR1TemporalType.INVARIANT,
             antecedent=AtomicProposition("a", True),
-            consequent = Eventually(Next(AtomicProposition("c", False))),
+            consequent = Eventually(Next(AtomicProposition("c", True))),
         )  # formula === G(a=true->next(c=true))
         adaptation = Adaptation(
             type='consequent_exception',
@@ -380,7 +380,7 @@ class TestGR1Formula(TestCase):
         )
         formula.integrate(adaptation)
         output = formula.to_str(self.formatter)
-        expected_output = "G((a=true->F((b=true|next(c=true)))"
+        expected_output = "G((a=true->F((next(c=true)|b=true))))"
         self.assertEqual(expected_output, output)
 
     def test_integrate_adaptation_to_formula_consequent_exception_8(self):
@@ -397,7 +397,7 @@ class TestGR1Formula(TestCase):
         )
         formula.integrate(adaptation)
         output = formula.to_str(self.formatter)
-        expected_output = "G((a=true->F((b=true|next(c=true)))"
+        expected_output = "G((a=true->F((b=true|next(c=true)))))"
         self.assertEqual(expected_output, output)
 
     def test_integrate_adaptation_to_formula_ev_temp_op(self):

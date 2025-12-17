@@ -112,13 +112,7 @@ class GR1Formula:
             case "antecedent_exception":
                 self._integrate_antecedent_exception(adaptation)
             case "consequent_exception":
-                if isinstance(self.consequent, Eventually):
-                    # TODO: remove possibility of consequent
-                    # exception when eventually consequent
-                    adaptation.disjunction_index = 0 # Placeholder. TODO: remove
-                    self._integrate_antecedent_exception(adaptation)
-                else:
-                    self._integrate_consequent_exception(adaptation)
+                self._integrate_consequent_exception(adaptation)
             case "ev_temp_op":
                 self.consequent = self.remove_temporal_operators(self.consequent)
                 if not self.antecedent:
@@ -135,7 +129,10 @@ class GR1Formula:
         new_disjunct = self._generate_literal(first_atom_assignment, first_temp_op)
         for op, atom in adaptation.atom_temporal_operators[1:]:
             new_disjunct = And(new_disjunct, self._generate_literal(atom, op))
-        self.consequent = Or(self.consequent, new_disjunct)
+        if isinstance(self.consequent, Eventually):
+            self.consequent = Eventually(Or(self.consequent.formula, new_disjunct))
+        else:
+            self.consequent = Or(self.consequent, new_disjunct)
 
     def _integrate_antecedent_exception(self, adaptation: Adaptation):
         if self.temp_type == GR1TemporalType.JUSTICE:
