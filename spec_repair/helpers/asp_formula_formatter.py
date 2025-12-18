@@ -21,7 +21,8 @@ def header_boilerplate(time, ops: Optional[List[str]], implication_type: str, st
     output = f"""\
 {implication_type}_holds({{name}},{time},S):-
 \ttrace(S),
-\ttimepoint({time},S)\
+\ttimepoint({time},S),
+\tnot weak_timepoint(T1,S)\
 """
     if ops is not None:
         for i, op in enumerate(ops):
@@ -195,7 +196,6 @@ class ASPFormulaFormatter(ILTLFormatter):
         output = f"root_antecedent_holds(OP,{{name}},{i},T1,S):-\n"
         output += "\ttrace(S),\n"
         output += "\ttimepoint(T1,S),\n"
-        output += "\tnot weak_timepoint(T1,S),\n"
         output += "\ttimepoint(T2,S),\n"
         output += "\ttemporal_operator(OP),\n"
         output += "\ttimepoint_of_op(OP,T1,T2,S)"
@@ -208,7 +208,6 @@ class ASPFormulaFormatter(ILTLFormatter):
         output = f"root_consequent_holds(OP,{{name}},{i},T1,S):-\n"
         output += "\ttrace(S),\n"
         output += "\ttimepoint(T1,S),\n"
-        output += "\tnot weak_timepoint(T1,S),\n"
         output += "\ttimepoint(T2,S),\n"
         output += "\ttemporal_operator(OP),\n"
         output += "\ttimepoint_of_op(OP,T1,T2,S)"

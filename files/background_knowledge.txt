@@ -25,13 +25,11 @@ temporal_operator(eventually).
 
 timepoint_of_op(current,T1,T1,S) :-
     trace(S),
-    timepoint(T1,S),
-    not weak_timepoint(T1,S).
+    timepoint(T1,S).
 
 timepoint_of_op(next,T1,T2,S) :-
     trace(S),
     timepoint(T1,S),
-    not weak_timepoint(T1,S),
     timepoint(T2,S),
     next(T2,T1,S).
 
@@ -39,19 +37,15 @@ timepoint_of_op(prev,T1,T2,S) :-
     trace(S),
     timepoint(T1,S),
     timepoint(T2,S),
-    not weak_timepoint(T1,S),
-    not weak_timepoint(T2,S),
     prev(T2,T1,S).
 
 timepoint_of_op(eventually,T1,T1,S) :-
     trace(S),
-    timepoint(T1,S),
-    not weak_timepoint(T1,S).
+    timepoint(T1,S).
 
 timepoint_of_op(eventually,T1,T2,S) :-
     trace(S),
     timepoint(T1,S),
-    not weak_timepoint(T1,S),
     timepoint(T2,S),
     after(T2,T1,S).
 
