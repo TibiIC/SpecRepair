@@ -43,13 +43,13 @@ class ARCALearner(ILearner):
             new_tasks = [(new_spec, deepcopy(new_data)) for new_spec in new_specs]
             return new_tasks
         except NoWeakeningException as e:
-            print(f"Weakening failed: {e}")
+            print(f"Weakening failed: NoWeakeningException thrown and {e}")
             return []
         except NoViolationException as e:
-            print(f"Weakening failed: {e}")
+            print(f"Weakening failed: NoViolationException thrown and {e}")
             return []
         except DeadlockRequiredException as e:
-            print(f"Weakening failed: {e}")
+            print(f"Weakening failed: DeadlockRequiredException thrown and {e}")
             return []
 
     def find_possible_adaptations(self, spec: SpectraSpecification, trace, cts, learning_type) -> List[

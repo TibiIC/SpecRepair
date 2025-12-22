@@ -20,3 +20,4 @@ assumption -- car_idle_when_red
 
 assumption -- car_moves_when_green
 	G(car & green -> next(!car));
+

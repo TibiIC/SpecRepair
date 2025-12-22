@@ -61,7 +61,8 @@ class NewSpecEncoder:
         if learning_type == Learning.ASSUMPTION_WEAKENING:
             exp_names_to_learn = get_violated_expression_names_of_type(violations, learning_type.exp_type_str())
         else:
-            exp_names_to_learn = get_unrealisable_core_expression_names(spec)
+            exp_names_to_learn = get_expression_names_of_type(violations, learning_type.exp_type_str())
+            # exp_names_to_learn = get_unrealisable_core_expression_names(spec)
         expressions_to_weaken = sub_spec.to_asp(learning_names=exp_names_to_learn, for_clingo=False, hm=self._hm)
         signature_string = create_atom_signature_asp(spec.get_atoms())
         las = SpecGenerator.generate_ilasp(mode_declaration, expressions_to_weaken, signature_string, trace_ilasp,
@@ -96,7 +97,8 @@ class NewSpecEncoder:
 
         # This determines which rules can be weakened.
         if learning_type == Learning.GUARANTEE_WEAKENING:
-            formula_names = get_unrealisable_core_expression_names(spec)
+            # formula_names = get_unrealisable_core_expression_names(spec)
+            formula_names  = get_expression_names_of_type(violations, learning_type.exp_type_str())
         elif not violations:
             formula_names = spec.filter(lambda x: x['type'] == GR1FormulaType.ASM)["name"]
         else:
