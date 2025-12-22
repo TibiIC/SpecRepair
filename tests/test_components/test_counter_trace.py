@@ -49,6 +49,50 @@ holds_at(methane,2,ini_S0_S1_DEAD).
 not_holds_at(pump,2,ini_S0_S1_DEAD).
 """
 
+cs3: CounterStrategy = \
+    ['INI -> S0 {car:true, emergency:false, police:false} / {green:false};',
+     'INI -> S0 {car:true, emergency:false, police:false} / {green:true};',
+     'S0 -> S0 {car:true, emergency:false, police:false} / {green:false};',
+     'S0 -> S0 {car:true, emergency:false, police:false} / {green:true};']
+
+cs3_1_raw_trace = """\
+holds_at(car,0,ini_S0_S0).
+not_holds_at(emergency,0,ini_S0_S0).
+not_holds_at(police,0,ini_S0_S0).
+not_holds_at(green,0,ini_S0_S0).
+holds_at(car,1,ini_S0_S0).
+not_holds_at(emergency,1,ini_S0_S0).
+not_holds_at(police,1,ini_S0_S0).
+not_holds_at(green,1,ini_S0_S0).
+"""
+
+cs3_2_raw_trace = """\
+holds_at(car,0,ini_S0_S0).
+not_holds_at(emergency,0,ini_S0_S0).
+not_holds_at(police,0,ini_S0_S0).
+holds_at(green,0,ini_S0_S0).
+holds_at(car,1,ini_S0_S0).
+not_holds_at(emergency,1,ini_S0_S0).
+not_holds_at(police,1,ini_S0_S0).
+holds_at(green,1,ini_S0_S0).
+"""
+
+cs3_3_raw_trace = """\
+holds_at(car,0,ini_S0_S0_S0).
+not_holds_at(emergency,0,ini_S0_S0_S0).
+not_holds_at(police,0,ini_S0_S0_S0).
+holds_at(green,0,ini_S0_S0_S0).
+holds_at(car,1,ini_S0_S0_S0).
+not_holds_at(emergency,1,ini_S0_S0_S0).
+not_holds_at(police,1,ini_S0_S0_S0).
+holds_at(green,1,ini_S0_S0_S0).
+holds_at(car,2,ini_S0_S0_S0).
+not_holds_at(emergency,2,ini_S0_S0_S0).
+not_holds_at(police,2,ini_S0_S0_S0).
+not_holds_at(green,2,ini_S0_S0_S0).
+"""
+
+
 class TestCounterTrace(BaseTestCase):
     maxDiff = None
 
@@ -66,6 +110,11 @@ class TestCounterTrace(BaseTestCase):
         ct = ct_from_cs(cs2, heuristic=first_choice)
         self.assertEqual(cs2_1_raw_trace, ct.get_raw_trace())
         self.assertEqual("ini_S0_S1_DEAD", ct._path)
+
+    def test_get_raw_form_cycle(self):
+        ct = ct_from_cs(cs3, heuristic=first_choice)
+        self.assertEqual(cs3_1_raw_trace, ct.get_raw_trace())
+        self.assertEqual("ini_S0_S0", ct._path)
 
     def test_get_named_form_1(self):
         ct = ct_from_cs(cs1, heuristic=first_choice, cs_id=0)

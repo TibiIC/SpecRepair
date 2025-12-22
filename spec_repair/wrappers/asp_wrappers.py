@@ -1,4 +1,5 @@
 import re
+from typing import Optional
 
 from spec_repair.config import FASTLAS, MAX_ASP_HYPOTHESES, PROJECT_PATH
 from spec_repair.enums import ExpType
@@ -115,6 +116,9 @@ def run_ILASP(las, pylasp_integrated=False):
     return output
 
 
-def get_violations(asp, exp_type: ExpType) -> list[str]:
+def get_violations(asp, exp_type: Optional[ExpType] = None) -> list[str]:
     output = run_clingo(asp)
-    return list(filter(re.compile(rf"violation_holds\(|{str(exp_type)}\(|entailed\(").search, output))
+    if exp_type:
+        return list(filter(re.compile(rf"violation_holds\(|{str(exp_type)}\(|entailed\(").search, output))
+    else:
+        return list(filter(re.compile(rf"violation_holds\(|entailed\(").search, output))
