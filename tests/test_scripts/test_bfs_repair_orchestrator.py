@@ -58,9 +58,9 @@ class TestBFSRepairOrchestrator(BaseTestCase):
         out_test_dir_name = "./test_files/out/lift_all_bfs"
         new_spec_strings = self.run_bfs_repair(case_study_name, case_study_path, out_test_dir_name)
 
-        expected_specs_files: list[str] = os.listdir('./test_files/lift_weakenings')
+        expected_specs_files: list[str] = os.listdir('./test_files/lift_weakenings/new')
         expected_spec_strings: list[SpectraSpecification] = [
-            SpectraSpecification.from_file(f"./test_files/lift_weakenings/{spec_file}")
+            SpectraSpecification.from_file(f"./test_files/lift_weakenings/new/{spec_file}")
             for spec_file in expected_specs_files
         ]
 
@@ -88,7 +88,7 @@ class TestBFSRepairOrchestrator(BaseTestCase):
     def test_bfs_repair_spec_minepump(self):
         case_study_name = 'minepump'
         case_study_path = '../input-files/case-studies/spectra/minepump'
-        out_test_dir_name = "./test_files/out/minepump_arca_bfs"
+        out_test_dir_name = "./test_files/out/minepump_2025_12_22"
         new_spec_strings = self.run_bfs_repair(case_study_name, case_study_path, out_test_dir_name, is_debug=True)
 
         expected_specs_files: list[str] = os.listdir('./test_files/minepump_weakenings')
