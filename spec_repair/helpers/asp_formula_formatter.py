@@ -22,7 +22,7 @@ def header_boilerplate(time, ops: Optional[List[str]], implication_type: str, st
 {implication_type}_holds({{name}},{time},S):-
 \ttrace(S),
 \ttimepoint({time},S),
-\tnot weak_timepoint(T1,S)\
+\tnot weak_timepoint({time},S)\
 """
     if ops is not None:
         for i, op in enumerate(ops):

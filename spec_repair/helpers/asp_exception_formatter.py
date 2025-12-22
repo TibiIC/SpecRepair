@@ -145,7 +145,7 @@ class ASPExceptionFormatter(ILTLFormatter):
                 output = self.format_boilerplate_holds(ops_atoms)
                 for i, (_, atoms) in enumerate(ops_atoms.items()):
                     output += "\n\n"
-                    output += self.format_boilerplate_root_consequent_holds(atoms, i)
+                    output += self.format_boilerplate_root_consequent_holds(atoms, 0, i)
                 return output
             case Or(left=lhs, right=rhs):
                 return f"({self.format(lhs)}|{self.format(rhs)})"
@@ -159,21 +159,21 @@ class ASPExceptionFormatter(ILTLFormatter):
                 output = self.format_boilerplate_holds(ops_atoms)
                 for i, (_, atoms) in enumerate(ops_atoms.items()):
                     output += "\n\n"
-                    output += self.format_boilerplate_root_consequent_holds(atoms, i)
+                    output += self.format_boilerplate_root_consequent_holds(atoms, 0, i)
                 return output
             case Prev(formula=formula):
                 ops_atoms = reformat_conjunction_to_op_atom_conjunction(this_formula)
                 output = self.format_boilerplate_holds(ops_atoms)
                 for i, (_, atoms) in enumerate(ops_atoms.items()):
                     output += "\n\n"
-                    output += self.format_boilerplate_root_consequent_holds(atoms, i)
+                    output += self.format_boilerplate_root_consequent_holds(atoms, 0, i)
                 return output
             case Eventually(formula=formula):
                 ops_atoms = reformat_conjunction_to_op_atom_conjunction(this_formula)
                 output = self.format_boilerplate_holds(ops_atoms)
                 for i, (_, atoms) in enumerate(ops_atoms.items()):
                     output += "\n\n"
-                    output += self.format_boilerplate_root_consequent_holds(atoms, i)
+                    output += self.format_boilerplate_root_consequent_holds(atoms, 0, i)
                 return output.replace("{implication_type}", "consequent")
             case Globally(formula=formula):
                 if isinstance(formula, Eventually):
@@ -190,7 +190,8 @@ class ASPExceptionFormatter(ILTLFormatter):
     def format_boilerplate_holds(ops_atoms):
         output = f"{{implication_type}}_holds({{name}},T,S):-\n"
         output += "\ttrace(S),\n"
-        output += "\ttimepoint(T,S)"
+        output += "\ttimepoint(T,S),\n"
+        output += "\tnot weak_timepoint(T,S)"
         for i, (op, atoms) in enumerate(ops_atoms.items()):
             output += f",\n\troot_{{implication_type}}_holds({op},{{name}},{i},T,S)"
         output += "."
@@ -200,7 +201,6 @@ class ASPExceptionFormatter(ILTLFormatter):
         output = f"root_antecedent_holds(OP,{{name}},{i},T1,S):-\n"
         output += "\ttrace(S),\n"
         output += "\ttimepoint(T1,S),\n"
-        output += "\tnot weak_timepoint(T1,S),\n"
         output += "\ttimepoint(T2,S),\n"
         output += "\ttemporal_operator(OP),\n"
         output += "\ttimepoint_of_op(OP,T1,T2,S)"
@@ -213,7 +213,6 @@ class ASPExceptionFormatter(ILTLFormatter):
         output = f"root_consequent_holds(OP,{{name}},{depth_id},{i},T1,S):-\n"
         output += "\ttrace(S),\n"
         output += "\ttimepoint(T1,S),\n"
-        output += "\tnot weak_timepoint(T1,S),\n"
         output += "\ttimepoint(T2,S),\n"
         output += "\ttemporal_operator(OP),\n"
         output += "\ttimepoint_of_op(OP,T1,T2,S)"
@@ -226,7 +225,6 @@ class ASPExceptionFormatter(ILTLFormatter):
         output = f"root_consequent_holds(OP,{{name}},{depth_id},{i},T1,S):-\n"
         output += "\ttrace(S),\n"
         output += "\ttimepoint(T1,S),\n"
-        output += "\tnot weak_timepoint(T1,S),\n"
         output += "\ttimepoint(T2,S),\n"
         output += "\ttemporal_operator(OP),\n"
         output += "\ttimepoint_of_op(OP,T1,T2,S)"
@@ -240,7 +238,8 @@ class ASPExceptionFormatter(ILTLFormatter):
         output = f"""\
 antecedent_holds({{name}},{time},S):-
 \ttrace(S),
-\ttimepoint({time},S)\
+\ttimepoint({time},S),
+\tnot weak_timepoint({time},S)\
 """
         if ops is not None:
             for i, op in enumerate(ops):
@@ -253,7 +252,8 @@ antecedent_holds({{name}},{time},S):-
         output = f"""\
 consequent_holds({{name}},{time},S):-
 \ttrace(S),
-\ttimepoint({time},S)\
+\ttimepoint({time},S),
+\tnot weak_timepoint({time},S)\
 """
         if ops is not None:
             for i, op in enumerate(ops):
@@ -270,6 +270,7 @@ consequent_holds({{name}},{time},S):-
 consequent_holds({{name}},{time},S):-
 \ttrace(S),
 \ttimepoint({time},S),
+\tnot weak_timepoint({time},S),
 \tconsequent_exception({{name}},{time},S).\
 """
 
@@ -279,7 +280,6 @@ consequent_holds({{name}},{time},S):-
         output = f"root_consequent_holds(OP,{{name}},{depth_id},{i},T1,S):-\n"
         output += "\ttrace(S),\n"
         output += "\ttimepoint(T1,S),\n"
-        output += "\tnot weak_timepoint(T1,S),\n"
         output += "\ttimepoint(T2,S),\n"
         output += "\ttemporal_operator(OP),\n"
         output += "\ttimepoint_of_op(OP,T1,T2,S),"
