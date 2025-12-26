@@ -71,28 +71,28 @@ class OptimisingSpecLearner(ILearner):
         return useful_adaptations
 
     def find_all_exception_adaptations(self, spec, trace, cts, learning_type, violations) -> List[Tuple[int, List[Adaptation]]]:
-        hm = NoFilterHeuristicManager()
+        hm = deepcopy(self._hm)
         hm.set_enabled("ANTECEDENT_WEAKENING")
         hm.set_enabled("CONSEQUENT_WEAKENING")
         hm.set_enabled("INVARIANT_TO_RESPONSE_WEAKENING")
         return self.find_adaptations_with_heuristic(spec, trace, cts, learning_type, violations, hm)
 
     def find_antecedent_exception_adaptations(self, spec, trace, cts, learning_type, violations) -> List[Tuple[int, List[Adaptation]]]:
-        hm = NoFilterHeuristicManager()
+        hm = deepcopy(self._hm)
         hm.set_enabled("ANTECEDENT_WEAKENING")
         hm.set_disabled("CONSEQUENT_WEAKENING")
         hm.set_disabled("INVARIANT_TO_RESPONSE_WEAKENING")
         return self.find_adaptations_with_heuristic(spec, trace, cts, learning_type, violations, hm)
 
     def find_consequent_exception_adaptations(self, spec, trace, cts, learning_type, violations) -> List[Tuple[int, List[Adaptation]]]:
-        hm = NoFilterHeuristicManager()
+        hm = deepcopy(self._hm)
         hm.set_disabled("ANTECEDENT_WEAKENING")
         hm.set_enabled("CONSEQUENT_WEAKENING")
         hm.set_disabled("INVARIANT_TO_RESPONSE_WEAKENING")
         return self.find_adaptations_with_heuristic(spec, trace, cts, learning_type, violations, hm)
 
     def find_eventualisation_adaptations(self, spec, trace, cts, learning_type, violations) -> List[Tuple[int, List[Adaptation]]]:
-        hm = NoFilterHeuristicManager()
+        hm = deepcopy(self._hm)
         hm.set_disabled("ANTECEDENT_WEAKENING")
         hm.set_disabled("CONSEQUENT_WEAKENING")
         hm.set_enabled("INVARIANT_TO_RESPONSE_WEAKENING")

@@ -151,12 +151,14 @@ class TestBFSRepairOrchestrator(BaseTestCase):
             os.remove(transitions_file_path)
         spec: SpectraSpecification = SpectraSpecification.from_file(f"{case_study_path}/strong.spectra")
         trace: list[str] = read_file_lines(f"{case_study_path}/violation_trace.txt")
+        hm = ChooseFirstHeuristicManager()
+        # hm.set_enabled("INCLUDE_NEXT")
         learners: Dict[str, ILearner] = {
-            "assumption_weakening": ARCALearner(
-                heuristic_manager=ChooseFirstHeuristicManager()
+            "assumption_weakening": OptimisingSpecLearner(
+                heuristic_manager=hm
             ),
             "guarantee_weakening": OptimisingSpecLearner(
-                heuristic_manager=ChooseFirstHeuristicManager()
+                heuristic_manager=hm
             )
         }
         if is_debug:
@@ -171,7 +173,7 @@ class TestBFSRepairOrchestrator(BaseTestCase):
                 Learning.ASSUMPTION_WEAKENING: move_one_to_guarantee_weakening,
                 Learning.GUARANTEE_WEAKENING: complete_counter_traces
             }),
-            ChooseFirstHeuristicManager(),
+            hm,
             recorder,
             SpecLogger(filename=log_file)
         )

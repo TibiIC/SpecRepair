@@ -7,7 +7,7 @@ from spec_repair.enums import Learning, When
 from spec_repair.helpers.heuristic_managers.iheuristic_manager import IHeuristicManager
 from spec_repair.helpers.heuristic_managers.no_filter_heuristic_manager import NoFilterHeuristicManager
 from spec_repair.helpers.spectra_specification import SpectraSpecification
-from spec_repair.ltl_types import GR1FormulaType
+from spec_repair.ltl_types import GR1FormulaType, GR1AtomType
 from spec_repair.util.spec_util import trace_list_to_asp_form, trace_list_to_ilasp_form, parse_formula_str, \
     create_atom_signature_asp, run_all_unrealisable_cores
 from spec_repair.components.spec_generator import SpecGenerator
@@ -86,7 +86,8 @@ class NewSpecEncoder:
         output += f"#modeb(2,holds_at(const(usable_atom), var(time), var(trace)){restriction}).\n"
         output += f"#modeb(2,not_holds_at(const(usable_atom), var(time), var(trace)){restriction}).\n"
 
-        for atom in sorted(spec.get_atoms()):
+        atoms = sorted(spec.get_atoms())
+        for atom in atoms:
             output += f"#constant(usable_atom,{atom.name}).\n"
         # TODO: find a way to provide the correct end index value
         if self._hm.is_enabled("ANTECEDENT_WEAKENING"):
@@ -136,6 +137,9 @@ class NewSpecEncoder:
                 output += f":- head(antecedent_exception(_,_,_,_)), body(timepoint_of_op(next,_,_,_)).\n"
             if self._hm.is_enabled("CONSEQUENT_WEAKENING"):
                 output += f":- head(consequent_exception(_,_,_)), body(timepoint_of_op(next,_,_,_)).\n"
+        else:
+            if self._hm.is_enabled("CONSEQUENT_WEAKENING"):
+                output += f":- body(holds_at(A1,_,_)), body(not_holds_at(A2,_,_)), A1 == A2.\n"
         if not self._hm.is_enabled("INCLUDE_PREV"):
             if self._hm.is_enabled("ANTECEDENT_WEAKENING"):
                 output += f":- head(antecedent_exception(_,_,_,_)), body(timepoint_of_op(prev,_,_,_)).\n"
@@ -151,6 +155,16 @@ class NewSpecEncoder:
             output += f":- head(ev_temp_op(_)), body(timepoint_of_op(_,_,_,_)).\n"
             output += f":- head(ev_temp_op(_)), body(holds_at(_,_,_)).\n"
             output += f":- head(ev_temp_op(_)), body(not_holds_at(_,_,_)).\n"
+        if learning_type == Learning.ASSUMPTION_WEAKENING:
+            sys_atom_names = [atom.name for atom in atoms if atom.atom_type == GR1AtomType.SYS]
+            for sys_atom_name in sys_atom_names:
+                if self._hm.is_enabled("ANTECEDENT_WEAKENING"):
+                    output += f":- head(antecedent_exception(_,_,_,_)), body(timepoint_of_op(next,_,_,_)), body(holds_at({sys_atom_name },_,_)).\n"
+                    output += f":- head(antecedent_exception(_,_,_,_)), body(timepoint_of_op(next,_,_,_)), body(not_holds_at({sys_atom_name},_,_)).\n"
+                if self._hm.is_enabled("CONSEQUENT_WEAKENING"):
+                    output += f":- head(consequent_exception(_,_,_)), body(timepoint_of_op(next,_,_,_)), body(holds_at({sys_atom_name},_,_)).\n"
+                    output += f":- head(consequent_exception(_,_,_)), body(timepoint_of_op(next,_,_,_)), body(not_holds_at({sys_atom_name},_,_)).\n"
+
         output += "\").\n\n"
         return output
 
