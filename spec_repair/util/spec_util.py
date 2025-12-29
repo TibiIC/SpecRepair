@@ -284,6 +284,7 @@ def trace_single_to_asp_form(trace: List[str]) -> str:
     output += create_time_fact(max_timepoint, "next", [1, 0, violation_name])
     if not loop_completion:
         output += f"next(weak_t,{max_timepoint},{violation_name}).\n"
+        output += f"next(weak_t,weak_t,{violation_name}).\n"
 
     output += loop_completion
     output += '\n' + '\n'.join(trace) + '\n'
