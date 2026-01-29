@@ -44,8 +44,12 @@ class OptimisingSpecLearner(ILearner):
             print(f"Weakening failed: NoWeakeningException thrown and {e}")
             return []
         except NoViolationException as e:
-            print(f"Weakening failed: NoViolationException thrown and {e}")
-            return []
+            if not trace and not cts and learning_type == Learning.GUARANTEE_WEAKENING:
+                print(f"No violation trace given, no counter-traces and spec is unrealisable, so will move straight to extracting counter strategies.")
+                return [(spec, data)]
+            else:
+                print(f"Weakening failed: NoViolationException thrown and {e}")
+                return []
         except DeadlockRequiredException as e:
             print(f"Weakening failed: DeadlockRequiredException thrown and {e}")
             return []

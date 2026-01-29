@@ -1,0 +1,18 @@
+module Weird
+
+env boolean e;
+sys boolean s;
+
+assumption -- sometimes_on
+    GF(e);
+assumption -- sometimes_off
+    GF(!e);
+
+guarantee -- system_next_on
+	G(e->next(s));
+guarantee -- system_next_off
+	G(!e->next(!s));
+guarantee -- system_stable_1
+	G(s->next(s));
+guarantee -- system_stable_2
+	G(!s->next(!s));

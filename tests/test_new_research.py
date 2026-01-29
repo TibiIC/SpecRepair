@@ -62,6 +62,12 @@ class TestNewResearch(TestCase):
         for i, trivial_spec in enumerate(trivial_specs):
             write_to_file(f'tests/test_files/out/trivial_solutions/traffic-updated_{i}.spectra', trivial_spec.to_str())
 
+    def test_weird_case_study(self):
+        dir = 'input-files/case-studies/spectra/weird_uc'
+        trivial_specs = self.get_all_trivial_specs(dir)
+        for i, trivial_spec in enumerate(trivial_specs):
+            write_to_file(f'tests/test_files/out/trivial_solutions/weird_uc_{i}.spectra', trivial_spec.to_str())
+
     def get_trivial_spec(self, dir):
         spec = SpectraSpecification.from_file(
             f'{dir}/strong.spectra'

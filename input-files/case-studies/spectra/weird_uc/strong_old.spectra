@@ -1,0 +1,16 @@
+module Weird
+
+env boolean e;
+sys boolean s;
+
+guarantee -- system_off_when_env_off
+	G(!e->!s);
+
+guarantee -- system_on_when_env_on
+	G(e->s);
+
+guarantee -- system_off_sometimes
+	GF(!s);
+
+guarantee -- system_on_sometimes
+	GF(s);

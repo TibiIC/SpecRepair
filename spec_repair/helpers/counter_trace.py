@@ -14,11 +14,11 @@ from spec_repair.enums import Learning
 from spec_repair.helpers.spectra_formula_parser import SpectraFormulaParser
 from spec_repair.helpers.spectra_specification import SpectraSpecification
 from spec_repair.heuristics import choose_one_with_heuristic, HeuristicType, random_choice
-from spec_repair.ltl_types import CounterStrategy
+from spec_repair.ltl_types import CounterStrategy, GR1FormulaType
 from spec_repair.special_types import DeadlockAtomSet, DeadlockViolations
 from spec_repair.util.ltl_formula_util import satisfies_ltl_formula
 from spec_repair.util.spec_util import cs_to_named_cs_traces, trace_replace_name, trace_list_to_asp_form, \
-    trace_list_to_ilasp_form, extract_expressions_from_spec, generate_model, run_clingo_raw, run_all_unrealisable_cores
+    trace_list_to_ilasp_form, generate_model, run_clingo_raw, run_all_unrealisable_cores
 from spec_repair.wrappers.asp_wrappers import run_clingo
 
 
@@ -150,7 +150,8 @@ def find_all_possible_deadlock_completion_assignments(ct: CounterTrace, spec: Sp
         raise ValueError("Not possible to complete the deadlock! There is no valid assignment that may "
                          "continue the trace. Some error must have occurred!")
     unrealisable_cores = get_unrealisable_core_expression_names(spec)
-    possible_assignments = [(atom_assignments, violated_expressions) for atom_assignments, violated_expressions in assignments if violated_expressions.issubset(unrealisable_cores)]
+    guarantee_names = set(spec._formulas_df.loc[spec._formulas_df["type"] == GR1FormulaType.GAR,"name"].tolist())
+    possible_assignments = [(atom_assignments, violated_expressions) for atom_assignments, violated_expressions in assignments if (violated_expressions.intersection(guarantee_names)).issubset(unrealisable_cores)]
     sorted_possible_assignments = sorted(possible_assignments, key=lambda x: len(x[0]))
     # TODO: introduce heuristic to enforce specific violation
     return [atom_assignments for atom_assignments, _ in sorted_possible_assignments]

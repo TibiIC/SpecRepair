@@ -92,6 +92,11 @@ not_holds_at(police,2,ini_S0_S0_S0).
 not_holds_at(green,2,ini_S0_S0_S0).
 """
 
+cs4: CounterStrategy = \
+    ['INI -> S0 {e:false} / {s:false};',
+     'INI -> DEAD {e:false} / {s:true};',
+     'S0 -> DEAD {e:true} / {s:false};']
+
 
 class TestCounterTrace(BaseTestCase):
     maxDiff = None
@@ -292,6 +297,19 @@ not_holds_at(pump,2,counter_strat_1_1).
 not_holds_at(pump,3,counter_strat_1_1).
 holds_at(highwater,3,counter_strat_1_1).
 holds_at(methane,3,counter_strat_1_1).\
+"""
+        self.assertEqual(expected_ct_raw, ct.get_raw_trace())
+
+    def test_ct_deadlock_completion_3(self):
+        ct = ct_from_cs(cs4, heuristic=partial(nth_choice, 0), cs_id=0)
+        spec: SpectraSpecification = SpectraSpecification.from_file(
+            './test_files/unrealisable_cores_of_size_3.spectra')
+        ct = complete_cts_from_ct(ct, spec, ["counter_strat_0_0"])[0]
+        expected_ct_raw = """\
+not_holds_at(e,0,counter_strat_0_0).
+holds_at(s,0,counter_strat_0_0).
+not_holds_at(s,1,counter_strat_0_0).
+holds_at(e,1,counter_strat_0_0).\
 """
         self.assertEqual(expected_ct_raw, ct.get_raw_trace())
 

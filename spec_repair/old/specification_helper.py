@@ -43,11 +43,10 @@ def run_subprocess(cmd, encoding: str = 'utf-8', suppress=False, timeout=-1):
     output = output.decode(encoding)
     return output
 
-
 def assign_equalities(formula_n, variables):
     for var in variables:
         formula_n = re.sub("!" + var + "(?!=|[a-z])", var + "=false", formula_n)
-        formula_n = re.sub(var + "(?!=|[a-z])", var + "=true", formula_n)
+        formula_n = re.sub("(?<![a-z])" + var + "(?!=|[a-z])", var + "=true", formula_n)
     return formula_n
 
 
