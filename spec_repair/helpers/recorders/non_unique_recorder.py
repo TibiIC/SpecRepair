@@ -52,3 +52,6 @@ class NonUniqueRecorder(IRecorder[T]):
         :return: True if the element is present, otherwise False.
         """
         return element in self._list
+
+    def __len__(self):
+        return len(self._list)

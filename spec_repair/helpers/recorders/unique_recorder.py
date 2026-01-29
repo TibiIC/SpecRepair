@@ -72,3 +72,6 @@ class UniqueRecorder(IRecorder[T]):
         """
         element = self._deep_freeze(element)
         return element in self._set
+
+    def __len__(self):
+        return len(self._set)

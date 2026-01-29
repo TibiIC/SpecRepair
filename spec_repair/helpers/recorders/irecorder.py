@@ -24,3 +24,7 @@ class IRecorder(ABC, Generic[T]):
     @abstractmethod
     def __contains__(self, element: T) -> bool:
         pass
+
+    @abstractmethod
+    def __len__(self):
+        pass

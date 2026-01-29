@@ -73,7 +73,7 @@ class BFSRepairOrchestrator:
                 alt_tasks: List[Tuple[ISpecification, Any]] = self._mitigator.prepare_alternative_learning_tasks(spec,
                                                                                                                  data)
                 for alt_spec, alt_data in alt_tasks:
-                    self._om.enqueue_new_tasks(alt_spec, alt_data)
+                    self._om.enqueue_new_tasks(alt_spec, alt_data, prev=(spec, data))
             else:
                 for learned_spec, data in learned_tasks:
                     counter_examples_with_data: List[Tuple[Any, Any]] = self._oracle.is_valid_or_counter_arguments(
@@ -81,9 +81,10 @@ class BFSRepairOrchestrator:
                     if not counter_examples_with_data:
                         learned_id = self._recorder.add(learned_spec)
                         self._logger.record(learned_id, learned_spec, data)
+                        # TODO: join unique solutions discoverable to intermediate nodes
                     else:
                         # TODO: find a way to filter the counter examples using the heuristic manager
                         for counter_example, data in counter_examples_with_data:
                             new_spec, new_data = self._mitigator.prepare_learning_task(spec, data, learned_spec,
                                                                                        counter_example)
-                            self._om.enqueue_new_tasks(new_spec, new_data)
+                            self._om.enqueue_new_tasks(new_spec, new_data, prev=(spec, data))
