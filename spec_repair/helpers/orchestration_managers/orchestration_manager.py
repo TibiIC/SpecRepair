@@ -70,6 +70,11 @@ class OrchestrationManager:
                     return task_id
             raise ValueError("No such task")
 
+    def connect_leaf_node(self, spec: ISpecification, unique_id: int, prev: Tuple[ISpecification, Any]):
+        prev_id = self.get_task_id(*prev)
+        self._graph.add_node(f"#{unique_id}", state=spec)
+        self._graph.add_edge(prev_id, f"#{unique_id}")
+
     def has_next(self) -> bool:
         return bool(self._stack)
 

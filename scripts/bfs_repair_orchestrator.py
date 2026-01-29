@@ -81,7 +81,7 @@ class BFSRepairOrchestrator:
                     if not counter_examples_with_data:
                         learned_id = self._recorder.add(learned_spec)
                         self._logger.record(learned_id, learned_spec, data)
-                        # TODO: join unique solutions discoverable to intermediate nodes
+                        self._om.connect_leaf_node(learned_spec, learned_id, prev=(spec, data))
                     else:
                         # TODO: find a way to filter the counter examples using the heuristic manager
                         for counter_example, data in counter_examples_with_data:

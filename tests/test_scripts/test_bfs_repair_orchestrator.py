@@ -30,12 +30,14 @@ def save_layered_graph(G: nx.DiGraph, filename: str = "graph.png"):
 
     # Find the node with '0' in its label
     target_node_name = None
-    for node in G.nodes():
-        if node == 0:
-            target_node_name = node
-            break
-    target_node_name = A.get_node(target_node_name)
-    target_node_name.attr['penwidth'] = '5'
+    for node_name in G.nodes():
+        if node_name == 0:
+            target_node_name = node_name
+        if '#' in str(node_name):
+            leaf_node = A.get_node(node_name)
+            leaf_node.attr['color'] = 'red'
+    target_node= A.get_node(target_node_name)
+    target_node.attr['penwidth'] = '5'
 
     # Render the Graphviz AGraph to an image file using Graphviz
     A.draw(filename, format='png', prog='dot')
@@ -106,7 +108,7 @@ class TestBFSRepairOrchestrator(BaseTestCase):
     def test_bfs_repair_spec_minepump(self):
         case_study_name = 'minepump'
         case_study_path = '../input-files/case-studies/spectra/minepump'
-        new_spec_strings = self.run_bfs_repair(case_study_name, case_study_path, is_debug=True)
+        new_spec_strings = self.run_bfs_repair(case_study_name, case_study_path)
 
         expected_specs_files: list[str] = os.listdir('./test_files/minepump_weakenings')
         expected_spec_strings: list[SpectraSpecification] = [
