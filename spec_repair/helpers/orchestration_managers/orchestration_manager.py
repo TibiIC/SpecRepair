@@ -30,11 +30,12 @@ class OrchestrationManager:
         trace, cts, learning_type, spec_history, learning_steps, learning_time = data
         visited_node: Tuple[ISpecification, Any] = (spec, (cts[-1:], learning_type))
         node: Tuple[ISpecification, Any] = (spec, data)
+        graph_node: Tuple[str, Any] = (spec.to_str(), ([ct.get_raw_trace() for ct in cts[-1:]], str(learning_type)))
         if not SEMANTIC_EQUIVALENCE:
             if visited_node not in self._visited_nodes:
                 self._stack.append(node)
                 self._visited_nodes.add(visited_node)
-                self._graph.add_node(len(self._visited_nodes)-1, state=node)
+                self._graph.add_node(len(self._visited_nodes)-1, state=graph_node)
             task_id = self._visited_nodes.get_id(visited_node)
             if prev is not None:
                 prev_task_id = self.get_task_id(*prev)
@@ -51,7 +52,7 @@ class OrchestrationManager:
             task_id = len(self._visited_nodes_list)
             self._stack.append(node)
             self._visited_nodes_list.append(visited_node)
-            self._graph.add_node(task_id, state=node)
+            self._graph.add_node(task_id, state=graph_node)
             if prev is not None:
                 prev_task_id = self.get_task_id(*prev)
                 self._graph.add_edge(prev_task_id, task_id)
@@ -72,7 +73,7 @@ class OrchestrationManager:
 
     def connect_leaf_node(self, spec: ISpecification, unique_id: int, prev: Tuple[ISpecification, Any]):
         prev_id = self.get_task_id(*prev)
-        self._graph.add_node(f"#{unique_id}", state=spec)
+        self._graph.add_node(f"#{unique_id}", state=spec.to_str())
         self._graph.add_edge(prev_id, f"#{unique_id}")
 
     def has_next(self) -> bool:

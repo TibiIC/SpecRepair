@@ -1,10 +1,13 @@
+import json
 import os
+import pickle
 from collections import deque, defaultdict
 from datetime import datetime
 from typing import Dict, Any, Hashable
 
 import networkx as nx
-from matplotlib import pyplot as plt
+from networkx.readwrite import json_graph
+from pyvis.network import Network
 
 from scripts.bfs_repair_orchestrator import BFSRepairOrchestrator, SpecLogger
 from spec_repair.components.arca_learner import ARCALearner
@@ -23,7 +26,7 @@ from spec_repair.util.mittigation_strategies import move_one_to_guarantee_weaken
 from spec_repair.util.spec_util import synthesise_controller
 from tests.base_test_case import BaseTestCase
 
-def save_layered_graph(G: nx.DiGraph, filename: str = "graph.png"):
+def save_layered_graph(G: nx.DiGraph, filepath: str):
     # Convert NetworkX graph to Graphviz Digraph
     A = nx.nx_agraph.to_agraph(G)
     A.node_attr.update(fontsize=24)
@@ -40,7 +43,17 @@ def save_layered_graph(G: nx.DiGraph, filename: str = "graph.png"):
     target_node.attr['penwidth'] = '5'
 
     # Render the Graphviz AGraph to an image file using Graphviz
-    A.draw(filename, format='png', prog='dot')
+    A.draw(f"{filepath}/graph.png", format='png', prog='dot')
+
+    with open(f"{filepath}/graph.pkl", "wb") as f:
+        pickle.dump(G, f)
+
+    # Create the interactive visualization
+    net = Network(height="800px", width="100%")
+    net.from_nx(G)
+    # Write the HTML file
+    net.write_html(f"{filepath}/graph.html")
+
 
 class TestBFSRepairOrchestrator(BaseTestCase):
     @classmethod
@@ -162,7 +175,7 @@ class TestBFSRepairOrchestrator(BaseTestCase):
         for i, new_spec in enumerate(new_spec_strings):
             write_to_file(f"{out_test_dir_name}/{case_study_name}_fix_{i}.spectra", new_spec)
         graph = repairer._om._graph
-        save_layered_graph(graph, f"{out_test_dir_name}/graph.png")
+        save_layered_graph(graph, out_test_dir_name)
         return new_spec_strings
 
     def run_single_repair(self, case_study_name, case_study_path, out_test_dir_name, is_debug=False):
