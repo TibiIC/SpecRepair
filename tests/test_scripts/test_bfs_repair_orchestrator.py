@@ -1,4 +1,5 @@
 import os
+from datetime import datetime
 from typing import Dict
 
 from scripts.bfs_repair_orchestrator import BFSRepairOrchestrator, SpecLogger
@@ -20,43 +21,41 @@ from tests.base_test_case import BaseTestCase
 
 
 class TestBFSRepairOrchestrator(BaseTestCase):
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        cls.date_str = datetime.now().strftime("%Y-%m-%d")
+
     def test_bfs_repair_spec_arbiter(self):
         case_study_name = 'arbiter'
         case_study_path = '../input-files/case-studies/spectra/arbiter'
-        out_test_dir_name = "./test_files/out/new_arbiter_test_bfs"
         new_spec_strings = self.run_bfs_repair(
             case_study_name,
             case_study_path,
-            out_test_dir_name,
             is_debug=True
         )
 
     def test_bfs_repair_spec_traffic_single(self):
         case_study_name = 'traffic_single'
         case_study_path = '../input-files/case-studies/spectra/traffic-single'
-        out_test_dir_name = "./test_files/out/traffic_single_2025_12_18"
         new_spec_strings = self.run_bfs_repair(
             case_study_name,
             case_study_path,
-            out_test_dir_name,
             is_debug=True
         )
 
     def test_bfs_repair_spec_traffic_updated(self):
         case_study_name = 'traffic_updated'
         case_study_path = '../input-files/case-studies/spectra/traffic-updated'
-        out_test_dir_name = "./test_files/out/new_traffic_updated_test_bfs"
         new_spec_strings = self.run_bfs_repair(
             case_study_name,
-            case_study_path,
-            out_test_dir_name
+            case_study_path
         )
 
     def test_bfs_repair_spec_lift(self):
         case_study_name = 'lift'
         case_study_path = '../input-files/case-studies/spectra/lift'
-        out_test_dir_name = "./test_files/out/lift_all_bfs"
-        new_spec_strings = self.run_bfs_repair(case_study_name, case_study_path, out_test_dir_name)
+        new_spec_strings = self.run_bfs_repair(case_study_name, case_study_path)
 
         expected_specs_files: list[str] = os.listdir('./test_files/lift_weakenings/new')
         expected_spec_strings: list[SpectraSpecification] = [
@@ -88,8 +87,7 @@ class TestBFSRepairOrchestrator(BaseTestCase):
     def test_bfs_repair_spec_minepump(self):
         case_study_name = 'minepump'
         case_study_path = '../input-files/case-studies/spectra/minepump'
-        out_test_dir_name = "./test_files/out/minepump_2025_12_29"
-        new_spec_strings = self.run_bfs_repair(case_study_name, case_study_path, out_test_dir_name, is_debug=True)
+        new_spec_strings = self.run_bfs_repair(case_study_name, case_study_path, is_debug=True)
 
         expected_specs_files: list[str] = os.listdir('./test_files/minepump_weakenings')
         expected_spec_strings: list[SpectraSpecification] = [
@@ -102,8 +100,10 @@ class TestBFSRepairOrchestrator(BaseTestCase):
             print(i)
             self.assertIn(expected_spec.to_str(), new_spec_strings)
 
-    def run_bfs_repair(self, case_study_name, case_study_path, out_test_dir_name, is_debug=False):
+    def run_bfs_repair(self, case_study_name, case_study_path, out_test_dir_name=None, is_debug=False):
         transitions_file_path = f"{out_test_dir_name}/transitions.csv"
+        if not out_test_dir_name:
+            out_test_dir_name = f"./test_files/out/repair/{case_study_name}_{self.date_str}"
         log_file = f"{out_test_dir_name}/log.txt"
         if not os.path.exists(out_test_dir_name):
             os.mkdir(out_test_dir_name)

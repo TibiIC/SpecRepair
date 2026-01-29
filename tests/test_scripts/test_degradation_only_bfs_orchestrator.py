@@ -3,20 +3,17 @@ from datetime import datetime
 from typing import Dict
 
 from scripts.bfs_repair_orchestrator import BFSRepairOrchestrator, SpecLogger
-from spec_repair.components.arca_learner import ARCALearner
 from spec_repair.components.interfaces.ilearner import ILearner
 from spec_repair.components.optimising_final_spec_learner import OptimisingSpecLearner
 from spec_repair.components.new_spec_oracle import NewSpecOracle
 from spec_repair.components.learning_type_spec_mitigator import LearningTypeSpecMitigator
 from spec_repair.components.spectra_discriminator import SpectraDiscriminator
 from spec_repair.enums import Learning
-from spec_repair.helpers.heuristic_managers.choose_first_heuristic_manager import ChooseFirstHeuristicManager
 from spec_repair.helpers.heuristic_managers.no_filter_heuristic_manager import NoFilterHeuristicManager
 from spec_repair.helpers.recorders.unique_spec_recorder import UniqueSpecRecorder
 from spec_repair.helpers.spectra_specification import SpectraSpecification
 from spec_repair.util.file_util import read_file_lines, write_to_file
 from spec_repair.util.mittigation_strategies import move_one_to_guarantee_weakening, complete_counter_traces
-from spec_repair.util.spec_util import synthesise_controller
 from tests.base_test_case import BaseTestCase
 
 

@@ -37,3 +37,11 @@ MANUAL: bool = True
 
 # Configuration of Learning
 WEAKENING_TO_JUSTICE = False
+SEMANTIC_EQUIVALENCE = True
+# 29.01.2026: Note no Semantic Equivalence above
+# * Makes learning solutions much faster, but
+# * Leaves out many weakenings, most likely, response pattern
+# e.g. G(a->b) weakens to either
+# 1. G(a&c->b) or 2. G(a->b|!c), and 1 equivalent to 2.
+# But both can be weakened further to response as:
+# 1. G(a&c->F(b)) or 2. G(a->F(b|!c)), who are not equivalent.
