@@ -171,7 +171,7 @@ class TestBFSRepairOrchestrator(BaseTestCase):
         )
         # Getting all possible repairs
         repairer.repair_bfs(spec, (trace, [], Learning.ASSUMPTION_WEAKENING, [], 0, 0))
-        new_spec_strings: list[str] = [spec.to_str() for spec in recorder.get_all_values()]
+        new_spec_strings: list[str] = recorder.get_specs()
         for i, new_spec in enumerate(new_spec_strings):
             write_to_file(f"{out_test_dir_name}/{case_study_name}_fix_{i}.spectra", new_spec)
         graph = repairer._om._graph
@@ -215,7 +215,7 @@ class TestBFSRepairOrchestrator(BaseTestCase):
         )
         # Getting all possible repairs
         repairer.repair_bfs(spec, (trace, [], Learning.ASSUMPTION_WEAKENING, [], 0, 0))
-        new_spec_strings: list[str] = [spec.to_str() for spec in recorder.get_all_values()]
+        new_spec_strings: list[str] = recorder.get_specs()
         for i, new_spec in enumerate(new_spec_strings):
             write_to_file(f"{out_test_dir_name}/{case_study_name}_fix_{i}.spectra", new_spec)
         assert len(new_spec_strings) == 1, "Expected exactly one new specification after single repair."

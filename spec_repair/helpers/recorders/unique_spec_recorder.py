@@ -17,14 +17,14 @@ class UniqueSpecRecorder(UniqueRecorder[SpectraSpecification]):
     def add(self, new_spec: SpectraSpecification):
         if not SEMANTIC_EQUIVALENCE:
             index = super().add(new_spec)
-            if self.debug_folder:
-                write_to_file(f"{self.debug_folder}/spec_{index}.spectra", new_spec.to_str())
         else:
             for index, spec in enumerate(self._specs):
                 if spec == new_spec:
                     return index
             index = len(self._specs)
             self._specs.append(new_spec)
+        if self.debug_folder:
+            write_to_file(f"{self.debug_folder}/spec_{index}.spectra", new_spec.to_str())
         return index
 
     def get_specs(self) -> list[str]:
