@@ -9,7 +9,7 @@ from spec_repair.helpers.recorders.irecorder import IRecorder
 from spec_repair.helpers.recorders.unique_recorder import UniqueRecorder
 
 
-class OrchestrationManager:
+class OrchestrationManagerSemanticEquivalence:
     def __init__(self):
         self._stack: Deque[Tuple[ISpecification, Any]] = deque()
         if SEMANTIC_EQUIVALENCE:

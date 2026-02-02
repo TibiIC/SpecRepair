@@ -2,7 +2,7 @@ from unittest import TestCase
 
 from py_ltl.formula import AtomicProposition
 
-from spec_repair.helpers.asp_mini_parser import ASPMiniParser
+from spec_repair.helpers.parsers.asp_mini_parser import ASPMiniParser
 
 
 class TestASPMiniParser(TestCase):

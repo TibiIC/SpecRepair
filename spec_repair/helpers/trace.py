@@ -5,7 +5,7 @@ from typing import Set, List, TypeVar, Optional, Tuple, Iterator
 
 from py_ltl.formula import AtomicProposition
 
-from spec_repair.helpers.asp_mini_parser import ASPMiniParser
+from spec_repair.helpers.parsers.asp_mini_parser import ASPMiniParser
 
 T = TypeVar("T")
 

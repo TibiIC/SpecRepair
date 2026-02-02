@@ -1,21 +1,17 @@
-import json
 import os
 import pickle
-from collections import deque, defaultdict
 from datetime import datetime
-from typing import Dict, Any, Hashable
+from typing import Dict
 
 import networkx as nx
-from networkx.readwrite import json_graph
 from pyvis.network import Network
 
 from scripts.bfs_repair_orchestrator import BFSRepairOrchestrator, SpecLogger
-from spec_repair.components.arca_learner import ARCALearner
 from spec_repair.components.interfaces.ilearner import ILearner
-from spec_repair.components.optimising_final_spec_learner import OptimisingSpecLearner
-from spec_repair.components.new_spec_oracle import NewSpecOracle
-from spec_repair.components.learning_type_spec_mitigator import LearningTypeSpecMitigator
-from spec_repair.components.spectra_discriminator import SpectraDiscriminator
+from spec_repair.components.learners.optimising_final_spec_learner import OptimisingSpecLearner
+from spec_repair.components.oracles.new_spec_oracle import NewSpecOracle
+from spec_repair.components.mitigators.learning_type_spec_mitigator import LearningTypeSpecMitigator
+from spec_repair.components.discriminators.spectra_discriminator import SpectraDiscriminator
 from spec_repair.enums import Learning
 from spec_repair.helpers.heuristic_managers.choose_first_heuristic_manager import ChooseFirstHeuristicManager
 from spec_repair.helpers.heuristic_managers.no_filter_heuristic_manager import NoFilterHeuristicManager

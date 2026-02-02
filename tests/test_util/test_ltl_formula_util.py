@@ -1,10 +1,10 @@
 import unittest
 import spot
 
-from py_ltl.formula import LTLFormula, Globally, Implies, AtomicProposition, Not, Top, Bottom, Eventually, And, Or, Next
+from py_ltl.formula import LTLFormula, Globally, Implies, AtomicProposition, Not, Top, Eventually, And, Or, Next
 
-from spec_repair.helpers.spectra_formula_parser import SpectraFormulaParser
-from spec_repair.helpers.spot_formula_formatter import SpotFormulaFormatter
+from spec_repair.helpers.parsers.spectra_formula_parser import SpectraFormulaParser
+from spec_repair.helpers.formatters.spot_formula_formatter import SpotFormulaFormatter
 from spec_repair.util.ltl_formula_util import normalize_to_pattern, satisfies_ltl_formula
 
 

@@ -11,14 +11,14 @@ from py_ltl.formula import AtomicProposition
 from spec_repair.components.interfaces.ispecification import ISpecification
 from spec_repair.components.new_spec_encoder import NewSpecEncoder
 from spec_repair.enums import Learning
-from spec_repair.helpers.spectra_formula_parser import SpectraFormulaParser
+from spec_repair.helpers.parsers.spectra_formula_parser import SpectraFormulaParser
 from spec_repair.helpers.spectra_specification import SpectraSpecification
 from spec_repair.heuristics import choose_one_with_heuristic, HeuristicType, random_choice
 from spec_repair.ltl_types import CounterStrategy, GR1FormulaType
 from spec_repair.special_types import DeadlockAtomSet, DeadlockViolations
 from spec_repair.util.ltl_formula_util import satisfies_ltl_formula
 from spec_repair.util.spec_util import cs_to_named_cs_traces, trace_replace_name, trace_list_to_asp_form, \
-    trace_list_to_ilasp_form, generate_model, run_clingo_raw, run_all_unrealisable_cores
+    trace_list_to_ilasp_form, generate_model, run_all_unrealisable_cores
 from spec_repair.wrappers.asp_wrappers import run_clingo
 
 

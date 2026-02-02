@@ -1,8 +1,8 @@
 import unittest
 
-from spec_repair.helpers.spot_formula_formatter import SpotFormulaFormatter
+from spec_repair.helpers.formatters.spot_formula_formatter import SpotFormulaFormatter
 
-from py_ltl.formula import AtomicProposition, Not, And, Or, Until, Next, Globally, Eventually, Implies, Prev, Top, \
+from py_ltl.formula import AtomicProposition, Not, And, Or, Next, Globally, Eventually, Implies, Prev, Top, \
     Bottom
 
 class TestSpotFormatter(unittest.TestCase):

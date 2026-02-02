@@ -2,7 +2,7 @@ from copy import deepcopy
 from typing import Tuple
 
 from tests.base_test_case import BaseTestCase
-from spec_repair.components.learning_type_spec_mitigator import LearningTypeSpecMitigator
+from spec_repair.components.mitigators.learning_type_spec_mitigator import LearningTypeSpecMitigator
 from spec_repair.enums import Learning
 from spec_repair.helpers.counter_trace import cts_from_cs, CounterTrace
 from spec_repair.helpers.spectra_specification import SpectraSpecification

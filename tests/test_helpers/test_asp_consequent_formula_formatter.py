@@ -1,8 +1,8 @@
 import unittest
 
-from spec_repair.helpers.asp_exception_formatter import ASPExceptionFormatter
+from spec_repair.helpers.formatters.asp_exception_formatter import ASPExceptionFormatter
 
-from py_ltl.formula import AtomicProposition, Not, And, Or, Until, Next, Globally, Eventually, Implies, Prev, Top, \
+from py_ltl.formula import AtomicProposition, Not, And, Or, Next, Globally, Eventually, Implies, Prev, Top, \
     Bottom
 
 class TestASPFormatter(unittest.TestCase):

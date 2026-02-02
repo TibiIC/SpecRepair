@@ -1,8 +1,8 @@
 import unittest
 
-from spec_repair.helpers.spectra_formula_formatter import SpectraFormulaFormatter
+from spec_repair.helpers.formatters.spectra_formula_formatter import SpectraFormulaFormatter
 
-from py_ltl.formula import AtomicProposition, Not, And, Or, Until, Next, Globally, Eventually, Implies, Prev, Top, \
+from py_ltl.formula import AtomicProposition, Not, And, Or, Next, Globally, Eventually, Implies, Prev, Top, \
     Bottom
 
 class TestSpectraFormatter(unittest.TestCase):

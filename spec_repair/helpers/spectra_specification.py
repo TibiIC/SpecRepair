@@ -1,24 +1,22 @@
 import copy
-import os
 import re
 import subprocess
 from copy import deepcopy
-from typing import TypedDict, Optional, TypeVar, List, Set, Any, Callable, Tuple
+from typing import TypedDict, Optional, TypeVar, List, Set, Any, Callable
 
-import numpy as np
 import pandas as pd
 import spot
 
 from spec_repair.components.interfaces.ispecification import ISpecification
 from spec_repair.helpers.adaptation_learned import Adaptation
-from spec_repair.helpers.asp_exception_formatter import ASPExceptionFormatter
+from spec_repair.helpers.formatters.asp_exception_formatter import ASPExceptionFormatter
 from spec_repair.helpers.heuristic_managers.iheuristic_manager import IHeuristicManager
 from spec_repair.helpers.heuristic_managers.no_filter_heuristic_manager import NoFilterHeuristicManager
 from spec_repair.helpers.spectra_atom import SpectraAtom
 from spec_repair.helpers.gr1_formula import GR1Formula
-from spec_repair.helpers.spectra_formula_formatter import SpectraFormulaFormatter
-from spec_repair.helpers.spectra_formula_parser import SpectraFormulaParser
-from spec_repair.helpers.spot_specification_formatter import SpotSpecificationFormatter
+from spec_repair.helpers.formatters.spectra_formula_formatter import SpectraFormulaFormatter
+from spec_repair.helpers.parsers.spectra_formula_parser import SpectraFormulaParser
+from spec_repair.helpers.formatters.spot_specification_formatter import SpotSpecificationFormatter
 from spec_repair.ltl_types import GR1FormulaType, GR1TemporalType
 from spec_repair.util.file_util import read_file_lines, validate_spectra_file
 from spec_repair.util.formula_util import get_disjuncts_from_disjunction

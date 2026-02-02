@@ -1,14 +1,12 @@
-from collections import defaultdict
 from unittest import TestCase
 
 from spec_repair.helpers.adaptation_learned import Adaptation
 from spec_repair.helpers.gr1_formula import GR1Formula
-from spec_repair.helpers.spectra_formula_formatter import SpectraFormulaFormatter
-from spec_repair.helpers.spectra_formula_parser import SpectraFormulaParser
+from spec_repair.helpers.formatters.spectra_formula_formatter import SpectraFormulaFormatter
+from spec_repair.helpers.parsers.spectra_formula_parser import SpectraFormulaParser
 from spec_repair.ltl_types import GR1TemporalType
 
-from py_ltl.formula import AtomicProposition, Not, And, Or, Until, Next, Globally, Eventually, Implies, Prev, Top, \
-    Bottom
+from py_ltl.formula import AtomicProposition, Not, And, Or, Next, Eventually, Prev, Top
 
 
 class TestGR1Formula(TestCase):

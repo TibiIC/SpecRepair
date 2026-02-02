@@ -2,10 +2,10 @@ from unittest import TestCase
 import unittest
 from py_ltl.formula import LTLFormula
 from py_ltl.formula import (
-    AtomicProposition, Not, And, Or, Until, Next, Globally, Eventually, Implies, Prev
+    AtomicProposition, Not, And, Or, Next, Globally, Eventually, Implies, Prev
 )
 
-from spec_repair.helpers.spectra_formula_parser import SpectraFormulaParser
+from spec_repair.helpers.parsers.spectra_formula_parser import SpectraFormulaParser
 
 
 class TestSpectraFormulaParser(TestCase):

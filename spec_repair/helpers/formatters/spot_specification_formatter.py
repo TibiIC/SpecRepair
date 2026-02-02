@@ -1,7 +1,7 @@
 from copy import deepcopy
 from typing import Optional
 
-from spec_repair.helpers.spot_formula_formatter import SpotFormulaFormatter
+from spec_repair.helpers.formatters.spot_formula_formatter import SpotFormulaFormatter
 from spec_repair.ltl_types import GR1FormulaType, GR1TemporalType
 
 

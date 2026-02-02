@@ -3,7 +3,7 @@ from unittest import TestCase
 
 import dill
 
-from spec_repair.components.optimising_final_spec_learner import OptimisingSpecLearner
+from spec_repair.components.learners.optimising_final_spec_learner import OptimisingSpecLearner
 from spec_repair.enums import Learning
 
 

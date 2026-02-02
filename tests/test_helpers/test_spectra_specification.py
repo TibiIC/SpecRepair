@@ -7,11 +7,11 @@ import spot
 from spec_repair.helpers.adaptation_learned import Adaptation
 from spec_repair.helpers.gr1_formula import GR1Formula
 from spec_repair.helpers.heuristic_managers.no_filter_heuristic_manager import NoFilterHeuristicManager
-from spec_repair.helpers.spectra_formula_formatter import SpectraFormulaFormatter
-from spec_repair.helpers.spectra_formula_parser import SpectraFormulaParser
+from spec_repair.helpers.formatters.spectra_formula_formatter import SpectraFormulaFormatter
+from spec_repair.helpers.parsers.spectra_formula_parser import SpectraFormulaParser
 from spec_repair.helpers.spectra_specification import SpectraSpecification
 from spec_repair.helpers.spectra_atom import SpectraAtom
-from spec_repair.helpers.spot_specification_formatter import SpotSpecificationFormatter
+from spec_repair.helpers.formatters.spot_specification_formatter import SpotSpecificationFormatter
 from spec_repair.ltl_types import GR1FormulaType, GR1TemporalType
 from spec_repair.weakness_measurement_davide.weakness_user_friendly import Weakness
 from tests.base_test_case import BaseTestCase
@@ -480,16 +480,6 @@ root_consequent_holds(OP,guarantee4,1,T1,S):-
         spec_1 = SpectraSpecification.from_str(spec_fixed_imperf)
         spec_2 = SpectraSpecification.from_str(spec_fixed_perf)
         self.assertNotEquals(spec_1, spec_2)
-
-    @unittest.skip("To be considered at a later date")
-    def test_swap_rule_1(self):
-        spec = Spec(copy.deepcopy(spec_strong))
-        new_spec = Spec(copy.deepcopy(spec_strong_asm_w))
-        spec.swap_rule(
-            name="assumption2_1",
-            new_rule="G(highwater=false-> highwater=false|methane=false);",
-        )
-        self.assertEqual(spec, new_spec)
 
     def test_asm_eq_gar_weaker(self):
         spec_1: SpectraSpecification = SpectraSpecification.from_str(spec_perf)
