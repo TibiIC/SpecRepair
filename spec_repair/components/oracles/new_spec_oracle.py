@@ -37,6 +37,7 @@ def get_unrealisable_core_expression_names(spec: SpectraSpecification) -> List[s
 class NewSpecOracle(IOracle):
     def __init__(self):
         self._ct_cnt = 0
+        self._hm = None
 
     def is_valid_or_counter_arguments(
             self,
