@@ -171,6 +171,10 @@ class GR1Formula:
                 raise ValueError(f"Unsupported temporal operator: {op}")
         return new_disjunct
 
+    def __hash__(self):
+        antecedent_hash = hash(str(self.antecedent)) if self.antecedent is not None else 0
+        return hash((self.temp_type, str(antecedent_hash), hash(str(self.consequent))))
+
     @staticmethod
     def remove_temporal_operators(this_formula: LTLFormula) -> LTLFormula:
         match this_formula:

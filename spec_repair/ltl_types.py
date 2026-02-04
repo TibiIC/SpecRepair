@@ -64,6 +64,9 @@ class GR1TemporalType(Enum):
     def __str__(self) -> str:
         return f"{self.value}"
 
+    def __hash__(self):
+        return hash(self.value)
+
 
 class LTLFiltOperation(Enum):
     IMPLIES = "imply"
