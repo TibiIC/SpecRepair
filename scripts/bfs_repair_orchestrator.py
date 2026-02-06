@@ -5,6 +5,7 @@ from spec_repair.components.interfaces.idiscriminator import IDiscriminator
 from spec_repair.components.interfaces.ilearner import ILearner
 from spec_repair.components.interfaces.imitigator import IMitigator
 from spec_repair.components.interfaces.ioracle import IOracle
+from spec_repair.components.interfaces.iorchestration_manager import IOrchestrationManager
 from spec_repair.components.interfaces.ispecification import ISpecification
 from spec_repair.components.orchestration_managers.orchestration_manager_semantic_equivalence import \
     OrchestrationManagerSemanticEquivalence
@@ -34,7 +35,8 @@ class BFSRepairOrchestrator:
             oracle: IOracle,
             discriminator: IDiscriminator,
             mitigator: IMitigator,
-            heuristic_manager: IHeuristicManager = NoFilterHeuristicManager(),
+            om: IOrchestrationManager = OrchestrationManagerSemanticEquivalence(),
+            hm: IHeuristicManager = NoFilterHeuristicManager(),
             recorder: IRecorder[ISpecification] = UniqueRecorder(),
             logger: SpecLogger = SpecLogger("spec_repair.log")
     ):
@@ -42,8 +44,8 @@ class BFSRepairOrchestrator:
         self._oracle = oracle
         self._discriminator = discriminator
         self._mitigator = mitigator
-        self._om = OrchestrationManagerSemanticEquivalence()
-        self._hm = heuristic_manager
+        self._om = om
+        self._hm = hm
         self._recorder = recorder
         self._logger = logger
         self._initialise_repair()

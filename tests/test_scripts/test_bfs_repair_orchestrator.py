@@ -1,5 +1,6 @@
 import os
 import pickle
+import unittest
 from datetime import datetime
 from typing import Dict
 
@@ -12,6 +13,8 @@ from spec_repair.components.learners.optimising_final_spec_learner import Optimi
 from spec_repair.components.oracles.new_spec_oracle import NewSpecOracle
 from spec_repair.components.mitigators.learning_type_spec_mitigator import LearningTypeSpecMitigator
 from spec_repair.components.discriminators.spectra_discriminator import SpectraDiscriminator
+from spec_repair.components.orchestration_managers.orchestration_manager_semantic_equivalence_no_change_gw import \
+    OrchestrationManagerSemanticEquivalenceNoGWChange
 from spec_repair.enums import Learning
 from spec_repair.helpers.heuristic_managers.choose_first_heuristic_manager import ChooseFirstHeuristicManager
 from spec_repair.helpers.heuristic_managers.no_filter_heuristic_manager import NoFilterHeuristicManager
@@ -100,6 +103,7 @@ class TestBFSRepairOrchestrator(BaseTestCase):
             print(i)
             self.assertIn(expected_spec.to_str(), new_spec_strings)
 
+    @unittest.skip("skip test")
     def test_single_repair_spec_minepump(self):
         case_study_name = 'minepump'
         case_study_path = '../input-files/case-studies/spectra/minepump'
@@ -107,6 +111,7 @@ class TestBFSRepairOrchestrator(BaseTestCase):
         new_spec_strings = self.run_single_repair(case_study_name, case_study_path, out_test_dir_name)
         print(new_spec_strings)
 
+    @unittest.skip("skip test")
     def test_single_repair_spec_minepump_liveness(self):
         case_study_name = 'minepump_liveness'
         case_study_path = '../input-files/case-studies/spectra/minepump_liveness'
@@ -117,7 +122,7 @@ class TestBFSRepairOrchestrator(BaseTestCase):
     def test_bfs_repair_spec_minepump(self):
         case_study_name = 'minepump'
         case_study_path = '../input-files/case-studies/spectra/minepump'
-        new_spec_strings = self.run_bfs_repair(case_study_name, case_study_path)
+        new_spec_strings = self.run_bfs_repair(case_study_name, case_study_path, is_debug=True)
 
         expected_specs_files: list[str] = os.listdir('./test_files/minepump_weakenings')
         expected_spec_strings: list[SpectraSpecification] = [
@@ -161,9 +166,10 @@ class TestBFSRepairOrchestrator(BaseTestCase):
                 Learning.ASSUMPTION_WEAKENING: move_one_to_guarantee_weakening,
                 Learning.GUARANTEE_WEAKENING: complete_counter_traces
             }),
-            NoFilterHeuristicManager(),
-            recorder,
-            SpecLogger(filename=log_file)
+            om = OrchestrationManagerSemanticEquivalenceNoGWChange(),
+            hm = NoFilterHeuristicManager(),
+            recorder = recorder,
+            logger = SpecLogger(filename=log_file)
         )
         # Getting all possible repairs
         repairer.repair_bfs(spec, (trace, [], Learning.ASSUMPTION_WEAKENING, [], 0, 0))

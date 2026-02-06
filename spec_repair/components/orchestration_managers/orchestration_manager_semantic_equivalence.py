@@ -3,11 +3,12 @@ from typing import Deque, Tuple, Any, Optional
 
 import networkx as nx
 
+from spec_repair.components.interfaces.iorchestration_manager import IOrchestrationManager
 from spec_repair.components.interfaces.ispecification import ISpecification
 from spec_repair.helpers.recorders.unique_recorder import UniqueRecorder
 
 
-class OrchestrationManagerSemanticEquivalence:
+class OrchestrationManagerSemanticEquivalence(IOrchestrationManager):
     def __init__(self):
         self._stack: Deque[Tuple[ISpecification, Any]] = deque()
         self._visited_nodes_list: list[Tuple[ISpecification, Any]] = []
