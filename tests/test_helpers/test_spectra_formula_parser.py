@@ -1,4 +1,3 @@
-from email._header_value_parser import Atom
 from unittest import TestCase
 import unittest
 from py_ltl.formula import LTLFormula
@@ -117,6 +116,15 @@ class TestSpectraFormulaParser(TestCase):
     def test_parse_nested_expression_global_eventually(self):
         """Test parsing a more complex nested formula: () using LTLFormula.parse()."""
         parsed = LTLFormula.parse("\tGF(pump=true);", self.parser)
+        self.assertIsInstance(parsed, Globally)
+        self.assertIsInstance(parsed.formula, Eventually)
+        self.assertIsInstance(parsed.formula.formula, AtomicProposition)
+        self.assertEqual(parsed.formula.formula.name, "pump")
+        self.assertEqual(parsed.formula.formula.value, True)
+
+    def test_parse_nested_expression_global_eventually_alt_form(self):
+        """Test parsing a more complex nested formula: () using LTLFormula.parse()."""
+        parsed = LTLFormula.parse("\talwEv(pump=true);", self.parser)
         self.assertIsInstance(parsed, Globally)
         self.assertIsInstance(parsed.formula, Eventually)
         self.assertIsInstance(parsed.formula.formula, AtomicProposition)
@@ -277,7 +285,13 @@ class TestSpectraFormulaParser(TestCase):
         self.assertIsInstance(parsed.formula.right, Implies)
         self.assertEqual(parsed.formula.right.left, AtomicProposition("color_0", value=True))
 
-
+    def test_problem_formula_submarine(self):
+        parsed = LTLFormula.parse("alwEv(diver_at_depth1=true);", self.parser)
+        self.assertIsInstance(parsed, Globally)
+        self.assertIsInstance(parsed.formula, Eventually)
+        self.assertIsInstance(parsed.formula.formula, AtomicProposition)
+        self.assertEqual(parsed.formula.formula.name, "diver_at_depth1")
+        self.assertEqual(parsed.formula.formula.value, True)
 
 if __name__ == "__main__":
     unittest.main()

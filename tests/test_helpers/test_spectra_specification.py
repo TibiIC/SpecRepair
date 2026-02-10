@@ -60,6 +60,12 @@ class TestSpectraSpecification(BaseTestCase):
         for atom in spec._atoms:
             self.assertIn(str(atom), expected_atoms_str)
 
+    def test_file_to_specification_works_complex_spec(self):
+        spec_file = "./test_files/submarine/submarine_boolean_64_92.spectra"
+        spec = SpectraSpecification.from_file(spec_file)
+        print(spec._atoms)
+
+
     def test_integrate_learning_rule(self):
         spec_file = "./test_files/minepump_strong.spectra"
         spec = SpectraSpecification.from_file(spec_file)
@@ -460,6 +466,19 @@ root_consequent_holds(OP,guarantee4,1,T1,S):-
         print(spec_trivial_weakness_gar)
         self.assertGreater(spec_trivial_weakness_gar.d3, 0)
         self.assertIsInstance(spec_trivial_weakness_gar.d3, np.float64)
+
+    def test_weakness_measurement_gar_eq_exception(self):
+        spec_trivial: SpectraSpecification = SpectraSpecification.from_file(
+            "test_files/arbiter_weakenings/arbiter_trivial.spectra"
+        )
+        spec_stronger_weakening: SpectraSpecification = SpectraSpecification.from_file(
+            "test_files/arbiter_weakenings/arbiter_aw_r1_gw_ev.spectra"
+        )
+        spec_trivial_weakness_gar: Weakness = spec_trivial.get_weakness(GR1FormulaType.GAR)
+        print(spec_trivial_weakness_gar)
+        spec_stronger_weakness_gar: Weakness = spec_stronger_weakening.get_weakness(GR1FormulaType.GAR)
+        print(spec_stronger_weakness_gar)
+        self.assertGreaterEqual(spec_trivial_weakness_gar, spec_stronger_weakness_gar)
 
     def test_eq_identical_strings(self):
         spec_1 = SpectraSpecification.from_str(spec_perf)

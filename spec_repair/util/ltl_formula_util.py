@@ -244,17 +244,28 @@ def group_temporals_in_and(f: LTLFormula) -> LTLFormula:
             literals.append(item)
 
     if nexts:
-        literals.append(Next(And(*nexts)) if len(nexts) > 1 else Next(nexts[0]))
+        literals.append(Next(conjoin(nexts)) if len(nexts) > 1 else Next(nexts[0]))
     if prevs:
-        literals.append(Prev(And(*prevs)) if len(prevs) > 1 else Prev(prevs[0]))
+        literals.append(Prev(conjoin(prevs)) if len(prevs) > 1 else Prev(prevs[0]))
 
     if not literals:
         return Top()
     elif len(literals) == 1:
         return literals[0]
     else:
-        return And(*literals)
+        return conjoin(literals)
 
+def conjoin(formulas: List[LTLFormula]):
+    """
+    Return a conjunction of the given formulas.
+    """
+    return reduce(lambda x, y: And(x, y), formulas)
+
+def disjoin(formulas: List[LTLFormula]):
+    """
+    Return a disjunction of the given formulas.
+    """
+    return reduce(lambda x, y: Or(x, y), formulas)
 
 def to_ednf(f: LTLFormula) -> LTLFormula:
     # Apply to_dnf first
