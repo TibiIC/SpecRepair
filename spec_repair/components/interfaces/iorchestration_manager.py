@@ -10,7 +10,7 @@ class IOrchestrationManager:
         pass
 
     @abstractmethod
-    def enqueue_new_tasks(self, spec: ISpecification, data: Any, prev: Optional[Tuple[ISpecification, Any]] = None):
+    def enqueue_new_tasks(self, spec: ISpecification, data: Any, prev: Optional[Tuple[ISpecification, Any]] = None, failed_spec: Optional[ISpecification] = None):
         pass
 
     @abstractmethod

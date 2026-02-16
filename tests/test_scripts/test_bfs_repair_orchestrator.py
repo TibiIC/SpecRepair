@@ -85,6 +85,15 @@ class TestBFSRepairOrchestrator(BaseTestCase):
             case_study_path
         )
 
+    def test_bfs_repair_spec_submarine(self):
+        case_study_name = 'submarine'
+        case_study_path = '../input-files/case-studies/spectra/submarine'
+        new_spec_strings = self.run_bfs_repair(
+            case_study_name,
+            case_study_path,
+            is_debug=True
+        )
+
     def test_bfs_repair_spec_lift(self):
         case_study_name = 'lift'
         case_study_path = '../input-files/case-studies/spectra/lift'

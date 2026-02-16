@@ -9,8 +9,9 @@ import numpy as np
 # ===============================================
 # SECTION 2 — Load CSV Once
 # ===============================================
-CSV_PATH = "scripts/weakness_results/arbiter_2025-11-19/weakness_table_2.csv"  # <-- edit if needed
-case_study_name="Arbiter"
+CSV_PATH = "scripts/weakness_results/lift_2025-11-19/weakness_table_2.csv"  # <-- edit if needed
+case_study_name="Traffic Single"
+IS_DEBUG = False
 
 df = pd.read_csv(CSV_PATH)
 
@@ -26,6 +27,17 @@ if (df == -np.inf).any().any():
     df.to_csv(CSV_PATH, index=False)
     print("Rewritten.")
 
+# %%
+# ===============================================
+# SECTION 2.2 — Rewrite the CSV asm_d3 and gar_d3 columns from value to 1 - value
+# ===============================================
+if "asm_d3" in df.columns and "gar_d3" in df.columns:
+    print("Transforming asm_d3 and gar_d3 columns: value -> 1 - value")
+    df["asm_d3"] = 1 - df["asm_d3"]
+    df["gar_d3"] = 1 - df["gar_d3"]
+    print("CSV rewritten with transformed asm_d3 and gar_d3 columns.")
+else:
+    print("Columns asm_d3 and/or gar_d3 not found in CSV.")
 
 # %%
 # ===============================================
@@ -95,6 +107,35 @@ def dist_to_single(normal, ref_row):
     # Compute Euclidean on filtered dimensions
     asm_dist = np.linalg.norm(asm_f - asm_ref_f, axis=1)
     gar_dist = np.linalg.norm(gar_f - gar_ref_f, axis=1)
+
+    return asm_dist, gar_dist
+
+def dist_to_single_per_dim(normal, ref_row):
+    asm_dims = ["asm_d0", "asm_d1", "asm_d3"]
+    gar_dims = ["gar_d0", "gar_d1", "gar_d3"]
+
+    asm_ref = ref_row[asm_dims].to_numpy(float)
+    asm = normal[asm_dims].to_numpy(float)
+
+    gar_ref = ref_row[gar_dims].to_numpy(float)
+    gar = normal[gar_dims].to_numpy(float)
+
+    # Masks of valid dimensions (based on ref)
+    finite_asm = np.isfinite(asm_ref)
+    finite_gar = np.isfinite(gar_ref)
+
+    # Initialize outputs with NaN (shape: n_rows x 3)
+    asm_dist = np.full((asm.shape[0], 3), np.nan)
+    gar_dist = np.full((gar.shape[0], 3), np.nan)
+
+    # Compute per-dimension euclidean contribution
+    asm_dist[:, finite_asm] = np.sqrt(
+        (asm[:, finite_asm] - asm_ref[finite_asm]) ** 2
+    )
+
+    gar_dist[:, finite_gar] = np.sqrt(
+        (gar[:, finite_gar] - gar_ref[finite_gar]) ** 2
+    )
 
     return asm_dist, gar_dist
 
@@ -290,6 +331,198 @@ if not original_df.empty:
 else:
     print("No original spec found.")
 
+
+# %%
+# ===============================================
+# SECTION 6.1 — Example: Distances to Original Spec in 3D
+# ===============================================
+
+if not original_df.empty:
+    orig_row = original_df.iloc[0]
+    asm_d, gar_d = dist_to_single_per_dim(trivial_df, orig_row)
+    print("\n=== Trivial to Original ===")
+    print("ASM mean:", asm_d.mean(axis=0), "max:", asm_d.max(axis=0), "min:", asm_d.min(axis=0), "std:", asm_d.std(axis=0))
+    print("GAR mean:", gar_d.mean(axis=0), "max:", gar_d.max(axis=0), "min:", gar_d.min(axis=0), "std:", gar_d.std(axis=0))
+
+    triv_to_orig = {
+        "ASM": {"mean": asm_d.mean(axis=0), "min": asm_d.min(axis=0), "max": asm_d.max(axis=0), "std": asm_d.std(axis=0)},
+        "GAR": {"mean": gar_d.mean(axis=0), "min": gar_d.min(axis=0), "max": gar_d.max(axis=0), "std": gar_d.std(axis=0)},
+    }
+
+    asm_d, gar_d = dist_to_single_per_dim(normal_df, orig_row)
+
+    print("\n=== Distances to Original ===")
+    print("ASM mean:", asm_d.mean(axis=0), "max:", asm_d.max(axis=0), "min:", asm_d.min(axis=0), "std:", asm_d.std(axis=0))
+    print("GAR mean:", gar_d.mean(axis=0), "max:", gar_d.max(axis=0), "min:", gar_d.min(axis=0), "std:", gar_d.std(axis=0))
+
+    normal_to_orig = {
+        "ASM": {"mean": asm_d.mean(axis=0), "min": asm_d.min(axis=0), "max": asm_d.max(axis=0), "std": asm_d.std(axis=0)},
+        "GAR": {"mean": gar_d.mean(axis=0), "min": gar_d.min(axis=0), "max": gar_d.max(axis=0), "std": gar_d.std(axis=0)},
+    }
+
+    latex_table = create_latex_table(normal_to_orig, triv_to_orig, case_study_name)
+    print("\nLaTeX Table:")
+    print(latex_table)
+else:
+    print("No original spec found.")
+
+# %%
+# ===============================================
+# SECTION 6.2 — Generate new dfs out of original, trivial & normal, where asm_d0 and asm_d3 are multiplied into a new column, and similarly for gar_d0 and gar_d3
+# ===============================================
+
+def create_merged_df(df):
+    """
+    Create a new dataframe with merged asm_d0,asm_d1,asm_d3 and gar_d0,gar_d1,gar_d3 as new columns.
+    """
+    eps = 1e-12
+    lexicographic_distance = 1
+    new_df = df.copy()
+
+
+    # Assert all entries in asm_d0 and asm_d3 are between 0 and 1 inclusive
+    assert new_df['asm_d0'].between(-eps, 1 + eps).all(), "asm_d0 contains values outside [0, 1]"
+    assert new_df['asm_d1'].between(-eps, 1 + eps).all(), "asm_d1 contains values outside [0, 1]"
+    assert new_df['asm_d3'].between(-eps, 1 + eps).all(), "asm_d3 contains values outside [0, 1]"
+    assert new_df['gar_d0'].between(-eps, 1 + eps).all(), "gar_d0 contains values outside [0, 1]"
+    assert new_df['gar_d1'].between(-eps, 1 + eps).all(), "gar_d1 contains values outside [0, 1]"
+    assert new_df['gar_d3'].between(-eps, 1 + eps).all(), "gar_d3 contains values outside [0, 1]"
+
+    new_df['asm_merged'] = (new_df['asm_d0'] * (10**(lexicographic_distance * 2)) + new_df['asm_d1'] * (10**lexicographic_distance) + new_df['asm_d3']) / (10**(lexicographic_distance * 2) + 10**lexicographic_distance + 1)
+    new_df['gar_merged'] = (new_df['gar_d0'] * (10**(lexicographic_distance * 2)) + new_df['gar_d1'] * (10**lexicographic_distance) + new_df['gar_d3']) / (10**(lexicographic_distance * 2) + 10**lexicographic_distance + 1)
+    return new_df
+
+
+# Generate new dataframes with multiplied columns
+normal_mult_df = create_merged_df(normal_df)
+trivial_mult_df = create_merged_df(trivial_df)
+original_mult_df = create_merged_df(original_df)
+
+print("\n=== Multiplied DataFrames Created ===")
+print(f"Normal (multiplied):   {len(normal_mult_df)} rows, columns: {list(normal_mult_df.columns)}")
+print(f"Trivial (multiplied):  {len(trivial_mult_df)} rows, columns: {list(trivial_mult_df.columns)}")
+print(f"Original (multiplied): {len(original_mult_df)} rows, columns: {list(original_mult_df.columns)}")
+
+# Display sample statistics
+print("\n=== Sample Statistics (Original) ===")
+print(f"asm_merged: mean={original_mult_df['asm_merged'].mean():.4f}, "
+      f"min={original_mult_df['asm_merged'].min():.4f}, "
+      f"max={original_mult_df['asm_merged'].max():.4f}, "
+      f"std={original_mult_df['asm_merged'].std():.4f}")
+print(f"gar_merged: mean={original_mult_df['gar_merged'].mean():.4f}, "
+      f"min={original_mult_df['gar_merged'].min():.4f}, "
+      f"max={original_mult_df['gar_merged'].max():.4f}, "
+      f"std={original_mult_df['gar_merged'].std():.4f}")
+print("\n=== Sample Statistics (Trivial) ===")
+print(f"asm_merged: mean={trivial_mult_df['asm_merged'].mean():.4f}, "
+      f"min={trivial_mult_df['asm_merged'].min():.4f}, "
+      f"max={trivial_mult_df['asm_merged'].max():.4f}, "
+      f"std={trivial_mult_df['asm_merged'].std():.4f}")
+print(f"gar_merged: mean={trivial_mult_df['gar_merged'].mean():.4f}, "
+      f"min={trivial_mult_df['gar_merged'].min():.4f}, "
+      f"max={trivial_mult_df['gar_merged'].max():.4f}, "
+      f"std={trivial_mult_df['gar_merged'].std():.4f}")
+print("\n=== Sample Statistics (Normal) ===")
+print(f"asm_merged: mean={normal_mult_df['asm_merged'].mean():.4f}, "
+      f"min={normal_mult_df['asm_merged'].min():.4f}, "
+      f"max={normal_mult_df['asm_merged'].max():.4f}, "
+      f"std={normal_mult_df['asm_merged'].std():.4f}")
+print(f"gar_merged: mean={normal_mult_df['gar_merged'].mean():.4f}, "
+      f"min={normal_mult_df['gar_merged'].min():.4f}, "
+      f"max={normal_mult_df['gar_merged'].max():.4f}, "
+      f"std={normal_mult_df['gar_merged'].std():.4f}")
+
+# ===============================================
+# Difference statistics between normal and original
+# ===============================================
+
+if not original_mult_df.empty:
+    orig_mult_row = original_mult_df.iloc[0]
+
+    # Calculate differences for asm_merged
+    asm_diff = np.abs(normal_mult_df['asm_merged'].to_numpy() - orig_mult_row['asm_merged'])
+
+    # Calculate differences for gar_merged
+    gar_diff = np.abs(normal_mult_df['gar_merged'].to_numpy() - orig_mult_row['gar_merged'])
+
+    # Calculate difference for both using euclidean distance
+    both_diff = np.linalg.norm(normal_mult_df[['asm_merged', 'gar_merged']].to_numpy(dtype=float) - orig_mult_row[['asm_merged', 'gar_merged']].to_numpy(dtype=float).reshape(1, 2), axis=1)
+
+    print("\n=== Difference Statistics (Normal vs Original) ===")
+    print(f"asm_merged difference: mean={asm_diff.mean():.4f}, "
+          f"min={asm_diff.min():.4f}, "
+          f"max={asm_diff.max():.4f}, "
+          f"std={asm_diff.std():.4f}")
+    print(f"gar_merged difference: mean={gar_diff.mean():.4f}, "
+          f"min={gar_diff.min():.4f}, "
+          f"max={gar_diff.max():.4f}, "
+          f"std={gar_diff.std():.4f}")
+    print(f"both_diff difference: mean={both_diff.mean():.4f}, "
+          f"min={both_diff.min():.4f}, "
+          f"max={both_diff.max():.4f}, "
+          f"std={both_diff.std():.4f}")
+
+    normal_to_orig = {
+        "ASM": {"mean": asm_diff.mean(axis=0), "min": asm_diff.min(axis=0), "max": asm_diff.max(axis=0), "std": asm_diff.std(axis=0)},
+        "GAR": {"mean": gar_diff.mean(axis=0), "min": gar_diff.min(axis=0), "max": gar_diff.max(axis=0), "std": gar_diff.std(axis=0)},
+        "BOTH": {"mean": both_diff.mean(axis=0), "min": both_diff.min(axis=0), "max": both_diff.max(axis=0), "std": both_diff.std(axis=0)},
+    }
+
+
+    # Find rows where gar_diff is maximum
+    if IS_DEBUG:
+        max_gar_diff = gar_diff.max()
+        max_gar_indices = np.where(gar_diff == max_gar_diff)[0]
+        print(f"\nRows with maximum gar_diff ({max_gar_diff:.4f}):")
+        for idx in max_gar_indices:
+            print(f"  {normal_mult_df.iloc[idx]['filename']}")
+
+    # Calculate differences for asm_merged
+    asm_diff = np.abs(trivial_mult_df['asm_merged'].to_numpy() - orig_mult_row['asm_merged'])
+
+    # Calculate differences for gar_merged
+    gar_diff = np.abs(trivial_mult_df['gar_merged'].to_numpy() - orig_mult_row['gar_merged'])
+
+    # Calculate difference for both using euclidean distance
+    both_diff = np.linalg.norm(trivial_mult_df[['asm_merged', 'gar_merged']].to_numpy(dtype=float) - orig_mult_row[['asm_merged', 'gar_merged']].to_numpy(dtype=float).reshape(1, 2), axis=1)
+
+    print("\n=== Difference Statistics (Trivial vs Original) ===")
+    print(f"asm_merged difference: mean={asm_diff.mean():.4f}, "
+          f"min={asm_diff.min():.4f}, "
+          f"max={asm_diff.max():.4f}, "
+          f"std={asm_diff.std():.4f}")
+    print(f"gar_merged difference: mean={gar_diff.mean():.4f}, "
+          f"min={gar_diff.min():.4f}, "
+          f"max={gar_diff.max():.4f}, "
+          f"std={gar_diff.std():.4f}")
+    print(f"both_diff difference: mean={both_diff.mean():.4f}, "
+          f"min={both_diff.min():.4f}, "
+          f"max={both_diff.max():.4f}, "
+          f"std={both_diff.std():.4f}")
+
+    triv_to_orig = {
+        "ASM": {"mean": asm_diff.mean(axis=0), "min": asm_diff.min(axis=0), "max": asm_diff.max(axis=0), "std": asm_diff.std(axis=0)},
+        "GAR": {"mean": gar_diff.mean(axis=0), "min": gar_diff.min(axis=0), "max": gar_diff.max(axis=0), "std": gar_diff.std(axis=0)},
+        "BOTH": {"mean": both_diff.mean(axis=0), "min": both_diff.min(axis=0), "max": both_diff.max(axis=0), "std": both_diff.std(axis=0)},
+    }
+
+    latex_table = create_latex_table(normal_to_orig, triv_to_orig, case_study_name)
+    print("\nLaTeX Table:")
+    print(latex_table)
+
+    # Find rows where gar_diff is maximum
+    if IS_DEBUG:
+        max_gar_diff = gar_diff.max()
+        max_gar_indices = np.where(gar_diff == max_gar_diff)[0]
+        print(f"\nRows with maximum gar_diff ({max_gar_diff:.4f}):")
+        for idx in max_gar_indices:
+            print(f"  {trivial_mult_df.iloc[idx]['filename']}")
+else:
+    print("\n=== No original spec found for difference calculation ===")
+
+
+
+# ===============================================
 
 
 # %%
@@ -505,29 +738,29 @@ def plot_multi_scatter(
 # SECTION 10 — PLOTTING AREA
 # Plot any graphs here (scatter plots, histograms, etc.)
 # ===============================================
-dimension = "d1"
+dimension = "merged"
 fig, ax = plot_multi_scatter(
     datasets=[
         {
-            "df": normal_df,
+            "df": normal_mult_df,
             "label": "normal",
             "color": "skyblue",
             "marker": "o",
         },
+#       {
+#           "df": ideal_df,
+#           "label": "ideal",
+#           "color": "green",
+#           "marker": "*",
+#       },
         {
-            "df": ideal_df,
-            "label": "ideal",
-            "color": "green",
-            "marker": "*",
-        },
-        {
-            "df": original_df,
+            "df": original_mult_df,
             "label": "original",
             "color": "red",
             "marker": "s",
         },
         {
-            "df": trivial_df,
+            "df": trivial_mult_df,
             "label": "trivial",
             "color": "navy",
             "marker": "D",

@@ -90,4 +90,4 @@ class BFSRepairOrchestrator:
                         for counter_example, data in counter_examples_with_data:
                             new_spec, new_data = self._mitigator.prepare_learning_task(spec, data, learned_spec,
                                                                                        counter_example)
-                            self._om.enqueue_new_tasks(new_spec, new_data, prev=(spec, data))
+                            self._om.enqueue_new_tasks(new_spec, new_data, prev=(spec, data), failed_spec=learned_spec)

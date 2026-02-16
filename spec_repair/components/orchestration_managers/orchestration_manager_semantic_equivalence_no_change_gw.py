@@ -23,7 +23,7 @@ class OrchestrationManagerSemanticEquivalenceNoGWChange(IOrchestrationManager):
         self._reset()
         self.enqueue_new_tasks(spec, data, prev=None)
 
-    def enqueue_new_tasks(self, spec: ISpecification, data: Any, prev: Optional[Tuple[ISpecification, Any]] = None):
+    def enqueue_new_tasks(self, spec: ISpecification, data: Any, prev: Optional[Tuple[ISpecification, Any]] = None, failed_spec: Optional[ISpecification] = None):
         trace, cts, learning_type, spec_history, learning_steps, learning_time = data
         if prev:
             prev_spec, prev_data = prev
@@ -38,12 +38,22 @@ class OrchestrationManagerSemanticEquivalenceNoGWChange(IOrchestrationManager):
             if visited_node[0] == past_spec and visited_node[1] == past_data:
                 if prev is not None:
                     prev_task_id = self.get_task_id(*prev)
-                    self._graph.add_edge(prev_task_id, task_id)
+                    if failed_spec is not None:
+                        self._graph.add_edge(
+                            prev_task_id,
+                            task_id,
+                            failed_spec=failed_spec.to_str()
+                        )
+                    else:
+                        self._graph.add_edge(
+                            prev_task_id,
+                            task_id
+                        )
                 return task_id
         task_id = len(self._visited_nodes_list)
         self._stack.append(node)
         self._visited_nodes_list.append(visited_node)
-        self._graph.add_node(task_id, state=graph_node)
+        self._graph.add_node(task_id, spec=spec.to_str(), data=([ct.get_raw_trace() for ct in cts[-1:]], str(learning_type)))
         if prev is not None:
             prev_task_id = self.get_task_id(*prev)
             self._graph.add_edge(prev_task_id, task_id)
@@ -60,7 +70,7 @@ class OrchestrationManagerSemanticEquivalenceNoGWChange(IOrchestrationManager):
 
     def connect_leaf_node(self, spec: ISpecification, unique_id: int, prev: Tuple[ISpecification, Any]):
         prev_id = self.get_task_id(*prev)
-        self._graph.add_node(f"#{unique_id}", state=spec.to_str())
+        self._graph.add_node(f"#{unique_id}", spec=spec.to_str(), color="#ff4444")
         self._graph.add_edge(prev_id, f"#{unique_id}")
 
     def has_next(self) -> bool:

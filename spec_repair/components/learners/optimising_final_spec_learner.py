@@ -37,8 +37,7 @@ class OptimisingSpecLearner(ILearner):
             if self._hm:
                 possible_adaptations = self._hm.select_possible_learning_adaptations(possible_adaptations)
             new_specs = [deepcopy(spec).integrate_multiple(adaptations) for adaptations in possible_adaptations]
-            new_data = (trace, cts, learning_type, spec_history, learning_steps + 1, learning_time)
-            new_tasks = [(new_spec, deepcopy(new_data)) for new_spec in new_specs]
+            new_tasks = [(new_spec, deepcopy((trace, cts, learning_type, spec_history, learning_steps + 1, learning_time))) for new_spec in new_specs]
             return new_tasks
         except NoWeakeningException as e:
             print(f"Weakening failed: NoWeakeningException thrown and {e}")
@@ -57,8 +56,8 @@ class OptimisingSpecLearner(ILearner):
     def find_possible_adaptations(self, spec: SpectraSpecification, trace, cts, learning_type) -> List[
         List[Adaptation]]:
         violations = self.get_spec_violations(spec, trace, cts, learning_type)
-        ant_adaptations = self.find_antecedent_exception_adaptations(spec, trace, cts, learning_type, violations)
         con_adaptations = self.find_consequent_exception_adaptations(spec, trace, cts, learning_type, violations)
+        ant_adaptations = self.find_antecedent_exception_adaptations(spec, trace, cts, learning_type, violations)
         ev_adaptations = self.find_eventualisation_adaptations(spec, trace, cts, learning_type, violations)
         adaptations = ant_adaptations + con_adaptations + ev_adaptations
         # adaptations = self.find_all_exception_adaptations(spec, trace, cts, learning_type, violations)

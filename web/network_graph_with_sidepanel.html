@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Network Graph with Side Panel - Fixed</title>
+
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/vis-network/9.1.2/dist/dist/vis-network.min.css" integrity="sha512-WgxfT5LWjfszlPHXRmBWHkV2eceiWTOBvrKCNbdgDYTHrT2AeLCGbF4sZlZw3UMN3WtL0tGUoIAKsu8mllg/XA==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/vis-network/9.1.2/dist/vis-network.min.js" integrity="sha512-LnvoEWDFrqGHlHmDD2101OrLcbsfkrzoSpvtSQtxK3RMnRV0eOkhhBN2dXHKRrUU8p2DGRTk35n4O8nWSVe1mQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+
+    <style type="text/css">
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: Arial, sans-serif;
+            overflow: hidden;
+        }
+
+        #mynetwork {
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: calc(100% - 300px);
+            height: 100vh;
+            background-color: #ffffff;
+            border-right: 2px solid #ccc;
+        }
+
+        #sidepanel {
+            position: absolute;
+            right: 0;
+            top: 0;
+            width: 300px;
+            height: 100vh;
+            background: #f8f9fa;
+            padding: 20px;
+            overflow-y: auto;
+            box-shadow: -2px 0 10px rgba(0,0,0,0.1);
+            z-index: 1000;
+        }
+
+        #sidepanel h3 {
+            margin: 0 0 20px 0;
+            color: #333;
+            border-bottom: 3px solid #007bff;
+            padding-bottom: 10px;
+            font-size: 20px;
+        }
+
+        #details {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            min-height: 100px;
+        }
+
+        #details p {
+            margin: 10px 0;
+            line-height: 1.6;
+        }
+
+        #details b {
+            color: #007bff;
+            display: inline-block;
+            min-width: 80px;
+        }
+
+        .placeholder {
+            color: #999;
+            font-style: italic;
+            text-align: center;
+            padding: 40px 20px;
+        }
+
+        #config {
+            display: none;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="mynetwork"></div>
+
+    <div id="sidepanel">
+        <h3>Details Panel</h3>
+        <div id="details">
+            <p class="placeholder">Click on a node or edge to view details</p>
+        </div>
+    </div>
+
+    <div id="config"></div>
+
+    <script type="text/javascript">
+        console.log("Script starting...");
+
+        // Initialize variables
+        var nodes = new vis.DataSet([
+            {
+                id: "A",
+                label: "Node A",
+                color: "#97c2fc",
+                shape: "dot",
+                title: "This is node A - it represents the starting point",
+                size: 20
+            },
+            {
+                id: "B",
+                label: "Node B",
+                color: "#97c2fc",
+                shape: "dot",
+                title: "This is node B - middle node in the chain",
+                size: 20
+            },
+            {
+                id: "C",
+                label: "Node C",
+                color: "#97c2fc",
+                shape: "dot",
+                title: "This is node C - the end point",
+                size: 20
+            }
+        ]);
+
+        var edges = new vis.DataSet([
+            {
+                from: "A",
+                to: "B",
+                arrows: "to",
+                title: "A influences B",
+                label: "influences"
+            },
+            {
+                from: "B",
+                to: "C",
+                arrows: "to",
+                title: "B influences C",
+                label: "influences"
+            }
+        ]);
+
+        // Create network
+        var container = document.getElementById('mynetwork');
+        var data = {
+            nodes: nodes,
+            edges: edges
+        };
+
+        var options = {
+            nodes: {
+                font: {
+                    size: 16
+                }
+            },
+            edges: {
+                font: {
+                    size: 12,
+                    align: 'middle'
+                },
+                color: {
+                    inherit: true
+                },
+                smooth: {
+                    enabled: true,
+                    type: "dynamic"
+                }
+            },
+            interaction: {
+                dragNodes: true,
+                hover: true,
+                tooltipDelay: 100
+            },
+            physics: {
+                enabled: true,
+                stabilization: {
+                    enabled: true,
+                    iterations: 1000
+                }
+            }
+        };
+
+        var network = new vis.Network(container, data, options);
+
+        console.log("Network created");
+
+        // Node click handler
+        network.on("click", function(params) {
+            console.log("Click event:", params);
+
+            var detailsDiv = document.getElementById("details");
+
+            if (params.nodes.length > 0) {
+                // Node was clicked
+                var nodeId = params.nodes[0];
+                var nodeData = nodes.get(nodeId);
+
+                console.log("Node clicked:", nodeId, nodeData);
+
+                detailsDiv.innerHTML = `
+                    <h4 style="color: #007bff; margin-top: 0; margin-bottom: 15px;">Node Selected</h4>
+                    <p><b>ID:</b> ${nodeData.id}</p>
+                    <p><b>Label:</b> ${nodeData.label}</p>
+                    <p><b>Shape:</b> ${nodeData.shape}</p>
+                    <p><b>Color:</b> <span style="display:inline-block; width:20px; height:20px; background:${nodeData.color}; border:1px solid #999; vertical-align:middle;"></span></p>
+                    <hr style="margin: 15px 0;">
+                    <p><b>Description:</b><br>${nodeData.title}</p>
+                `;
+            }
+            else if (params.edges.length > 0) {
+                // Edge was clicked
+                var edgeId = params.edges[0];
+                var edgeData = edges.get(edgeId);
+
+                console.log("Edge clicked:", edgeId, edgeData);
+
+                detailsDiv.innerHTML = `
+                    <h4 style="color: #28a745; margin-top: 0; margin-bottom: 15px;">Edge Selected</h4>
+                    <p><b>From:</b> ${edgeData.from}</p>
+                    <p><b>To:</b> ${edgeData.to}</p>
+                    <p><b>Label:</b> ${edgeData.label || 'None'}</p>
+                    <p><b>Direction:</b> ${edgeData.arrows || 'None'}</p>
+                    <hr style="margin: 15px 0;">
+                    <p><b>Description:</b><br>${edgeData.title}</p>
+                `;
+            }
+            else {
+                // Empty space clicked
+                console.log("Empty space clicked");
+                detailsDiv.innerHTML = '<p class="placeholder">Click on a node or edge to view details</p>';
+            }
+        });
+
+        console.log("Event listeners attached");
+    </script>
+</body>
+</html>

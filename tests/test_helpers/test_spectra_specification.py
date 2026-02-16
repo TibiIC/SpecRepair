@@ -475,10 +475,8 @@ root_consequent_holds(OP,guarantee4,1,T1,S):-
             "test_files/arbiter_weakenings/arbiter_aw_r1_gw_ev.spectra"
         )
         spec_trivial_weakness_gar: Weakness = spec_trivial.get_weakness(GR1FormulaType.GAR)
-        print(spec_trivial_weakness_gar)
         spec_stronger_weakness_gar: Weakness = spec_stronger_weakening.get_weakness(GR1FormulaType.GAR)
-        print(spec_stronger_weakness_gar)
-        self.assertGreaterEqual(spec_trivial_weakness_gar, spec_stronger_weakness_gar)
+        self.assertGreaterEqual(spec_stronger_weakness_gar, spec_trivial_weakness_gar)
 
     def test_eq_identical_strings(self):
         spec_1 = SpectraSpecification.from_str(spec_perf)
