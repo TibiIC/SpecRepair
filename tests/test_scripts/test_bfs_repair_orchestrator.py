@@ -15,6 +15,7 @@ from spec_repair.components.mitigators.learning_type_spec_mitigator import Learn
 from spec_repair.components.discriminators.spectra_discriminator import SpectraDiscriminator
 from spec_repair.components.orchestration_managers.orchestration_manager_semantic_equivalence_no_change_gw import \
     OrchestrationManagerSemanticEquivalenceNoGWChange
+from spec_repair.components.repair_data import RepairData
 from spec_repair.enums import Learning
 from spec_repair.helpers.heuristic_managers.choose_first_heuristic_manager import ChooseFirstHeuristicManager
 from spec_repair.helpers.heuristic_managers.no_filter_heuristic_manager import NoFilterHeuristicManager
@@ -181,7 +182,7 @@ class TestBFSRepairOrchestrator(BaseTestCase):
             logger = SpecLogger(filename=log_file)
         )
         # Getting all possible repairs
-        repairer.repair_bfs(spec, (trace, [], Learning.ASSUMPTION_WEAKENING, [], 0, 0))
+        repairer.repair_bfs(spec, RepairData(trace, counter_traces=[], learning_type=Learning.ASSUMPTION_WEAKENING))
         new_spec_strings: list[str] = recorder.get_specs()
         for i, new_spec in enumerate(new_spec_strings):
             write_to_file(f"{out_test_dir_name}/{case_study_name}_fix_{i}.spectra", new_spec)

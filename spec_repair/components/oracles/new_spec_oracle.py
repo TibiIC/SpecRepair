@@ -4,6 +4,7 @@ from typing import Optional, List, Tuple
 
 from spec_repair.components.interfaces.ioracle import IOracle
 from spec_repair.components.new_spec_encoder import NewSpecEncoder
+from spec_repair.components.repair_data import RepairData
 from spec_repair.enums import Learning
 from spec_repair.helpers.counter_trace import cts_from_cs, CounterTrace
 from spec_repair.helpers.spectra_specification import SpectraSpecification
@@ -42,8 +43,8 @@ class NewSpecOracle(IOracle):
     def is_valid_or_counter_arguments(
             self,
             new_spec: SpectraSpecification,
-            data: Tuple[list[str], list[CounterTrace], Learning, list[SpectraSpecification], int, float]
-    ) -> Optional[List[Tuple[CounterTrace, Tuple[list[str], list[CounterTrace], Learning, list[SpectraSpecification], int, float]]]]:
+            data: RepairData
+    ) -> Optional[List[Tuple[CounterTrace, RepairData]]]:
         counter_strategy = self._synthesise_and_check(new_spec)
         if counter_strategy:
             all_counter_traces = cts_from_cs(counter_strategy, cs_id=self._ct_cnt)

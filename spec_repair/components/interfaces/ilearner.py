@@ -2,6 +2,7 @@ from abc import ABC, abstractmethod
 from typing import Any, List, Tuple
 
 from spec_repair.components.interfaces.ispecification import ISpecification
+from spec_repair.components.repair_data import RepairData
 
 
 class ILearner(ABC):
@@ -9,7 +10,7 @@ class ILearner(ABC):
     def learn_new(
         self,
         spec: ISpecification,
-        data: Any
+        data: RepairData
     ) -> List[Tuple[ISpecification, Any]]:
         """
         Given a specification and data, learn new specifications.

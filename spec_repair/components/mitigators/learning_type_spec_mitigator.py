@@ -3,6 +3,7 @@ from typing import List, Tuple, Callable, Dict
 
 from spec_repair.components.interfaces.imitigator import IMitigator
 from spec_repair.components.interfaces.ispecification import ISpecification
+from spec_repair.components.repair_data import RepairData
 from spec_repair.enums import Learning
 from spec_repair.helpers.counter_trace import CounterTrace
 from spec_repair.helpers.heuristic_managers.no_filter_heuristic_manager import NoFilterHeuristicManager
@@ -15,30 +16,31 @@ class LearningTypeSpecMitigator(IMitigator):
     strategies it has been instantiated with based on the learning_type of the learning task.
     e.g. learning_type==Learning.ASSUMPTION_WEAKENING -> move_to_guarantee_weakening
     """
-    def __init__(self, learning_strategies: Dict[Learning, Callable[[ISpecification, list[str], list[CounterTrace], list[ISpecification], int, float], List[Tuple[ISpecification, Tuple[list[str], list[CounterTrace], Learning, list[ISpecification], int, float]]]]]):
+    def __init__(self, learning_strategies: Dict[Learning, Callable[[ISpecification, RepairData], List[Tuple[ISpecification, RepairData]]]]):
         self._hm = NoFilterHeuristicManager()
         self._mitigation_strategies = learning_strategies
 
     def prepare_alternative_learning_tasks(
             self,
             spec: SpectraSpecification,
-            data: Tuple[list[str], list[CounterTrace], Learning, list[SpectraSpecification], int, float]
-    ) -> List[Tuple[ISpecification, Tuple[list[str], list[CounterTrace], Learning, list[ISpecification], int, float]]]:
-        trace, cts, learning_type, spec_history, learning_steps, learning_time = data
+            data: RepairData
+    ) -> List[Tuple[ISpecification, RepairData]]:
         # TODO: find way to continue from "Weakening failed: No guarantee weakening produces realizable spec (las file UNSAT)"
         # TODO: because atm, it loops infinitely on the same task
-        return self._hm.select_alternative_learning_tasks(self._mitigation_strategies[learning_type](spec, trace, cts, spec_history, learning_steps, learning_time))
+        return self._hm.select_alternative_learning_tasks(self._mitigation_strategies[data.learning_type](spec, data))
 
 
     def prepare_learning_task(
             self,
             spec: SpectraSpecification,
-            data: Tuple[list[str], list[CounterTrace], Learning, list[SpectraSpecification], int, float],
+            data: RepairData,
             learned_spec: SpectraSpecification,
             counter_argument
-    ) -> Tuple[ISpecification, Tuple[list[str], list[CounterTrace], Learning, list[ISpecification], int, float]]:
-        trace, cts, learning_type, spec_history, learning_steps, learning_time = data
-        if learning_type == Learning.ASSUMPTION_WEAKENING:
-            return spec, (trace, cts + [counter_argument], learning_type, spec_history + [deepcopy(learned_spec)], learning_steps, learning_time)
+    ) -> Tuple[ISpecification, RepairData]:
+        new_data = deepcopy(data)
+        new_data.counter_traces.append(counter_argument)
+        new_data.spec_history.append(deepcopy(learned_spec))
+        if data.learning_type == Learning.ASSUMPTION_WEAKENING:
+            return spec, new_data
         else:
-            return learned_spec, (trace, cts + [counter_argument], learning_type, spec_history + [deepcopy(learned_spec)], learning_steps, learning_time)
+            return learned_spec, new_data

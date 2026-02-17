@@ -4,6 +4,7 @@ from typing import List, Tuple, Set, Any, cast
 
 from spec_repair.components.interfaces.ispecification import ISpecification
 from spec_repair.components.new_spec_encoder import NewSpecEncoder
+from spec_repair.components.repair_data import RepairData
 from spec_repair.enums import Learning
 from spec_repair.exceptions import NoViolationException
 from spec_repair.helpers.counter_trace import CounterTrace, complete_cts_from_ct
@@ -13,18 +14,14 @@ from spec_repair.wrappers.asp_wrappers import get_violations
 
 def move_one_to_guarantee_weakening(
         spec: ISpecification,  # ignored
-        trace: list[str],
-        cts: List[CounterTrace],
-        spec_history: List[ISpecification],
-        learning_steps: int,
-        learning_time: float
+        data: RepairData,
 ) -> List[Tuple[
-    ISpecification, Tuple[list[str], list[CounterTrace], Learning, list[ISpecification], int, float]]]:
-    new_spec = spec_history[0]
-    new_cts = cts[0:1]  # Only keep the first counter-trace
-    new_learning_type = Learning.GUARANTEE_WEAKENING
-    new_spec_history = []
-    new_data = (trace, new_cts, new_learning_type, new_spec_history, learning_steps, learning_time)
+    ISpecification, RepairData]]:
+    new_spec = data.spec_history[0]
+    new_data = deepcopy(data)
+    new_data.counter_traces = data.counter_traces[0:1]  # Only keep the first counter-trace
+    new_data.learning_type = Learning.GUARANTEE_WEAKENING
+    new_data.spec_history  = []
     return [(new_spec, new_data)]
 
 def move_all_to_guarantee_weakening(
@@ -45,19 +42,15 @@ def move_all_to_guarantee_weakening(
 
 def complete_counter_traces(
         spec: ISpecification,
-        trace: list[str],
-        cts: List[CounterTrace],
-        spec_history: List[ISpecification],
-        learning_steps: int,
-        learning_time: float
+        data: RepairData,
 ) -> List[Tuple[
-    ISpecification, Tuple[list[str], list[CounterTrace], Learning, list[ISpecification], int, float]]]:
-    ctss: Set[Tuple[CounterTrace, ...]] = {tuple(cts)}
+    ISpecification, RepairData]]:
+    ctss: Set[Tuple[CounterTrace, ...]] = {tuple(data.counter_traces)}
     unchanged = False
     while not unchanged:
         unchanged = True
         for cts in deepcopy(ctss):
-            asp: str = NewSpecEncoder.encode_ASP(cast(SpectraSpecification, spec), trace, list(cts))
+            asp: str = NewSpecEncoder.encode_ASP(cast(SpectraSpecification, spec), data.trace, list(cts))
             violations = get_violations(asp, exp_type=Learning.GUARANTEE_WEAKENING.exp_type())
             if not violations:
                 raise NoViolationException("Violation trace is not violating!")
@@ -77,7 +70,8 @@ def complete_counter_traces(
     alternative_learning_tasks: List[Tuple[ISpecification, Any]] = []
     for possible_cts in possible_cts_list:
         new_spec = deepcopy(spec)
-        new_learning_type = Learning.GUARANTEE_WEAKENING
-        new_data = (trace, possible_cts, new_learning_type, deepcopy(spec_history), learning_steps, learning_time)
+        new_data = deepcopy(data)
+        new_data.counter_traces = possible_cts
+        new_data.learning_type = Learning.GUARANTEE_WEAKENING
         alternative_learning_tasks.append((new_spec, new_data))
     return alternative_learning_tasks

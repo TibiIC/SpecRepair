@@ -2,6 +2,7 @@ from abc import ABC, abstractmethod
 from typing import Any
 
 from spec_repair.components.interfaces.ispecification import ISpecification
+from spec_repair.components.repair_data import RepairData
 
 
 class IDiscriminator(ABC):
@@ -9,7 +10,7 @@ class IDiscriminator(ABC):
     def get_learning_strategy(
             self,
             spec: ISpecification,
-            data: Any
+            data: RepairData
     ) -> str:
         """
         Given a specification and data, return the learning strategy.

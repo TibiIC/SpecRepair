@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Any, Dict, List, Tuple
+from typing import Dict, List, Tuple
 
 from spec_repair.components.interfaces.idiscriminator import IDiscriminator
 from spec_repair.components.interfaces.ilearner import ILearner
@@ -9,6 +9,8 @@ from spec_repair.components.interfaces.iorchestration_manager import IOrchestrat
 from spec_repair.components.interfaces.ispecification import ISpecification
 from spec_repair.components.orchestration_managers.orchestration_manager_semantic_equivalence import \
     OrchestrationManagerSemanticEquivalence
+from spec_repair.components.repair_data import RepairData
+from spec_repair.helpers.counter_trace import CounterTrace
 from spec_repair.helpers.heuristic_managers.iheuristic_manager import IHeuristicManager
 from spec_repair.helpers.heuristic_managers.no_filter_heuristic_manager import NoFilterHeuristicManager
 from spec_repair.helpers.recorders.irecorder import IRecorder
@@ -21,9 +23,8 @@ class SpecLogger:
         with open(self.filename, 'a') as f:
             f.write(f"[SpecLogger] Started at: {datetime.now()}\n")
 
-    def record(self, idx: int, spec: ISpecification, data: Any):
-        trace, cts, learning_type, spec_history, learning_steps, learning_time = data
-        log_message = f"[SpecLogger] Index: {idx}, learning_type: {learning_type}, learning_steps: {learning_steps}, learning_time: {learning_time}\n"
+    def record(self, idx: int, spec: ISpecification, data: RepairData):
+        log_message = f"[SpecLogger] Index: {idx}, learning_type: {data.learning_type}, learning_steps: {data.learning_steps}, learning_time: {data.learning_time}\n"
         with open(self.filename, 'a') as f:
             f.write(log_message)
 
@@ -62,7 +63,7 @@ class BFSRepairOrchestrator:
     def repair_bfs(
             self,
             og_spec: ISpecification,
-            og_data: Any
+            og_data: RepairData
     ):
         self._initialise_repair()
         self._om.initialise_learning_tasks(og_spec, og_data)
@@ -71,15 +72,16 @@ class BFSRepairOrchestrator:
             spec, data = self._om.get_next()
             learning_strategy: str = self._discriminator.get_learning_strategy(spec, data)
             learner = self._learners[learning_strategy]
-            learned_tasks: List[Tuple[ISpecification, Any]] = learner.learn_new(spec, data)
+            learned_tasks: List[Tuple[ISpecification, RepairData]] = learner.learn_new(spec, data)
             if not learned_tasks:
-                alt_tasks: List[Tuple[ISpecification, Any]] = self._mitigator.prepare_alternative_learning_tasks(spec,
-                                                                                                                 data)
+                alt_tasks: List[Tuple[ISpecification, RepairData]] = self._mitigator.prepare_alternative_learning_tasks(
+                    spec,
+                    data)
                 for alt_spec, alt_data in alt_tasks:
                     self._om.enqueue_new_tasks(alt_spec, alt_data, prev=(spec, data))
             else:
                 for learned_spec, data in learned_tasks:
-                    counter_examples_with_data: List[Tuple[Any, Any]] = self._oracle.is_valid_or_counter_arguments(
+                    counter_examples_with_data: List[Tuple[CounterTrace, RepairData]] = self._oracle.is_valid_or_counter_arguments(
                         learned_spec, data)
                     if not counter_examples_with_data:
                         learned_id = self._recorder.add(learned_spec)

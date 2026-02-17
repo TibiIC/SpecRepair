@@ -4,6 +4,7 @@ from typing import Set, List, Tuple, Optional
 
 from spec_repair.components.interfaces.ilearner import ILearner
 from spec_repair.components.new_spec_encoder import NewSpecEncoder
+from spec_repair.components.repair_data import RepairData
 from spec_repair.helpers.adaptation_learned import Adaptation
 from spec_repair.helpers.counter_trace import CounterTrace, complete_cts_from_ct
 from spec_repair.enums import Learning
@@ -29,21 +30,22 @@ class OptimisingSpecLearner(ILearner):
     def learn_new(
             self,
             spec: SpectraSpecification,
-            data: Tuple[list[str], list[CounterTrace], Learning, list[SpectraSpecification], int, float]
-    ) -> List[Tuple[SpectraSpecification, Tuple[list[str], list[CounterTrace], Learning, list[SpectraSpecification], int, float]]]:
-        trace, cts, learning_type, spec_history, learning_steps, learning_time = data
+            data: RepairData
+    ) -> List[Tuple[SpectraSpecification, RepairData]]:
         try:
-            possible_adaptations: List[List[Adaptation]] = self.find_possible_adaptations(spec, trace, cts, learning_type)
+            possible_adaptations: List[List[Adaptation]] = self.find_possible_adaptations(spec, data.trace, data.counter_traces, data.learning_type)
             if self._hm:
                 possible_adaptations = self._hm.select_possible_learning_adaptations(possible_adaptations)
             new_specs = [deepcopy(spec).integrate_multiple(adaptations) for adaptations in possible_adaptations]
-            new_tasks = [(new_spec, deepcopy((trace, cts, learning_type, spec_history, learning_steps + 1, learning_time))) for new_spec in new_specs]
+            new_repair_data = deepcopy(data)
+            new_repair_data.learning_steps += 1
+            new_tasks = [(new_spec, deepcopy(new_repair_data)) for new_spec in new_specs]
             return new_tasks
         except NoWeakeningException as e:
             print(f"Weakening failed: NoWeakeningException thrown and {e}")
             return []
         except NoViolationException as e:
-            if not trace and not cts and learning_type == Learning.GUARANTEE_WEAKENING:
+            if not data.trace and not data.cts and data.learning_type == Learning.GUARANTEE_WEAKENING:
                 print(f"No violation trace given, no counter-traces and spec is unrealisable, so will move straight to extracting counter strategies.")
                 return [(spec, data)]
             else:

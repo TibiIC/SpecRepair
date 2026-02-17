@@ -2,6 +2,7 @@ from typing import Any, Tuple
 
 from spec_repair.components.interfaces.idiscriminator import IDiscriminator
 from spec_repair.components.interfaces.ispecification import ISpecification
+from spec_repair.components.repair_data import RepairData
 from spec_repair.enums import Learning
 from spec_repair.helpers.counter_trace import CounterTrace
 from spec_repair.helpers.spectra_specification import SpectraSpecification
@@ -12,7 +13,7 @@ class SpectraDiscriminator(IDiscriminator):
     def get_learning_strategy(
             self,
             spec: ISpecification,
-            data: Tuple[list[str], list[CounterTrace], Learning, list[SpectraSpecification], int, float]
+            data: RepairData
     ) -> str:
         """
         Given a specification and data, return the learning strategy.
@@ -20,11 +21,10 @@ class SpectraDiscriminator(IDiscriminator):
         :param data: The data to learn from.
         :return: The learning strategy.
         """
-        trace, cts, learning_type, spec_history, learning_steps, learning_time = data
-        match learning_type:
+        match data.learning_type:
             case Learning.ASSUMPTION_WEAKENING:
                 return "assumption_weakening"
             case Learning.GUARANTEE_WEAKENING:
                 return "guarantee_weakening"
             case _:
-                raise ValueError(f"Unknown learning type: {learning_type}")
+                raise ValueError(f"Unknown learning type: {data.learning_type}")

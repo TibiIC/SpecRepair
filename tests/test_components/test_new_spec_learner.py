@@ -2,6 +2,7 @@ from typing import Any, Tuple
 
 from spec_repair.components.interfaces.ispecification import ISpecification
 from spec_repair.components.learners.optimising_final_spec_learner import OptimisingSpecLearner
+from spec_repair.components.repair_data import RepairData
 from spec_repair.enums import Learning
 from spec_repair.helpers.heuristic_managers.no_filter_heuristic_manager import NoFilterHeuristicManager
 from spec_repair.helpers.spectra_specification import SpectraSpecification
@@ -25,11 +26,11 @@ class TestNewSpecLearner(BaseTestCase):
         expected_specs.append(SpectraSpecification.from_file('./test_files/minepump_aw_ev.spectra'))
 
         new_tasks: list[Tuple[ISpecification, Any]]
-        new_tasks = spec_learner.learn_new(spec, (trace, [], Learning.ASSUMPTION_WEAKENING, [], 0, 0))
+        new_tasks = spec_learner.learn_new(spec, RepairData(trace, counter_traces=[], learning_type=Learning.ASSUMPTION_WEAKENING))
         new_specs_str: list[str] = [new_spec.to_str() for new_spec, new_data in new_tasks]
 
         for new_spec_str in new_specs_str:
-            print(new_spec_str)
+            print(f"#{new_spec_str}#")
         for i, expected_spec in enumerate(expected_specs):
             print(i)
             self.assertIn(expected_spec.to_str(), new_specs_str)
