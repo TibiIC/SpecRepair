@@ -36,12 +36,13 @@ class OrchestrationManagerSemanticEquivalenceNoGWChange(IOrchestrationManager):
             past_spec, past_data = past_node
             if visited_node[0] == past_spec and visited_node[1] == past_data:
                 if prev is not None:
-                    prev_task_id = self.get_task_id(*prev)
+                    prev_task_id = self._get_task_id(*prev)
                     if failed_spec is not None:
                         self._graph.add_edge(
                             prev_task_id,
                             task_id,
-                            failed_spec=failed_spec.to_str()
+                            failed_spec=failed_spec.to_str(),
+                            last_adaptation=[str(adaptation) for adaptation in prev_data.adaptation_history[-1]]
                         )
                     else:
                         self._graph.add_edge(
@@ -54,11 +55,16 @@ class OrchestrationManagerSemanticEquivalenceNoGWChange(IOrchestrationManager):
         self._visited_nodes_list.append(visited_node)
         self._graph.add_node(task_id, spec=spec.to_str(), data=([ct.get_raw_trace() for ct in data.counter_traces[-1:]], str(data.learning_type)))
         if prev is not None:
-            prev_task_id = self.get_task_id(*prev)
-            self._graph.add_edge(prev_task_id, task_id)
+            prev_task_id = self._get_task_id(*prev)
+            self._graph.add_edge(
+                prev_task_id,
+                task_id,
+                failed_spec=failed_spec.to_str(),
+                last_adaptation=[str(adaptation) for adaptation in prev_data.adaptation_history[-1]]
+            )
         return task_id
 
-    def get_task_id(self, spec: ISpecification, data: RepairData):
+    def _get_task_id(self, spec: ISpecification, data: RepairData):
         visited_node: Tuple[ISpecification, Any] = (spec, (sorted(data.counter_traces), data.learning_type))
         for task_id, past_node in enumerate(self._visited_nodes_list):
             past_spec, past_data = past_node
@@ -67,9 +73,16 @@ class OrchestrationManagerSemanticEquivalenceNoGWChange(IOrchestrationManager):
         raise ValueError("No such task")
 
     def connect_leaf_node(self, spec: ISpecification, unique_id: int, prev: Tuple[ISpecification, RepairData]):
-        prev_id = self.get_task_id(*prev)
+        prev_id = self._get_task_id(*prev)
+        prev_spec, prev_data = prev
         self._graph.add_node(f"#{unique_id}", spec=spec.to_str(), color="#ff4444")
         self._graph.add_edge(prev_id, f"#{unique_id}")
+
+        self._graph.add_edge(
+            prev_id,
+            f"#{unique_id}",
+            last_adaptation=[str(adaptation) for adaptation in prev_data.adaptation_history[-1]]
+        )
 
     def has_next(self) -> bool:
         return bool(self._stack)

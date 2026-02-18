@@ -31,7 +31,7 @@ class OrchestrationManagerSemanticEquivalence(IOrchestrationManager):
             past_spec, past_data = past_node
             if visited_node[0] == past_spec and visited_node[1] == past_data:
                 if prev is not None:
-                    prev_task_id = self.get_task_id(*prev)
+                    prev_task_id = self._get_task_id(*prev)
                     self._graph.add_edge(prev_task_id, task_id)
                 return task_id
         task_id = len(self._visited_nodes_list)
@@ -39,11 +39,11 @@ class OrchestrationManagerSemanticEquivalence(IOrchestrationManager):
         self._visited_nodes_list.append(visited_node)
         self._graph.add_node(task_id, state=graph_node)
         if prev is not None:
-            prev_task_id = self.get_task_id(*prev)
+            prev_task_id = self._get_task_id(*prev)
             self._graph.add_edge(prev_task_id, task_id)
         return task_id
 
-    def get_task_id(self, spec: ISpecification, data: Any):
+    def _get_task_id(self, spec: ISpecification, data: Any):
         trace, cts, learning_type, spec_history, learning_steps, learning_time = data
         visited_node: Tuple[ISpecification, Any] = (spec, (cts[-1:], learning_type))
         for task_id, past_node in enumerate(self._visited_nodes_list):
@@ -53,7 +53,7 @@ class OrchestrationManagerSemanticEquivalence(IOrchestrationManager):
         raise ValueError("No such task")
 
     def connect_leaf_node(self, spec: ISpecification, unique_id: int, prev: Tuple[ISpecification, Any]):
-        prev_id = self.get_task_id(*prev)
+        prev_id = self._get_task_id(*prev)
         self._graph.add_node(f"#{unique_id}", state=spec.to_str())
         self._graph.add_edge(prev_id, f"#{unique_id}")
 

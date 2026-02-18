@@ -36,10 +36,16 @@ class OptimisingSpecLearner(ILearner):
             possible_adaptations: List[List[Adaptation]] = self.find_possible_adaptations(spec, data.trace, data.counter_traces, data.learning_type)
             if self._hm:
                 possible_adaptations = self._hm.select_possible_learning_adaptations(possible_adaptations)
-            new_specs = [deepcopy(spec).integrate_multiple(adaptations) for adaptations in possible_adaptations]
-            new_repair_data = deepcopy(data)
-            new_repair_data.learning_steps += 1
-            new_tasks = [(new_spec, deepcopy(new_repair_data)) for new_spec in new_specs]
+            new_specs = []
+            new_repair_datas = []
+            for adaptations in possible_adaptations:
+                new_spec = deepcopy(spec).integrate_multiple(adaptations)
+                new_specs.append(new_spec)
+                new_repair_data = deepcopy(data)
+                new_repair_data.learning_steps += 1
+                new_repair_data.adaptation_history.append(adaptations)
+                new_repair_datas.append(new_repair_data)
+            new_tasks = [(new_spec, new_repair_data) for new_spec, new_repair_data in zip(new_specs, new_repair_datas)]
             return new_tasks
         except NoWeakeningException as e:
             print(f"Weakening failed: NoWeakeningException thrown and {e}")

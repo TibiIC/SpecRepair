@@ -113,7 +113,7 @@ class TestBFSRepairOrchestrator(BaseTestCase):
             print(i)
             self.assertIn(expected_spec.to_str(), new_spec_strings)
 
-    @unittest.skip("skip test")
+    #@unittest.skip("skip test")
     def test_single_repair_spec_minepump(self):
         case_study_name = 'minepump'
         case_study_path = '../input-files/case-studies/spectra/minepump'

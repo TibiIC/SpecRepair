@@ -14,7 +14,7 @@ class IOrchestrationManager:
         pass
 
     @abstractmethod
-    def get_task_id(self, spec: ISpecification, data: Any) -> int:
+    def _get_task_id(self, spec: ISpecification, data: Any) -> int:
         pass
 
     @abstractmethod

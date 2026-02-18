@@ -34,16 +34,16 @@ class OrchestrationManagerSyntacticEquivalence(IOrchestrationManager):
             self._graph.add_node(len(self._visited_nodes)-1, state=graph_node)
         task_id = self._visited_nodes.get_id(visited_node)
         if prev is not None:
-            prev_task_id = self.get_task_id(*prev)
+            prev_task_id = self._get_task_id(*prev)
             self._graph.add_edge(prev_task_id, task_id)
         return task_id
 
-    def get_task_id(self, spec: ISpecification, data: Any):
+    def _get_task_id(self, spec: ISpecification, data: Any):
         node: Tuple[ISpecification, Any] = (spec, data)
         return self._visited_nodes.get_id(node)
 
     def connect_leaf_node(self, spec: ISpecification, unique_id: int, prev: Tuple[ISpecification, Any]):
-        prev_id = self.get_task_id(*prev)
+        prev_id = self._get_task_id(*prev)
         self._graph.add_node(f"#{unique_id}", state=spec.to_str())
         self._graph.add_edge(prev_id, f"#{unique_id}")
 
