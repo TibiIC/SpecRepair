@@ -14,7 +14,7 @@ class OrchestrationManagerSemanticEquivalenceNoGWChange(IOrchestrationManager):
     def __init__(self):
         self._stack: Deque[Tuple[ISpecification, Any]] = deque()
         self._visited_nodes_list: list[Tuple[ISpecification, Any]] = []
-        self._graph = nx.DiGraph()
+        self._graph = nx.MultiDiGraph()
 
     def _reset(self):
         self._stack.clear()
@@ -76,8 +76,6 @@ class OrchestrationManagerSemanticEquivalenceNoGWChange(IOrchestrationManager):
         prev_id = self._get_task_id(*prev)
         prev_spec, prev_data = prev
         self._graph.add_node(f"#{unique_id}", spec=spec.to_str(), color="#ff4444")
-        self._graph.add_edge(prev_id, f"#{unique_id}")
-
         self._graph.add_edge(
             prev_id,
             f"#{unique_id}",

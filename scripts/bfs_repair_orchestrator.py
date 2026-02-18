@@ -88,7 +88,6 @@ class BFSRepairOrchestrator:
                         self._logger.record(learned_id, learned_spec, data)
                         self._om.connect_leaf_node(learned_spec, learned_id, prev=(spec, data))
                     else:
-                        # TODO: find a way to filter the counter examples using the heuristic manager
                         for counter_example, data in counter_examples_with_data:
                             new_spec, new_data = self._mitigator.prepare_learning_task(spec, data, learned_spec,
                                                                                        counter_example)

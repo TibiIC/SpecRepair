@@ -22,6 +22,9 @@ class Adaptation:
         self.disjunction_index: Optional[int] = disjunction_index
         self.atom_temporal_operators = atom_temporal_operators
 
+    def __repr__(self):
+        return f'{self.type}({self.formula_name},{self.disjunction_index},{self.atom_temporal_operators})'
+
     def __str__(self):
         return f'{self.type}({self.formula_name},{self.disjunction_index},{self.atom_temporal_operators})'
 

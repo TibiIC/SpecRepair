@@ -89,6 +89,9 @@ class CounterTrace:
     def __str__(self):
         return f"CounterTrace({self._name}):\nPATH: '{self._path}'\nTrace:\n{self.get_raw_trace()}"
 
+    def __repr__(self):
+        return self.print_one_line()
+
     def print_one_line(self):
         # Dictionary to store states at each time point
         state_dict = defaultdict(dict)

@@ -88,14 +88,16 @@ def load_graph_json(filename='graph.json'):
 
 def convert_graph_to_vis_data(G):
     """
-    Convert NetworkX DiGraph to vis.js format
+    Convert NetworkX DiGraph or MultiDiGraph to vis.js format
     
     Args:
-        G: NetworkX DiGraph
+        G: NetworkX DiGraph or MultiDiGraph
         
     Returns:
         dict with 'nodes' and 'edges' lists ready for vis.js
     """
+    import networkx as nx
+    
     nodes = []
     edges = []
     
@@ -131,37 +133,77 @@ def convert_graph_to_vis_data(G):
         }
         nodes.append(node_obj)
     
-    # Convert edges
-    for source, target, edge_data in G.edges(data=True):
-        # Build title from either 'title' attribute or all custom attributes
-        if 'title' in edge_data:
-            edge_title = str(edge_data['title']).replace('\n', '<br>').replace('\t', '&nbsp;&nbsp;&nbsp;&nbsp;')
-        else:
-            # Collect all custom attributes
-            custom_attrs = []
-            for key, value in edge_data.items():
-                if key not in ['label']:
-                    # Convert newlines to HTML breaks and tabs to spaces
-                    value_str = str(value).replace('\n', '<br>').replace('\t', '&nbsp;&nbsp;&nbsp;&nbsp;')
-                    custom_attrs.append(f"{key}: {value_str}")
-            
-            if custom_attrs:
-                # Add double line breaks for better spacing
-                edge_title = "<br><br>".join(custom_attrs)
+    # Convert edges - handle both DiGraph and MultiDiGraph
+    is_multigraph = isinstance(G, nx.MultiDiGraph) or isinstance(G, nx.MultiGraph)
+    
+    if is_multigraph:
+        # MultiDiGraph: edges have keys
+        edge_id = 0
+        for source, target, key, edge_data in G.edges(keys=True, data=True):
+            # Build title from either 'title' attribute or all custom attributes
+            if 'title' in edge_data:
+                edge_title = str(edge_data['title']).replace('\n', '<br>').replace('\t', '&nbsp;&nbsp;&nbsp;&nbsp;')
             else:
-                edge_title = f'{source} → {target}'
-        
-        edge_label = edge_data.get('label', '')
-        edge_label = str(edge_label).replace('\n', '<br>').replace('\t', '&nbsp;&nbsp;&nbsp;&nbsp;')
-        
-        edge_obj = {
-            'from': str(source),
-            'to': str(target),
-            'arrows': 'to',  # DiGraph always has arrows
-            '_fullTitle': edge_title,  # Store for side panel, but don't show as tooltip
-            'label': edge_label
-        }
-        edges.append(edge_obj)
+                # Collect all custom attributes
+                custom_attrs = []
+                for attr_key, value in edge_data.items():
+                    if attr_key not in ['label']:
+                        # Convert newlines to HTML breaks and tabs to spaces
+                        value_str = str(value).replace('\n', '<br>').replace('\t', '&nbsp;&nbsp;&nbsp;&nbsp;')
+                        custom_attrs.append(f"{attr_key}: {value_str}")
+                
+                if custom_attrs:
+                    # Add double line breaks for better spacing
+                    edge_title = "<br><br>".join(custom_attrs)
+                else:
+                    edge_title = f'{source} → {target} (edge {key})'
+            
+            edge_label = edge_data.get('label', '')
+            edge_label = str(edge_label).replace('\n', '<br>').replace('\t', '&nbsp;&nbsp;&nbsp;&nbsp;')
+            
+            edge_obj = {
+                'id': edge_id,  # Unique ID for each edge
+                'from': str(source),
+                'to': str(target),
+                'arrows': 'to',  # DiGraph always has arrows
+                '_fullTitle': edge_title,  # Store for side panel, but don't show as tooltip
+                'label': edge_label,
+                'smooth': {'type': 'curvedCW', 'roundness': 0.2 + (edge_id % 3) * 0.2}  # Curve parallel edges
+            }
+            edges.append(edge_obj)
+            edge_id += 1
+    else:
+        # Regular DiGraph: no keys
+        for source, target, edge_data in G.edges(data=True):
+            # Build title from either 'title' attribute or all custom attributes
+            if 'title' in edge_data:
+                edge_title = str(edge_data['title']).replace('\n', '<br>').replace('\t', '&nbsp;&nbsp;&nbsp;&nbsp;')
+            else:
+                # Collect all custom attributes
+                custom_attrs = []
+                for key, value in edge_data.items():
+                    if key not in ['label']:
+                        # Convert newlines to HTML breaks and tabs to spaces
+                        value_str = str(value).replace('\n', '<br>').replace('\t', '&nbsp;&nbsp;&nbsp;&nbsp;')
+                        custom_attrs.append(f"{key}: {value_str}")
+                
+                if custom_attrs:
+                    # Add double line breaks for better spacing
+                    edge_title = "<br><br>".join(custom_attrs)
+                else:
+                    edge_title = f'{source} → {target}'
+            
+            edge_label = edge_data.get('label', '')
+            edge_label = str(edge_label).replace('\n', '<br>').replace('\t', '&nbsp;&nbsp;&nbsp;&nbsp;')
+            
+            edge_obj = {
+                'from': str(source),
+                'to': str(target),
+                'arrows': 'to',  # DiGraph always has arrows
+                '_fullTitle': edge_title,  # Store for side panel, but don't show as tooltip
+                'label': edge_label
+            }
+            edges.append(edge_obj)
     
     return {'nodes': nodes, 'edges': edges}
 
@@ -171,7 +213,7 @@ def generate_html_visualization(G, output_file='graph_visualization.html', title
     Generate HTML file with interactive graph visualization
     
     Args:
-        G: NetworkX DiGraph
+        G: NetworkX DiGraph or MultiDiGraph
         output_file: Path to output HTML file
         title: Title for the visualization
     """
@@ -225,6 +267,45 @@ def generate_html_visualization(G, output_file='graph_visualization.html', title
             z-index: 1000;
             min-width: 200px;
             max-width: 800px;
+        }}
+
+        #controls {{
+            margin-bottom: 20px;
+            padding: 10px;
+            background: white;
+            border-radius: 5px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }}
+
+        .control-button {{
+            width: 100%;
+            padding: 8px;
+            margin: 5px 0;
+            background: #007bff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+        }}
+
+        .control-button:hover {{
+            background: #0056b3;
+        }}
+
+        .control-button.secondary {{
+            background: #6c757d;
+        }}
+
+        .control-button.secondary:hover {{
+            background: #545b62;
+        }}
+
+        #physics-status {{
+            font-size: 12px;
+            color: #666;
+            margin-top: 5px;
+            text-align: center;
         }}
 
         #resize-handle {{
@@ -289,6 +370,13 @@ def generate_html_visualization(G, output_file='graph_visualization.html', title
     
     <div id="sidepanel">
         <div id="resize-handle"></div>
+        
+        <div id="controls">
+            <button class="control-button" id="toggle-physics">Toggle Physics</button>
+            <button class="control-button secondary" id="fit-view">Fit to View</button>
+            <div id="physics-status">Physics: OFF (Manual Mode)</div>
+        </div>
+        
         <h3>Details Panel</h3>
         <div id="details">
             <p class="placeholder">Click on a node or edge to view details</p>
@@ -318,11 +406,6 @@ def generate_html_visualization(G, output_file='graph_visualization.html', title
                     size: 16
                 }}
             }},
-            nodes: {{
-                font: {{
-                    size: 16
-                }}
-            }},
             edges: {{
                 font: {{
                     size: 12,
@@ -343,16 +426,20 @@ def generate_html_visualization(G, output_file='graph_visualization.html', title
                 hideEdgesOnDrag: false,
                 hideNodesOnDrag: false
             }},
-            nodes: {{
-                font: {{
-                    size: 16
-                }}
-            }},
             physics: {{
                 enabled: true,
                 stabilization: {{
                     enabled: true,
-                    iterations: 1000
+                    iterations: 1000,
+                    updateInterval: 50
+                }},
+                barnesHut: {{
+                    gravitationalConstant: -2000,
+                    centralGravity: 0.1,
+                    springLength: 150,
+                    springConstant: 0.001,
+                    damping: 0.5,
+                    avoidOverlap: 0.1
                 }}
             }}
         }};
@@ -360,6 +447,53 @@ def generate_html_visualization(G, output_file='graph_visualization.html', title
         var network = new vis.Network(container, data, options);
 
         console.log("Network created");
+
+        // Disable physics after initial stabilization to prevent elastic snap-back
+        network.on("stabilizationIterationsDone", function() {{
+            console.log("Stabilization complete - disabling physics for manual positioning");
+            network.setOptions({{ physics: false }});
+            updatePhysicsStatus(false);
+        }});
+
+        // Also disable physics after a timeout as a fallback
+        setTimeout(function() {{
+            if (network.physics.physicsEnabled) {{
+                console.log("Timeout reached - disabling physics");
+                network.setOptions({{ physics: false }});
+                updatePhysicsStatus(false);
+            }}
+        }}, 5000);
+
+        // Physics status indicator
+        function updatePhysicsStatus(enabled) {{
+            const statusDiv = document.getElementById('physics-status');
+            if (enabled) {{
+                statusDiv.textContent = 'Physics: ON (Auto Layout)';
+                statusDiv.style.color = '#28a745';
+            }} else {{
+                statusDiv.textContent = 'Physics: OFF (Manual Mode)';
+                statusDiv.style.color = '#666';
+            }}
+        }}
+
+        // Toggle physics button
+        document.getElementById('toggle-physics').addEventListener('click', function() {{
+            const currentState = network.physics.physicsEnabled;
+            network.setOptions({{ physics: !currentState }});
+            updatePhysicsStatus(!currentState);
+            console.log('Physics toggled:', !currentState);
+        }});
+
+        // Fit view button
+        document.getElementById('fit-view').addEventListener('click', function() {{
+            network.fit({{
+                animation: {{
+                    duration: 500,
+                    easingFunction: 'easeInOutQuad'
+                }}
+            }});
+            console.log('View fitted to graph');
+        }});
 
         // Node click handler
         network.on("click", function(params) {{
@@ -503,13 +637,25 @@ if __name__ == "__main__":
     
     generate_html_visualization(G, 'my_graph_visualization.html', 'My Network Graph')
     
-    # Example 2: Load and visualize a saved graph
+    # Example 2: Create a MultiDiGraph with multiple edges
     print("\n" + "=" * 70)
-    print("Loading graph from pickle and creating visualization...")
+    print("Creating example NetworkX MultiDiGraph...")
     print("=" * 70)
     
-    loaded_graph = load_graph_pickle('my_graph.pkl')
-    generate_html_visualization(loaded_graph, 'loaded_graph_visualization.html', 'Loaded Graph')
+    MG = nx.MultiDiGraph()
+    
+    MG.add_node("X", label="Node X", color="#ff6b6b")
+    MG.add_node("Y", label="Node Y", color="#4ecdc4")
+    
+    # Add multiple edges between same nodes
+    MG.add_edge("X", "Y", label="data", description="Data flow")
+    MG.add_edge("X", "Y", label="control", description="Control signals")
+    MG.add_edge("X", "Y", label="error", description="Error reporting")
+    
+    print(f"MultiDiGraph created with {MG.number_of_nodes()} nodes and {MG.number_of_edges()} edges")
+    print(f"Edges between X and Y: {MG.number_of_edges('X', 'Y')}")
+    
+    generate_html_visualization(MG, 'my_multidigraph_visualization.html', 'MultiDiGraph Example')
     
     print("\n" + "=" * 70)
     print("DONE! Open the HTML files in your browser to view the graphs")

@@ -183,6 +183,12 @@ class SpectraSpecification(ISpecification):
         sub_spec._formulas_df = deepcopy(self.filter(func))
         return sub_spec
 
+    def __str__(self):
+        return self.to_str()
+
+    def __repr__(self):
+        return self.to_str()
+
     def to_str(self, is_to_compile: bool = False) -> str:
         """
         Convert the specification to a string representation.
