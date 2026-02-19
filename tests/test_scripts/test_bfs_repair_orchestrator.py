@@ -13,6 +13,8 @@ from spec_repair.components.learners.optimising_final_spec_learner import Optimi
 from spec_repair.components.oracles.new_spec_oracle import NewSpecOracle
 from spec_repair.components.mitigators.learning_type_spec_mitigator import LearningTypeSpecMitigator
 from spec_repair.components.discriminators.spectra_discriminator import SpectraDiscriminator
+from spec_repair.components.orchestration_managers.orchestration_manager_semantic_equivalence import \
+    OrchestrationManagerSemanticEquivalence
 from spec_repair.components.orchestration_managers.orchestration_manager_semantic_equivalence_no_change_gw import \
     OrchestrationManagerSemanticEquivalenceNoGWChange
 from spec_repair.components.repair_data import RepairData
@@ -176,7 +178,7 @@ class TestBFSRepairOrchestrator(BaseTestCase):
                 Learning.ASSUMPTION_WEAKENING: move_one_to_guarantee_weakening,
                 Learning.GUARANTEE_WEAKENING: complete_counter_traces
             }),
-            om = OrchestrationManagerSemanticEquivalenceNoGWChange(),
+            om = OrchestrationManagerSemanticEquivalence(),
             hm = NoFilterHeuristicManager(),
             recorder = recorder,
             logger = SpecLogger(filename=log_file)

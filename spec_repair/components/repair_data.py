@@ -1,11 +1,12 @@
-from typing import Any, Optional
+from typing import Any, Optional, List
 
 from spec_repair.enums import Learning
 from spec_repair.helpers.adaptation_learned import Adaptation
+from spec_repair.helpers.counter_trace import CounterTrace
 
 
 class RepairData:
-    def __init__(self, trace: Any = None, counter_traces: Any = None, learning_type: Optional[Learning] = None,
+    def __init__(self, trace: Any = None, counter_traces: List[CounterTrace] = None, learning_type: Optional[Learning] = None,
                  spec_history: Optional[list] = None, adaptation_history: Optional[list[Adaptation]] = None, learning_steps: int = 0, learning_time: float = 0.0):
         self.trace = trace
         self.counter_traces = counter_traces

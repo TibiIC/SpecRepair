@@ -1,5 +1,3 @@
-import networkx as nx
-from pyvis.network import Network
 from datetime import datetime
 
 from web.nx_graph_visualizer import load_graph_pickle, generate_html_visualization
@@ -14,7 +12,7 @@ def load_and_visualize(pickle_file, output_file='visualization.html'):
 
 if __name__ == '__main__':
     date = datetime.now().strftime('%Y-%m-%d')
-    experiment = 'traffic_single'
+    experiment = 'minepump'
     load_and_visualize(
         f'../tests/test_files/out/repair/{experiment}_{date}/graph.pkl',
         f'visualization_{experiment}_{date}.html'
