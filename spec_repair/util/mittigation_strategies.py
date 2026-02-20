@@ -26,17 +26,21 @@ def move_one_to_guarantee_weakening(
 
 def move_all_to_guarantee_weakening(
         spec: ISpecification,  # ignored
-        trace: list[str],
-        cts: List[CounterTrace],
-        spec_history: List[ISpecification],
-        learning_steps: int,
-        learning_time: float
+        data: RepairData,
 ) -> List[Tuple[
-    ISpecification, Tuple[list[str], list[CounterTrace], Learning, list[ISpecification], int, float]]]:
-    new_spec_cts_pairs = zip(spec_history, cts)
-    new_learning_type = Learning.GUARANTEE_WEAKENING
-    new_spec_history = []
-    new_tasks = [(new_spec, (trace, [new_cts], new_learning_type, deepcopy(new_spec_history), learning_steps, learning_time)) for new_spec, new_cts in new_spec_cts_pairs]
+    ISpecification, RepairData]]:
+    assert len(data.spec_history) == len(data.spec_history) == len(data.counter_traces)
+    new_spec_cts_pairs = zip(data.spec_history, data.counter_traces, data.adaptation_history)
+    new_data_template = deepcopy(data)
+    new_data_template.learning_type = Learning.GUARANTEE_WEAKENING
+    new_data_template.spec_history = []
+    new_data_template.adaptation_history = []
+    new_tasks = []
+    for new_spec, new_cts, new_adaptation_history in new_spec_cts_pairs:
+        new_data = deepcopy(new_data_template)
+        new_data.counter_traces = [new_cts]
+        new_data.adaptation_history = [new_adaptation_history]
+        new_tasks.append((new_spec, new_data))
     return new_tasks
 
 

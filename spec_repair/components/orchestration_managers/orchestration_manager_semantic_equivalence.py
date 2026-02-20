@@ -67,7 +67,7 @@ class OrchestrationManagerSemanticEquivalence(IOrchestrationManager):
                             task_id,
                             last_adaptation = [str(adaptation) for adaptation in prev_data.adaptation_history[-1]],
                             before_deadlock_completion = prev_data.counter_traces[-1].print_one_line(),
-                            deadlock_completion = difference
+                            deadlock_completion = list(difference)
                         )
                 return task_id
         task_id = len(self._visited_nodes_list)
@@ -100,7 +100,7 @@ class OrchestrationManagerSemanticEquivalence(IOrchestrationManager):
                     task_id,
                     last_adaptation = [str(adaptation) for adaptation in prev_data.adaptation_history[-1]],
                     before_deadlock_completion = prev_data.counter_traces[-1].print_one_line(),
-                    deadlock_completion = difference
+                    deadlock_completion = list(difference)
                 )
         return task_id
 
