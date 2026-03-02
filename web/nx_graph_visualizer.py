@@ -208,7 +208,7 @@ def convert_graph_to_vis_data(G):
     return {'nodes': nodes, 'edges': edges}
 
 
-def generate_html_visualization(G, output_file='graph_visualization.html', title='Network Graph'):
+def generate_html_visualization(G, output_file='graph_visualization.html', title='Network Graph', hierarchical=False, root_node=None):
     """
     Generate HTML file with interactive graph visualization
     
@@ -216,10 +216,64 @@ def generate_html_visualization(G, output_file='graph_visualization.html', title
         G: NetworkX DiGraph or MultiDiGraph
         output_file: Path to output HTML file
         title: Title for the visualization
+        hierarchical: If True, use tree-like hierarchical layout
+        root_node: Root node for hierarchical layout (required if hierarchical=True)
     """
     
     # Convert graph to vis.js format
     vis_data = convert_graph_to_vis_data(G)
+    
+    # Calculate levels for hierarchical layout if requested
+    if hierarchical:
+        if root_node is None:
+            raise ValueError("root_node must be specified when hierarchical=True")
+        
+        import networkx as nx
+        
+        # Calculate shortest path distances from root
+        # For MultiDiGraph, we use the underlying graph structure
+        try:
+            distances = nx.single_source_shortest_path_length(G, root_node)
+        except nx.NetworkXError:
+            # Root node might not exist or graph might be disconnected
+            print(f"Warning: Could not calculate distances from root node '{root_node}'")
+            print("Falling back to non-hierarchical layout")
+            hierarchical = False
+            distances = {}
+        
+        # Assign levels to nodes based on shortest path distance
+        if hierarchical:
+            # Create a string-keyed version of distances for matching
+            str_distances = {str(k): v for k, v in distances.items()}
+            
+            for node_data in vis_data['nodes']:
+                node_id = node_data['id']  # This is already a string from convert_graph_to_vis_data
+                if node_id in str_distances:
+                    node_data['level'] = str_distances[node_id]
+                else:
+                    # Node is not reachable from root - put it at a far level
+                    node_data['level'] = max(distances.values()) + 1 if distances else 0
+    
+    # Prepare layout configuration
+    if hierarchical:
+        layout_section = """
+            layout: {
+                hierarchical: {
+                    enabled: true,
+                    direction: 'UD',        // Up to Down (vertical tree)
+                    sortMethod: 'directed',
+                    levelSeparation: 150,   // Vertical distance between levels
+                    nodeSpacing: 200,       // Horizontal spacing between nodes
+                    treeSpacing: 200,       // Spacing between separate trees
+                    blockShifting: true,
+                    edgeMinimization: true,
+                    parentCentralization: true
+                }
+            },"""
+        physics_enabled = "false"
+    else:
+        layout_section = ""
+        physics_enabled = "true"
     
     # Create the HTML template with embedded data
     html_template = f"""<!DOCTYPE html>
@@ -425,9 +479,9 @@ def generate_html_visualization(G, output_file='graph_visualization.html', title
                 tooltipDelay: 300,
                 hideEdgesOnDrag: false,
                 hideNodesOnDrag: false
-            }},
+            }},{layout_section}
             physics: {{
-                enabled: true,
+                enabled: {physics_enabled},
                 stabilization: {{
                     enabled: true,
                     iterations: 1000,
@@ -449,20 +503,28 @@ def generate_html_visualization(G, output_file='graph_visualization.html', title
         console.log("Network created");
 
         // Disable physics after initial stabilization to prevent elastic snap-back
-        network.on("stabilizationIterationsDone", function() {{
-            console.log("Stabilization complete - disabling physics for manual positioning");
-            network.setOptions({{ physics: false }});
-            updatePhysicsStatus(false);
-        }});
-
-        // Also disable physics after a timeout as a fallback
-        setTimeout(function() {{
-            if (network.physics.physicsEnabled) {{
-                console.log("Timeout reached - disabling physics");
+        // (but only for non-hierarchical layouts)
+        var isHierarchical = {str(hierarchical).lower()};
+        
+        if (!isHierarchical) {{
+            network.on("stabilizationIterationsDone", function() {{
+                console.log("Stabilization complete - disabling physics for manual positioning");
                 network.setOptions({{ physics: false }});
                 updatePhysicsStatus(false);
-            }}
-        }}, 5000);
+            }});
+
+            // Also disable physics after a timeout as a fallback
+            setTimeout(function() {{
+                if (network.physics.physicsEnabled) {{
+                    console.log("Timeout reached - disabling physics");
+                    network.setOptions({{ physics: false }});
+                    updatePhysicsStatus(false);
+                }}
+            }}, 5000);
+        }} else {{
+            // For hierarchical layouts, physics is already disabled
+            updatePhysicsStatus(false);
+        }}
 
         // Physics status indicator
         function updatePhysicsStatus(enabled) {{

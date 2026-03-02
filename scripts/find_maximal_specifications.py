@@ -2,14 +2,12 @@ import argparse
 import os
 from typing import Optional
 
-from scripts.util import print_spec_names
-from util import make_plural, find_maximal_specifications_from_folder
+from util import make_plural, find_maximal_specifications_from_folder, print_spec_names
 from spec_repair.ltl_types import GR1FormulaType
 
 _description = """
 This script finds all maximal specifications in a given directory.
 """
-
 
 def _get_arguments_from_cmd_line():
     parser = argparse.ArgumentParser(description=_description)

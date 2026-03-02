@@ -4,7 +4,7 @@ import random
 import re
 from collections import defaultdict
 from copy import deepcopy
-from typing import Optional, List, Set, Tuple
+from typing import Optional, List, Set, Tuple, Any
 
 from py_ltl.formula import AtomicProposition
 
@@ -92,7 +92,21 @@ class CounterTrace:
     def __repr__(self):
         return self.print_one_line()
 
-    def print_one_line(self):
+    def print_one_line(self) -> str:
+        output = self._simple_print_data()
+
+        # Join the time steps with a semicolon
+        result = ';'.join(output)
+        return f"CT({result})"
+
+    def print_multi_line(self) -> str:
+        output = self._simple_print_data()
+
+        # Join the time steps with a semicolon
+        result = ';\n'.join(output)
+        return f"CT({result})"
+
+    def _simple_print_data(self) -> list[str]:
         # Dictionary to store states at each time point
         state_dict = defaultdict(dict)
 
@@ -111,10 +125,7 @@ class CounterTrace:
             entities = sorted(state_dict[time].keys())
             time_output = ','.join([f"{state_dict[time][entity]}{entity}" for entity in entities])
             output.append(time_output)
-
-        # Join the time steps with a semicolon
-        result = ';'.join(output)
-        return f"CT({result})"
+        return output
 
 
 def cts_from_cs(cs: CounterStrategy, cs_id: Optional[int] = None) -> list[CounterTrace]:

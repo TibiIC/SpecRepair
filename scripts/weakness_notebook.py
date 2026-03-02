@@ -9,8 +9,8 @@ import numpy as np
 # ===============================================
 # SECTION 2 — Load CSV Once
 # ===============================================
-CSV_PATH = "scripts/weakness_results/lift_2025-11-19/weakness_table_2.csv"  # <-- edit if needed
-case_study_name="Traffic Single"
+CSV_PATH = "scripts/weakness_results/traffic_updated_2025-11-19/weakness_table_maximal_only.csv"  # <-- edit if needed
+case_study_name="Traffic Updated"
 IS_DEBUG = False
 
 df = pd.read_csv(CSV_PATH)

@@ -1,4 +1,4 @@
-from collections import deque
+from collections import deque, Counter
 from typing import Deque, Tuple, Any, Optional
 
 import networkx as nx
@@ -20,7 +20,8 @@ def parse_ct(text):
     # Split on semicolons to get each state
     states = inner.split(';')
     # Convert each state into a tuple of values
-    return {tuple(state.split(',')) for state in states}
+    return Counter([tuple(state.split(',')) for state in states])
+
 
 class OrchestrationManagerSemanticEquivalence(IOrchestrationManager):
     def __init__(self):
@@ -36,7 +37,7 @@ class OrchestrationManagerSemanticEquivalence(IOrchestrationManager):
         self._reset()
         self.enqueue_new_tasks(spec, data, prev=None)
 
-    def enqueue_new_tasks(self, spec: ISpecification, data: RepairData, prev: Optional[Tuple[ISpecification, Any]] = None, failed_spec: Optional[ISpecification] = None):
+    def enqueue_new_tasks(self, spec: ISpecification, data: RepairData, prev: Optional[Tuple[ISpecification, RepairData]] = None, failed_spec: Optional[ISpecification] = None):
         if prev:
             prev_spec, prev_data = prev
         if data.learning_type == Learning.ASSUMPTION_WEAKENING:
@@ -48,27 +49,7 @@ class OrchestrationManagerSemanticEquivalence(IOrchestrationManager):
         for task_id, past_node in enumerate(self._visited_nodes_list):
             past_spec, past_data = past_node
             if visited_node[0] == past_spec and visited_node[1] == past_data:
-                if prev is not None:
-                    prev_task_id = self._get_task_id(*prev)
-                    if failed_spec is not None:
-                        self._graph.add_edge(
-                            prev_task_id,
-                            task_id,
-                            failed_spec=failed_spec.to_str(),
-                            last_adaptation=[str(adaptation) for adaptation in prev_data.adaptation_history[-1]]
-                        )
-                    else:
-                        ct1 = prev_data.counter_traces[-1].print_one_line()
-                        ct2 = data.counter_traces[-1].print_one_line()
-                        difference = parse_ct(ct2) - parse_ct(ct1)
-                        print(difference)
-                        self._graph.add_edge(
-                            prev_task_id,
-                            task_id,
-                            last_adaptation = [str(adaptation) for adaptation in prev_data.adaptation_history[-1]],
-                            before_deadlock_completion = prev_data.counter_traces[-1].print_one_line(),
-                            deadlock_completion = list(difference)
-                        )
+                self._add_edge_data_to_graph(data, prev, failed_spec, task_id)
                 return task_id
         task_id = len(self._visited_nodes_list)
         self._stack.append(node)
@@ -78,10 +59,21 @@ class OrchestrationManagerSemanticEquivalence(IOrchestrationManager):
             task_id,
             spec=spec.to_str(),
             color=node_color,
-            data=([ct.print_one_line() for ct in data.counter_traces[-1:]], str(data.learning_type))
+            data=([ct.print_multi_line() for ct in data.counter_traces[-1:]], str(data.learning_type))
         )
 
+        self._add_edge_data_to_graph(data, prev, failed_spec, task_id)
+        return task_id
+
+    def _add_edge_data_to_graph(
+        self,
+        data: RepairData,
+        prev: Optional[tuple[ISpecification, RepairData]],
+        failed_spec: Optional[ISpecification],
+        task_id: int
+    ):
         if prev is not None:
+            _, prev_data = prev
             prev_task_id = self._get_task_id(*prev)
             if failed_spec is not None:
                 self._graph.add_edge(
@@ -90,19 +82,30 @@ class OrchestrationManagerSemanticEquivalence(IOrchestrationManager):
                     failed_spec=failed_spec.to_str(),
                     last_adaptation=[str(adaptation) for adaptation in prev_data.adaptation_history[-1]]
                 )
-            else:
-                ct1 = prev_data.counter_traces[-1].print_one_line()
-                ct2 = data.counter_traces[-1].print_one_line()
-                difference = parse_ct(ct2) - parse_ct(ct1)
-                print(difference)
+            elif prev_data.learning_type == Learning.ASSUMPTION_WEAKENING and data.learning_type == Learning.GUARANTEE_WEAKENING:
                 self._graph.add_edge(
                     prev_task_id,
                     task_id,
-                    last_adaptation = [str(adaptation) for adaptation in prev_data.adaptation_history[-1]],
-                    before_deadlock_completion = prev_data.counter_traces[-1].print_one_line(),
-                    deadlock_completion = list(difference)
+                    last_adaptation=["Switch to Guarantee Weakening"]
                 )
-        return task_id
+            else:
+                ct1 = prev_data.counter_traces[-1].print_one_line()
+                ct2 = data.counter_traces[-1].print_one_line()
+                if len(prev_data.counter_traces) == len(data.counter_traces) and ct1 != ct2:
+                    difference = parse_ct(ct2) - parse_ct(ct1)
+                    self._graph.add_edge(
+                        prev_task_id,
+                        task_id,
+                        before_deadlock_completion=prev_data.counter_traces[-1].print_multi_line(),
+                        after_deadlock_completion=data.counter_traces[-1].print_multi_line(),
+                        deadlock_completion=list(difference)
+                    )
+                else:
+                    self._graph.add_edge(
+                        prev_task_id,
+                        task_id,
+                        last_adaptation=[str(adaptation) for adaptation in prev_data.adaptation_history[-1]]
+                    )
 
     def _get_task_id(self, spec: ISpecification, data: RepairData):
         if data.learning_type == Learning.ASSUMPTION_WEAKENING:

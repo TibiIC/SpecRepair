@@ -3,45 +3,40 @@
 # Save the current directory
 ORIGINAL_DIR=$(pwd)
 
+DATE="2026-02-18" #  $(date '+%Y-%m-%d')
+
 # Set working directory
 WORKDIR="/Users/tg4018/Documents/PhD/SpecRepair"
 cd "$WORKDIR" || { echo "Directory $WORKDIR not found! Exiting."; exit 1; }
 
 # Activate Conda
-ENV_PATH="/Users/tg4018/opt/anaconda3/envs/logic"
+ENV_PATH="/Users/tg4018/miniforge3/envs/arm_env"
 source "$(conda info --base)/etc/profile.d/conda.sh"
 conda activate "$ENV_PATH" || { echo "Failed to activate Conda environment: $ENV_PATH"; exit 1; }
 
 # Define input and output arrays
 INPUT_FILES=(
-    "tests/test_files/out/traffic_non_unique_eventually"
-    "tests/test_files/out/traffic_non_unique_no_eventually"
-    "tests/test_files/out/minepump_test_bfs_non_unique_no_eventually"
-    "tests/test_files/out/minepump_test_bfs_non_unique"
-    "tests/test_files/out/arbiter_test_bfs_non_unique"
-    "tests/test_files/out/arbiter_test_bfs_non_unique_no_eventually"
-    "tests/test_files/out/lift_non_unique_no_eventually"
-    "tests/test_files/out/lift_non_unique_eventually"
-    "tests/test_files/out/traffic_single_non_unique_no_eventually"
-    "tests/test_files/out/traffic_single_non_unique_eventually"
+    "tests/test_files/out/repair/traffic_updated_${DATE}"
+    "tests/test_files/out/repair/traffic_single_${DATE}"
+    "tests/test_files/out/repair/minepump_${DATE}"
+    "tests/test_files/out/repair/arbiter_${DATE}"
+    "tests/test_files/out/repair/lift_${DATE}"
 )
 
 OUTPUT_FILES=(
-    "scripts/maximal_outputs/ideal/traffic_updated_non_unique_eventually_fixed.txt"
-    "scripts/maximal_outputs/ideal/traffic_updated_non_unique_no_eventually_fixed.txt"
-    "scripts/maximal_outputs/practical/minepump_non_unique_no_eventually.txt"
-    "scripts/maximal_outputs/practical/minepump_non_unique_eventually.txt"
-    "scripts/maximal_outputs/practical/arbiter_non_unique_eventually.txt"
-    "scripts/maximal_outputs/practical/arbiter_non_unique_no_eventually.txt"
-    "scripts/maximal_outputs/practical/lift_non_unique_no_eventually.txt"
-    "scripts/maximal_outputs/practical/lift_non_unique_eventually.txt"
-    "scripts/maximal_outputs/practical/traffic_single_non_unique_no_eventually.txt"
-    "scripts/maximal_outputs/practical/traffic_single_non_unique_eventually.txt"
+    "scripts/maximal_outputs/${DATE}/traffic_updated.txt"
+    "scripts/maximal_outputs/${DATE}/traffic_single.txt"
+    "scripts/maximal_outputs/${DATE}/minepump.txt"
+    "scripts/maximal_outputs/${DATE}/arbiter.txt"
+    "scripts/maximal_outputs/${DATE}/lift.txt"
 )
+
+# Create output directory if it doesn't exist
+mkdir -p "scripts/maximal_outputs/${DATE}"
 
 # Run tasks in parallel
 for i in "${!INPUT_FILES[@]}"; do
-    python scripts/find_maximal_specs.py -s "${INPUT_FILES[i]}" &> "${OUTPUT_FILES[i]}" &
+    python scripts/find_maximal_specifications.py -s "${INPUT_FILES[i]}" &> "${OUTPUT_FILES[i]}" &
 done
 
 # Wait for all processes to complete
