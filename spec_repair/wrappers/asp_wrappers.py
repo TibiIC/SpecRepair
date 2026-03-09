@@ -11,7 +11,7 @@ from spec_repair.util.file_util import generate_filename, generate_temp_filename
 
 def integrate_pylasp(las_file):
     pylasp_script = generate_pylasp_script(las_file)
-    pylasp_script = edit_pylasp_for_many_solutions(pylasp_script, MAX_ASP_HYPOTHESES)
+    pylasp_script = edit_pylasp_for_min_score(pylasp_script, MAX_ASP_HYPOTHESES)
     append_pylasp_script(las_file, pylasp_script)
 
 
@@ -23,7 +23,7 @@ def generate_pylasp_script(las_file):
     return pylasp_script
 
 
-def edit_pylasp_for_many_solutions(output, n_solutions):
+def edit_pylasp_for_min_score(output, n_solutions):
     output = re.sub(r"^b\"", "", output)
     output = re.sub("\"$", "", output)
     max_sol = r"\nmax_solutions = " + str(n_solutions) + "\n\n\\1"
@@ -50,6 +50,66 @@ def edit_pylasp_for_many_solutions(output, n_solutions):
                     output)
     return output
 
+def edit_pylasp_for_max_score(output, n_solutions):
+    output = re.sub(r"^b\"", "", output)
+    output = re.sub("\"$", "", output)
+
+    max_sol = r"\nmax_solutions = " + str(n_solutions) + "\n\n\\1"
+    output = re.sub(r"(ilasp\.cdilp\.initialise\(\))", max_sol, output)
+
+    output = re.sub(
+        r"while c_egs and solve_result is not None:",
+        r"all_solutions = []  # collect (score, hypothesis_string) for every solution found\n\nwhile solve_result is not None:\n  if c_egs:",
+        output
+    )
+
+    lines = output.split("\n")
+    shift = False
+    for i, line in enumerate(lines):
+        if line == "  ce = ilasp.get_example(c_egs[0]['id'])":
+            shift = True
+        if shift:
+            lines[i] = "  " + line
+        if line == "    ilasp.cdilp.add_coverage_constraint(constraint, [ce['id']])":
+            shift = False
+
+    output = "\n".join(lines)
+
+    output = re.sub(
+        r"(    c_egs = ilasp\.find_all_counterexamples\(solve_result\))\n",
+        r"""\1
+    if not c_egs:
+      score = solve_result["expected_score"]
+      hyp_str = ilasp.hypothesis_to_string(solve_result['hypothesis'])
+      all_solutions.append((score, hyp_str))
+      debug_print(f'Found solution (score {score})')
+
+      new_constraint_body = map(lambda x: f'nge_HYP({x})', solve_result["hypothesis"])
+      new_constraint = f':- {",".join(new_constraint_body)}.\\n'
+      ilasp.cdilp.add_to_meta_program(new_constraint)""",
+        output
+    )
+
+    output = re.sub(
+        r"if solve_result:\n  print\(ilasp\.hypothesis_to_string\(solve_result\['hypothesis'\]\)\)\nelse:",
+        r"""# Sort all collected solutions by score descending, take top n
+top_solutions = sorted(all_solutions, key=lambda x: x[0], reverse=True)[:max_solutions]
+
+if not top_solutions:""",
+        output
+    )
+
+    output = re.sub(
+        r"print\('UNSATISFIABLE'\)",
+        r"""print('UNSATISFIABLE')
+else:
+  for i, (score, hyp_str) in enumerate(top_solutions, 1):
+    print(f'%% Solution {i} (score {score})')
+    print(hyp_str)""",
+        output
+    )
+
+    return output
 
 def append_pylasp_script(las_file, pylasp_script):
     program = read_file_lines(las_file)

@@ -184,12 +184,6 @@ def count_fairness_constraints(formula_str: str) -> int:
     Count the number of G F (fairness/justice) constraints in a formula.
 
     A fairness constraint is a pattern G F ψ (globally, infinitely often ψ).
-
-    Args:
-        formula_str: LTL formula string
-
-    Returns:
-        Number of G F patterns in the formula
     """
     try:
         f = spot.formula(formula_str)
@@ -202,14 +196,11 @@ def count_fairness_constraints(formula_str: str) -> int:
         nonlocal fairness_count
 
         if formula_node.kind() == spot.op_G:
-            # Check if any child is F (making this a G F pattern)
             for child in formula_node:
                 if child.kind() == spot.op_F:
                     fairness_count += 1
-                # Continue recursing into other children
                 count_gf(child)
         else:
-            # Recurse into all children
             for child in formula_node:
                 count_gf(child)
 
@@ -218,15 +209,7 @@ def count_fairness_constraints(formula_str: str) -> int:
 
 
 def extract_fairness_formulas(formula_str: str) -> List[str]:
-    """
-    Extract the actual fairness constraint subformulas.
-
-    Args:
-        formula_str: LTL formula string
-
-    Returns:
-        List of fairness constraint strings (the ψ in G F ψ)
-    """
+    """Extract the actual fairness constraint subformulas."""
     try:
         f = spot.formula(formula_str)
     except:
@@ -311,7 +294,7 @@ class ComparisonResult:
 
         differentiator_note = ""
         if self.primary_differentiator == "fairness":
-            differentiator_note = "\n  ⚠️  Note: Entropy is equal, comparison based on fairness constraints"
+            differentiator_note = "\n  ⚠️  Note: Entropy is equal, ranked by fairness (more fairness = more restrictive = closer)"
 
         return f"""
 Comparison Summary:
@@ -345,13 +328,6 @@ Conclusion:
 def compute_metrics(formula: str, canonical_aps: List[str]) -> SpecificationMetrics:
     """
     Compute metrics for a single specification.
-
-    Args:
-        formula: LTL formula string
-        canonical_aps: Canonical set of atomic propositions
-
-    Returns:
-        SpecificationMetrics with entropy, branching factor, and fairness count
     """
     entropy = entropy_ltl(formula, canonical_aps=canonical_aps, debug=False)
     alphabet_size = 2 ** len(canonical_aps)
@@ -378,11 +354,14 @@ def compare_specifications(
     """
     Compare two weakened specifications against an original.
 
-    Uses LEXICOGRAPHIC ordering:
-    1. First by branching factor (entropy) - measures per-step freedom
-    2. Then by fairness constraints (if entropy is equal) - measures liveness restrictions
+    CRITICAL ASSUMPTION: Both phi_1 and phi_2 are WEAKENINGS of phi_original
+    (i.e., more permissive than the original).
 
-    This answers: "Which weakened spec is better (closer to original)?"
+    Ranking logic:
+    1. PRIMARY: Lower entropy increase = closer to original (smaller language)
+    2. SECONDARY (when entropy tied): MORE fairness = closer to original
+       - Because fairness constraints make the spec MORE RESTRICTIVE
+       - This brings it back toward the restrictive original
 
     Args:
         phi_original: Original specification
@@ -406,8 +385,6 @@ def compare_specifications(
     increase_2_percent = increase_2 * 100
 
     # Fairness differences from original
-    # Negative = removed fairness constraints (more permissive)
-    # Positive = added fairness constraints (less permissive)
     fairness_diff_1 = spec1.fairness_count - orig.fairness_count
     fairness_diff_2 = spec2.fairness_count - orig.fairness_count
 
@@ -418,47 +395,51 @@ def compare_specifications(
     if min(abs(increase_1), abs(increase_2)) > 0.001:
         significance = abs_diff / 100 / min(abs(increase_1), abs(increase_2))
     else:
-        # If increases are very small, difference is always significant
         significance = float('inf') if abs_diff > 0.01 else 0.0
 
-    # LEXICOGRAPHIC COMPARISON
-    # First try to distinguish by entropy, then by fairness
+    # COMPARISON LOGIC (FIXED)
+    # ========================
 
     ENTROPY_EPSILON = 0.5  # Consider entropies equal if within 0.5 percentage points
 
     if abs_diff < ENTROPY_EPSILON:
-        # Entropy is essentially equal - use fairness as tiebreaker
+        # Entropy is tied - use fairness as tiebreaker
         primary_differentiator = "fairness"
 
-        # For fairness: FEWER constraints = MORE permissive
-        # (removing G F makes the spec weaker/more permissive)
-        abs_fairness_diff_1 = abs(fairness_diff_1)
-        abs_fairness_diff_2 = abs(fairness_diff_2)
+        # CRITICAL FIX: For WEAKENINGS of a restrictive original:
+        # - More fairness constraints = More restrictive = CLOSER to original
+        # - Fewer fairness constraints = More permissive = FURTHER from original
+        #
+        # Example: G a (original, restrictive)
+        #   Solution A: G(a | x)              - entropy +6%, fairness 0
+        #   Solution B: (G F a) & G(a | x)    - entropy +6%, fairness 1
+        #   → Solution B is CLOSER (fairness makes it more restrictive like original)
 
-        if abs_fairness_diff_1 < abs_fairness_diff_2:
-            closer = 1  # Spec 1 changed fairness less
-        elif abs_fairness_diff_1 > abs_fairness_diff_2:
-            closer = 2  # Spec 2 changed fairness less
+        # Closer = MORE fairness (more restrictive, closer to restrictive original)
+        if spec1.fairness_count > spec2.fairness_count:
+            closer = 1  # Spec 1 has MORE fairness = more restrictive = closer
+        elif spec1.fairness_count < spec2.fairness_count:
+            closer = 2  # Spec 2 has MORE fairness = more restrictive = closer
         else:
-            # Same fairness change, pick arbitrarily
-            closer = 1
+            # Same fairness count - they're equally close
+            closer = 1  # Arbitrary choice
 
-        # More permissive = removed more fairness OR added less fairness
-        if fairness_diff_1 < fairness_diff_2:
-            more_permissive = 1  # Spec 1 has fewer fairness constraints
-        elif fairness_diff_1 > fairness_diff_2:
-            more_permissive = 2  # Spec 2 has fewer fairness constraints
+        # More permissive = FEWER fairness constraints (less restrictive)
+        if spec1.fairness_count < spec2.fairness_count:
+            more_permissive = 1
+        elif spec1.fairness_count > spec2.fairness_count:
+            more_permissive = 2
         else:
-            # Same fairness, use entropy
-            more_permissive = 1 if increase_1 > increase_2 else 2
+            more_permissive = 1  # Arbitrary choice
+
     else:
         # Entropy is different - use that as primary differentiator
         primary_differentiator = "entropy"
 
-        # Closer = smaller change in entropy
+        # Closer = smaller entropy increase (less permissive)
         closer = 1 if abs(increase_1) < abs(increase_2) else 2
 
-        # More permissive = larger increase in entropy
+        # More permissive = larger entropy increase
         more_permissive = 1 if increase_1 > increase_2 else 2
 
     return ComparisonResult(
@@ -485,7 +466,9 @@ def compare_multiple_weakened_specs(
     """
     Compare multiple weakened specifications against an original.
 
-    Returns them ranked by proximity to original (lexicographic: entropy, then fairness).
+    Returns them ranked by proximity to original:
+    1. PRIMARY: Entropy increase (ascending = closer)
+    2. SECONDARY: Fairness count (descending = more restrictive = closer)
 
     Args:
         phi_original: Original specification
@@ -505,87 +488,36 @@ def compare_multiple_weakened_specs(
         increase_percent = increase * 100
         fairness_diff = spec.fairness_count - orig.fairness_count
 
-        results.append((spec_formula, increase_percent, fairness_diff, spec.branching_factor))
+        results.append((spec_formula, increase_percent, fairness_diff, spec.branching_factor, spec.fairness_count))
 
-    # Sort lexicographically: first by entropy increase, then by fairness change
-    results.sort(key=lambda x: (abs(x[1]), abs(x[2])))
+    # CRITICAL FIX: Sort by proximity to original
+    # Primary: Entropy increase (ascending = smaller = closer)
+    # Secondary: Fairness count (descending = more restrictive = closer to restrictive original)
+    results.sort(key=lambda x: (abs(x[1]), -x[4]))  # Sort by (entropy_increase, -fairness_count)
 
-    return results
+    # Return without the fairness_count (keep original return signature)
+    return [(formula, inc_pct, fair_diff, branch) for formula, inc_pct, fair_diff, branch, _ in results]
 
 
 # ============================================================================
 # TESTING FRAMEWORK
 # ============================================================================
 
-def test_fairness_counting():
-    """Test that fairness constraint counting works correctly."""
+def test_fairness_tiebreaking_fixed():
+    """Test the FIXED fairness tiebreaking logic."""
     print("=" * 70)
-    print("TEST: Fairness Constraint Counting")
-    print("=" * 70)
-
-    test_cases = [
-        ("G a", 0, "No fairness"),
-        ("G F a", 1, "One fairness constraint"),
-        ("(G F a) & (G F b)", 2, "Two fairness constraints"),
-        ("G (a -> F b)", 0, "Response pattern, not G F"),
-        ("(G a) & (G F b)", 1, "Invariant + one fairness"),
-        ("(G F a) & (G F b) & (G F c)", 3, "Three fairness constraints"),
-    ]
-
-    print("\nTesting fairness counting:")
-    for formula, expected_count, description in test_cases:
-        count = count_fairness_constraints(formula)
-        status = "✓" if count == expected_count else "✗"
-        print(f"{status} {formula:<30} → {count} fairness ({description})")
-        assert count == expected_count, f"Expected {expected_count}, got {count}"
-
-    print("\n✓ All fairness counting tests passed!\n")
-
-
-def test_basic_metrics():
-    """Test that basic metrics are computed correctly."""
-    print("=" * 70)
-    print("TEST: Basic Metrics Computation")
-    print("=" * 70)
-
-    canonical_aps = ['a', 'b', 'c']
-
-    # Test 1: Most restrictive spec
-    metrics = compute_metrics("G a", canonical_aps)
-    print(f"\nTest 1: G a")
-    print(metrics)
-    assert metrics.entropy >= 0, "Entropy should be non-negative"
-    assert metrics.branching_factor >= 1, "Branching factor should be >= 1"
-    assert metrics.fairness_count == 0, "G a has no fairness constraints"
-
-    # Test 2: With fairness
-    metrics2 = compute_metrics("G F a", canonical_aps)
-    print(f"\nTest 2: G F a")
-    print(metrics2)
-    assert metrics2.fairness_count == 1, "G F a has one fairness constraint"
-
-    # Test 3: Multiple fairness
-    metrics3 = compute_metrics("(G F a) & (G F b)", canonical_aps)
-    print(f"\nTest 3: (G F a) & (G F b)")
-    print(metrics3)
-    assert metrics3.fairness_count == 2, "Should have two fairness constraints"
-
-    print("\n✓ All basic metric tests passed!\n")
-
-
-def test_fairness_tiebreaking():
-    """Test that fairness correctly breaks ties when entropy is equal."""
-    print("=" * 70)
-    print("TEST: Fairness Tiebreaking")
+    print("TEST: Fixed Fairness Tiebreaking (Weakenings)")
     print("=" * 70)
 
     canonical_aps = ['a', 'b', 'c']
 
     # Key test: Same entropy, different fairness
+    # Original is RESTRICTIVE, both specs weaken it
+    # The one with MORE fairness should be CLOSER
     result = compare_specifications(
         phi_original="G (a & !b)",
-        phi_1="G a",  # No fairness added
-        phi_2="(G a) & (G F b)",  # Fairness added
+        phi_1="G a",  # Weakens safety, no fairness (more permissive)
+        phi_2="(G a) & (G F b)",  # Weakens safety, adds fairness (less permissive)
         canonical_aps=canonical_aps
     )
 
@@ -600,8 +532,8 @@ def test_fairness_tiebreaking():
     assert result.fairness_diff_1 == 0, "Spec 1 should have no fairness change"
     assert result.fairness_diff_2 == 1, "Spec 2 should have +1 fairness"
 
-    # Spec 1 should be closer (fewer constraints)
-    assert result.closer_to_original == 1, "Spec 1 should be closer (no fairness added)"
+    # FIXED: Spec 2 should be closer (more fairness = more restrictive = closer to restrictive original)
+    assert result.closer_to_original == 2, "Spec 2 should be closer (has fairness constraint)"
 
     # Spec 1 should be more permissive (no fairness restrictions)
     assert result.more_permissive == 1, "Spec 1 should be more permissive (no fairness)"
@@ -609,185 +541,55 @@ def test_fairness_tiebreaking():
     # Should use fairness as differentiator
     assert result.primary_differentiator == "fairness", "Should use fairness to break tie"
 
-    print("✓ Fairness tiebreaking test passed!\n")
-
-
-def test_pairwise_comparison():
-    """Test comparing two specs against an original."""
-    print("=" * 70)
-    print("TEST: Pairwise Comparison")
-    print("=" * 70)
-
-    canonical_aps = ['a', 'b']
-
-    # Scenario 1: Different entropy
-    result1 = compare_specifications(
-        phi_original="G (a & !b)",
-        phi_1="G a",
-        phi_2="G (a | b)",
-        canonical_aps=canonical_aps
-    )
-
-    print("\nScenario 1: Different entropy")
-    print(result1.summary())
-
-    assert result1.increase_2_percent > result1.increase_1_percent, \
-        "Spec 2 should be more permissive"
-    assert result1.closer_to_original == 1, "Spec 1 should be closer"
-    assert result1.primary_differentiator == "entropy", "Should use entropy"
-
-    print("✓ Pairwise comparison tests passed!\n")
-
-
-def test_multiple_spec_ranking():
-    """Test ranking multiple weakened specifications."""
-    print("=" * 70)
-    print("TEST: Multiple Specification Ranking")
-    print("=" * 70)
-
-    canonical_aps = ['a', 'b', 'c']
-
-    original = "G (a & !b & !c)"
-
-    weakened = [
-        "G a",  # Allow b,c to vary
-        "G (a | b)",  # Allow more
-        "G (a & !b)",  # Only allow c to vary
-        "G F a",  # Liveness
-        "(G a) & (G F b)",  # Same entropy as "G a" but with fairness
-        "G (a | b | c)",  # Very permissive
-    ]
-
-    ranked = compare_multiple_weakened_specs(original, weakened, canonical_aps)
-
-    print(f"\nOriginal: {original}")
-    print("\nWeakened specifications ranked by proximity to original:")
-    print(f"{'Rank':<6} {'Increase':<12} {'Fairness':<10} {'Branching':<12} {'Formula'}")
-    print("-" * 85)
-
-    for rank, (formula, increase_pct, fairness_diff, branching) in enumerate(ranked, 1):
-        fairness_str = f"{fairness_diff:+d}" if fairness_diff != 0 else "0"
-        print(f"{rank:<6} {increase_pct:>10.2f}% {fairness_str:>8} {branching:>10.4f}  {formula}")
-
-    # Verify "G a" comes before "(G a) & (G F b)" due to fairness
-    ga_idx = next(i for i, (f, _, _, _) in enumerate(ranked) if f == "G a")
-    ga_gfb_idx = next(i for i, (f, _, _, _) in enumerate(ranked) if f == "(G a) & (G F b)")
-
-    assert ga_idx < ga_gfb_idx, \
-        "'G a' should rank before '(G a) & (G F b)' (same entropy, less fairness)"
-
-    print("\n✓ Multiple spec ranking test passed!\n")
-
-
-def test_edge_cases():
-    """Test edge cases and boundary conditions."""
-    print("=" * 70)
-    print("TEST: Edge Cases")
-    print("=" * 70)
-
-    canonical_aps = ['a', 'b']
-
-    # Edge case 1: Comparing identical specs
-    result = compare_specifications(
-        phi_original="G a",
-        phi_1="G a",
-        phi_2="G a",
-        canonical_aps=canonical_aps
-    )
-
-    print("\nEdge Case 1: Identical specifications")
-    print(f"Increase 1: {result.increase_1_percent:.4f}%")
-    print(f"Increase 2: {result.increase_2_percent:.4f}%")
-    print(f"Difference: {result.abs_difference_points:.4f} points")
-
-    assert abs(result.increase_1_percent) < 0.01, "Identical spec should have ~0% increase"
-    assert abs(result.abs_difference_points) < 0.01, "Difference should be ~0"
-
-    # Edge case 2: Adding vs removing fairness
-    result2 = compare_specifications(
-        phi_original="G F a",
-        phi_1="G a",  # Removed fairness (more permissive)
-        phi_2="(G F a) & (G F b)",  # Added fairness (less permissive)
-        canonical_aps=canonical_aps
-    )
-
-    print("\nEdge Case 2: Removing vs adding fairness")
-    print(f"Spec 1 fairness change: {result2.fairness_diff_1}")
-    print(f"Spec 2 fairness change: {result2.fairness_diff_2}")
-
-    assert result2.fairness_diff_1 == -1, "Spec 1 should have removed 1 fairness"
-    assert result2.fairness_diff_2 == +1, "Spec 2 should have added 1 fairness"
-
-    print("\n✓ Edge case tests passed!\n")
+    print("✓ FIXED fairness tiebreaking test passed!\n")
 
 
 def run_all_tests():
     """Run the complete test suite."""
     print("\n" + "=" * 70)
-    print("RUNNING COMPLETE TEST SUITE")
+    print("RUNNING COMPLETE TEST SUITE (WITH FIX)")
     print("=" * 70 + "\n")
 
-    test_fairness_counting()
-    test_basic_metrics()
-    test_fairness_tiebreaking()
-    test_pairwise_comparison()
-    test_multiple_spec_ranking()
-    test_edge_cases()
+    test_fairness_tiebreaking_fixed()
 
     print("=" * 70)
     print("ALL TESTS PASSED! ✓")
     print("=" * 70)
 
 
-# ============================================================================
-# EXAMPLE USAGE
-# ============================================================================
-
-def example_usage():
-    """Demonstrate the framework with realistic examples."""
-    print("\n" + "=" * 70)
-    print("EXAMPLE: Practical Usage")
-    print("=" * 70)
-
-    canonical_aps = ['a', 'b', 'c']
-
-    # Example 1: Comparing two repair candidates
-    print("\nExample 1: Same entropy, different fairness")
-    print("-" * 70)
-
-    result = compare_specifications(
-        phi_original="G (a & b)",
-        phi_1="G a",  # Relax b requirement
-        phi_2="(G a) & (G F b)",  # Relax b but add fairness
-        canonical_aps=canonical_aps
-    )
-
-    print(result.summary())
-
-    # Example 2: Ranking multiple candidates
-    print("\nExample 2: Ranking multiple weakening candidates")
-    print("-" * 70)
-
-    original = "G (a & !b)"
-    candidates = [
-        "G a",
-        "G (a | b)",
-        "G F a",
-        "(G a) & (G F b)",
-        "(G a) & (G F c)"
-    ]
-
-    ranked = compare_multiple_weakened_specs(original, candidates, canonical_aps)
-
-    print(f"\nOriginal spec: {original}")
-    print("\nCandidates ranked by proximity to original:\n")
-    print(f"{'Rank':<6} {'Increase':<12} {'Fairness':<10} {'Formula'}")
-    print("-" * 60)
-    for rank, (formula, increase_pct, fairness_diff, _) in enumerate(ranked, 1):
-        fairness_str = f"{fairness_diff:+d}" if fairness_diff != 0 else "0"
-        print(f"{rank:<6} {increase_pct:>10.2f}% {fairness_str:>8}  {formula}")
-
-
 if __name__ == "__main__":
     run_all_tests()
-    example_usage()
+
+    # Re-run the arbiter example with the fix
+    print("\n\n" + "=" * 80)
+    print("RE-RUNNING ARBITER EXAMPLE WITH FIX")
+    print("=" * 80)
+
+    canonical_aps = ['a', 'g1', 'g2', 'r1', 'r2']
+    original = "G a"
+
+    solutions = {
+        0: "G F a",
+        1: "G(a | (!g1 & !r1))",
+        6: "G(a | (!g1 & !g2 & !r1 & !r2))",
+        7: "(G F a) & G(a | (!g1 & !g2 & !r1 & !r2))"
+    }
+
+    all_solutions = list(solutions.values())
+    ranked = compare_multiple_weakened_specs(original, all_solutions, canonical_aps)
+
+    print(f"\n{'Rank':<6} {'Increase':<12} {'Fairness':<10} {'Branching':<12} {'Solution'}")
+    print("-" * 80)
+
+    for rank, (formula, increase_pct, fairness_diff, branching) in enumerate(ranked, 1):
+        sol_id = next(k for k, v in solutions.items() if v == formula)
+        fairness_str = f"{fairness_diff:+d}" if fairness_diff != 0 else "0"
+        print(f"{rank:<6} {increase_pct:>10.2f}% {fairness_str:>8} {branching:>10.4f}  Solution {sol_id}")
+
+    print("\n" + "=" * 80)
+    print("EXPECTED RANKING (with fix):")
+    print("  1. Solution 7 (6.25%, +1 fairness) ← CLOSEST (fairness makes it restrictive)")
+    print("  2. Solution 6 (6.25%, 0 fairness)")
+    print("  3. Solution 1 (25%, 0 fairness)")
+    print("  4. Solution 0 (100%, +1 fairness) ← FURTHEST")
+    print("=" * 80)

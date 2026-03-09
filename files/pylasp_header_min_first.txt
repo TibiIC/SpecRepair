@@ -1,0 +1,66 @@
+#ilasp_script
+
+max_solutions = 10
+
+ilasp.cdilp.initialise()
+solve_result = ilasp.cdilp.solve()
+
+c_egs = None
+if solve_result is not None:
+  c_egs = ilasp.find_all_counterexamples(solve_result)
+
+conflict_analysis_strategy = {
+  'positive-strategy': 'all-ufs',
+  'negative-strategy': 'single-as',
+  'brave-strategy':    'all-ufs',
+  'cautious-strategy': 'single-as-pair'
+}
+
+solution_count = 0
+
+while solution_count < max_solutions and solve_result is not None:
+  if c_egs:
+    ce = ilasp.get_example(c_egs[0]['id'])
+    constraint = ilasp.cdilp.analyse_conflict(solve_result['hypothesis'], ce['id'], conflict_analysis_strategy)
+
+    # An example with recorded penalty of 0 is in reality an example with an
+    # infinite penalty, meaning that it must be covered. Constraint propagation is,
+    # therefore, unnecessary.
+    if ce['penalty'] != -1:
+      c_eg_ids = list(map(lambda x: x['id'], c_egs))
+      prop_egs = []
+      if ce['type'] == 'positive':
+        prop_egs = ilasp.cdilp.propagate_constraint(constraint, c_eg_ids, {'select-examples': ['positive'], 'strategy': 'cdpi-implies-constraint'})
+      elif ce['type'] == 'negative':
+        prop_egs = ilasp.cdilp.propagate_constraint(constraint, c_eg_ids, {'select-examples': ['negative'], 'strategy': 'neg-constraint-implies-cdpi'})
+      elif ce['type'] == 'brave-order':
+        prop_egs = ilasp.cdilp.propagate_constraint(constraint, c_eg_ids, {'select-examples': ['brave-order'],    'strategy': 'cdoe-implies-constraint'})
+      else:
+        prop_egs = [ce['id']]
+
+      ilasp.cdilp.add_coverage_constraint(constraint, prop_egs)
+
+    else:
+      ilasp.cdilp.add_coverage_constraint(constraint, [ce['id']])
+
+  solve_result = ilasp.cdilp.solve()
+
+  if solve_result is not None:
+    c_egs = ilasp.find_all_counterexamples(solve_result)
+    if not c_egs:
+      solution_count+=1
+      debug_print(f'Solution {solution_count} (score {solve_result["expected_score"]})')
+      print(ilasp.hypothesis_to_string(solve_result['hypothesis']))
+      new_constraint_body = map(lambda x: f'nge_HYP({x})', solve_result["hypothesis"])
+      # if you want to rule allow non-subset-minimal solutions uncomment this line and comment the one below.
+      # new_constraint = f':- {",".join(new_constraint_body)}, #count' + "{ H : nge_HYP(H) }" + f' = {len(solve_result["hypothesis"])}.\n'
+      new_constraint = f':- {",".join(new_constraint_body)}.\n'
+      ilasp.cdilp.add_to_meta_program(new_constraint)
+
+
+if solution_count == 0:
+  print('UNSATISFIABLE')
+
+ilasp.stats.print_timings()
+
+#end.
