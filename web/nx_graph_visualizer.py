@@ -271,9 +271,20 @@ def generate_html_visualization(G, output_file='graph_visualization.html', title
                 }
             },"""
         physics_enabled = "false"
+        # Use straight edges for hierarchical layout (cleaner, no overlaps)
+        edge_smooth = """
+                smooth: {
+                    enabled: false  // Straight lines for hierarchical
+                }"""
     else:
         layout_section = ""
         physics_enabled = "true"
+        # Use curved edges for regular layout
+        edge_smooth = """
+                smooth: {
+                    enabled: true,
+                    type: "dynamic"
+                }"""
     
     # Create the HTML template with embedded data
     html_template = f"""<!DOCTYPE html>
@@ -467,11 +478,7 @@ def generate_html_visualization(G, output_file='graph_visualization.html', title
                 }},
                 color: {{
                     inherit: true
-                }},
-                smooth: {{
-                    enabled: true,
-                    type: "dynamic"
-                }}
+                }},{edge_smooth}
             }},
             interaction: {{
                 dragNodes: true,
@@ -524,6 +531,20 @@ def generate_html_visualization(G, output_file='graph_visualization.html', title
         }} else {{
             // For hierarchical layouts, physics is already disabled
             updatePhysicsStatus(false);
+            
+            // After initial render, unlock the hierarchical constraints
+            // This allows free movement in both X and Y directions
+            setTimeout(function() {{
+                console.log("Unlocking hierarchical layout - enabling free movement");
+                network.setOptions({{
+                    layout: {{
+                        hierarchical: {{
+                            enabled: false  // Disable to allow free Y-axis movement
+                        }}
+                    }}
+                }});
+                console.log("Nodes can now be moved freely in all directions");
+            }}, 1000);  // Wait 1 second for initial layout to complete
         }}
 
         // Physics status indicator

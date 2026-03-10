@@ -39,7 +39,7 @@ class BFSRepairOrchestrator:
             om: IOrchestrationManager = OrchestrationManagerSemanticEquivalence(),
             hm: IHeuristicManager = NoFilterHeuristicManager(),
             recorder: IRecorder[ISpecification] = UniqueRecorder(),
-            logger: SpecLogger = SpecLogger("spec_repair.log")
+            logger: SpecLogger = SpecLogger("./main/spec_repair.log")
     ):
         self._learners = learners
         self._oracle = oracle

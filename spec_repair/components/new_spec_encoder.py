@@ -3,10 +3,10 @@ import re
 from collections import defaultdict
 from typing import List, Optional, TYPE_CHECKING
 
+from spec_repair.components.interfaces.ispecification import ISpecification
 from spec_repair.enums import Learning, When
 from spec_repair.helpers.heuristic_managers.iheuristic_manager import IHeuristicManager
 from spec_repair.helpers.heuristic_managers.no_filter_heuristic_manager import NoFilterHeuristicManager
-from spec_repair.helpers.spectra_specification import SpectraSpecification
 from spec_repair.ltl_types import GR1FormulaType, GR1AtomType
 from spec_repair.util.spec_util import trace_list_to_asp_form, trace_list_to_ilasp_form, parse_formula_str, \
     create_atom_signature_asp, run_all_unrealisable_cores
@@ -23,7 +23,7 @@ class NewSpecEncoder:
         self._hm = heuristic_manager
 
     @staticmethod
-    def encode_ASP(spec: SpectraSpecification, trace: list[str], ct_list: List[CounterTrace]) -> str:
+    def encode_ASP(spec: ISpecification, trace: list[str], ct_list: List[CounterTrace]) -> str:
         """
         ASSUMES LEARNING ASSUMPTION WEAKENING ONLY
         """
@@ -36,7 +36,7 @@ class NewSpecEncoder:
                                              cs_trace_string)
 
     @staticmethod
-    def encode_ASP_deadlock_extension(spec: SpectraSpecification, ct_to_extend: CounterTrace) -> str:
+    def encode_ASP_deadlock_extension(spec: ISpecification, ct_to_extend: CounterTrace) -> str:
         """
         ASSUMES LEARNING ASSUMPTION WEAKENING ONLY
         """
@@ -48,7 +48,7 @@ class NewSpecEncoder:
         return SpecGenerator.generate_clingo(formulas_string, "", signature_string, "",
                                              cs_trace_string, elements_to_show)
 
-    def encode_ILASP(self, spec: SpectraSpecification, trace: List[str], ct_list: List[CounterTrace],
+    def encode_ILASP(self, spec: ISpecification, trace: List[str], ct_list: List[CounterTrace],
                      violations: list[str],
                      learning_type: Learning):
         mode_declaration = self._create_mode_bias(spec, violations, learning_type)
@@ -69,7 +69,7 @@ class NewSpecEncoder:
                                            ct_list_ilasp)
         return las
 
-    def _create_mode_bias(self, spec: SpectraSpecification, violations: list[str], learning_type) -> str:
+    def _create_mode_bias(self, spec: ISpecification, violations: list[str], learning_type) -> str:
         output = "%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%\n" \
                  "%% Mode Declaration\n" \
                  "%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%\n\n"
@@ -184,7 +184,7 @@ def get_expression_names_of_type(asp_text: list[str], exp_type: str):
     return re.findall(rf"{exp_type}\(\b([^,^)]*)", ''.join(asp_text))
 
 
-def get_unrealisable_core_expression_names(spec: SpectraSpecification) -> List[str]:
+def get_unrealisable_core_expression_names(spec: ISpecification) -> List[str]:
     unrealisable_cores = run_all_unrealisable_cores(spec.to_str(is_to_compile=True))
     return list(set().union(*unrealisable_cores))
 

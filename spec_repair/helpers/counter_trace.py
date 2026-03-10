@@ -12,7 +12,6 @@ from spec_repair.components.interfaces.ispecification import ISpecification
 from spec_repair.components.new_spec_encoder import NewSpecEncoder
 from spec_repair.enums import Learning
 from spec_repair.helpers.parsers.spectra_formula_parser import SpectraFormulaParser
-from spec_repair.helpers.spectra_specification import SpectraSpecification
 from spec_repair.heuristics import choose_one_with_heuristic, HeuristicType, random_choice
 from spec_repair.ltl_types import CounterStrategy, GR1FormulaType
 from spec_repair.special_types import DeadlockAtomSet, DeadlockViolations
@@ -166,7 +165,7 @@ def complete_cts_from_ct(ct: CounterTrace, spec: ISpecification, entailed_list: 
 
 
 # TODO: rework this to not force breakings on guarantees outside of unrealisable cores
-def find_all_possible_deadlock_completion_assignments(ct: CounterTrace, spec: SpectraSpecification) -> List[List[AtomicProposition]]:
+def find_all_possible_deadlock_completion_assignments(ct: CounterTrace, spec: ISpecification) -> List[List[AtomicProposition]]:
     asp = NewSpecEncoder.encode_ASP_deadlock_extension(spec, ct)
     out = run_clingo(asp, n_models=0)
     assignments = extract_answers("\n".join(out))
@@ -182,7 +181,7 @@ def find_all_possible_deadlock_completion_assignments(ct: CounterTrace, spec: Sp
 
 
 
-def get_unrealisable_core_expression_names(spec: SpectraSpecification) -> Set[str]:
+def get_unrealisable_core_expression_names(spec: ISpecification) -> Set[str]:
     unrealisable_cores = run_all_unrealisable_cores(spec.to_str(is_to_compile=True))
     return set().union(*unrealisable_cores)
 

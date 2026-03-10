@@ -5,7 +5,6 @@ from typing import Optional, List, Tuple
 from spec_repair.components.interfaces.ioracle import IOracle
 from spec_repair.components.new_spec_encoder import NewSpecEncoder
 from spec_repair.components.repair_data import RepairData
-from spec_repair.enums import Learning
 from spec_repair.helpers.counter_trace import cts_from_cs, CounterTrace
 from spec_repair.helpers.spectra_specification import SpectraSpecification
 from spec_repair.ltl_types import CounterStrategy
@@ -35,7 +34,7 @@ def get_unrealisable_core_expression_names(spec: SpectraSpecification) -> List[s
     unrealisable_cores = run_all_unrealisable_cores(spec.to_str(is_to_compile=True))
     return list(set().union(*unrealisable_cores))
 
-class NewSpecOracle(IOracle):
+class SpectraGR1Oracle(IOracle):
     def __init__(self):
         self._ct_cnt = 0
         self._hm = None
@@ -57,6 +56,22 @@ class NewSpecOracle(IOracle):
         else:
             return None
 
+    @staticmethod
+    def is_realisable(
+            spec: SpectraSpecification
+    ) -> bool:
+        """
+        Uses Spectra under the hood to check whether specifcation is realisable.
+        If it is, nothing is returned. Otherwise, it returns a CounterStrategy.
+        """
+        output = SpectraGR1Oracle._synthesise(spec)
+        if re.search("Result: Specification is unrealizable", output):
+            return False
+        elif re.search("Result: Specification is realizable", output):
+            return True
+        else:
+            raise Exception(output)
+
     def _synthesise_and_check(self, spec: SpectraSpecification) -> Optional[CounterStrategy]:
         """
         Uses Spectra under the hood to check whether specifcation is realisable.
@@ -72,7 +87,8 @@ class NewSpecOracle(IOracle):
         else:
             raise Exception(output)
 
-    def _synthesise(self, spec: SpectraSpecification):
+    @staticmethod
+    def _synthesise(spec: SpectraSpecification):
         spec_str = spec.to_str(is_to_compile=True)
         spectra_file: str = generate_temp_filename(ext=".spectra")
         write_to_file(spectra_file, spec_str)

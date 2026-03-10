@@ -1,19 +1,17 @@
 from typing import Optional
 
+from spec_repair.components.oracles.spectra_gr1_oracle import SpectraGR1Oracle
+from spec_repair.helpers.spectra_specification import SpectraSpecification
 from tests.base_test_case import BaseTestCase
-from spec_repair.components.oracles.spec_oracle import SpecOracle
 from spec_repair.ltl_types import CounterStrategy
-from spec_repair.util.file_util import read_file_lines
-from spec_repair.util.spec_util import format_spec
 
 
-class TestSpecLearner(BaseTestCase):
+class TestSpectraSpecOracle(BaseTestCase):
     def test_synthesise_and_check(self):
-        spec_oracle = SpecOracle()
-        weakened_spec: list[str] = format_spec(read_file_lines(
-            './test_files/minepump_aw_methane.spectra'))
+        spec_oracle = SpectraGR1Oracle()
+        weakened_spec: SpectraSpecification = SpectraSpecification.from_file('./test_files/minepump_aw_methane.spectra')
 
-        cs: CounterStrategy = spec_oracle.synthesise_and_check(weakened_spec)
+        cs: CounterStrategy = spec_oracle._synthesise_and_check(weakened_spec)
 
         expected_cs: CounterStrategy = \
             ['INI -> S0 {highwater:false, methane:false} / {pump:false};',
@@ -22,11 +20,10 @@ class TestSpecLearner(BaseTestCase):
         self.assertEqual(expected_cs, cs)
 
     def test_synthesise_and_check_2(self):
-        spec_oracle = SpecOracle()
-        weakened_spec: list[str] = format_spec(read_file_lines(
-            './test_files/minepump_aw_pump.spectra'))
+        spec_oracle = SpectraGR1Oracle()
+        weakened_spec: SpectraSpecification = SpectraSpecification.from_file('./test_files/minepump_aw_pump.spectra')
 
-        cs: CounterStrategy = spec_oracle.synthesise_and_check(weakened_spec)
+        cs: CounterStrategy = spec_oracle._synthesise_and_check(weakened_spec)
 
         expected_cs: CounterStrategy = \
             ['INI -> S0 {highwater:false, methane:false} / {pump:false};',
@@ -36,11 +33,10 @@ class TestSpecLearner(BaseTestCase):
         self.assertEqual(expected_cs, cs)
 
     def test_synthesise_and_check_asm_eventually(self):
-        spec_oracle = SpecOracle()
-        weakened_spec: list[str] = format_spec(read_file_lines(
-            './test_files/minepump_aw_ev.spectra'))
+        spec_oracle = SpectraGR1Oracle()
+        weakened_spec: SpectraSpecification = SpectraSpecification.from_file('./test_files/minepump_aw_ev.spectra')
 
-        cs: CounterStrategy = spec_oracle.synthesise_and_check(weakened_spec)
+        cs: CounterStrategy = spec_oracle._synthesise_and_check(weakened_spec)
 
         expected_cs: CounterStrategy = \
             ['INI -> S0 {highwater:false, methane:false} / {pump:false};',
@@ -49,9 +45,8 @@ class TestSpecLearner(BaseTestCase):
         self.assertEqual(expected_cs, cs)
 
     def test_synthesise_and_check_arbiter_asm_eventually(self):
-        spec_oracle = SpecOracle()
-        weakened_spec: list[str] = format_spec(read_file_lines(
-            './test_files/arbiter_aw_ev.spectra'))
+        spec_oracle = SpectraGR1Oracle()
+        weakened_spec: SpectraSpecification = SpectraSpecification.from_file('./test_files/arbiter_aw_ev.spectra')
 
-        cs: Optional[CounterStrategy] = spec_oracle.synthesise_and_check(weakened_spec)
+        cs: Optional[CounterStrategy] = spec_oracle._synthesise_and_check(weakened_spec)
         self.assertIsNone(cs)

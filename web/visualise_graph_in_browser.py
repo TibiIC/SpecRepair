@@ -49,12 +49,13 @@ def load_and_visualize(pickle_file, output_file='visualization.html'):
 
 
 if __name__ == '__main__':
-    date = datetime.now().strftime('%Y-%m-%d')
-    # date_experiment = '2026-02-23'
-    experiment = 'lift'
+    # date = datetime.now().strftime('%Y-%m-%d')
+    date = '2026-02-23'
+    experiment = 'minepump'
     # Use it:
     load_and_visualize_smart(
         f'../tests/test_files/out/repair/{experiment}_{date}/graph.pkl',
+        #f'../tests/test_files/out/degradation/{experiment}_{date}/graph.pkl',
         expected_root=0,
         output_file=f'visualization_{experiment}_{date}.html'
     )

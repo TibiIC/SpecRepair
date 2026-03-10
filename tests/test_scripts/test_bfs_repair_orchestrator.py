@@ -7,16 +7,14 @@ from typing import Dict
 import networkx as nx
 from pyvis.network import Network
 
-from scripts.bfs_repair_orchestrator import BFSRepairOrchestrator, SpecLogger
+from main.bfs_repair_orchestrator import BFSRepairOrchestrator, SpecLogger
 from spec_repair.components.interfaces.ilearner import ILearner
 from spec_repair.components.learners.optimising_final_spec_learner import OptimisingSpecLearner
-from spec_repair.components.oracles.new_spec_oracle import NewSpecOracle
 from spec_repair.components.mitigators.learning_type_spec_mitigator import LearningTypeSpecMitigator
 from spec_repair.components.discriminators.spectra_discriminator import SpectraDiscriminator
+from spec_repair.components.oracles.spectra_gr1_oracle import SpectraGR1Oracle
 from spec_repair.components.orchestration_managers.orchestration_manager_semantic_equivalence import \
     OrchestrationManagerSemanticEquivalence
-from spec_repair.components.orchestration_managers.orchestration_manager_semantic_equivalence_no_change_gw import \
-    OrchestrationManagerSemanticEquivalenceNoGWChange
 from spec_repair.components.repair_data import RepairData
 from spec_repair.enums import Learning
 from spec_repair.helpers.heuristic_managers.choose_first_heuristic_manager import ChooseFirstHeuristicManager
@@ -24,7 +22,7 @@ from spec_repair.helpers.heuristic_managers.no_filter_heuristic_manager import N
 from spec_repair.helpers.recorders.unique_spec_recorder import UniqueSpecRecorder
 from spec_repair.helpers.spectra_specification import SpectraSpecification
 from spec_repair.util.file_util import read_file_lines, write_to_file
-from spec_repair.util.mittigation_strategies import move_one_to_guarantee_weakening, complete_counter_traces, move_all_to_guarantee_weakening
+from spec_repair.util.mittigation_strategies import move_one_to_guarantee_weakening, complete_counter_traces
 from spec_repair.util.spec_util import synthesise_controller
 from tests.base_test_case import BaseTestCase
 
@@ -172,7 +170,7 @@ class TestBFSRepairOrchestrator(BaseTestCase):
             recorder = UniqueSpecRecorder()
         repairer: BFSRepairOrchestrator = BFSRepairOrchestrator(
             learners,
-            NewSpecOracle(),
+            SpectraGR1Oracle(),
             SpectraDiscriminator(),
             LearningTypeSpecMitigator({
                 Learning.ASSUMPTION_WEAKENING: move_one_to_guarantee_weakening,
@@ -217,7 +215,7 @@ class TestBFSRepairOrchestrator(BaseTestCase):
             recorder = UniqueSpecRecorder()
         repairer: BFSRepairOrchestrator = BFSRepairOrchestrator(
             learners,
-            NewSpecOracle(),
+            SpectraGR1Oracle(),
             SpectraDiscriminator(),
             LearningTypeSpecMitigator({
                 Learning.ASSUMPTION_WEAKENING: move_one_to_guarantee_weakening,
