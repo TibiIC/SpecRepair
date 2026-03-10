@@ -65,5 +65,5 @@ if __name__ == "__main__":
 
     folder_path = sys.argv[1]
     """
-    folder_path = "/Users/tg4018/Documents/PhD/SpecRepair/tests/test_files/out/maximal_solutions_from_ssh"
+    folder_path = "/tests/test_files/maximal_solutions_from_ssh"
     texify_spectra_files(folder_path)
