@@ -38,14 +38,14 @@ class OrchestrationManagerSemanticEquivalence(IOrchestrationManager):
         self.enqueue_new_tasks(spec, data, prev=None)
 
     def enqueue_new_tasks(self, spec: ISpecification, data: RepairData, prev: Optional[Tuple[ISpecification, RepairData]] = None, failed_spec: Optional[ISpecification] = None):
-        if prev:
-            prev_spec, prev_data = prev
         if data.learning_type == Learning.ASSUMPTION_WEAKENING:
             visited_node: Tuple[ISpecification, Any] = (spec, (sorted(data.counter_traces), data.learning_type))
-        else:
+        elif prev:
             visited_node: Tuple[ISpecification, Any] = (spec, (data.counter_traces[-1], data.learning_type))
+        else:
+            assert data.counter_traces == [] and data.learning_type == Learning.GUARANTEE_WEAKENING
+            visited_node: Tuple[ISpecification, Any] = (spec, (data.counter_traces, data.learning_type))
         node: Tuple[ISpecification, Any] = (spec, data)
-        graph_node: Tuple[str, Any] = (spec.to_str(), ([ct.get_raw_trace() for ct in data.counter_traces[-1:]], str(data.learning_type)))
         for task_id, past_node in enumerate(self._visited_nodes_list):
             past_spec, past_data = past_node
             if visited_node[0] == past_spec and visited_node[1] == past_data:
@@ -76,12 +76,20 @@ class OrchestrationManagerSemanticEquivalence(IOrchestrationManager):
             _, prev_data = prev
             prev_task_id = self._get_task_id(*prev)
             if failed_spec is not None:
-                self._graph.add_edge(
-                    prev_task_id,
-                    task_id,
-                    failed_spec=failed_spec.to_str(),
-                    last_adaptation=[str(adaptation) for adaptation in prev_data.adaptation_history[-1]]
-                )
+                if prev_data.adaptation_history:
+                    self._graph.add_edge(
+                        prev_task_id,
+                        task_id,
+                        failed_spec=failed_spec.to_str(),
+                        last_adaptation=[str(adaptation) for adaptation in prev_data.adaptation_history[-1]]
+                    )
+                else: # happens at the start of guarantee weakening from unrealisable spec, after counter example generation
+                    self._graph.add_edge(
+                        prev_task_id,
+                        task_id,
+                        failed_spec=failed_spec.to_str(),
+                        details="Generating first counter-example"
+                    )
             elif prev_data.learning_type == Learning.ASSUMPTION_WEAKENING and data.learning_type == Learning.GUARANTEE_WEAKENING:
                 self._graph.add_edge(
                     prev_task_id,
@@ -110,8 +118,11 @@ class OrchestrationManagerSemanticEquivalence(IOrchestrationManager):
     def _get_task_id(self, spec: ISpecification, data: RepairData):
         if data.learning_type == Learning.ASSUMPTION_WEAKENING:
             visited_node: Tuple[ISpecification, Any] = (spec, (sorted(data.counter_traces), data.learning_type))
-        else:
+        elif data.counter_traces:
             visited_node: Tuple[ISpecification, Any] = (spec, (data.counter_traces[-1], data.learning_type))
+        else:
+            assert data.counter_traces == [] and data.learning_type == Learning.GUARANTEE_WEAKENING
+            visited_node: Tuple[ISpecification, Any] = (spec, (data.counter_traces, data.learning_type))
         for task_id, past_node in enumerate(self._visited_nodes_list):
             past_spec, past_data = past_node
             if visited_node[0] == past_spec and visited_node[1] == past_data:

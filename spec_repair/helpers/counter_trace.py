@@ -68,18 +68,28 @@ class CounterTrace:
                                   self._name)
 
     def __eq__(self, other: CounterTrace) -> bool:
+        if not isinstance(other, CounterTrace):
+            return False
         return self._raw_trace == other._raw_trace
 
     def __le__(self, other: CounterTrace) -> bool:
+        if not isinstance(other, CounterTrace):
+            return False
         return self._raw_trace <= other._raw_trace
 
     def __lt__(self, other: CounterTrace) -> bool:
+        if not isinstance(other, CounterTrace):
+            return False
         return self._raw_trace < other._raw_trace
 
     def __ge__(self, other: CounterTrace) -> bool:
+        if not isinstance(other, CounterTrace):
+            return False
         return self._raw_trace >= other._raw_trace
 
     def __gt__(self, other: CounterTrace) -> bool:
+        if not isinstance(other, CounterTrace):
+            return False
         return self._raw_trace > other._raw_trace
 
     def __hash__(self):

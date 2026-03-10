@@ -51,7 +51,7 @@ class OptimisingSpecLearner(ILearner):
             print(f"Weakening failed: NoWeakeningException thrown and {e}")
             return []
         except NoViolationException as e:
-            if not data.trace and not data.cts and data.learning_type == Learning.GUARANTEE_WEAKENING:
+            if not data.trace and not data.counter_traces and data.learning_type == Learning.GUARANTEE_WEAKENING:
                 print(f"No violation trace given, no counter-traces and spec is unrealisable, so will move straight to extracting counter strategies.")
                 return [(spec, data)]
             else:
