@@ -8,6 +8,28 @@ from tests.base_test_case import BaseTestCase
 from datetime import datetime
 
 
+def _create_minepump_test(i, j):
+    def test_method(self):
+        case_study_name = f'minepump_{i}_{j}'
+        input_specs_path = 'test_files/maximal_solutions_from_ssh'
+        spec_1 = SpectraSpecification.from_file(f"{input_specs_path}/minepump_{i}.spectra")
+        spec_2 = SpectraSpecification.from_file(f"{input_specs_path}/minepump_{j}.spectra")
+        case_study_path = '../input-files/case-studies/spectra/minepump'
+        new_specs = self.run_merge_two(
+            case_study_name,
+            case_study_path,
+            spec_1,
+            spec_2,
+            is_debug=True
+        )
+        expected_dir = f"test_files/expected/merge_two/minepump/{i}+{j}/"
+        expected_specs = [SpectraSpecification.from_file(os.path.join(expected_dir, file_name))
+                          for file_name in os.listdir(expected_dir) if file_name.endswith('.spectra')]
+        self.are_specification_sets_equivalent(expected_specs, new_specs)
+
+    return test_method
+
+
 class TestRepairBro(BaseTestCase):
     @classmethod
     def setUpClass(cls):
@@ -90,7 +112,6 @@ class TestRepairBro(BaseTestCase):
                           for file_name in os.listdir(expected_dir) if file_name.endswith('.spectra')]
         self.are_specification_sets_equivalent(expected_specs, new_specs)
 
-
     def run_merge_two(self, case_study_name, case_study_path, spec1, spec2, out_test_dir_name=None, is_debug=False):
         if not out_test_dir_name:
             out_test_dir_name = f"./test_files/out/merge_two/{case_study_name}_{self.date_str}"
@@ -101,3 +122,11 @@ class TestRepairBro(BaseTestCase):
         repair_bro = RepairBro(original_spec=original_spec, oracle=SpectraGR1Oracle())
         new_specs = repair_bro.merge_two_solutions(spec1, spec2)
         return new_specs
+
+# Generate individual test methods for all minepump combinations
+for i in range(0, 6):
+    for j in range(i+1, 7):
+        test_name = f'test_merge_two_solutions_minepump_{i}_{j}'
+        test_method = _create_minepump_test(i, j)
+        setattr(TestRepairBro, test_name, test_method)
+
