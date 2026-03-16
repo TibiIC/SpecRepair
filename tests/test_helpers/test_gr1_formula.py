@@ -1,6 +1,7 @@
 from unittest import TestCase
 
 from spec_repair.helpers.adaptation_learned import Adaptation
+from spec_repair.helpers.formatters.spot_formula_formatter import SpotFormulaFormatter
 from spec_repair.helpers.gr1_formula import GR1Formula
 from spec_repair.helpers.formatters.spectra_formula_formatter import SpectraFormulaFormatter
 from spec_repair.helpers.parsers.spectra_formula_parser import SpectraFormulaParser
@@ -14,6 +15,7 @@ class TestGR1Formula(TestCase):
     def setUpClass(cls):
         cls.parser = SpectraFormulaParser()
         cls.formatter = SpectraFormulaFormatter()
+        cls.spot_formatter = SpotFormulaFormatter()
 
     def test_parse_spectra_formula_ini(self):
         formula = "\thighwater=false&methane=false;"
@@ -494,4 +496,425 @@ class TestGR1Formula(TestCase):
         formula.integrate(adaptation)
         output = formula.to_str(self.formatter)
         expected_output = "GF(((!(emergency=true)|car=false)|emergency=true))"
+        self.assertEqual(expected_output, output)
+
+    def test_spot_format_formula_ini(self):
+        formula = GR1Formula(
+            temp_type=GR1TemporalType.INITIAL,
+            antecedent=None,
+            consequent=Or(AtomicProposition("highwater", False), AtomicProposition("methane", False)),
+        )
+        output = formula.to_str(formatter=self.spot_formatter)
+        expected_output = "(!highwater | !methane)"
+        self.assertEqual(expected_output, output)
+
+    def test_spot_format_formula_inv(self):
+        formula = GR1Formula(
+            temp_type=GR1TemporalType.INVARIANT,
+            antecedent=None,
+            consequent=Or(AtomicProposition("highwater", False), AtomicProposition("methane", False)),
+        )
+        output = formula.to_str(formatter=self.spot_formatter)
+        expected_output = "G((!highwater | !methane))"
+        self.assertEqual(expected_output, output)
+
+    def test_spot_format_formula_inv_2(self):
+        formula = GR1Formula(
+            temp_type=GR1TemporalType.INVARIANT,
+            antecedent=And(Prev(AtomicProposition("pump", True)), AtomicProposition("pump", True)),
+            consequent=AtomicProposition("highwater", False),
+        )
+        output = formula.to_str(formatter=self.spot_formatter)
+        expected_output = "G(((pump & X(pump)) -> X(!highwater)))"
+        self.assertEqual(expected_output, output)
+
+    def test_spot_format_formula_justice(self):
+        formula = GR1Formula(
+            temp_type=GR1TemporalType.JUSTICE,
+            antecedent=None,
+            consequent=Or(AtomicProposition("highwater", False), AtomicProposition("methane", False))
+        )
+        output = formula.to_str(formatter=self.spot_formatter)
+        expected_output = "G(F((!highwater | !methane)))"
+        self.assertEqual(expected_output, output)
+
+    def test_spot_format_formula_response(self):
+        formula = GR1Formula(
+            temp_type=GR1TemporalType.INVARIANT,
+            antecedent=Top(),
+            consequent=Eventually(Or(AtomicProposition("highwater", False), AtomicProposition("methane", False))),
+        )
+        output = formula.to_str(formatter=self.spot_formatter)
+        expected_output = "G((true -> F((!highwater | !methane))))"
+        self.assertEqual(expected_output, output)
+
+    def test_spot_integrate_adaptation_to_formula_antecedent_exception(self):
+        formula = GR1Formula(
+            temp_type=GR1TemporalType.INVARIANT,
+            antecedent=None,
+            consequent=Or(AtomicProposition("highwater", False), AtomicProposition("methane", False))
+        )  # formula === G(highwater=false|methane=false)
+        adaptation = Adaptation(
+            type='antecedent_exception',
+            formula_name='assumption2_1',
+            disjunction_index=0,
+            atom_temporal_operators=[('current', 'methane=true')]
+        )
+        formula.integrate(adaptation)
+        output = formula.to_str(self.spot_formatter)
+        expected_output = "G((!methane -> (!highwater | !methane)))"
+        self.assertEqual(expected_output, output)
+
+    def test_spot_integrate_adaptation_to_formula_antecedent_exception_2(self):
+        formula = GR1Formula(
+            temp_type=GR1TemporalType.INVARIANT,
+            antecedent=None,
+            consequent=AtomicProposition("a", True),
+        )  # formula === G(a=true)
+        adaptation = Adaptation(
+            type='antecedent_exception',
+            formula_name='a_always',
+            disjunction_index=0,
+            atom_temporal_operators=[('current', 'r1=false'),
+                                     ('current', 'r2=false')]
+        )
+        formula.integrate(adaptation)
+        output = formula.to_str(self.spot_formatter)
+        expected_output = "G(((r1 | r2) -> a))"
+        self.assertEqual(expected_output, output)
+
+    def test_spot_integrate_adaptation_to_formula_antecedent_exception_3(self):
+        formula = GR1Formula(
+            temp_type=GR1TemporalType.INVARIANT,
+            antecedent=AtomicProposition("a", True),
+            consequent=AtomicProposition("b", True),
+        )  # formula === G(a=true->b=true)
+        adaptation = Adaptation(
+            type='antecedent_exception',
+            formula_name='a_always',
+            disjunction_index=0,
+            atom_temporal_operators=[('current', 'c=false')]
+        )
+        formula.integrate(adaptation)
+        output = formula.to_str(self.spot_formatter)
+        expected_output = "G(((a & c) -> b))"
+        self.assertEqual(expected_output, output)
+
+    def test_spot_integrate_adaptation_to_formula_antecedent_exception_4(self):
+        formula = GR1Formula(
+            temp_type=GR1TemporalType.INVARIANT,
+            antecedent=And(AtomicProposition("a", True), AtomicProposition("b", True)),
+            consequent=AtomicProposition("c", True),
+        )  # formula === G(a=true&b=true->c=true)
+        adaptation = Adaptation(
+            type='antecedent_exception',
+            formula_name='a_always',
+            disjunction_index=0,
+            atom_temporal_operators=[('current', 'd=false')]
+        )
+        formula.integrate(adaptation)
+        output = formula.to_str(self.spot_formatter)
+        expected_output = "G((((a & b) & d) -> c))"
+        self.assertEqual(expected_output, output)
+
+    def test_spot_integrate_adaptation_to_formula_antecedent_exception_5(self):
+        formula = GR1Formula(
+            temp_type=GR1TemporalType.INVARIANT,
+            antecedent=Or(AtomicProposition("a", True), AtomicProposition("b", True)),
+            consequent=AtomicProposition("c", True),
+        )  # formula === G(a=true|b=true->c=true)
+        adaptation = Adaptation(
+            type='antecedent_exception',
+            formula_name='a_always',
+            disjunction_index=0,
+            atom_temporal_operators=[('current', 'd=false')]
+        )
+        formula.integrate(adaptation)
+        output = formula.to_str(self.spot_formatter)
+        expected_output = "G(((b | (a & d)) -> c))"
+        self.assertEqual(expected_output, output)
+
+    def test_spot_integrate_adaptation_to_formula_antecedent_exception_6(self):
+        formula = GR1Formula(
+            temp_type=GR1TemporalType.INVARIANT,
+            antecedent=Or(AtomicProposition("a", True), AtomicProposition("b", True)),
+            consequent=AtomicProposition("c", True),
+        )  # formula === G(a=true|b=true->c=true)
+        adaptation = Adaptation(
+            type='antecedent_exception',
+            formula_name='a_always',
+            disjunction_index=0,
+            atom_temporal_operators=[('current', 'd=false'), ('current', 'e=false')]
+        )
+        formula.integrate(adaptation)
+        output = formula.to_str(self.spot_formatter)
+        expected_output = "G((((b | (a & d)) | (a & e)) -> c))"
+        self.assertEqual(expected_output, output)
+
+    def test_spot_integrate_adaptation_to_formula_antecedent_exception_7(self):
+        formula = GR1Formula(
+            temp_type=GR1TemporalType.INVARIANT,
+            antecedent=Or(Prev(AtomicProposition("a", True)), AtomicProposition("b", True)),
+            consequent=AtomicProposition("c", True),
+        )  # formula === G(a=true|b=true->c=true)
+        adaptation = Adaptation(
+            type='antecedent_exception',
+            formula_name='a_always',
+            disjunction_index=0,
+            atom_temporal_operators=[('next', 'd=false'), ('prev', 'e=false')]
+        )
+        formula.integrate(adaptation)
+        output = formula.to_str(self.spot_formatter)
+        expected_output = "G((((X(b) | (X(X(d)) & a)) | (a & e)) -> X(c)))"
+        self.assertEqual(expected_output, output)
+
+    def test_spot_integrate_adaptation_to_formula_antecedent_exception_8(self):
+        formula = GR1Formula(
+            temp_type=GR1TemporalType.INVARIANT,
+            antecedent=None,
+            consequent=Or(AtomicProposition("highwater", False), AtomicProposition("methane", False))
+        )  # formula === G(highwater=false|methane=false)
+        adaptation = Adaptation(
+            type='antecedent_exception',
+            formula_name='assumption2_1',
+            disjunction_index=0,
+            atom_temporal_operators=[('current', 'pump=false')]
+        )
+        formula.integrate(adaptation)
+        output = formula.to_str(self.spot_formatter)
+        expected_output = "G((pump -> (!highwater | !methane)))"
+        self.assertEqual(expected_output, output)
+
+    def test_spot_integrate_adaptation_to_formula_consequent_exception(self):
+        formula = GR1Formula(
+            temp_type=GR1TemporalType.INVARIANT,
+            antecedent=AtomicProposition("highwater", True),
+            consequent=Next(AtomicProposition("pump", True))
+        )  # formula === G(highwater=true->next(pump=true))
+        adaptation = Adaptation(
+            type='consequent_exception',
+            formula_name='consequent2_1',
+            disjunction_index=0,
+            atom_temporal_operators=[('current', 'methane=true')]
+        )
+        formula.integrate(adaptation)
+        output = formula.to_str(self.spot_formatter)
+        expected_output = "G((highwater -> (X(pump) | methane)))"
+        self.assertEqual(expected_output, output)
+
+    def test_spot_integrate_adaptation_to_formula_consequent_exception_2(self):
+        formula = GR1Formula(
+            temp_type=GR1TemporalType.INVARIANT,
+            antecedent=AtomicProposition("a", True),
+            consequent=Next(AtomicProposition("b", True))
+        )  # formula === G(a=true->next(b=true))
+        adaptation = Adaptation(
+            type='consequent_exception',
+            formula_name='consequent2_1',
+            disjunction_index=0,
+            atom_temporal_operators=[('prev', 'c=true')]
+        )
+        formula.integrate(adaptation)
+        output = formula.to_str(self.spot_formatter)
+        expected_output = "G((X(a) -> (X(X(b)) | c)))"
+        self.assertEqual(expected_output, output)
+
+    def test_spot_integrate_adaptation_to_formula_consequent_exception_3(self):
+        formula = GR1Formula(
+            temp_type=GR1TemporalType.INVARIANT,
+            antecedent=AtomicProposition("a", True),
+            consequent=Or(AtomicProposition("b", True), AtomicProposition("c", True))
+        )  # formula === G(a=true->(b=true|c=true))
+        adaptation = Adaptation(
+            type='consequent_exception',
+            formula_name='consequent2_1',
+            disjunction_index=0,
+            atom_temporal_operators=[('current', 'd=true')]
+        )
+        formula.integrate(adaptation)
+        output = formula.to_str(self.spot_formatter)
+        expected_output = "G((a -> ((b | c) | d)))"
+        self.assertEqual(expected_output, output)
+
+    def test_spot_integrate_adaptation_to_formula_consequent_exception_4(self):
+        formula = GR1Formula(
+            temp_type=GR1TemporalType.INVARIANT,
+            antecedent=AtomicProposition("a", True),
+            consequent=And(AtomicProposition("b", True), AtomicProposition("c", True))
+        )  # formula === G(a=true->(b=true&c=true))
+        adaptation = Adaptation(
+            type='consequent_exception',
+            formula_name='consequent2_1',
+            disjunction_index=0,
+            atom_temporal_operators=[('current', 'd=true')]
+        )
+        formula.integrate(adaptation)
+        output = formula.to_str(self.spot_formatter)
+        expected_output = "G((a -> ((b & c) | d)))"
+        self.assertEqual(expected_output, output)
+
+    def test_spot_integrate_adaptation_to_formula_consequent_exception_5(self):
+        formula = GR1Formula(
+            temp_type=GR1TemporalType.INVARIANT,
+            antecedent=AtomicProposition("a", True),
+            consequent=Or(AtomicProposition("b", True), AtomicProposition("c", True))
+        )  # formula === G(a=true->(b=true|c=true))
+        adaptation = Adaptation(
+            type='consequent_exception',
+            formula_name='consequent2_1',
+            disjunction_index=0,
+            atom_temporal_operators=[('current', 'd=true'), ('current', 'e=true')]
+        )
+        formula.integrate(adaptation)
+        output = formula.to_str(self.spot_formatter)
+        expected_output = "G((a -> ((b | c) | (d & e))))"
+        self.assertEqual(expected_output, output)
+
+    def test_spot_integrate_adaptation_to_formula_consequent_exception_6(self):
+        formula = GR1Formula(
+            temp_type=GR1TemporalType.INVARIANT,
+            antecedent=AtomicProposition("a", True),
+            consequent=Or(AtomicProposition("b", True), And(AtomicProposition("c", True), AtomicProposition("d", True)))
+        )  # formula === G(a=true->(b=true|(c=true&d=true))
+        adaptation = Adaptation(
+            type='consequent_exception',
+            formula_name='consequent2_1',
+            disjunction_index=0,
+            atom_temporal_operators=[('current', 'e=true'), ('current', 'f=true')]
+        )
+        formula.integrate(adaptation)
+        output = formula.to_str(self.spot_formatter)
+        expected_output = "G((a -> ((b | (c & d)) | (e & f))))"
+        self.assertEqual(expected_output, output)
+
+    def test_spot_integrate_adaptation_to_formula_consequent_exception_7(self):
+        formula = GR1Formula(
+            temp_type=GR1TemporalType.INVARIANT,
+            antecedent=AtomicProposition("a", True),
+            consequent = Eventually(Next(AtomicProposition("c", True))),
+        )  # formula === G(a=true->next(c=true))
+        adaptation = Adaptation(
+            type='consequent_exception',
+            formula_name='consequent2_1',
+            disjunction_index=0,
+            atom_temporal_operators=[('current', 'b=true')]
+        )
+        formula.integrate(adaptation)
+        output = formula.to_str(self.spot_formatter)
+        expected_output = "G((a -> F((X(c) | b))))"
+        self.assertEqual(expected_output, output)
+
+    def test_spot_integrate_adaptation_to_formula_consequent_exception_8(self):
+        formula = GR1Formula(
+            temp_type=GR1TemporalType.INVARIANT,
+            antecedent=AtomicProposition("a", True),
+            consequent = Eventually(AtomicProposition("b", True)),
+        )  # formula === G(a=true->b=true)
+        adaptation = Adaptation(
+            type='consequent_exception',
+            formula_name='consequent2_1',
+            disjunction_index=0,
+            atom_temporal_operators=[('next', 'c=true')]
+        )
+        formula.integrate(adaptation)
+        output = formula.to_str(self.spot_formatter)
+        expected_output = "G((a -> F((b | X(c)))))"
+        self.assertEqual(expected_output, output)
+
+    def test_spot_integrate_adaptation_to_formula_ev_temp_op(self):
+        formula = GR1Formula(
+            temp_type=GR1TemporalType.INVARIANT,
+            antecedent=None,
+            consequent=Or(AtomicProposition("highwater", False), AtomicProposition("methane", False))
+        )  # formula === G(highwater=false|methane=false
+        adaptation = Adaptation(
+            type="ev_temp_op",
+            formula_name="assumption2_1",
+            disjunction_index=None,
+            atom_temporal_operators=[]
+        )
+        formula.integrate(adaptation)
+        output = formula.to_str(self.spot_formatter)
+        expected_output = "G(F((!highwater | !methane)))"
+        self.assertEqual(expected_output, output)
+
+    def test_spot_integrate_eventualisation_adaptation_to_formula_2(self):
+        formula = GR1Formula(
+            temp_type=GR1TemporalType.INVARIANT,
+            antecedent=AtomicProposition("a", False),
+            consequent=Or(AtomicProposition("r1", False),
+                          And(AtomicProposition("g1", False), AtomicProposition("g2", False)))
+        )
+        adaptation = Adaptation(
+            type="ev_temp_op",
+            formula_name="guarantee3_1",
+            disjunction_index=None,
+            atom_temporal_operators=[]
+        )
+        formula.integrate(adaptation)
+        output = formula.to_str(self.spot_formatter)
+        expected_output = "G((!a -> F((!r1 | (!g1 & !g2)))))"
+        self.assertEqual(expected_output, output)
+
+    def test_spot_integrate_eventualisation_adaptation_to_formula_3(self):
+        formula = GR1Formula(
+            temp_type=GR1TemporalType.INVARIANT,
+            antecedent=AtomicProposition("a", True),
+            consequent=And(AtomicProposition("b", True),
+                           Next(AtomicProposition("c", True)))
+        ) # formula === G(a=true->(b=true&next(c=true)))
+        adaptation = Adaptation(
+            type="ev_temp_op",
+            formula_name="guarantee3_1",
+            disjunction_index=None,
+            atom_temporal_operators=[]
+        )
+        formula.integrate(adaptation)
+        output = formula.to_str(self.spot_formatter)
+        expected_output = "G((a -> F((b & X(c)))))"
+        self.assertEqual(expected_output, output)
+
+    def test_spot_integrate_justice_implication_normalised(self):
+        formula = GR1Formula(
+            temp_type=GR1TemporalType.JUSTICE,
+            antecedent=None,
+            consequent=AtomicProposition("car", False)
+        )
+        adaptation = Adaptation(
+            type="antecedent_exception",
+            formula_name="no_car_often",
+            disjunction_index=0,
+            atom_temporal_operators=[('current', 'emergency=false')]
+        )
+        formula.integrate(adaptation)
+        output = formula.to_str(self.spot_formatter)
+        expected_output = "G((emergency -> F(!car)))"
+        self.assertEqual(expected_output, output)
+        self.assertEqual(GR1TemporalType.INVARIANT, formula.temp_type)
+
+    def test_spot_justice_implication_formula(self):
+        formula = GR1Formula(
+            temp_type=GR1TemporalType.JUSTICE,
+            antecedent=AtomicProposition("a", True),
+            consequent=AtomicProposition("b", False)
+        )
+        output = formula.to_str(self.spot_formatter)
+        expected_output = "G(F((a -> !b)))"
+        self.assertEqual(expected_output, output)
+
+    def test_spot_integrate_justice_implication_normalised_2(self):
+        formula = GR1Formula(
+            temp_type=GR1TemporalType.JUSTICE,
+            antecedent=None,
+            consequent=Or(Not(AtomicProposition("emergency", True)), AtomicProposition("car", False))
+        )
+        adaptation = Adaptation(
+            type="consequent_exception",
+            formula_name="no_car_often",
+            disjunction_index=0,
+            atom_temporal_operators=[('current', 'emergency=true')]
+        )
+        formula.integrate(adaptation)
+        output = formula.to_str(self.spot_formatter)
+        expected_output = "G(F(((!(emergency) | !car) | emergency)))"
         self.assertEqual(expected_output, output)

@@ -49,9 +49,10 @@ class TestRepairBro(BaseTestCase):
             spec_2,
             is_debug=True
         )
-        self.assertEqual(len(new_specs), 1)
-        expected_spec = SpectraSpecification.from_file(f"test_files/expected/merge_two/arbiter_0_1.spectra")
-        self.assertEqual(new_specs[0], expected_spec)
+        expected_dir = "test_files/expected/merge_two/arbiter/1+2/"
+        expected_specs = [SpectraSpecification.from_file(os.path.join(expected_dir, file_name))
+                          for file_name in os.listdir(expected_dir) if file_name.endswith('.spectra')]
+        self.are_specification_sets_equivalent(expected_specs, new_specs)
 
     def test_merge_two_solutions_arbiter_1_2(self):
         case_study_name = 'arbiter_1_2'
