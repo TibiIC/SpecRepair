@@ -23,6 +23,7 @@ from spec_repair.util.file_util import read_file_lines, validate_spectra_file
 from spec_repair.util.formula_util import get_disjuncts_from_disjunction
 from spec_repair.util.spec_util import format_spec
 from spec_repair.weakness_measurement_davide.weakness_user_friendly import computeWeakness, Weakness
+from spec_repair.exceptions import NameClashException
 
 
 class FormulaDataPoint(TypedDict):
@@ -55,26 +56,24 @@ class SpectraSpecification(ISpecification):
 
     def __init__(self, spec_txt: str):
         spec_txt = copy.deepcopy(spec_txt)
-        self._formulas_df: pd.DataFrame = None
+        self._formulas_df: pd.DataFrame = pd.DataFrame(columns=["name", "type", "when", "formula"])
         self._module_name: str
         self._atoms: Set[SpectraAtom] = set()
         self._parser = SpectraFormulaParser()
         self._formater = SpectraFormulaFormatter()
         self._asp_formatter = ASPExceptionFormatter()
-        formula_list = []
         spec_lines = spec_txt.splitlines()
         try:
             for i, line in enumerate(spec_lines):
                 if line.find("module") >= 0:
                     self._module_name = line.split()[1]
                 elif line.find("--") >= 0:
-                    name: str = re.search(r'--\s*(\S+)', line).group(1)
+                    name: str = re.search(r'--\s*(.+)', line).group(1)
                     type_txt: str = re.search(r'\s*(asm|assumption|gar|guarantee)\s*--', line).group(1)
                     type: GR1FormulaType = GR1FormulaType.from_str(type_txt)
                     formula_txt: str = re.sub('\s*', '', spec_lines[i + 1])
                     formula: GR1Formula = GR1Formula.from_str(formula_txt, self._parser)
-                    when: GR1TemporalType = formula.temp_type
-                    formula_list.append([name, type, when, formula])
+                    self.add_formula(formula, name, type)
                 else:
                     atom: Optional[SpectraAtom] = SpectraAtom.from_str(line)
                     if atom:
@@ -82,8 +81,6 @@ class SpectraSpecification(ISpecification):
 
         except AttributeError as e:
             raise e
-
-        self._formulas_df = pd.DataFrame(formula_list, columns=["name", "type", "when", "formula"])
 
     def integrate_multiple(self, adaptations: List[Adaptation]):
         for adaptation in adaptations:
@@ -305,6 +302,44 @@ class SpectraSpecification(ISpecification):
         this_spot: str = self.to_formatted_string(formatter)
         signature: List[str] = [atom.name for atom in self.get_atoms()]
         return computeWeakness(this_spot, signature)
+
+    def add_formula(self, new_formula: GR1Formula, name: str, formula_type: GR1FormulaType):
+        when: GR1TemporalType = new_formula.temp_type
+        # Check if a formula with the same name, type, and when already exists
+        existing = self._formulas_df[
+            (self._formulas_df['name'] == name)
+            ]
+
+        if not existing.empty:
+            raise NameClashException(
+                f"Formula with name '{name}', type '{formula_type}', and temporal type '{when}' already exists"
+            )
+
+        new_row = pd.DataFrame([[name, formula_type, when, new_formula]], columns=["name", "type", "when", "formula"])
+        self._formulas_df = pd.concat([self._formulas_df, new_row], ignore_index=True)
+
+    def rename_formula(self, old_name: str, new_name: str):
+        # Check if old_name exists
+        existing_old = self._formulas_df[self._formulas_df['name'] == old_name]
+        if existing_old.empty:
+            raise ValueError(f"Formula with name '{old_name}' does not exist")
+
+        # Check if new_name would create a clash
+        existing_new = self._formulas_df[self._formulas_df['name'] == new_name]
+        if not existing_new.empty:
+            raise NameClashException(f"Formula with name '{new_name}' already exists")
+
+        # Update the name
+        self._formulas_df.loc[self._formulas_df['name'] == old_name, 'name'] = new_name
+
+    def remove_formula(self, name: str):
+        # Check if formula exists
+        existing = self._formulas_df[self._formulas_df['name'] == name]
+        if existing.empty:
+            raise ValueError(f"Formula with name '{name}' does not exist")
+
+        # Remove the formula
+        self._formulas_df = self._formulas_df[self._formulas_df['name'] != name].reset_index(drop=True)
 
 
 def does_left_imply_right(left_exp: str, right_exp: str) -> bool:

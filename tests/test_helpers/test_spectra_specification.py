@@ -1,5 +1,3 @@
-import unittest
-
 import numpy as np
 import pandas as pd
 import spot
@@ -14,6 +12,7 @@ from spec_repair.helpers.spectra_atom import SpectraAtom
 from spec_repair.helpers.formatters.spot_specification_formatter import SpotSpecificationFormatter
 from spec_repair.ltl_types import GR1FormulaType, GR1TemporalType
 from spec_repair.weakness_measurement_davide.weakness_user_friendly import Weakness
+from spec_repair.exceptions import NameClashException
 from tests.base_test_case import BaseTestCase
 from tests.test_common_utility_strings.specs import spec_perf, spec_fixed_perf, spec_fixed_imperf, \
     spec_asm_eq_gar_weaker, spec_asm_stronger_gar_eq
@@ -47,6 +46,50 @@ class TestSpectraSpecification(BaseTestCase):
         for formula in formulas:
             self.assertIn(formula.to_str(self.formatter), expected_formulas)
 
+    def test_add_formula_to_specification(self):
+        spec_file = "../input-files/case-studies/spectra/arbiter/strong.spectra"
+        spec: SpectraSpecification = SpectraSpecification.from_file(spec_file)
+        new_formula: GR1Formula = GR1Formula.from_str("GF(a);", self.parser)
+        new_formula_name: str = "a_always_eventually"
+        spec.add_formula(new_formula, name=new_formula_name, formula_type=GR1FormulaType.ASM)
+        # Check if new_formula belongs to any cell in the dataframe column "formulas"
+        self.assertTrue((spec._formulas_df['name'] == new_formula_name).any())
+        actual_formula_row = spec._formulas_df[spec._formulas_df['name'] == new_formula_name]
+
+        self.assertEqual(actual_formula_row['name'].iloc[0], new_formula_name)
+        self.assertEqual(actual_formula_row['formula'].iloc[0].to_str(self.formatter),
+                         new_formula.to_str(self.formatter))
+        self.assertEqual(actual_formula_row['when'].iloc[0], GR1TemporalType.JUSTICE)
+        self.assertEqual(actual_formula_row['type'].iloc[0], GR1FormulaType.ASM)
+
+    def test_remove_formula_from_specification(self):
+        spec_file = "../input-files/case-studies/spectra/arbiter/strong.spectra"
+        spec: SpectraSpecification = SpectraSpecification.from_file(spec_file)
+        formula_name: str = "a_always"
+        spec.remove_formula(name=formula_name)
+        # Check if new_formula belongs to any cell in the dataframe column "formulas"
+        self.assertFalse((spec._formulas_df['name'] == formula_name).any())
+
+    def test_rename_formula_in_specification(self):
+        spec_file = "../input-files/case-studies/spectra/arbiter/strong.spectra"
+        spec: SpectraSpecification = SpectraSpecification.from_file(spec_file)
+        formula_name: str = "a_always"
+        new_formula_name: str = "a_always_sucks"
+        spec.rename_formula(old_name=formula_name, new_name=new_formula_name)
+        # Check if new_formula belongs to any cell in the dataframe column "formulas"
+        self.assertFalse((spec._formulas_df['name'] == formula_name).any())
+        self.assertTrue((spec._formulas_df['name'] == new_formula_name).any())
+
+    def test_cannot_add_formula_existing_name_to_specification(self):
+        spec_file = "../input-files/case-studies/spectra/arbiter/strong.spectra"
+        spec: SpectraSpecification = SpectraSpecification.from_file(spec_file)
+        new_formula: GR1Formula = GR1Formula.from_str("G(a);", self.parser)
+        new_formula_name: str = "a_always"
+
+        with self.assertRaises(NameClashException):
+            spec.add_formula(new_formula, name=new_formula_name, formula_type=GR1FormulaType.ASM)
+
+
     def test_file_to_specification_records_all_atoms(self):
         spec_file = "./test_files/minepump_strong.spectra"
         spec = SpectraSpecification.from_file(spec_file)
@@ -64,7 +107,6 @@ class TestSpectraSpecification(BaseTestCase):
         spec_file = "./test_files/submarine/submarine_boolean_64_92.spectra"
         spec = SpectraSpecification.from_file(spec_file)
         print(spec._atoms)
-
 
     def test_integrate_learning_rule(self):
         spec_file = "./test_files/minepump_strong.spectra"

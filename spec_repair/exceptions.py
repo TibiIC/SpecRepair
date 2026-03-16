@@ -20,3 +20,7 @@ class DeadlockRequiredException(Exception):
 
 class LearningException(Exception):
     pass
+
+
+class NameClashException(Exception):
+    pass
