@@ -177,17 +177,18 @@ assumption(a_always).
 antecedent_holds(a_always,T,S):-
 \ttrace(S),
 \ttimepoint(T,S),
+\tnot weak_timepoint(T,S),
 \tnot antecedent_exception(a_always,0,T,S).
 
 consequent_holds(a_always,T,S):-
 \ttrace(S),
 \ttimepoint(T,S),
-\troot_consequent_holds(current,a_always,0,T,S).
+\tnot weak_timepoint(T,S),
+\troot_consequent_holds(current,a_always,0,0,T,S).
 
-root_consequent_holds(OP,a_always,0,T1,S):-
+root_consequent_holds(OP,a_always,0,0,T1,S):-
 \ttrace(S),
 \ttimepoint(T1,S),
-\tnot weak_timepoint(T1,S),
 \ttimepoint(T2,S),
 \ttemporal_operator(OP),
 \ttimepoint_of_op(OP,T1,T2,S),
@@ -216,12 +217,12 @@ guarantee(guarantee1_1).
 antecedent_holds(guarantee1_1,T,S):-
 \ttrace(S),
 \ttimepoint(T,S),
+\tnot weak_timepoint(T,S),
 \troot_antecedent_holds(current,guarantee1_1,0,T,S).
 
 root_antecedent_holds(OP,guarantee1_1,0,T1,S):-
 \ttrace(S),
 \ttimepoint(T1,S),
-\tnot weak_timepoint(T1,S),
 \ttimepoint(T2,S),
 \ttemporal_operator(OP),
 \ttimepoint_of_op(OP,T1,T2,S),
@@ -230,12 +231,20 @@ root_antecedent_holds(OP,guarantee1_1,0,T1,S):-
 consequent_holds(guarantee1_1,T,S):-
 \ttrace(S),
 \ttimepoint(T,S),
-\troot_consequent_holds(eventually,guarantee1_1,0,T,S).
+\tnot weak_timepoint(T,S),
+\troot_consequent_holds(eventually,guarantee1_1,0,0,T,S).
 
-root_consequent_holds(OP,guarantee1_1,0,T1,S):-
+root_consequent_holds(OP,guarantee1_1,0,0,T1,S):-
 \ttrace(S),
 \ttimepoint(T1,S),
-\tnot weak_timepoint(T1,S),
+\ttimepoint(T2,S),
+\ttemporal_operator(OP),
+\ttimepoint_of_op(OP,T1,T2,S),
+\troot_consequent_holds(current,guarantee1_1,1,0,T2,S).
+
+root_consequent_holds(OP,guarantee1_1,1,0,T1,S):-
+\ttrace(S),
+\ttimepoint(T1,S),
 \ttimepoint(T2,S),
 \ttemporal_operator(OP),
 \ttimepoint_of_op(OP,T1,T2,S),
@@ -265,12 +274,12 @@ guarantee(guarantee3_1).
 antecedent_holds(guarantee3_1,T,S):-
 \ttrace(S),
 \ttimepoint(T,S),
+\tnot weak_timepoint(T,S),
 \troot_antecedent_holds(current,guarantee3_1,0,T,S).
 
 root_antecedent_holds(OP,guarantee3_1,0,T1,S):-
 \ttrace(S),
 \ttimepoint(T1,S),
-\tnot weak_timepoint(T1,S),
 \ttimepoint(T2,S),
 \ttemporal_operator(OP),
 \ttimepoint_of_op(OP,T1,T2,S),
@@ -279,12 +288,12 @@ root_antecedent_holds(OP,guarantee3_1,0,T1,S):-
 consequent_holds(guarantee3_1,T,S):-
 \ttrace(S),
 \ttimepoint(T,S),
-\troot_consequent_holds(current,guarantee3_1,0,T,S).
+\tnot weak_timepoint(T,S),
+\troot_consequent_holds(current,guarantee3_1,0,0,T,S).
 
-root_consequent_holds(OP,guarantee3_1,0,T1,S):-
+root_consequent_holds(OP,guarantee3_1,0,0,T1,S):-
 \ttrace(S),
 \ttimepoint(T1,S),
-\tnot weak_timepoint(T1,S),
 \ttimepoint(T2,S),
 \ttemporal_operator(OP),
 \ttimepoint_of_op(OP,T1,T2,S),
@@ -314,17 +323,18 @@ guarantee(guarantee4).
 
 antecedent_holds(guarantee4,T,S):-
 \ttrace(S),
-\ttimepoint(T,S).
+\ttimepoint(T,S),
+\tnot weak_timepoint(T,S).
 
 consequent_holds(guarantee4,T,S):-
 \ttrace(S),
 \ttimepoint(T,S),
-\troot_consequent_holds(current,guarantee4,0,T,S).
+\tnot weak_timepoint(T,S),
+\troot_consequent_holds(current,guarantee4,0,0,T,S).
 
-root_consequent_holds(OP,guarantee4,0,T1,S):-
+root_consequent_holds(OP,guarantee4,0,0,T1,S):-
 \ttrace(S),
 \ttimepoint(T1,S),
-\tnot weak_timepoint(T1,S),
 \ttimepoint(T2,S),
 \ttemporal_operator(OP),
 \ttimepoint_of_op(OP,T1,T2,S),
@@ -333,12 +343,12 @@ root_consequent_holds(OP,guarantee4,0,T1,S):-
 consequent_holds(guarantee4,T,S):-
 \ttrace(S),
 \ttimepoint(T,S),
-\troot_consequent_holds(current,guarantee4,1,T,S).
+\tnot weak_timepoint(T,S),
+\troot_consequent_holds(current,guarantee4,0,1,T,S).
 
-root_consequent_holds(OP,guarantee4,1,T1,S):-
+root_consequent_holds(OP,guarantee4,0,1,T1,S):-
 \ttrace(S),
 \ttimepoint(T1,S),
-\tnot weak_timepoint(T1,S),
 \ttimepoint(T2,S),
 \ttemporal_operator(OP),
 \ttimepoint_of_op(OP,T1,T2,S),
@@ -380,18 +390,6 @@ root_consequent_holds(OP,guarantee4,1,T1,S):-
             "../input-files/case-studies/spectra/minepump/strong.spectra")
         self.assertFalse(spec_strong.is_trivial_true(GR1FormulaType.ASM))
         self.assertFalse(spec_strong.is_trivial_false(GR1FormulaType.ASM))
-
-    @unittest.skip("Test is ignored as ignore_initial currently not supported")
-    def test_minepump_is_trivial_no_initial(self):
-        spec_ideal: SpectraSpecification = SpectraSpecification.from_file(
-            "../input-files/case-studies/spectra/minepump/ideal.spectra")
-        self.assertFalse(spec_ideal.is_trivial_true(GR1FormulaType.ASM, ignore_initial=True))
-        self.assertFalse(spec_ideal.is_trivial_false(GR1FormulaType.ASM, ignore_initial=True))
-
-        spec_strong: SpectraSpecification = SpectraSpecification.from_file(
-            "../input-files/case-studies/spectra/minepump/strong.spectra")
-        self.assertFalse(spec_strong.is_trivial_true(GR1FormulaType.ASM, ignore_initial=True))
-        self.assertFalse(spec_strong.is_trivial_false(GR1FormulaType.ASM, ignore_initial=True))
 
     def test_extract_gr1_expressions_of_type_spot(self):
         spec_ideal: SpectraSpecification = SpectraSpecification.from_file(
