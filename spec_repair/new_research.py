@@ -1,3 +1,6 @@
+from copy import deepcopy
+from typing import Any
+
 from spec_repair.components.new_spec_encoder import get_violated_expression_names_of_type
 from spec_repair.components.learners.optimising_final_spec_learner import OptimisingSpecLearner
 from spec_repair.enums import Learning
@@ -80,6 +83,10 @@ def get_all_trivial_solution(spec: SpectraSpecification, violation_trace: list[s
         lambda x: (x['type'] == GR1FormulaType.GAR) | (~x['name'].isin(violated_assumptions))
     )
 
+    return get_all_trivial_solutions_guarantee_only(new_spec)
+
+
+def get_all_trivial_solutions_guarantee_only(new_spec: SpectraSpecification) -> list[Any]:
     # Step 2: Find unrealizable cores
     unrealisable_cores = run_all_unrealisable_cores(new_spec.to_str(is_to_compile=True))
     if not (unrealisable_cores):
@@ -90,10 +97,10 @@ def get_all_trivial_solution(spec: SpectraSpecification, violation_trace: list[s
     trivial_specs = []
     guarantees_to_remove_list = all_minimal_hitting_sets(unrealisable_cores)
     for i, guarantees_to_remove in enumerate(guarantees_to_remove_list):
+        trivial_spec = deepcopy(new_spec)
         print("Guarantees to remove:", guarantees_to_remove)
-        trivial_spec = new_spec.extract_sub_specification(
-            lambda x: (x['type'] == GR1FormulaType.ASM) | (~x['name'].isin(guarantees_to_remove))
-        )
+        for guarantee_to_remove in guarantees_to_remove:
+            trivial_spec.remove_formula(guarantee_to_remove)
         trivial_specs.append(trivial_spec)
 
     return trivial_specs

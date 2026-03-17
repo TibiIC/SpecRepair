@@ -10,6 +10,7 @@ from spec_repair.helpers.formatters.spot_specification_formatter import SpotSpec
 from spec_repair.helpers.gr1_formula import GR1Formula
 from spec_repair.helpers.spectra_specification import SpectraSpecification
 from spec_repair.ltl_types import GR1FormulaType, GR1TemporalType
+from spec_repair.new_research import get_all_trivial_solutions_guarantee_only
 from spec_repair.util.spot_ltl_conjoining_util import conjoin_and_simplify
 
 
@@ -29,15 +30,12 @@ class RepairBro:
         assert self._original_spec.implies(spec1, GR1FormulaType.ASM) and self._original_spec.implies(spec2, GR1FormulaType.ASM)
         assert self._original_spec.implies(spec1, GR1FormulaType.GAR) and self._original_spec.implies(spec2, GR1FormulaType.GAR)
 
-        if self._original_spec.equivalent_to(spec1, GR1FormulaType.GAR) and self._original_spec.equivalent_to(spec2, GR1FormulaType.GAR):
-            print("Guarantees equivalent! There exists a single solution, where the assumptions are conjoined!")
-            gar_only_spec = self._original_spec.extract_sub_specification(lambda x: (x['type'] == GR1FormulaType.GAR))
-            asm_only_spec_1 = spec1.extract_sub_specification(lambda x: (x['type'] == GR1FormulaType.ASM))
-            asm_only_spec_2 = spec2.extract_sub_specification(lambda x: (x['type'] == GR1FormulaType.ASM))
-            conjoined_asms_spec = self._merge_two_assumption_sets(asm_only_spec_1, asm_only_spec_2)
-            merged_spec = conjoined_asms_spec.join_with_spec(gar_only_spec)
-            assert merged_spec.is_realisable()
+
+        merged_spec = spec1.merge(spec2)
+        if self._oracle.is_realisable(merged_spec):
             return [merged_spec]
+        else:
+            return get_all_trivial_solutions_guarantee_only(merged_spec)
 
     def _merge_two_assumption_sets(self, asm_only_spec_1: SpectraSpecification, asm_only_spec_2: SpectraSpecification):
         asm_only_spec = self._original_spec.extract_sub_specification(lambda x: (x['type'] == GR1FormulaType.ASM))

@@ -1,9 +1,15 @@
 import os
 
+import spot
+
 from main.solution_merger import RepairBro
 from spec_repair.components.interfaces.ispecification import ISpecification
 from spec_repair.components.oracles.spectra_gr1_oracle import SpectraGR1Oracle
+from spec_repair.helpers.formatters.spectra_formula_formatter import SpectraFormulaFormatter
+from spec_repair.helpers.formatters.spot_specification_formatter import SpotSpecificationFormatter
+from spec_repair.helpers.parsers.spectra_formula_parser import SpectraFormulaParser
 from spec_repair.helpers.spectra_specification import SpectraSpecification, Self
+from spec_repair.ltl_types import GR1FormulaType
 from tests.base_test_case import BaseTestCase
 from datetime import datetime
 
@@ -35,6 +41,13 @@ class TestRepairBro(BaseTestCase):
     def setUpClass(cls):
         super().setUpClass()
         cls.date_str = datetime.now().strftime("%Y-%m-%d")
+        cls.maxDiff = None
+        cls.parser = SpectraFormulaParser()
+        cls.formatter = SpectraFormulaFormatter()
+        cls.spot_formatter_asm = SpotSpecificationFormatter(GR1FormulaType.ASM)
+        cls.spot_formatter_gar = SpotSpecificationFormatter(GR1FormulaType.GAR)
+        # Some template spec for method testing
+        cls.spec = SpectraSpecification.from_file("./test_files/minepump_strong.spectra")
 
     def test_merge_two_solutions_arbiter_0_1(self):
         case_study_name = 'arbiter_0_1'
@@ -49,7 +62,7 @@ class TestRepairBro(BaseTestCase):
             spec_2,
             is_debug=True
         )
-        expected_dir = "test_files/expected/merge_two/arbiter/1+2/"
+        expected_dir = "test_files/expected/merge_two/arbiter/0+1/"
         expected_specs = [SpectraSpecification.from_file(os.path.join(expected_dir, file_name))
                           for file_name in os.listdir(expected_dir) if file_name.endswith('.spectra')]
         self.are_specification_sets_equivalent(expected_specs, new_specs)
@@ -72,11 +85,6 @@ class TestRepairBro(BaseTestCase):
         expected_specs = [SpectraSpecification.from_file(os.path.join(expected_dir, file_name))
                           for file_name in os.listdir(expected_dir) if file_name.endswith('.spectra')]
         self.are_specification_sets_equivalent(expected_specs, new_specs)
-
-    def are_specification_sets_equivalent(self, expected_specs: list[SpectraSpecification], new_specs: list[ISpecification]):
-        self.assertEqual(len(new_specs), len(expected_specs))
-        for new_spec in new_specs:
-            self.assertIn(new_spec, expected_specs)
 
     def test_merge_two_solutions_arbiter_1_3(self):
         case_study_name = 'arbiter_1_3'
@@ -124,6 +132,20 @@ class TestRepairBro(BaseTestCase):
         repair_bro = RepairBro(original_spec=original_spec, oracle=SpectraGR1Oracle())
         new_specs = repair_bro.merge_two_solutions(spec1, spec2)
         return new_specs
+
+    def are_specification_sets_equivalent(self, expected_specs: list[SpectraSpecification], new_specs: list[ISpecification]):
+        self.assertEqual(len(expected_specs), len(new_specs))
+        for new_spec in new_specs:
+            self.assertTrue(self._has_equivalent_in_list(new_spec, expected_specs),
+                            f"New spec not found in expected_specs")
+
+    def _has_equivalent_in_list(self, spec: SpectraSpecification, spec_list: list[SpectraSpecification]) -> bool:
+        for spec_candidate in spec_list:
+            if (spec.equivalent_to(spec_candidate, GR1FormulaType.ASM) and
+                    spec.equivalent_to(spec_candidate, GR1FormulaType.GAR)):
+                return True
+        return False
+
 
 # Generate individual test methods for all minepump combinations
 for i in range(0, 6):

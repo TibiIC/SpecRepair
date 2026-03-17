@@ -104,6 +104,9 @@ class TestSpectraSpecification(BaseTestCase):
         for spec in specs[1:]:
             spec_merged = spec_merged.merge(spec)
 
+        self._validate_merge_is_equivalent(spec_merged, specs)
+
+    def _validate_merge_is_equivalent(self, spec_merged: SpectraSpecification, specs: list[SpectraSpecification]):
         # Build expected formulas by concatenating all specs
         spec_asm_parts: list[str] = []
         spec_gar_parts: list[str] = []
