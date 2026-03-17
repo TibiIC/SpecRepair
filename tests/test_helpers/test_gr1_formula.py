@@ -918,3 +918,115 @@ class TestGR1Formula(TestCase):
         output = formula.to_str(self.spot_formatter)
         expected_output = "G(F(((!(emergency) | !car) | emergency)))"
         self.assertEqual(expected_output, output)
+
+    def test_formula_equality_syntactic_identical_construction(self):
+        formula1 = GR1Formula(
+            temp_type=GR1TemporalType.INVARIANT,
+            antecedent=AtomicProposition("a", True),
+            consequent=AtomicProposition("b", True),
+        )
+        formula2 = GR1Formula(
+            temp_type=GR1TemporalType.INVARIANT,
+            antecedent=AtomicProposition("a", True),
+            consequent=AtomicProposition("b", True),
+        )
+        self.assertEqual(formula1, formula2)
+
+    def test_formula_equality_syntactic_same_instance(self):
+        formula = GR1Formula(
+            temp_type=GR1TemporalType.INVARIANT,
+            antecedent=None,
+            consequent=Or(AtomicProposition("highwater", False), AtomicProposition("methane", False)),
+        )
+        self.assertEqual(formula, formula)
+
+    def test_formula_equality_semantic_double_negation(self):
+        formula1 = GR1Formula(
+            temp_type=GR1TemporalType.INVARIANT,
+            antecedent=None,
+            consequent=AtomicProposition("a", True),
+        )
+        formula2 = GR1Formula(
+            temp_type=GR1TemporalType.INVARIANT,
+            antecedent=None,
+            consequent=Not(Not(AtomicProposition("a", True))),
+        )
+        self.assertEqual(formula1, formula2)
+
+    def test_formula_equality_semantic_commutative_and(self):
+        formula1 = GR1Formula(
+            temp_type=GR1TemporalType.INVARIANT,
+            antecedent=None,
+            consequent=And(AtomicProposition("a", True), AtomicProposition("b", True)),
+        )
+        formula2 = GR1Formula(
+            temp_type=GR1TemporalType.INVARIANT,
+            antecedent=None,
+            consequent=And(AtomicProposition("b", True), AtomicProposition("a", True)),
+        )
+        self.assertEqual(formula1, formula2)
+
+    def test_formula_inequality_different_temporal_types(self):
+        formula1 = GR1Formula(
+            temp_type=GR1TemporalType.INVARIANT,
+            antecedent=None,
+            consequent=AtomicProposition("pump", True),
+        )
+        formula2 = GR1Formula(
+            temp_type=GR1TemporalType.JUSTICE,
+            antecedent=None,
+            consequent=AtomicProposition("pump", True),
+        )
+        self.assertNotEqual(formula1, formula2)
+
+    def test_formula_inequality_different_antecedents(self):
+        formula1 = GR1Formula(
+            temp_type=GR1TemporalType.INVARIANT,
+            antecedent=AtomicProposition("a", True),
+            consequent=AtomicProposition("b", True),
+        )
+        formula2 = GR1Formula(
+            temp_type=GR1TemporalType.INVARIANT,
+            antecedent=AtomicProposition("c", True),
+            consequent=AtomicProposition("b", True),
+        )
+        self.assertNotEqual(formula1, formula2)
+
+    def test_formula_inequality_different_consequents(self):
+        formula1 = GR1Formula(
+            temp_type=GR1TemporalType.INVARIANT,
+            antecedent=AtomicProposition("a", True),
+            consequent=AtomicProposition("b", True),
+        )
+        formula2 = GR1Formula(
+            temp_type=GR1TemporalType.INVARIANT,
+            antecedent=AtomicProposition("a", True),
+            consequent=AtomicProposition("c", True),
+        )
+        self.assertNotEqual(formula1, formula2)
+
+    def test_formula_inequality_antecedent_presence(self):
+        formula1 = GR1Formula(
+            temp_type=GR1TemporalType.INVARIANT,
+            antecedent=None,
+            consequent=AtomicProposition("b", True),
+        )
+        formula2 = GR1Formula(
+            temp_type=GR1TemporalType.INVARIANT,
+            antecedent=AtomicProposition("a", True),
+            consequent=AtomicProposition("b", True),
+        )
+        self.assertNotEqual(formula1, formula2)
+
+    def test_formula_equality_one_has_no_antecedent(self):
+        formula1 = GR1Formula(
+            temp_type=GR1TemporalType.INVARIANT,
+            antecedent=None,
+            consequent=Or(AtomicProposition("a", False), AtomicProposition("b", True)),
+        )
+        formula2 = GR1Formula(
+            temp_type=GR1TemporalType.INVARIANT,
+            antecedent=AtomicProposition("a", True),
+            consequent=AtomicProposition("b", True),
+        )
+        self.assertEqual(formula1, formula2)

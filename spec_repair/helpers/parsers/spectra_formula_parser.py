@@ -97,6 +97,13 @@ class LTLTokenizer:
 
 
 class SpectraFormulaParser:
+    _instance = None
+
+    def __new__(cls):
+        if cls._instance is None:
+            cls._instance = super().__new__(cls)
+        return cls._instance
+
     def parse(self, text: str):
         self.lexer = LTLTokenizer(text)
         expr = self.expression()

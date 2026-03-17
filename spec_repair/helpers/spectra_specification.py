@@ -1,6 +1,7 @@
 import copy
 import re
 import subprocess
+from collections import Counter
 from copy import deepcopy
 from typing import TypedDict, Optional, TypeVar, List, Set, Any, Callable
 
@@ -70,10 +71,10 @@ class SpectraSpecification(ISpecification):
                 elif line.find("--") >= 0:
                     name: str = re.search(r'--\s*(.+)', line).group(1)
                     type_txt: str = re.search(r'\s*(asm|assumption|gar|guarantee)\s*--', line).group(1)
-                    type: GR1FormulaType = GR1FormulaType.from_str(type_txt)
+                    formula_type: GR1FormulaType = GR1FormulaType.from_str(type_txt)
                     formula_txt: str = re.sub('\s*', '', spec_lines[i + 1])
                     formula: GR1Formula = GR1Formula.from_str(formula_txt, self._parser)
-                    self.add_formula(formula, name, type)
+                    self.add_formula(formula, name, formula_type)
                 else:
                     atom: Optional[SpectraAtom] = SpectraAtom.from_str(line)
                     if atom:
@@ -340,6 +341,79 @@ class SpectraSpecification(ISpecification):
 
         # Remove the formula
         self._formulas_df = self._formulas_df[self._formulas_df['name'] != name].reset_index(drop=True)
+
+    def merge(self, other: Self) -> Self:
+        """
+        Merge this specification with another specification.
+        Returns a new specification containing all distinct formulas from both specifications.
+
+        - If name and formula are identical, skip the duplicate
+        - If names clash but formulas differ, rename both with counter suffix (name_0, name_1)
+
+        Args:
+            other: The specification to merge with this one
+
+        Returns:
+            A new merged specification
+        """
+        merged_spec = deepcopy(self)
+
+        # Track all formula names and their formulas for clash detection
+        name_to_formulas: dict[str, list[tuple[GR1Formula, GR1FormulaType, GR1TemporalType, str]]] = {}
+
+        # Collect formulas from the current specification
+        for _, row in merged_spec._formulas_df.iterrows():
+            name: str = row['name']
+            if name not in name_to_formulas:
+                name_to_formulas[name] = []
+            name_to_formulas[name].append((row['formula'], row['type'], row['when'], 'self'))
+
+        # Process formulas from the other specification
+        for _, row in other._formulas_df.iterrows():
+            name = row['name']
+            formula = row['formula']
+            formula_type = row['type']
+            when = row['when']
+
+            if name not in name_to_formulas:
+                # No clash, add directly
+                name_to_formulas[name] = [(formula, formula_type, when, 'other')]
+            else:
+                # Check if identical formula with same name already exists
+                is_duplicate = False
+                for existing_formula, existing_type, existing_when, _ in name_to_formulas[name]:
+                    if (existing_formula == formula and
+                            existing_type == formula_type and
+                            existing_when == when):
+                        is_duplicate = True
+                        break
+
+                if not is_duplicate:
+                    # Name clash with different formula
+                    name_to_formulas[name].append((formula, formula_type, when, 'other'))
+
+        # Rebuild the specification with renamed formulas where needed
+        merged_spec._formulas_df = pd.DataFrame(columns=["name", "type", "when", "formula"])
+
+        for base_name, formulas_list in name_to_formulas.items():
+            if len(formulas_list) == 1:
+                # No clash, use original name
+                formula, formula_type, when, _ = formulas_list[0]
+                new_row = pd.DataFrame([[base_name, formula_type, when, formula]],
+                                       columns=["name", "type", "when", "formula"])
+                merged_spec._formulas_df = pd.concat([merged_spec._formulas_df, new_row], ignore_index=True)
+            else:
+                # Multiple formulas with same name, rename with counter
+                for idx, (formula, formula_type, when, _) in enumerate(formulas_list):
+                    new_name = f"{base_name}_{idx}"
+                    new_row = pd.DataFrame([[new_name, formula_type, when, formula]],
+                                           columns=["name", "type", "when", "formula"])
+                    merged_spec._formulas_df = pd.concat([merged_spec._formulas_df, new_row], ignore_index=True)
+
+        # Merge atoms from both specifications
+        merged_spec._atoms = self._atoms.union(other._atoms)
+
+        return merged_spec
 
 
 def does_left_imply_right(left_exp: str, right_exp: str) -> bool:

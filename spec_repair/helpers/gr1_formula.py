@@ -1,7 +1,10 @@
 from copy import deepcopy
 from typing import TypeVar, Optional
 
+import spot
+
 from spec_repair.helpers.adaptation_learned import Adaptation
+from spec_repair.helpers.formatters.spot_formula_formatter import SpotFormulaFormatter
 from spec_repair.helpers.parsers.spectra_formula_parser import SpectraFormulaParser
 from spec_repair.ltl_types import GR1TemporalType
 from spec_repair.util.formula_util import disjoin_all, get_disjuncts_from_disjunction
@@ -28,6 +31,7 @@ class GR1Formula:
         self.consequent = consequent
         # TODO: create separate parser for ILASP output. for now use this
         self.ilasp_parser = SpectraFormulaParser()
+        self.spot_formatter = SpotFormulaFormatter()
 
     @staticmethod
     def from_str(formula: str, parser: ILTLParser) -> Self:
@@ -174,6 +178,14 @@ class GR1Formula:
     def __hash__(self):
         antecedent_hash = hash(str(self.antecedent)) if self.antecedent is not None else 0
         return hash((self.temp_type, str(antecedent_hash), hash(str(self.consequent))))
+
+    def __eq__(self, other):
+        formula1 = spot.formula(self.to_str(formatter=self.spot_formatter))
+        formula2 = spot.formula(other.to_str(formatter=self.spot_formatter))
+        return spot.are_equivalent(formula1, formula2)
+
+    def __repr__(self):
+        return self.to_str(formatter=self.spot_formatter)
 
     @staticmethod
     def remove_temporal_operators(this_formula: LTLFormula) -> LTLFormula:

@@ -75,7 +75,8 @@ class TestRepairBro(BaseTestCase):
 
     def are_specification_sets_equivalent(self, expected_specs: list[SpectraSpecification], new_specs: list[ISpecification]):
         self.assertEqual(len(new_specs), len(expected_specs))
-        self.assertIn(new_specs[0], expected_specs)
+        for new_spec in new_specs:
+            self.assertIn(new_spec, expected_specs)
 
     def test_merge_two_solutions_arbiter_1_3(self):
         case_study_name = 'arbiter_1_3'

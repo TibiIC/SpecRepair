@@ -25,6 +25,8 @@ class TestSpectraSpecification(BaseTestCase):
         cls.maxDiff = None
         cls.parser = SpectraFormulaParser()
         cls.formatter = SpectraFormulaFormatter()
+        cls.spot_formatter_asm = SpotSpecificationFormatter(GR1FormulaType.ASM)
+        cls.spot_formatter_gar = SpotSpecificationFormatter(GR1FormulaType.GAR)
         # Some template spec for method testing
         cls.spec = SpectraSpecification.from_file("./test_files/minepump_strong.spectra")
 
@@ -89,6 +91,26 @@ class TestSpectraSpecification(BaseTestCase):
         with self.assertRaises(NameClashException):
             spec.add_formula(new_formula, name=new_formula_name, formula_type=GR1FormulaType.ASM)
 
+    def test_merge_specifications(self):
+        input_specs_dir = "./test_files/maximal_solutions_from_ssh"
+        spec_1: SpectraSpecification = SpectraSpecification.from_file(f"{input_specs_dir}/arbiter_0.spectra")
+        spec_2: SpectraSpecification = SpectraSpecification.from_file(f"{input_specs_dir}/arbiter_1.spectra")
+        spec_merged: SpectraSpecification = spec_1.merge(spec_2)
+
+        spec_1_spot_asm: str = spec_1.to_formatted_string(self.spot_formatter_asm)
+        spec_1_spot_gar: str = spec_1.to_formatted_string(self.spot_formatter_gar)
+        spec_2_spot_asm: str = spec_2.to_formatted_string(self.spot_formatter_asm)
+        spec_2_spot_gar: str = spec_2.to_formatted_string(self.spot_formatter_gar)
+        spec_1_and_2_spot_asm: str = f"({spec_1_spot_asm})&({spec_2_spot_asm})"
+        spec_1_and_2_spot_gar: str = f"({spec_1_spot_gar})&({spec_2_spot_gar})"
+        spec_merged_spot_asm: str = spec_merged.to_formatted_string(self.spot_formatter_asm)
+        spec_merged_spot_gar: str = spec_merged.to_formatted_string(self.spot_formatter_gar)
+        print(spec_1_and_2_spot_asm)
+        print(spec_merged_spot_asm)
+        print(spec_1_and_2_spot_gar)
+        print(spec_merged_spot_gar)
+        self.assertTrue(spot.are_equivalent(spot.formula(spec_1_and_2_spot_asm), spot.formula(spec_merged_spot_asm)))
+        self.assertTrue(spot.are_equivalent(spot.formula(spec_1_and_2_spot_gar), spot.formula(spec_merged_spot_gar)))
 
     def test_file_to_specification_records_all_atoms(self):
         spec_file = "./test_files/minepump_strong.spectra"
