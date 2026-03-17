@@ -361,6 +361,25 @@ class SpectraSpecification(ISpecification):
         # Track all formula names and their formulas for clash detection
         name_to_formulas: dict[str, list[tuple[GR1Formula, GR1FormulaType, GR1TemporalType, str]]] = {}
 
+
+        # Collect all existing names from both specifications for clash detection
+        all_existing_names: Set[str] = set()
+        for _, row in merged_spec._formulas_df.iterrows():
+            all_existing_names.add(row['name'])
+        for _, row in other._formulas_df.iterrows():
+            all_existing_names.add(row['name'])
+
+
+        # Helper function to generate unique name
+        def generate_unique_name(base_name: str, counter: int) -> str:
+            while True:
+                candidate = f"{base_name}_{counter}"
+                if candidate not in all_existing_names:
+                    all_existing_names.add(candidate)
+                    return candidate
+                counter += 1
+
+
         # Collect formulas from the current specification
         for _, row in merged_spec._formulas_df.iterrows():
             name: str = row['name']
@@ -405,9 +424,9 @@ class SpectraSpecification(ISpecification):
             else:
                 # Multiple formulas with same name, rename with counter
                 for idx, (formula, formula_type, when, _) in enumerate(formulas_list):
-                    new_name = f"{base_name}_{idx}"
+                    new_name = generate_unique_name(base_name, idx)
                     new_row = pd.DataFrame([[new_name, formula_type, when, formula]],
-                                           columns=["name", "type", "when", "formula"])
+                                                   columns=["name", "type", "when", "formula"])
                     merged_spec._formulas_df = pd.concat([merged_spec._formulas_df, new_row], ignore_index=True)
 
         # Merge atoms from both specifications

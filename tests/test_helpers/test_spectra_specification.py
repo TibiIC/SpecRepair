@@ -91,26 +91,62 @@ class TestSpectraSpecification(BaseTestCase):
         with self.assertRaises(NameClashException):
             spec.add_formula(new_formula, name=new_formula_name, formula_type=GR1FormulaType.ASM)
 
-    def test_merge_specifications(self):
-        input_specs_dir = "./test_files/maximal_solutions_from_ssh"
-        spec_1: SpectraSpecification = SpectraSpecification.from_file(f"{input_specs_dir}/arbiter_0.spectra")
-        spec_2: SpectraSpecification = SpectraSpecification.from_file(f"{input_specs_dir}/arbiter_1.spectra")
-        spec_merged: SpectraSpecification = spec_1.merge(spec_2)
+    def _test_merge_specifications(self, spec_file_paths: list[str]):
+        """Helper method to test merging multiple specifications."""
+        # Load all specifications
+        specs: list[SpectraSpecification] = [
+            SpectraSpecification.from_file(file_path)
+            for file_path in spec_file_paths
+        ]
 
-        spec_1_spot_asm: str = spec_1.to_formatted_string(self.spot_formatter_asm)
-        spec_1_spot_gar: str = spec_1.to_formatted_string(self.spot_formatter_gar)
-        spec_2_spot_asm: str = spec_2.to_formatted_string(self.spot_formatter_asm)
-        spec_2_spot_gar: str = spec_2.to_formatted_string(self.spot_formatter_gar)
-        spec_1_and_2_spot_asm: str = f"({spec_1_spot_asm})&({spec_2_spot_asm})"
-        spec_1_and_2_spot_gar: str = f"({spec_1_spot_gar})&({spec_2_spot_gar})"
+        # Merge specifications sequentially
+        spec_merged: SpectraSpecification = specs[0]
+        for spec in specs[1:]:
+            spec_merged = spec_merged.merge(spec)
+
+        # Build expected formulas by concatenating all specs
+        spec_asm_parts: list[str] = []
+        spec_gar_parts: list[str] = []
+
+        for spec in specs:
+            spec_asm_parts.append(f"({spec.to_formatted_string(self.spot_formatter_asm)})")
+            spec_gar_parts.append(f"({spec.to_formatted_string(self.spot_formatter_gar)})")
+
+        expected_spot_asm: str = "&".join(spec_asm_parts)
+        expected_spot_gar: str = "&".join(spec_gar_parts)
+
+        # Get merged formulas
         spec_merged_spot_asm: str = spec_merged.to_formatted_string(self.spot_formatter_asm)
         spec_merged_spot_gar: str = spec_merged.to_formatted_string(self.spot_formatter_gar)
-        print(spec_1_and_2_spot_asm)
-        print(spec_merged_spot_asm)
-        print(spec_1_and_2_spot_gar)
-        print(spec_merged_spot_gar)
-        self.assertTrue(spot.are_equivalent(spot.formula(spec_1_and_2_spot_asm), spot.formula(spec_merged_spot_asm)))
-        self.assertTrue(spot.are_equivalent(spot.formula(spec_1_and_2_spot_gar), spot.formula(spec_merged_spot_gar)))
+
+        # Assert equivalence
+        self.assertTrue(spot.are_equivalent(spot.formula(expected_spot_asm), spot.formula(spec_merged_spot_asm)))
+        self.assertTrue(spot.are_equivalent(spot.formula(expected_spot_gar), spot.formula(spec_merged_spot_gar)))
+
+    def test_merge_two_specifications_where_asms_only_differ(self):
+        input_specs_dir = "./test_files/maximal_solutions_from_ssh"
+        spec_names = ["arbiter_0.spectra", "arbiter_1.spectra"]
+        self._test_merge_specifications([f"{input_specs_dir}/{spec_names}" for spec_names in spec_names])
+
+    def test_merge_three_specifications_where_asms_only_differ(self):
+        input_specs_dir = "./test_files/maximal_solutions_from_ssh"
+        spec_names = ["arbiter_0.spectra", "arbiter_1.spectra", "arbiter_2.spectra"]
+        self._test_merge_specifications([f"{input_specs_dir}/{spec_names}" for spec_names in spec_names])
+
+    def test_merge_four_specifications_where_asms_only_differ(self):
+        input_specs_dir = "./test_files/maximal_solutions_from_ssh"
+        spec_names = ["arbiter_0.spectra", "arbiter_1.spectra", "arbiter_2.spectra", "arbiter_3.spectra"]
+        self._test_merge_specifications([f"{input_specs_dir}/{spec_names}" for spec_names in spec_names])
+
+    def test_merge_five_specifications_where_asms_only_differ(self):
+        input_specs_dir = "./test_files/maximal_solutions_from_ssh"
+        spec_names = ["arbiter_0.spectra", "arbiter_1.spectra", "arbiter_2.spectra", "arbiter_3.spectra", "arbiter_4.spectra"]
+        self._test_merge_specifications([f"{input_specs_dir}/{spec_names}" for spec_names in spec_names])
+
+    def test_merge_six_specifications_where_asms_only_differ(self):
+        input_specs_dir = "./test_files/maximal_solutions_from_ssh"
+        spec_names = ["arbiter_0.spectra", "arbiter_1.spectra", "arbiter_2.spectra", "arbiter_3.spectra", "arbiter_4.spectra", "arbiter_5.spectra"]
+        self._test_merge_specifications([f"{input_specs_dir}/{spec_names}" for spec_names in spec_names])
 
     def test_file_to_specification_records_all_atoms(self):
         spec_file = "./test_files/minepump_strong.spectra"
