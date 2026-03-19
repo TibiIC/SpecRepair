@@ -1,6 +1,8 @@
 import os
+from typing import List
 
 import spot
+from jedi.api import file_name
 
 from main.solution_merger import RepairBro
 from spec_repair.components.interfaces.ispecification import ISpecification
@@ -10,6 +12,7 @@ from spec_repair.helpers.formatters.spot_specification_formatter import SpotSpec
 from spec_repair.helpers.parsers.spectra_formula_parser import SpectraFormulaParser
 from spec_repair.helpers.spectra_specification import SpectraSpecification, Self
 from spec_repair.ltl_types import GR1FormulaType
+from spec_repair.util.file_util import write_to_file
 from tests.base_test_case import BaseTestCase
 from datetime import datetime
 
@@ -121,6 +124,67 @@ class TestRepairBro(BaseTestCase):
         expected_specs = [SpectraSpecification.from_file(os.path.join(expected_dir, file_name))
                           for file_name in os.listdir(expected_dir) if file_name.endswith('.spectra')]
         self.are_specification_sets_equivalent(expected_specs, new_specs)
+
+    def test_merge_all_lift(self):
+        case_study_name = 'lift'
+        case_study_solutions_number = 2
+        case_study_path = f'../input-files/case-studies/spectra/{case_study_name}'
+        input_specs_path = 'test_files/maximal_solutions_from_ssh'
+        all_spec_files: List[str] = [
+            f"{input_specs_path}/{case_study_name}_{i}.spectra"
+            for i in range(0, case_study_solutions_number)
+        ]
+        all_specs: List[SpectraSpecification] = [
+            SpectraSpecification.from_file(spec_file_name)
+            for spec_file_name in all_spec_files
+        ]
+        self.run_merge_all(case_study_name, case_study_path, all_specs)
+
+    def test_merge_all_arbiter(self):
+        case_study_name = 'arbiter'
+        case_study_solutions_number = 6
+        case_study_path = f'../input-files/case-studies/spectra/{case_study_name}'
+        input_specs_path = 'test_files/maximal_solutions_from_ssh'
+        all_spec_files: List[str] = [
+            f"{input_specs_path}/{case_study_name}_{i}.spectra"
+            for i in range(0, case_study_solutions_number)
+        ]
+        all_specs: List[SpectraSpecification] = [
+            SpectraSpecification.from_file(spec_file_name)
+            for spec_file_name in all_spec_files
+        ]
+        self.run_merge_all(case_study_name, case_study_path, all_specs)
+
+    def test_merge_all_minepump(self):
+        case_study_name = 'minepump'
+        case_study_solutions_number = 7
+        case_study_path = f'../input-files/case-studies/spectra/{case_study_name}'
+        input_specs_path = 'test_files/maximal_solutions_from_ssh'
+        all_spec_files: List[str] = [
+            f"{input_specs_path}/{case_study_name}_{i}.spectra"
+            for i in range(0, case_study_solutions_number)
+        ]
+        all_specs: List[SpectraSpecification] = [
+            SpectraSpecification.from_file(spec_file_name)
+            for spec_file_name in all_spec_files
+        ]
+        self.run_merge_all(case_study_name, case_study_path, all_specs)
+
+    def run_merge_all(self, case_study_name, case_study_path, all_specs: List[SpectraSpecification], out_test_dir_name=None):
+        if not out_test_dir_name:
+            out_test_dir_name = f"./test_files/out/merge_all/{case_study_name}_{self.date_str}"
+        if not os.path.exists(out_test_dir_name):
+            os.mkdir(out_test_dir_name)
+        merged_specs: List[SpectraSpecification] = all_specs[0:1]
+        assert len(merged_specs) == 1, "There should be at least one merged spec"
+        for spec in all_specs[1:]:
+            new_merged_specs = []
+            for merged_spec in merged_specs:
+                new_merged_specs.extend(self.run_merge_two(case_study_name, case_study_path, merged_spec, spec, out_test_dir_name=out_test_dir_name))
+            merged_specs = list(set(new_merged_specs))
+        for i, merged_spec in enumerate(merged_specs):
+            write_to_file(f"{out_test_dir_name}/{case_study_name}_merged_{i}.spectra", merged_spec.to_str())
+        return merged_specs
 
     def run_merge_two(self, case_study_name, case_study_path, spec1, spec2, out_test_dir_name=None, is_debug=False):
         if not out_test_dir_name:
