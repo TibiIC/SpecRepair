@@ -151,6 +151,17 @@ class TestSpectraSpecification(BaseTestCase):
         spec_names = ["arbiter_0.spectra", "arbiter_1.spectra", "arbiter_2.spectra", "arbiter_3.spectra", "arbiter_4.spectra", "arbiter_5.spectra"]
         self._test_merge_specifications([f"{input_specs_dir}/{spec_names}" for spec_names in spec_names])
 
+    def test_merge_two_specifications_where_asms_are_equivalent_but_names_of_asms_differ(self):
+        input_specs_dir = "./test_files/maximal_solutions_from_ssh"
+        spec_0 = SpectraSpecification.from_file(f"{input_specs_dir}/arbiter_0.spectra")
+        spec_1 = SpectraSpecification.from_file(f"{input_specs_dir}/arbiter_0.spectra")
+        spec_1.rename_formula("a_always", "a_always_1")
+        spec_merged = spec_0.merge(spec_1)
+        existing_old = spec_merged._formulas_df[spec_merged._formulas_df['name'] == "a_always"]
+        self.assertFalse(existing_old.empty)
+        existing_new = spec_merged._formulas_df[spec_merged._formulas_df['name'] == "a_always_1"]
+        self.assertTrue(existing_new.empty)
+
     def test_file_to_specification_records_all_atoms(self):
         spec_file = "./test_files/minepump_strong.spectra"
         spec = SpectraSpecification.from_file(spec_file)

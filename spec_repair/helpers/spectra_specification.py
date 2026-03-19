@@ -387,12 +387,24 @@ class SpectraSpecification(ISpecification):
                 name_to_formulas[name] = []
             name_to_formulas[name].append((row['formula'], row['type'], row['when'], 'self'))
 
+        # Helper function to check if equivalent formula already exists
+        def has_equivalent_formula(target_formula: GR1Formula, target_type: GR1FormulaType) -> bool:
+            for formulas_list in name_to_formulas.values():
+                for existing_formula, existing_type, _, _ in formulas_list:
+                    if existing_type == target_type and existing_formula == target_formula:
+                        return True
+            return False
+
         # Process formulas from the other specification
         for _, row in other._formulas_df.iterrows():
             name = row['name']
             formula = row['formula']
             formula_type = row['type']
             when = row['when']
+
+            # Skip if an equivalent formula with the same type already exists
+            if has_equivalent_formula(formula, formula_type):
+                continue
 
             if name not in name_to_formulas:
                 # No clash, add directly

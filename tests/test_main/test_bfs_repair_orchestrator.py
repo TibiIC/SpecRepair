@@ -72,7 +72,7 @@ class TestBFSRepairOrchestrator(BaseTestCase):
 
     def test_bfs_repair_spec_traffic_single(self):
         case_study_name = 'traffic_single'
-        case_study_path = '../input-files/case-studies/spectra/traffic-single'
+        case_study_path = '../input-files/case-studies/spectra/traffic_single'
         new_spec_strings = self.run_bfs_repair(
             case_study_name,
             case_study_path
@@ -80,7 +80,7 @@ class TestBFSRepairOrchestrator(BaseTestCase):
 
     def test_bfs_repair_spec_traffic_updated(self):
         case_study_name = 'traffic_updated'
-        case_study_path = '../input-files/case-studies/spectra/traffic-updated'
+        case_study_path = '../input-files/case-studies/spectra/traffic_updated'
         new_spec_strings = self.run_bfs_repair(
             case_study_name,
             case_study_path
