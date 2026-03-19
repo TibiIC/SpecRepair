@@ -154,20 +154,21 @@ class TestRepairBro(BaseTestCase):
         if not os.path.exists(out_test_dir_name):
             os.mkdir(out_test_dir_name)
         merged_specs: List[SpectraSpecification] = all_specs[0:1]
-        assert len(merged_specs) == 1, "There should be at least one merged spec"
         for spec in all_specs[1:]:
             new_merged_specs = []
             for merged_spec in merged_specs:
                 new_merged_specs.extend(self.run_merge_two(case_study_name, case_study_path, merged_spec, spec, out_test_dir_name=out_test_dir_name))
-            merged_specs = list(set(new_merged_specs))
+            merged_specs = self._remove_duplicate_specs(new_merged_specs)
         if len(merged_specs) != 1:
-            # sanity check
             sanity_checked_merged_specs = merged_specs[0:1]
             for spec in merged_specs[1:]:
                 new_merged_specs = []
                 for merged_spec in merged_specs:
                     new_merged_specs.extend(self.run_merge_two(case_study_name, case_study_path, merged_spec, spec, out_test_dir_name=out_test_dir_name))
-                sanity_checked_merged_specs= list(set(new_merged_specs))
+                
+                sanity_checked_merged_specs = self._remove_duplicate_specs(new_merged_specs)
+            for i, merged_spec in enumerate(sanity_checked_merged_specs):
+                write_to_file(f"{out_test_dir_name}/{case_study_name}_merged_sanity_{i}.spectra", merged_spec.to_str())
             self.are_specification_sets_equivalent(merged_specs, sanity_checked_merged_specs)
         for i, merged_spec in enumerate(merged_specs):
             write_to_file(f"{out_test_dir_name}/{case_study_name}_merged_{i}.spectra", merged_spec.to_str())
@@ -198,6 +199,19 @@ class TestRepairBro(BaseTestCase):
                     spec.equivalent_to(spec_candidate, GR1FormulaType.GAR)):
                 return True
         return False
+
+    def _remove_duplicate_specs(self, specs: list[SpectraSpecification]) -> list[SpectraSpecification]:
+        unique_specs = []
+        for spec in specs:
+            is_unique = True
+            for unique_spec in unique_specs:
+                if (spec.equivalent_to(unique_spec, GR1FormulaType.ASM) and
+                        spec.equivalent_to(unique_spec, GR1FormulaType.GAR)):
+                    is_unique = False
+                    break
+            if is_unique:
+                unique_specs.append(spec)
+        return unique_specs
 
 
 # Generate individual test methods for all minepump combinations
