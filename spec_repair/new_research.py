@@ -98,7 +98,6 @@ def get_all_trivial_solutions_guarantee_only(new_spec: SpectraSpecification) -> 
     guarantees_to_remove_list = all_minimal_hitting_sets(unrealisable_cores)
     for i, guarantees_to_remove in enumerate(guarantees_to_remove_list):
         trivial_spec = deepcopy(new_spec)
-        print("Guarantees to remove:", guarantees_to_remove)
         for guarantee_to_remove in guarantees_to_remove:
             trivial_spec.remove_formula(guarantee_to_remove)
         trivial_specs.append(trivial_spec)

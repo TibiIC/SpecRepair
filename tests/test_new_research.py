@@ -2,6 +2,7 @@ import os
 from unittest import TestCase
 
 from spec_repair.helpers.spectra_specification import SpectraSpecification
+from spec_repair.ltl_types import GR1FormulaType
 from spec_repair.new_research import get_trivial_solution, get_all_trivial_solution
 from spec_repair.util.file_util import read_file_lines, write_to_file
 
@@ -23,14 +24,14 @@ class TestNewResearch(TestCase):
         write_to_file('tests/test_files/out/trivial_solutions/lift.spectra', trivial_spec.to_str())
 
     def test_get_trivial_solution_traffic_single(self):
-        dir = 'input-files/case-studies/spectra/traffic-single'
+        dir = 'input-files/case-studies/spectra/traffic_single'
         trivial_spec = self.get_trivial_spec(dir)
-        write_to_file('tests/test_files/out/trivial_solutions/traffic-single.spectra', trivial_spec.to_str())
+        write_to_file('tests/test_files/out/trivial_solutions/traffic_single.spectra', trivial_spec.to_str())
 
     def test_get_trivial_solution_traffic_updated(self):
-        dir = 'input-files/case-studies/spectra/traffic-updated'
+        dir = 'input-files/case-studies/spectra/traffic_updated'
         trivial_spec = self.get_trivial_spec(dir)
-        write_to_file('tests/test_files/out/trivial_solutions/traffic-updated.spectra', trivial_spec.to_str())
+        write_to_file('tests/test_files/out/trivial_solutions/traffic_updated.spectra', trivial_spec.to_str())
 
     def test_get_all_trivial_solution_minepump(self):
         dir = 'input-files/case-studies/spectra/minepump'
@@ -51,16 +52,16 @@ class TestNewResearch(TestCase):
             write_to_file(f'tests/test_files/out/trivial_solutions/lift_{i}.spectra', trivial_spec.to_str())
 
     def test_get_all_trivial_solution_traffic_single(self):
-        dir = 'input-files/case-studies/spectra/traffic-single'
+        dir = 'input-files/case-studies/spectra/traffic_single'
         trivial_specs = self.get_all_trivial_specs(dir)
         for i, trivial_spec in enumerate(trivial_specs):
-            write_to_file(f'tests/test_files/out/trivial_solutions/traffic-single_{i}.spectra', trivial_spec.to_str())
+            write_to_file(f'tests/test_files/out/trivial_solutions/traffic_single_{i}.spectra', trivial_spec.to_str())
 
     def test_get_all_trivial_solution_traffic_updated(self):
-        dir = 'input-files/case-studies/spectra/traffic-updated'
+        dir = 'input-files/case-studies/spectra/traffic_updated'
         trivial_specs = self.get_all_trivial_specs(dir)
         for i, trivial_spec in enumerate(trivial_specs):
-            write_to_file(f'tests/test_files/out/trivial_solutions/traffic-updated_{i}.spectra', trivial_spec.to_str())
+            write_to_file(f'tests/test_files/out/trivial_solutions/traffic_updated_{i}.spectra', trivial_spec.to_str())
 
     def test_weird_case_study(self):
         dir = 'input-files/case-studies/spectra/weird_uc'

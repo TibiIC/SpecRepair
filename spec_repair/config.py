@@ -36,7 +36,6 @@ STATISTICS: bool = True
 MANUAL: bool = True
 
 # Configuration of Learning
-WEAKENING_TO_JUSTICE = False
 SEMANTIC_EQUIVALENCE = True
 # 29.01.2026: Note no Semantic Equivalence above
 # * Makes learning solutions much faster, but

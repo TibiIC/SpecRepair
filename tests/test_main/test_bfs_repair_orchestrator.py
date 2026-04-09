@@ -38,7 +38,7 @@ def save_layered_graph(G: nx.DiGraph, filepath: str):
             target_node_name = node_name
         if '#' in str(node_name):
             leaf_node = A.get_node(node_name)
-            leaf_node.attr['color'] = 'red'
+            leaf_node.attr['color'] = 'blue'
     target_node= A.get_node(target_node_name)
     target_node.attr['penwidth'] = '5'
 
@@ -146,28 +146,35 @@ class TestBFSRepairOrchestrator(BaseTestCase):
             self.assertIn(expected_spec.to_str(), new_spec_strings)
 
     def run_bfs_repair(self, case_study_name, case_study_path, out_test_dir_name=None, is_debug=False):
-        transitions_file_path = f"{out_test_dir_name}/transitions.csv"
         if not out_test_dir_name:
             out_test_dir_name = f"./test_files/out/repair/{case_study_name}_{self.date_str}"
         log_file = f"{out_test_dir_name}/log.txt"
+        transitions_file_path = f"{out_test_dir_name}/transitions.csv"
         if not os.path.exists(out_test_dir_name):
             os.mkdir(out_test_dir_name)
         if os.path.exists(transitions_file_path):
             os.remove(transitions_file_path)
         spec: SpectraSpecification = SpectraSpecification.from_file(f"{case_study_path}/strong.spectra")
         trace: list[str] = read_file_lines(f"{case_study_path}/violation_trace.txt")
+        hm = NoFilterHeuristicManager()
+        hm.set_enabled("INCLUDE_NEXT")
+        hm.set_enabled("INCLUDE_PREV")
         learners: Dict[str, ILearner] = {
-            "assumption_weakening": OptimisingSpecLearner(
-                heuristic_manager=NoFilterHeuristicManager()
-            ),
-            "guarantee_weakening": OptimisingSpecLearner(
-                heuristic_manager=NoFilterHeuristicManager()
-            )
+            "assumption_weakening": OptimisingSpecLearner(heuristic_manager=hm),
+            "guarantee_weakening": OptimisingSpecLearner(heuristic_manager=hm)
         }
         if is_debug:
             recorder = UniqueSpecRecorder(debug_folder=out_test_dir_name)
         else:
             recorder = UniqueSpecRecorder()
+
+        # will be set after repairer is constructed
+        repairer_ref = []
+
+        def on_new_spec_found(idx, spec, data):
+            if repairer_ref:
+                save_layered_graph(repairer_ref[0]._om._graph, out_test_dir_name)
+
         repairer: BFSRepairOrchestrator = BFSRepairOrchestrator(
             learners,
             SpectraGR1Oracle(),
@@ -176,18 +183,16 @@ class TestBFSRepairOrchestrator(BaseTestCase):
                 Learning.ASSUMPTION_WEAKENING: move_one_to_guarantee_weakening,
                 Learning.GUARANTEE_WEAKENING: complete_counter_traces
             }),
-            om = OrchestrationManagerSemanticEquivalence(),
-            hm = NoFilterHeuristicManager(),
-            recorder = recorder,
-            logger = SpecLogger(filename=log_file)
+            om=OrchestrationManagerSemanticEquivalence(),
+            hm=hm,
+            recorder=recorder,
+            logger=SpecLogger(filename=log_file, on_record=on_new_spec_found)
         )
-        # Getting all possible repairs
+        repairer_ref.append(repairer)
+
         repairer.repair_bfs(spec, RepairData(trace, counter_traces=[], learning_type=Learning.ASSUMPTION_WEAKENING))
         new_spec_strings: list[str] = recorder.get_specs()
-        for i, new_spec in enumerate(new_spec_strings):
-            write_to_file(f"{out_test_dir_name}/{case_study_name}_fix_{i}.spectra", new_spec)
-        graph = repairer._om._graph
-        save_layered_graph(graph, out_test_dir_name)
+        save_layered_graph(repairer._om._graph, out_test_dir_name)
         return new_spec_strings
 
     def run_single_repair(self, case_study_name, case_study_path, out_test_dir_name, is_debug=False):

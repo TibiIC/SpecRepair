@@ -50,7 +50,7 @@ def load_and_visualize(pickle_file, output_file='visualization.html'):
 
 if __name__ == '__main__':
     # date = datetime.now().strftime('%Y-%m-%d')
-    date = '2026-02-23'
+    date = '2026-04-09'
     experiment = 'minepump'
     # Use it:
     load_and_visualize_smart(

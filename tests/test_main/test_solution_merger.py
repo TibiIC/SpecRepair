@@ -137,6 +137,22 @@ class TestRepairBro(BaseTestCase):
     def test_merge_all_traffic_updated(self):
         self.run_merge_all_spectra_case_study('traffic_updated')
 
+    def test_merge_all_lift_today(self):
+        self.run_merge_all_spectra_case_study_from_today('lift')
+
+    def test_merge_all_arbiter_today(self):
+        self.run_merge_all_spectra_case_study_from_today('arbiter')
+
+    def test_merge_all_minepump_today(self):
+        self.run_merge_all_spectra_case_study_from_today('minepump')
+
+    def test_merge_all_traffic_single_today(self):
+        self.run_merge_all_spectra_case_study_from_today('traffic_single')
+
+    def test_merge_all_traffic_updated_today(self):
+        self.run_merge_all_spectra_case_study_from_today('traffic_updated')
+
+
     def run_merge_all_spectra_case_study(self, case_study_name: str):
         case_study_path = f'../input-files/case-studies/spectra/{case_study_name}'
         input_specs_path = 'test_files/maximal_solutions_from_ssh'
@@ -212,6 +228,18 @@ class TestRepairBro(BaseTestCase):
             if is_unique:
                 unique_specs.append(spec)
         return unique_specs
+
+    def run_merge_all_spectra_case_study_from_today(self, case_study_name: str):
+        case_study_path = f'../input-files/case-studies/spectra/{case_study_name}'
+        input_specs_path = f'test_files/out/repair/{case_study_name}_{self.date_str}'
+
+        all_spec_files: List[str] = sorted(glob.glob(f"{input_specs_path}/{case_study_name}_fix_*.spectra"))
+        all_specs: List[SpectraSpecification] = [
+            SpectraSpecification.from_file(spec_file_name)
+            for spec_file_name in all_spec_files
+        ]
+        self.run_merge_all(case_study_name, case_study_path, all_specs)
+
 
 
 # Generate individual test methods for all minepump combinations

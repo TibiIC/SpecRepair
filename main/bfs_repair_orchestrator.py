@@ -18,8 +18,9 @@ from spec_repair.helpers.recorders.unique_recorder import UniqueRecorder
 
 
 class SpecLogger:
-    def __init__(self, filename: str = "spec_repair.log"):
+    def __init__(self, filename: str = "spec_repair.log", on_record=None):
         self.filename = filename
+        self._on_record = on_record  # optional callback(idx, spec, data)
         with open(self.filename, 'a') as f:
             f.write(f"[SpecLogger] Started at: {datetime.now()}\n")
 
@@ -27,7 +28,8 @@ class SpecLogger:
         log_message = f"[SpecLogger] Index: {idx}, learning_type: {data.learning_type}, learning_steps: {data.learning_steps}, learning_time: {data.learning_time}\n"
         with open(self.filename, 'a') as f:
             f.write(log_message)
-
+        if self._on_record:
+            self._on_record(idx, spec, data)
 
 class BFSRepairOrchestrator:
     def __init__(
