@@ -131,26 +131,22 @@ class NewSpecEncoder:
         output += f":- body(timepoint_of_op(eventually,V1,V2,_)), V1 == V2.\n"
         output += f":- body(holds_at(_,V1,V2)), not body(timepoint_of_op(_,_,V1,V2)).\n"
         output += f":- body(not_holds_at(_,V1,V2)), not body(timepoint_of_op(_,_,V1,V2)).\n"
+        output += f":- body(holds_at(A1,_,_)), body(not_holds_at(A2,_,_)), A1 == A2.\n"
 
-        if not self._hm.is_enabled("INCLUDE_NEXT"):
-            if self._hm.is_enabled("ANTECEDENT_WEAKENING"):
-                output += f":- head(antecedent_exception(_,_,_,_)), body(timepoint_of_op(next,_,_,_)).\n"
-            if self._hm.is_enabled("CONSEQUENT_WEAKENING"):
-                output += f":- head(consequent_exception(_,_,_)), body(timepoint_of_op(next,_,_,_)).\n"
-        else:
-            if self._hm.is_enabled("CONSEQUENT_WEAKENING"):
-                output += f":- body(holds_at(A1,_,_)), body(not_holds_at(A2,_,_)), A1 == A2.\n"
-        if not self._hm.is_enabled("INCLUDE_PREV"):
-            if self._hm.is_enabled("ANTECEDENT_WEAKENING"):
-                output += f":- head(antecedent_exception(_,_,_,_)), body(timepoint_of_op(prev,_,_,_)).\n"
-            if self._hm.is_enabled("CONSEQUENT_WEAKENING"):
-                output += f":- head(consequent_exception(_,_,_)), body(timepoint_of_op(prev,_,_,_)).\n"
         if self._hm.is_enabled("ANTECEDENT_WEAKENING"):
+            # It makes little sense to learn a "NEXT" atom within an antecedent
+            output += f":- head(antecedent_exception(_,_,_,_)), body(timepoint_of_op(next,_,_,_)).\n"
             # Learning eventually expressions doesn't make sense within the antecedent of a formula
             output += f":- head(antecedent_exception(_,_,_,_)), body(timepoint_of_op(eventually,_,_,_)).\n"
+            if not self._hm.is_enabled("INCLUDE_PREV"):
+                output += f":- head(antecedent_exception(_,_,_,_)), body(timepoint_of_op(prev,_,_,_)).\n"
         if self._hm.is_enabled("CONSEQUENT_WEAKENING"):
+            # It makes little sense to learn a "PREV" atom within a consequent
+            output += f":- head(consequent_exception(_,_,_)), body(timepoint_of_op(prev,_,_,_)).\n"
             # This is already taken care of by the INVARIANT_TO_RESPONSE_WEAKENING behaviour
             output += f":- head(consequent_exception(_,_,_)), body(timepoint_of_op(eventually,_,_,_)).\n"
+            if not self._hm.is_enabled("INCLUDE_NEXT"):
+                output += f":- head(consequent_exception(_,_,_)), body(timepoint_of_op(next,_,_,_)).\n"
         if self._hm.is_enabled("INVARIANT_TO_RESPONSE_WEAKENING"):
             output += f":- head(ev_temp_op(_)), body(timepoint_of_op(_,_,_,_)).\n"
             output += f":- head(ev_temp_op(_)), body(holds_at(_,_,_)).\n"
