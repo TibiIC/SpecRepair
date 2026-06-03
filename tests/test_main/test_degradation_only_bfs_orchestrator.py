@@ -57,7 +57,16 @@ class TestBFSRepairOrchestrator(BaseTestCase):
         super().setUpClass()
         cls.date_str = datetime.now().strftime("%Y-%m-%d")
 
-    def test_bfs_repair_spec_weird_uc(self):
+    def test_bfs_degrade_spec_arbiter_trivial_asm(self):
+        case_study_name = 'arbiter_no_asm'
+        case_study_path = '../input-files/case-studies/spectra-degrade/arbiter_no_asm'
+        new_spec_strings = self.run_bfs_degradation(
+            case_study_name,
+            case_study_path,
+            is_debug=True
+        )
+
+    def test_bfs_degrade_spec_weird_uc(self):
         case_study_name = 'weird_uc'
         case_study_path = '../input-files/case-studies/spectra/weird_uc'
         new_spec_strings = self.run_bfs_degradation(
