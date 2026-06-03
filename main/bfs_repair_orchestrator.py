@@ -10,6 +10,7 @@ from spec_repair.components.interfaces.ispecification import ISpecification
 from spec_repair.components.orchestration_managers.orchestration_manager_semantic_equivalence import \
     OrchestrationManagerSemanticEquivalence
 from spec_repair.components.repair_data import RepairData
+from spec_repair.enums import Learning
 from spec_repair.helpers.counter_trace import CounterTrace
 from spec_repair.helpers.heuristic_managers.iheuristic_manager import IHeuristicManager
 from spec_repair.helpers.heuristic_managers.no_filter_heuristic_manager import NoFilterHeuristicManager
@@ -24,8 +25,8 @@ class SpecLogger:
         with open(self.filename, 'a') as f:
             f.write(f"[SpecLogger] Started at: {datetime.now()}\n")
 
-    def record(self, idx: int, spec: ISpecification, data: RepairData):
-        log_message = f"[SpecLogger] Index: {idx}, learning_type: {data.learning_type}, learning_steps: {data.learning_steps}, learning_time: {data.learning_time}\n"
+    def record(self, idx: int, spec: ISpecification, data: RepairData, type: str = "Learned"):
+        log_message = f"[SpecLogger] {type} Index: {idx}, learning_type: {data.learning_type}, learning_steps: {data.learning_steps}, learning_time: {data.learning_time}\n"
         with open(self.filename, 'a') as f:
             f.write(log_message)
         if self._on_record:
@@ -41,6 +42,7 @@ class BFSRepairOrchestrator:
             om: IOrchestrationManager = OrchestrationManagerSemanticEquivalence(),
             hm: IHeuristicManager = NoFilterHeuristicManager(),
             recorder: IRecorder[ISpecification] = UniqueRecorder(),
+            intermediate_recorder: IRecorder[ISpecification] = UniqueRecorder(),
             logger: SpecLogger = SpecLogger("./main/spec_repair.log")
     ):
         self._learners = learners
@@ -50,6 +52,7 @@ class BFSRepairOrchestrator:
         self._om = om
         self._hm = hm
         self._recorder = recorder
+        self._intermediate_recorder = intermediate_recorder
         self._logger = logger
         self._initialise_repair()
 
@@ -87,9 +90,11 @@ class BFSRepairOrchestrator:
                         learned_spec, data)
                     if not counter_examples_with_data:
                         learned_id = self._recorder.add(learned_spec)
-                        self._logger.record(learned_id, learned_spec, data)
+                        self._logger.record(learned_id, learned_spec, data, "Learned")
                         self._om.connect_leaf_node(learned_spec, learned_id, prev=(spec, data))
                     else:
+                        intermediate_id = self._intermediate_recorder.add(learned_spec)
+                        self._logger.record(intermediate_id, learned_spec, data, "Intermediate")
                         for counter_example, data in counter_examples_with_data:
                             new_spec, new_data = self._mitigator.prepare_learning_task(spec, data, learned_spec,
                                                                                        counter_example)
