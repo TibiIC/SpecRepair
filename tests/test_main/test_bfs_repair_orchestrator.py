@@ -160,6 +160,26 @@ class TestBFSRepairOrchestrator(BaseTestCase):
         new_spec_strings = self.run_single_repair(case_study_name, case_study_path, out_test_dir_name)
         print(new_spec_strings)
 
+    def test_bfs_repair_spec_minepump_syn(self):
+        case_study_name = 'minepump'
+        case_study_path = '../input-files/case-studies/spectra/minepump'
+        new_spec_strings = self.run_bfs_repair_syn_unique(
+            case_study_name,
+            case_study_path,
+            is_debug=True
+        )
+
+        expected_specs_files: list[str] = os.listdir('./test_files/minepump_weakenings')
+        expected_spec_strings: list[SpectraSpecification] = [
+            SpectraSpecification.from_file(f"./test_files/minepump_weakenings/{spec_file}")
+            for spec_file in expected_specs_files
+        ]
+
+        self.assertEqual(len(expected_spec_strings), len(new_spec_strings))
+        for i, expected_spec in enumerate(expected_spec_strings):
+            print(i)
+            self.assertIn(expected_spec.to_str(), new_spec_strings)
+
     def test_bfs_repair_spec_minepump(self):
         case_study_name = 'minepump'
         case_study_path = '../input-files/case-studies/spectra/minepump'

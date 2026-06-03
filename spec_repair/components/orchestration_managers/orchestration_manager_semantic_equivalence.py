@@ -14,6 +14,7 @@ GREEN = "#44ff44"
 BLUE = "#4444ff"
 YELLOW = "#ffff44"
 
+
 def parse_ct(text):
     # Remove CT( and )
     inner = text.strip()[3:-1]
@@ -33,11 +34,21 @@ class OrchestrationManagerSemanticEquivalence(IOrchestrationManager):
         self._stack.clear()
         self._visited_nodes = UniqueRecorder()
 
-    def initialise_learning_tasks(self, spec: ISpecification, data: Any):
+    def initialise_learning_tasks(
+            self,
+            spec: ISpecification,
+            data: Any
+    ):
         self._reset()
         self.enqueue_new_tasks(spec, data, prev=None)
 
-    def enqueue_new_tasks(self, spec: ISpecification, data: RepairData, prev: Optional[Tuple[ISpecification, RepairData]] = None, failed_spec: Optional[ISpecification] = None):
+    def enqueue_new_tasks(
+            self,
+            spec: ISpecification,
+            data: RepairData,
+            prev: Optional[Tuple[ISpecification, RepairData]] = None,
+            failed_spec: Optional[ISpecification] = None
+    ):
         if data.learning_type == Learning.ASSUMPTION_WEAKENING:
             visited_node: Tuple[ISpecification, Any] = (spec, (sorted(data.counter_traces), data.learning_type))
         elif prev:
@@ -61,16 +72,15 @@ class OrchestrationManagerSemanticEquivalence(IOrchestrationManager):
             color=node_color,
             data=([ct.print_multi_line() for ct in data.counter_traces[-1:]], str(data.learning_type))
         )
-
         self._add_edge_data_to_graph(data, prev, failed_spec, task_id)
         return task_id
 
     def _add_edge_data_to_graph(
-        self,
-        data: RepairData,
-        prev: Optional[tuple[ISpecification, RepairData]],
-        failed_spec: Optional[ISpecification],
-        task_id: int
+            self,
+            data: RepairData,
+            prev: Optional[tuple[ISpecification, RepairData]],
+            failed_spec: Optional[ISpecification],
+            task_id: int
     ):
         if prev is not None:
             _, prev_data = prev
@@ -83,7 +93,7 @@ class OrchestrationManagerSemanticEquivalence(IOrchestrationManager):
                         failed_spec=failed_spec.to_str(),
                         last_adaptation=[str(adaptation) for adaptation in prev_data.adaptation_history[-1]]
                     )
-                else: # happens at the start of guarantee weakening from unrealisable spec, after counter example generation
+                else:  # happens at the start of guarantee weakening from unrealisable spec, after counter example generation
                     self._graph.add_edge(
                         prev_task_id,
                         task_id,
@@ -115,7 +125,11 @@ class OrchestrationManagerSemanticEquivalence(IOrchestrationManager):
                         last_adaptation=[str(adaptation) for adaptation in prev_data.adaptation_history[-1]]
                     )
 
-    def _get_task_id(self, spec: ISpecification, data: RepairData):
+    def _get_task_id(
+            self,
+            spec: ISpecification,
+            data: RepairData
+    ):
         if data.learning_type == Learning.ASSUMPTION_WEAKENING:
             visited_node: Tuple[ISpecification, Any] = (spec, (sorted(data.counter_traces), data.learning_type))
         elif data.counter_traces:
@@ -129,7 +143,12 @@ class OrchestrationManagerSemanticEquivalence(IOrchestrationManager):
                 return task_id
         raise ValueError("No such task")
 
-    def connect_leaf_node(self, spec: ISpecification, unique_id: int, prev: Tuple[ISpecification, RepairData]):
+    def connect_leaf_node(
+            self,
+            spec: ISpecification,
+            unique_id: int,
+            prev: Tuple[ISpecification, RepairData]
+    ):
         prev_id = self._get_task_id(*prev)
         prev_spec, prev_data = prev
         self._graph.add_node(f"#{unique_id}", spec=spec.to_str(), color=BLUE)
