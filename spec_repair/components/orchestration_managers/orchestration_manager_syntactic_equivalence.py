@@ -1,11 +1,8 @@
-from collections import deque
 from typing import Deque, Tuple, Any, Optional
 
-import networkx as nx
-
-from spec_repair.components.interfaces.iorchestration_manager import IOrchestrationManager
 from spec_repair.components.interfaces.ispecification import ISpecification
-from spec_repair.components.orchestration_managers.orchestration_manager_semantic_equivalence import parse_ct
+from spec_repair.components.orchestration_managers.a_orchestration_manager_with_graph import \
+    AOrchestrationManagerWithStackAndGraph
 from spec_repair.components.repair_data import RepairData
 from spec_repair.enums import Learning
 from spec_repair.helpers.recorders.irecorder import IRecorder
@@ -17,19 +14,14 @@ BLUE = "#4444ff"
 YELLOW = "#ffff44"
 
 
-class OrchestrationManagerSyntacticEquivalence(IOrchestrationManager):
+class OrchestrationManagerSyntacticEquivalence(AOrchestrationManagerWithStackAndGraph):
     def __init__(self):
-        self._stack: Deque[Tuple[ISpecification, Any]] = deque()
+        super().__init__()
         self._visited_nodes: IRecorder[Tuple[ISpecification, Any]] = UniqueRecorder()
-        self._graph = nx.MultiDiGraph()
 
     def _reset(self):
-        self._stack.clear()
+        super()._reset()
         self._visited_nodes = UniqueRecorder()
-
-    def initialise_learning_tasks(self, spec: ISpecification, data: Any):
-        self._reset()
-        self.enqueue_new_tasks(spec, data, prev=None)
 
     def enqueue_new_tasks(
             self,
@@ -64,56 +56,6 @@ class OrchestrationManagerSyntacticEquivalence(IOrchestrationManager):
         self._add_edge_data_to_graph(data, prev, failed_spec, task_id)
         return task_id
 
-    def _add_edge_data_to_graph(
-            self,
-            data: RepairData,
-            prev: Optional[tuple[ISpecification, RepairData]],
-            failed_spec: Optional[ISpecification],
-            task_id: int
-    ):
-        if prev is not None:
-            _, prev_data = prev
-            prev_task_id = self._get_task_id(*prev)
-            if failed_spec is not None:
-                if prev_data.adaptation_history:
-                    self._graph.add_edge(
-                        prev_task_id,
-                        task_id,
-                        failed_spec=failed_spec.to_str(),
-                        last_adaptation=[str(adaptation) for adaptation in prev_data.adaptation_history[-1]]
-                    )
-                else:  # happens at the start of guarantee weakening from unrealisable spec, after counter example generation
-                    self._graph.add_edge(
-                        prev_task_id,
-                        task_id,
-                        failed_spec=failed_spec.to_str(),
-                        details="Generating first counter-example"
-                    )
-            elif prev_data.learning_type == Learning.ASSUMPTION_WEAKENING and data.learning_type == Learning.GUARANTEE_WEAKENING:
-                self._graph.add_edge(
-                    prev_task_id,
-                    task_id,
-                    last_adaptation=["Switch to Guarantee Weakening"]
-                )
-            else:
-                ct1 = prev_data.counter_traces[-1].print_one_line()
-                ct2 = data.counter_traces[-1].print_one_line()
-                if len(prev_data.counter_traces) == len(data.counter_traces) and ct1 != ct2:
-                    difference = parse_ct(ct2) - parse_ct(ct1)
-                    self._graph.add_edge(
-                        prev_task_id,
-                        task_id,
-                        before_deadlock_completion=prev_data.counter_traces[-1].print_multi_line(),
-                        after_deadlock_completion=data.counter_traces[-1].print_multi_line(),
-                        deadlock_completion=list(difference)
-                    )
-                else:
-                    self._graph.add_edge(
-                        prev_task_id,
-                        task_id,
-                        last_adaptation=[str(adaptation) for adaptation in prev_data.adaptation_history[-1]]
-                    )
-
     def _get_task_id(
             self,
             spec: ISpecification,
@@ -127,19 +69,3 @@ class OrchestrationManagerSyntacticEquivalence(IOrchestrationManager):
             assert data.counter_traces == [] and data.learning_type == Learning.GUARANTEE_WEAKENING
             visited_node: Tuple[ISpecification, Any] = (spec, (data.counter_traces, data.learning_type))
         return self._visited_nodes.get_id(visited_node)
-
-    def connect_leaf_node(self, spec: ISpecification, unique_id: int, prev: Tuple[ISpecification, Any]):
-        prev_id = self._get_task_id(*prev)
-        prev_spec, prev_data = prev
-        self._graph.add_node(f"#{unique_id}", spec=spec.to_str(), color=BLUE)
-        self._graph.add_edge(
-            prev_id,
-            f"#{unique_id}",
-            last_adaptation=[str(adaptation) for adaptation in prev_data.adaptation_history[-1]]
-        )
-
-    def has_next(self) -> bool:
-        return bool(self._stack)
-
-    def get_next(self) -> Tuple[ISpecification, Any]:
-        return self._stack.popleft()
