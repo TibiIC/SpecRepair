@@ -50,8 +50,8 @@ def load_and_visualize(pickle_file, output_file='visualization.html'):
 
 if __name__ == '__main__':
     # date = datetime.now().strftime('%Y-%m-%d')
-    date = '2026-04-09'
-    experiment = 'minepump'
+    date = '2026-06-03'
+    experiment = 'traffic_single'
     # Use it:
     load_and_visualize_smart(
         f'../tests/test_files/out/repair/{experiment}_{date}/graph.pkl',
