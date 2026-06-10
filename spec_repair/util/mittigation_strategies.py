@@ -24,6 +24,13 @@ def move_one_to_guarantee_weakening(
     new_data.spec_history  = []
     return [(new_spec, new_data)]
 
+def finish_here_return_nothing(
+        spec: ISpecification,  # ignored
+        data: RepairData,
+) -> List[Tuple[
+    ISpecification, RepairData]]:
+    return []
+
 def move_all_to_guarantee_weakening(
         spec: ISpecification,  # ignored
         data: RepairData,

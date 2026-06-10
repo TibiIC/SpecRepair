@@ -50,15 +50,10 @@ def load_and_visualize(pickle_file, output_file='visualization.html'):
 
 if __name__ == '__main__':
     # date = datetime.now().strftime('%Y-%m-%d')
-    date = '2026-06-03'
-    experiment = 'minepump'
-    is_syn = True
-    if is_syn:
-        pickle_file = f'../tests/test_files/out/repair_syn/{experiment}_{date}/graph.pkl'
-        output_file = f'visualization_syn_{experiment}_{date}.html'
-    else:
-        pickle_file = f'../tests/test_files/out/repair/{experiment}_{date}/graph.pkl'
-        output_file = f'visualization_{experiment}_{date}.html'
+    date = '2026-06-09'
+    experiment = 'arbiter'
+    pickle_file = f'../tests/test_files/out/repair_asm_only/{experiment}_{date}/graph.pkl'
+    output_file = f'visualization_asm_only_{experiment}_{date}.html'
     # Use it:
     load_and_visualize_smart(
         pickle_file,

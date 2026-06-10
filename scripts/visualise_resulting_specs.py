@@ -8,8 +8,8 @@ import networkx as nx
 
 from typing import Dict, Optional
 
+from spec_repair.helpers.spectra_specification import SpectraSpecification
 from spec_repair.util.file_util import read_file
-from spec_repair.wrappers.spec import Spec
 from spec_repair.ltl_types import GR1FormulaType
 from spec_repair.util.graph_util import remove_reflexive_relations, merge_on_bidirectional_edges, \
     remove_transitive_relations
@@ -25,7 +25,7 @@ def extract_graph_without_transitivity_relations(graph: nx.DiGraph):
     return graph
 
 
-def generate_graph(all_specs: Dict[int, Spec], graph_type: Optional[GR1FormulaType] = None):
+def generate_graph(all_specs: Dict[int, SpectraSpecification], graph_type: Optional[GR1FormulaType] = None):
     # Create a directed graph (graph) using networkx
     graph = nx.DiGraph()
 
@@ -40,7 +40,7 @@ def generate_graph(all_specs: Dict[int, Spec], graph_type: Optional[GR1FormulaTy
     return extract_graph_without_transitivity_relations(graph)
 
 
-def generate_tree_from_root(root_spec: Spec, all_other_specs: Dict[int, Spec], graph_type: Optional[GR1FormulaType] = None):
+def generate_tree_from_root(root_spec: SpectraSpecification, all_other_specs: Dict[int, SpectraSpecification], graph_type: Optional[GR1FormulaType] = None):
     # Create a directed graph (tree) using networkx
     tree = nx.DiGraph()
 
@@ -67,11 +67,11 @@ def visualise_implication_graph_from_specs_at_path(spec_directory_path: str, out
     spec_abs_paths = glob.glob(os.path.join(spec_directory_path, '*.spectra'))
     spec_abs_paths = [os.path.abspath(file_path) for file_path in spec_abs_paths]
 
-    all_specs: Dict[int, Spec] = {}
+    all_specs: Dict[int, SpectraSpecification] = {}
     for spec_abs_path in spec_abs_paths:
         spec_id: int = extract_id(os.path.splitext(os.path.basename(spec_abs_path))[0])
         spec_txt: str = read_file(spec_abs_path)
-        spec: Spec = Spec(spec_txt)
+        spec: SpectraSpecification = SpectraSpecification(spec_txt)
         all_specs[spec_id] = spec
 
     graph = generate_graph(all_specs, graph_type)
@@ -105,16 +105,14 @@ def visualise_tree_from_ideal_from_specs_at_path(spec_directory_path: str, outpu
     ideal_spec_absolute_path = os.path.abspath(ideal_spec_path)
     assert (os.path.exists(ideal_spec_absolute_path))
 
-    all_specs: Dict[int, Spec] = {}
+    all_specs: Dict[int, SpectraSpecification] = {}
     for spec_abs_path in spec_abs_paths:
         spec_id: int = int(os.path.splitext(os.path.basename(spec_abs_path))[0])
-        spec_txt: str = read_file(spec_abs_path)
-        spec: Spec = Spec(spec_txt)
+        spec: SpectraSpecification = SpectraSpecification.from_file(spec_abs_path)
         all_specs[spec_id] = spec
 
     del all_specs[0]
-    ideal_spec_txt: str = read_file(ideal_spec_absolute_path)
-    ideal_spec: Spec = Spec(ideal_spec_txt)
+    ideal_spec: SpectraSpecification = SpectraSpecification.from_file(ideal_spec_absolute_path)
 
     graph = generate_tree_from_root(ideal_spec, all_specs)
     graph = extract_graph_without_transitivity_relations(graph)

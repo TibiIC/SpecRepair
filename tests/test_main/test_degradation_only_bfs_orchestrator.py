@@ -6,7 +6,8 @@ from typing import Dict
 import networkx as nx
 from pyvis.network import Network
 
-from main.bfs_repair_orchestrator import BFSRepairOrchestrator, SpecLogger
+from main.bfs_repair_orchestrator import BFSRepairOrchestrator
+from spec_repair.loggers.spec_logger import SpecLogger
 from spec_repair.components.interfaces.ilearner import ILearner
 from spec_repair.components.learners.optimising_final_spec_learner import OptimisingSpecLearner
 from spec_repair.components.mitigators.learning_type_spec_mitigator import LearningTypeSpecMitigator

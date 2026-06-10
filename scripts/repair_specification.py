@@ -1,7 +1,8 @@
 import argparse
 from typing import Optional
 
-from main.bfs_repair_orchestrator import BFSRepairOrchestrator, SpecLogger
+from main.bfs_repair_orchestrator import BFSRepairOrchestrator
+from spec_repair.loggers.spec_logger import SpecLogger
 from spec_repair.components.interfaces.ilearner import ILearner
 from spec_repair.components.learners.optimising_final_spec_learner import OptimisingSpecLearner
 from spec_repair.components.oracles.spectra_gr1_oracle import SpectraGR1Oracle

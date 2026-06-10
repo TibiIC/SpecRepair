@@ -262,8 +262,8 @@ def generate_html_visualization(G, output_file='graph_visualization.html', title
                     enabled: true,
                     direction: 'UD',        // Up to Down (vertical tree)
                     sortMethod: 'directed',
-                    levelSeparation: 150,   // Vertical distance between levels
-                    nodeSpacing: 200,       // Horizontal spacing between nodes
+                    levelSeparation: 300,   // Vertical distance between levels
+                    nodeSpacing: 50,       // Horizontal spacing between nodes
                     treeSpacing: 200,       // Spacing between separate trees
                     blockShifting: true,
                     edgeMinimization: true,
