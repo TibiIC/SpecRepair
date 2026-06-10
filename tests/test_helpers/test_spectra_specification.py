@@ -621,3 +621,21 @@ root_consequent_holds(OP,guarantee4,0,1,T1,S):-
         spec_2 = SpectraSpecification.from_str(spec_asm_stronger_gar_eq)
         self.assertTrue(spec_1.implied_by(spec_2, GR1FormulaType.ASM))
         self.assertTrue(spec_1.equivalent_to(spec_2, GR1FormulaType.GAR))
+
+    def test_specification_equality_between_syntactically_distinct_semantically_equivalent_specifications(self):
+        spec_1 = SpectraSpecification.from_str(spec_perf)
+        spec_2 = SpectraSpecification.from_str(spec_fixed_perf)
+        self.assertNotEquals(spec_perf, spec_fixed_perf)
+        self.assertEqual(spec_1, spec_2)
+
+    def test_specification_inequality_between_semantically_distinct_specifications(self):
+        spec_1 = SpectraSpecification.from_str(spec_perf)
+        spec_2 = SpectraSpecification.from_str(spec_fixed_imperf)
+        self.assertNotEquals(spec_1, spec_2)
+
+    def test_specification_sets_do_not_use_semantic_equivalence(self):
+        spec_1 = SpectraSpecification.from_str(spec_perf)
+        spec_2 = SpectraSpecification.from_str(spec_fixed_perf)
+        self.assertNotEquals(spec_perf, spec_fixed_perf)
+        self.assertEqual(spec_1, spec_2)
+        self.assertNotEquals({spec_1, spec_2}, {spec_1})

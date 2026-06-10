@@ -50,7 +50,7 @@ def load_and_visualize(pickle_file, output_file='visualization.html'):
 
 if __name__ == '__main__':
     # date = datetime.now().strftime('%Y-%m-%d')
-    date = '2026-06-09'
+    date = '2026-06-10'
     experiment = 'arbiter'
     pickle_file = f'../tests/test_files/out/repair_asm_only/{experiment}_{date}/graph.pkl'
     output_file = f'visualization_asm_only_{experiment}_{date}.html'

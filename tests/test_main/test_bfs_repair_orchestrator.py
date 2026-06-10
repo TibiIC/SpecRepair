@@ -8,6 +8,8 @@ import networkx as nx
 from pyvis.network import Network
 
 from main.bfs_repair_orchestrator import BFSRepairOrchestrator
+from spec_repair.components.orchestration_managers.orchestration_manager_semantic_equivalence_aw_merge import \
+    OrchestrationManagerSemanticEquivalenceAsmOnly
 from spec_repair.loggers.spec_logger import SpecLogger
 from spec_repair.components.interfaces.ilearner import ILearner
 from spec_repair.components.learners.optimising_final_spec_learner import OptimisingSpecLearner
@@ -305,7 +307,7 @@ class TestBFSRepairOrchestrator(BaseTestCase):
             LearningTypeSpecMitigator({
                 Learning.ASSUMPTION_WEAKENING: finish_here_return_nothing
             }),
-            om=OrchestrationManagerSemanticEquivalence(),
+            om=OrchestrationManagerSemanticEquivalenceAsmOnly(),
             hm=hm,
             recorder=final_recorder,
             intermediate_recorder=intermediate_recorder,

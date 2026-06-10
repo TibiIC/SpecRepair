@@ -75,8 +75,8 @@ class BFSRepairOrchestrator:
                         learned_spec, data)
                     if not counter_examples_with_data:
                         learned_id = self._recorder.add(learned_spec)
-                        self._logger.record(learned_id, learned_spec, data, "Learned")
                         self._om.connect_leaf_node(learned_spec, learned_id, prev=(spec, data))
+                        self._logger.record(learned_id, learned_spec, data, "Learned")
                     else:
                         intermediate_id = self._intermediate_recorder.add(learned_spec)
                         self._logger.record(intermediate_id, learned_spec, data, "Intermediate")
