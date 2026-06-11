@@ -89,8 +89,7 @@ class OrchestrationManagerSemanticEquivalenceAsmOnly(AOrchestrationManagerWithSt
 
     def _if_stack_empty_add_next_stack_candidate(self) -> bool:
         if not self._stack:
-            self._add_next_stack_candidate()
-            return True
+            return self._add_next_stack_candidate()
         return False
 
     def get_next(self) -> Tuple[ISpecification, Any]:
@@ -107,18 +106,39 @@ class OrchestrationManagerSemanticEquivalenceAsmOnly(AOrchestrationManagerWithSt
         return spec, data
 
     def _add_next_stack_candidate(self):
-        if self._stack_candidates:
+        while self._stack_candidates:
             failed_spec, (spec, data), prev_list = self._stack_candidates.popleft()
-            self._stack.append((spec, data))
-            node_color = YELLOW if not prev_list else (RED if data.learning_type == Learning.ASSUMPTION_WEAKENING else GREEN)
-            cts: list[CounterTrace] = data.counter_traces[
-                -1:] if data.learning_type == Learning.GUARANTEE_WEAKENING else sorted(data.counter_traces)
-            task_id = len(self._visited_nodes_list)
-            self._graph.add_node(
-                task_id,
-                spec=spec.to_str(),
-                color=node_color,
-                data=([ct.print_multi_line() for ct in cts], str(data.learning_type))
-            )
-            for prev in prev_list:
-                self._add_edge_data_to_graph(data, prev, failed_spec, task_id)
+
+            if data.learning_type == Learning.ASSUMPTION_WEAKENING:
+                new_data = sorted(data.counter_traces)
+            elif not data.counter_traces:
+                new_data = data.counter_traces[-1]
+            else:
+                assert data.learning_type == Learning.GUARANTEE_WEAKENING
+                new_data = data.counter_traces
+            is_visited = False
+            for task_id, visited_node in enumerate(self._visited_nodes_list):
+                if task_id == 3:
+                    print("stop here")
+                visited_spec, visited_learning_type, visited_data = visited_node
+                if spec == visited_spec and data.learning_type == visited_learning_type and new_data == visited_data:
+                    assert failed_spec
+                    for prev in prev_list:
+                        self._add_edge_data_to_graph(data, prev, failed_spec, task_id)
+                    is_visited = True
+            if not is_visited:
+                self._stack.append((spec, data))
+                node_color = YELLOW if not prev_list else (RED if data.learning_type == Learning.ASSUMPTION_WEAKENING else GREEN)
+                cts: list[CounterTrace] = data.counter_traces[
+                    -1:] if data.learning_type == Learning.GUARANTEE_WEAKENING else sorted(data.counter_traces)
+                task_id = len(self._visited_nodes_list)
+                self._graph.add_node(
+                    task_id,
+                    spec=spec.to_str(),
+                    color=node_color,
+                    data=([ct.print_multi_line() for ct in cts], str(data.learning_type))
+                )
+                for prev in prev_list:
+                    self._add_edge_data_to_graph(data, prev, failed_spec, task_id)
+                return True
+        return False
