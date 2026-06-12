@@ -152,6 +152,67 @@ class TestRepairBro(BaseTestCase):
     def test_merge_all_traffic_updated_today(self):
         self.run_merge_all_spectra_case_study_from_today('traffic_updated')
 
+    def test_merge_all_lift_ssh_date(self):
+        DATE = '2026-06-03'
+        self.run_merge_all_spectra_case_study_ssh_date('lift', date_str=DATE)
+
+    def test_merge_all_arbiter_ssh_date(self):
+        DATE = '2026-06-03'
+        self.run_merge_all_spectra_case_study_ssh_date('arbiter', date_str=DATE)
+
+    def test_merge_all_minepump_ssh_date(self):
+        DATE = '2026-06-03'
+        self.run_merge_all_spectra_case_study_ssh_date('minepump', date_str=DATE)
+
+    def test_merge_all_traffic_single_ssh_date(self):
+        DATE = '2026-06-03'
+        self.run_merge_all_spectra_case_study_ssh_date('traffic_single', date_str=DATE)
+
+    def test_merge_all_traffic_updated_ssh_date(self):
+        DATE = '2026-06-03'
+        self.run_merge_all_spectra_case_study_ssh_date('traffic_updated', date_str=DATE)
+
+    def run_merge_all_spectra_case_study_ssh_date(self, case_study_name: str, date_str: str):
+        DATE = '2026-06-03'
+        case_study_path = f'../input-files/case-studies/spectra/{case_study_name}'
+        input_specs_path = f'test_files/maximal_solutions_from_ssh/{DATE}/{case_study_name}'
+
+        all_spec_files: List[str] = sorted(glob.glob(f"{input_specs_path}/*.spectra"))
+        all_specs: List[SpectraSpecification] = [
+            SpectraSpecification.from_file(spec_file_name)
+            for spec_file_name in all_spec_files
+        ]
+        self.run_merge_all_ssh_date(case_study_name, case_study_path, date_str, all_specs)
+
+    def run_merge_all_ssh_date(self, case_study_name, case_study_path, date_str, all_specs: List[SpectraSpecification],
+                               out_test_dir_name=None):
+        if not out_test_dir_name:
+            out_test_dir_name = f"./test_files/out_ssh/merge_all/{case_study_name}_{date_str}"
+        if not os.path.exists(out_test_dir_name):
+            os.makedirs(out_test_dir_name, exist_ok=True)
+        merged_specs: List[SpectraSpecification] = all_specs[0:1]
+        for spec in all_specs[1:]:
+            new_merged_specs = []
+            for merged_spec in merged_specs:
+                new_merged_specs.extend(self.run_merge_two(case_study_name, case_study_path, merged_spec, spec,
+                                                           out_test_dir_name=out_test_dir_name))
+            merged_specs = self._remove_duplicate_specs(new_merged_specs)
+        if len(merged_specs) != 1:
+            sanity_checked_merged_specs = merged_specs[0:1]
+            for spec in merged_specs[1:]:
+                new_merged_specs = []
+                for merged_spec in merged_specs:
+                    new_merged_specs.extend(self.run_merge_two(case_study_name, case_study_path, merged_spec, spec,
+                                                               out_test_dir_name=out_test_dir_name))
+
+                sanity_checked_merged_specs = self._remove_duplicate_specs(new_merged_specs)
+            for i, merged_spec in enumerate(sanity_checked_merged_specs):
+                write_to_file(f"{out_test_dir_name}/{case_study_name}_merged_sanity_{i}.spectra", merged_spec.to_str())
+            self.are_specification_sets_equivalent(merged_specs, sanity_checked_merged_specs)
+        for i, merged_spec in enumerate(merged_specs):
+            write_to_file(f"{out_test_dir_name}/{case_study_name}_merged_{i}.spectra", merged_spec.to_str())
+        return merged_specs
+
 
     def run_merge_all_spectra_case_study(self, case_study_name: str):
         case_study_path = f'../input-files/case-studies/spectra/{case_study_name}'

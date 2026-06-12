@@ -3,9 +3,9 @@
 # ----------------------------
 # Config (edit these only)
 # ----------------------------
-SOURCE_DIR="../tests/test_files/out_ssh/repair_syn/arbiter_2026-06-03/final"
-OUTPUT_FILE="../tests/test_files/out_ssh/repair_syn/arbiter_2026-06-03/viz_gars.png"
-TYPE="gar"
+SOURCE_DIR="../tests/test_files/out_ssh/merge_all/minepump_2026-06-03"
+OUTPUT_FILE="../tests/test_files/out_ssh/merge_all/minepump_2026-06-03/viz_asms.png"
+TYPE="asm"
 
 # ----------------------------
 # Run command

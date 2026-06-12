@@ -22,7 +22,10 @@ INPUT_FILES=(
     # "tests/test_files/out/repair/arbiter_${DATE}"
     # "tests/test_files/out/repair/lift_${DATE}"
     # "tests/test_files/out_ssh/repair_syn/arbiter_${DATE}/final"
-    "tests/test_files/out_ssh/repair_syn/minepump_${DATE}/final"
+    # "tests/test_files/out_ssh/repair_syn/minepump_${DATE}/final"
+    "tests/test_files/out_ssh/repair_syn/lift_${DATE}/distinct"
+    "tests/test_files/out_ssh/repair_syn/traffic_single_${DATE}/distinct"
+    "tests/test_files/out_ssh/repair_syn/traffic_updated_${DATE}/distinct"
 )
 
 OUTPUT_FILES=(
@@ -32,7 +35,10 @@ OUTPUT_FILES=(
     # "scripts/maximal_outputs/${DATE}/arbiter.txt"
     # "scripts/maximal_outputs/${DATE}/lift.txt"
     # "scripts/out_ssh/maximal_outputs/${DATE}/arbiter.txt"
-    "scripts/out_ssh/maximal_outputs/${DATE}/minepump.txt"
+    # "scripts/out_ssh/maximal_outputs/${DATE}/minepump.txt"
+    "scripts/out_ssh/maximal_outputs/${DATE}/lift.txt"
+    "scripts/out_ssh/maximal_outputs/${DATE}/traffic_single.txt"
+    "scripts/out_ssh/maximal_outputs/${DATE}/traffic_updated.txt"
 )
 
 # Create output directory if it doesn't exist
