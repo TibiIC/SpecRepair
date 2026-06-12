@@ -293,5 +293,38 @@ class TestSpectraFormulaParser(TestCase):
         self.assertEqual(parsed.formula.formula.name, "diver_at_depth1")
         self.assertEqual(parsed.formula.formula.value, True)
 
+    def test_minepump_edge_case_prev_conjunction(self):
+        parsed = LTLFormula.parse("G(((methane=true&PREV((highwater=true&highwater=false)))->next(pump=false)));", self.parser)
+        self.assertIsInstance(parsed, Globally)
+        self.assertIsInstance(parsed.formula, Implies)
+        self.assertIsInstance(parsed.formula.left, And)
+        self.assertIsInstance(parsed.formula.left.left, AtomicProposition)
+        self.assertEqual(parsed.formula.left.left.name, "methane")
+        self.assertEqual(parsed.formula.left.left.value, True)
+        self.assertIsInstance(parsed.formula.right, Next)
+        self.assertIsInstance(parsed.formula.right.formula, AtomicProposition)
+        self.assertEqual(parsed.formula.right.formula.name, "pump")
+        self.assertEqual(parsed.formula.right.formula.value, False)
+
+        self.assertIsInstance(parsed.formula.left.right, Prev)
+        self.assertIsInstance(parsed.formula.left.right.formula, And)
+        self.assertIsInstance(parsed.formula.left.right.formula.left, AtomicProposition)
+        self.assertEqual(parsed.formula.left.right.formula.left.name, "highwater")
+        self.assertEqual(parsed.formula.left.right.formula.left.value, True)
+        self.assertIsInstance(parsed.formula.left.right.formula.right, AtomicProposition)
+        self.assertEqual(parsed.formula.left.right.formula.right.name, "highwater")
+        self.assertEqual(parsed.formula.left.right.formula.right.value, False)
+"""
+        self.assertIsInstance(parsed.formula.left.right, And)
+        self.assertIsInstance(parsed.formula.left.right.left, Prev)
+        self.assertIsInstance(parsed.formula.left.right.left.formula, AtomicProposition)
+        self.assertEqual(parsed.formula.left.right.left.formula.name, "highwater")
+        self.assertEqual(parsed.formula.left.right.left.formula.value, True)
+        self.assertIsInstance(parsed.formula.left.right.right, Prev)
+        self.assertIsInstance(parsed.formula.left.right.right.formula, AtomicProposition)
+        self.assertEqual(parsed.formula.left.right.right.formula.name, "highwater")
+        self.assertEqual(parsed.formula.left.right.right.formula.value, False)
+"""
+
 if __name__ == "__main__":
     unittest.main()

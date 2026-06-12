@@ -3,7 +3,7 @@
 # Save the current directory
 ORIGINAL_DIR=$(pwd)
 
-DATE="2026-02-18" #  $(date '+%Y-%m-%d')
+DATE="2026-06-03" #  $(date '+%Y-%m-%d')
 
 # Set working directory
 WORKDIR="/Users/tg4018/Documents/PhD/SpecRepair"
@@ -16,27 +16,31 @@ conda activate "$ENV_PATH" || { echo "Failed to activate Conda environment: $ENV
 
 # Define input and output arrays
 INPUT_FILES=(
-    "tests/test_files/out/repair/traffic_updated_${DATE}"
-    "tests/test_files/out/repair/traffic_single_${DATE}"
-    "tests/test_files/out/repair/minepump_${DATE}"
-    "tests/test_files/out/repair/arbiter_${DATE}"
-    "tests/test_files/out/repair/lift_${DATE}"
+    # "tests/test_files/out/repair/traffic_updated_${DATE}"
+    # "tests/test_files/out/repair/traffic_single_${DATE}"
+    # "tests/test_files/out/repair/minepump_${DATE}"
+    # "tests/test_files/out/repair/arbiter_${DATE}"
+    # "tests/test_files/out/repair/lift_${DATE}"
+    # "tests/test_files/out_ssh/repair_syn/arbiter_${DATE}/final"
+    "tests/test_files/out_ssh/repair_syn/minepump_${DATE}/final"
 )
 
 OUTPUT_FILES=(
-    "scripts/maximal_outputs/${DATE}/traffic_updated.txt"
-    "scripts/maximal_outputs/${DATE}/traffic_single.txt"
-    "scripts/maximal_outputs/${DATE}/minepump.txt"
-    "scripts/maximal_outputs/${DATE}/arbiter.txt"
-    "scripts/maximal_outputs/${DATE}/lift.txt"
+    # "scripts/maximal_outputs/${DATE}/traffic_updated.txt"
+    # "scripts/maximal_outputs/${DATE}/traffic_single.txt"
+    # "scripts/maximal_outputs/${DATE}/minepump.txt"
+    # "scripts/maximal_outputs/${DATE}/arbiter.txt"
+    # "scripts/maximal_outputs/${DATE}/lift.txt"
+    # "scripts/out_ssh/maximal_outputs/${DATE}/arbiter.txt"
+    "scripts/out_ssh/maximal_outputs/${DATE}/minepump.txt"
 )
 
 # Create output directory if it doesn't exist
-mkdir -p "scripts/maximal_outputs/${DATE}"
+mkdir -p "scripts/out_ssh/maximal_outputs/${DATE}"
 
 # Run tasks in parallel
 for i in "${!INPUT_FILES[@]}"; do
-    python scripts/find_maximal_specifications.py -s "${INPUT_FILES[i]}" &> "${OUTPUT_FILES[i]}" &
+    python scripts/find_maximal_specifications.py "${INPUT_FILES[i]}" &> "${OUTPUT_FILES[i]}" &
 done
 
 # Wait for all processes to complete

@@ -180,6 +180,11 @@ class TestSpectraSpecification(BaseTestCase):
         spec = SpectraSpecification.from_file(spec_file)
         print(spec._atoms)
 
+    def test_file_to_specification_works_weird_edge_case(self):
+        spec_file = "./test_files/out_ssh/repair_syn/minepump_2026-06-03/final/spec_1655.spectra"
+        spec = SpectraSpecification.from_file(spec_file)
+        print(spec._atoms)
+
     def test_integrate_learning_rule(self):
         spec_file = "./test_files/minepump_strong.spectra"
         spec = SpectraSpecification.from_file(spec_file)

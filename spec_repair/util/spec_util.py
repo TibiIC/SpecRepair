@@ -411,8 +411,8 @@ def format_spec(spec):
             if len(re.findall(r"\(", line)) == len(re.findall(r"\)", line)) + 1:
                 line = line.replace(";", " ) ;")
             # This replaces next(A & B) with next(A) & next(B):
-            line = spread_temporal_operator(line, "next")
-            line = spread_temporal_operator(line, "PREV")
+            # line = spread_temporal_operator(line, "next")
+            # line = spread_temporal_operator(line, "PREV")
             line = assign_equalities(line, variables + new_vars)
             spec[i] = line
     # This simplifies multiple brackets to single brackets
@@ -447,15 +447,125 @@ def enumerate_spec(spec):
             spec[i] = replacement_line
     return spec, new_vars
 
+def split_top_level(expr, sep):
+    parts = []
+    depth = 0
+    start = 0
+
+    for i, c in enumerate(expr):
+        if c == '(':
+            depth += 1
+        elif c == ')':
+            depth -= 1
+        elif c == sep and depth == 0:
+            parts.append(expr[start:i])
+            start = i + 1
+
+    parts.append(expr[start:])
+    return parts
+
+
+def extract_balanced(s, start_idx):
+    depth = 0
+    for i in range(start_idx, len(s)):
+        if s[i] == '(':
+            depth += 1
+        elif s[i] == ')':
+            depth -= 1
+            if depth == 0:
+                return s[start_idx + 1:i], i
+    raise ValueError("Unbalanced parentheses")
+
+
+def flatten_with_op(expr):
+    expr = expr.strip()
+
+    # strip redundant parentheses
+    while expr.startswith("(") and expr.endswith(")"):
+        inner = expr[1:-1].strip()
+        if inner.count("(") == inner.count(")"):
+            expr = inner
+        else:
+            break
+
+    depth = 0
+    ops = set()
+
+    for c in expr:
+        if c == '(':
+            depth += 1
+        elif c == ')':
+            depth -= 1
+        elif depth == 0 and c in "&|":
+            ops.add(c)
+
+    if not ops:
+        return None, [expr]
+
+    if len(ops) > 1:
+        return None, [expr]
+
+    op = ops.pop()
+
+    parts = []
+    depth = 0
+    start = 0
+
+    for i, c in enumerate(expr):
+        if c == '(':
+            depth += 1
+        elif c == ')':
+            depth -= 1
+        elif c == op and depth == 0:
+            parts.append(expr[start:i])
+            start = i + 1
+
+    parts.append(expr[start:])
+
+    result = []
+    for p in parts:
+        _, sub = flatten_with_op(p)
+        result.extend(sub)
+
+    return op, result
 
 def spread_temporal_operator(line, temporal):
-    pattern = r"(!)?" + temporal + r"\(([^\)]*)(&|\|)\s*"
-    replacement = temporal + r"(\1\2) \3 \1" + temporal + "("
-    while re.search(pattern, line):
-        line = re.sub(pattern, replacement, line)
-    line = re.sub("!" + temporal + r"\(", temporal + "(!", line)
-    return line
+    pattern = temporal + "("
+    i = 0
+    out = ""
 
+    while i < len(line):
+        m = line.find(pattern, i)
+        if m == -1:
+            out += line[i:]
+            break
+
+        out += line[i:m]
+        j = m + len(temporal)
+
+        if j >= len(line) or line[j] != '(':
+            out += line[m]
+            i = m + 1
+            continue
+
+        inner, end = extract_balanced(line, j)
+
+        # IMPORTANT: prevent PREV(PREV(...)) explosion
+        inner = inner.strip()
+
+        op, atoms = flatten_with_op(inner)
+
+        if op is None:
+            rebuilt = f"{temporal}({atoms[0]})"
+        else:
+            rebuilt = f" {op} ".join(
+                f"{temporal}({a.strip()})" for a in atoms
+            )
+
+        out += rebuilt
+        i = end + 1
+
+    return out
 
 def word_sub(spec: list[str], word: str, replacement: str):
     """

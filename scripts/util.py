@@ -32,8 +32,12 @@ def filter_semantically_unique_specifications(
     files_with_specs = sorted(files_with_specs, key=lambda x: x[0])
     unique_specs = []
     for file_path, spec in files_with_specs:
-        if not any(spec.equivalent_to(other_spec, comparison_type) for other_path, other_spec in unique_specs):
-            unique_specs.append((file_path, spec))
+        if comparison_type:
+            if not any(spec.equivalent_to(other_spec, comparison_type) for other_path, other_spec in unique_specs):
+                unique_specs.append((file_path, spec))
+        else:
+            if not any(spec == other_spec for other_path, other_spec in unique_specs):
+                unique_specs.append((file_path, spec))
     return unique_specs
 
 

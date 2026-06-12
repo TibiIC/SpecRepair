@@ -28,3 +28,4 @@ scripts/visualisations/remote/asm.png
 /logs/
 /build/
 /tests/test_files/out
+/tests/test_files/out_ssh/

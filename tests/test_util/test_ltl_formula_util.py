@@ -78,7 +78,7 @@ class TestLTLNormalization(unittest.TestCase):
 
     def test_spec_error(self):
         f_str = "GF((emergency=true->car=false))"
-        f = LTLFormula.parse(f_str, SpectraFormulaParser())
+        f = LTLFormula.parse(f_str, self._parser)
         normalized = normalize_to_pattern(f)
         print("Normalized formula:", normalized)
         expected_normalized = Globally(Eventually(Or(Not(AtomicProposition("emergency", True)), AtomicProposition("car", False))))
@@ -87,7 +87,16 @@ class TestLTLNormalization(unittest.TestCase):
 
     def test_spec_error_2(self):
         f_str = "\tG(PREV(pump=true)&pump=true->highwater=false);"
-        f = LTLFormula.parse(f_str, SpectraFormulaParser())
+        f = LTLFormula.parse(f_str, self._parser)
+        normalized = normalize_to_pattern(f)
+        print("Normalized formula:", normalized)
+        self.assertTrue(self._equiv(f, normalized))
+
+    def test_spec_error_3(self):
+        f_str = "G(((methane=true&PREV((highwater=true&highwater=false)))->next(pump=false)));"
+        print(f_str)
+        f = LTLFormula.parse(f_str, self._parser)
+        print(f)
         normalized = normalize_to_pattern(f)
         print("Normalized formula:", normalized)
         self.assertTrue(self._equiv(f, normalized))
