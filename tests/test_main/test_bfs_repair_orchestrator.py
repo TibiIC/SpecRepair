@@ -437,9 +437,17 @@ class TestBFSRepairOrchestrator(BaseTestCase):
             "guarantee_weakening": OptimisingSpecLearner(heuristic_manager=hm)
         }
         if is_debug:
-            recorder = UniqueSpecRecorder(sem_equivalence=False, debug_folder=out_test_dir_name)
+            intermediate_spec_dir_name = f"{out_test_dir_name}/intermediate_specs"
+            final_spec_dir_name = f"{out_test_dir_name}/final_specs"
+            intermediate_recorder = UniqueSpecRecorder(sem_equivalence=False, debug_folder=intermediate_spec_dir_name)
+            final_recorder = UniqueSpecRecorder(sem_equivalence=False, debug_folder=final_spec_dir_name)
+            if not os.path.exists(intermediate_spec_dir_name):
+                os.makedirs(intermediate_spec_dir_name, exist_ok=True)
+            if not os.path.exists(final_spec_dir_name):
+                os.makedirs(final_spec_dir_name, exist_ok=True)
         else:
-            recorder = UniqueSpecRecorder(sem_equivalence=False)
+            intermediate_recorder = UniqueSpecRecorder()
+            final_recorder = UniqueSpecRecorder()
 
         # will be set after repairer is constructed
         repairer_ref = []
@@ -458,12 +466,13 @@ class TestBFSRepairOrchestrator(BaseTestCase):
             }),
             om=OrchestrationManagerSyntacticEquivalence(),
             hm=hm,
-            recorder=recorder,
+            recorder=final_recorder,
+            intermediate_recorder=intermediate_recorder,
             logger=SpecLogger(filename=log_file, on_record=on_new_spec_found)
         )
         repairer_ref.append(repairer)
 
         repairer.repair_bfs(spec, RepairData(trace, counter_traces=[], learning_type=Learning.ASSUMPTION_WEAKENING))
-        new_spec_strings: list[str] = recorder.get_specs()
+        new_spec_strings: list[str] = final_recorder.get_specs()
         save_layered_graph(repairer._om._graph, out_test_dir_name)
         return new_spec_strings
