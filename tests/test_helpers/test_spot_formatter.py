@@ -55,6 +55,42 @@ class TestSpotFormatter(unittest.TestCase):
                              Next(AtomicProposition("highwater", False))))
         self.assertEqual("G(((X((X(pump) & pump)) & pump) -> X(X(X(!highwater)))))", self.formatter.format(f))
 
+    def test_response_pattern_as_dwyer_pattern(self):
+        f = Globally(Implies(AtomicProposition("s", True),
+                    Eventually(AtomicProposition("p", True))))
+        self.assertEqual(self.formatter.format(f), "G((s -> F(p)))")
+        f_string, d_index = self.formatter.format_dwyer_response_aware(f)
+        self.assertEqual(f_string, "!dwyer_state_0 & G((!dwyer_state_0 & (!(s) | ((s) & (p))) & X(!dwyer_state_0)) | (!dwyer_state_0 & ((s) & !(p)) & X(dwyer_state_0)) | (dwyer_state_0 & (p) & X(!dwyer_state_0)) | (dwyer_state_0 & !(p) & X(dwyer_state_0))) & GF(!dwyer_state_0)")
+        self.assertEqual(d_index, 1)
+
+    def test_response_pattern_as_dwyer_pattern_against_false_equivalents(self):
+        f = Implies(Globally(AtomicProposition("r", True)),
+                    Eventually(AtomicProposition("s", True)))
+        self.assertEqual(self.formatter.format(f), "(G(r) -> F(s))")
+        f_string, d_index = self.formatter.format_dwyer_response_aware(f)
+        self.assertEqual(f_string, "(G(r) -> F(s))")
+        self.assertEqual(d_index, 0)
+
+    def test_response_pattern_as_dwyer_pattern_complex(self):
+        # G((methane -> F(X(!pump))))
+        f = Globally(Implies(AtomicProposition("methane", True),
+                             Eventually(Next(AtomicProposition("pump", False)))))
+        self.assertEqual(self.formatter.format(f), "G((methane -> F(X(!pump))))")
+        f_string, d_index = self.formatter.format_dwyer_response_aware(f)
+        self.assertEqual(f_string, "!dwyer_state_0 & G((!dwyer_state_0 & (!(methane) | ((methane) & (X(!pump)))) & X(!dwyer_state_0)) | (!dwyer_state_0 & ((methane) & !(X(!pump))) & X(dwyer_state_0)) | (dwyer_state_0 & (X(!pump)) & X(!dwyer_state_0)) | (dwyer_state_0 & !(X(!pump)) & X(dwyer_state_0))) & GF(!dwyer_state_0)")
+        self.assertEqual(d_index, 1)
+
+    def test_response_pattern_as_dwyer_pattern_complex_2(self):
+        # G((highwater -> F((X(pump) | X(methane)))))
+        f = Globally(Implies(AtomicProposition("highwater", True),
+                             Eventually(
+                                 Or(Next(AtomicProposition("pump", True)), Next(AtomicProposition("methane", True))))))
+        self.assertEqual(self.formatter.format(f), "G((highwater -> F((X(pump) | X(methane)))))")
+        f_string, d_index = self.formatter.format_dwyer_response_aware(f, 2)
+        self.assertEqual(f_string,
+                         "!dwyer_state_2 & G((!dwyer_state_2 & (!(highwater) | ((highwater) & ((X(pump) | X(methane))))) & X(!dwyer_state_2)) | (!dwyer_state_2 & ((highwater) & !((X(pump) | X(methane)))) & X(dwyer_state_2)) | (dwyer_state_2 & ((X(pump) | X(methane))) & X(!dwyer_state_2)) | (dwyer_state_2 & !((X(pump) | X(methane))) & X(dwyer_state_2))) & GF(!dwyer_state_2)")
+        self.assertEqual(d_index, 3)
+
 
 if __name__ == "__main__":
     unittest.main()
