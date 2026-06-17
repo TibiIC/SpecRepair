@@ -2,6 +2,7 @@ import numpy as np
 import pandas as pd
 import spot
 
+from spec_repair.enums import Learning
 from spec_repair.helpers.adaptation_learned import Adaptation
 from spec_repair.helpers.gr1_formula import GR1Formula
 from spec_repair.helpers.heuristic_managers.no_filter_heuristic_manager import NoFilterHeuristicManager
@@ -509,6 +510,15 @@ root_consequent_holds(OP,guarantee4,0,1,T1,S):-
             "../input-files/case-studies/spectra/minepump/strong.spectra")
         self.assertFalse(spec_strong.is_trivial_true(GR1FormulaType.ASM))
         self.assertFalse(spec_strong.is_trivial_false(GR1FormulaType.ASM))
+
+    def test_minepump_strongest_against_best_repair(self):
+        spec_strong: SpectraSpecification = SpectraSpecification.from_file(
+            "../input-files/case-studies/spectra/minepump/strong.spectra")
+        spec_best: SpectraSpecification = SpectraSpecification.from_file(
+            "../tests/test_files/out_ssh/repair_syn/minepump_2026-06-12/best/merged_14.spectra")
+
+        self.assertTrue(spec_strong.implies(spec_best, GR1FormulaType.GAR))
+        self.assertFalse(spec_best.implies(spec_strong, GR1FormulaType.GAR))
 
     def test_extract_gr1_expressions_of_type_spot(self):
         spec_ideal: SpectraSpecification = SpectraSpecification.from_file(
