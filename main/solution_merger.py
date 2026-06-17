@@ -26,7 +26,9 @@ class RepairBro:
         assert oracle.is_realisable(self._original_spec)
 
     def merge_two_solutions(self, spec1: ISpecification, spec2: ISpecification) -> List[ISpecification]:
-        assert self._oracle.is_realisable(spec1) and self._oracle.is_realisable(spec2)
+        if not self._oracle.is_realisable(spec1) or not self._oracle.is_realisable(spec2):
+            print("WARNING: At least one of the two solutions is unrealizable.")
+            assert self._oracle.is_realisable(spec1) and self._oracle.is_realisable(spec2)
         assert self._original_spec.implies(spec1, GR1FormulaType.ASM) and self._original_spec.implies(spec2, GR1FormulaType.ASM)
         assert self._original_spec.implies(spec1, GR1FormulaType.GAR) and self._original_spec.implies(spec2, GR1FormulaType.GAR)
 
@@ -35,7 +37,12 @@ class RepairBro:
         if self._oracle.is_realisable(merged_spec):
             return [merged_spec]
         else:
-            return get_all_trivial_solutions_guarantee_only(merged_spec)
+            new_merged_specs = get_all_trivial_solutions_guarantee_only(merged_spec)
+            for new_merged_spec in new_merged_specs:
+                if not self._oracle.is_realisable(new_merged_spec):
+                    print("WARNING: Merged solution is unrealizable.")
+                    print(merged_spec)
+            return new_merged_specs
 
     def _merge_two_assumption_sets(self, asm_only_spec_1: SpectraSpecification, asm_only_spec_2: SpectraSpecification):
         asm_only_spec = self._original_spec.extract_sub_specification(lambda x: (x['type'] == GR1FormulaType.ASM))

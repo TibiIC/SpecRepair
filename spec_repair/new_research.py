@@ -102,4 +102,13 @@ def get_all_trivial_solutions_guarantee_only(new_spec: SpectraSpecification) -> 
             trivial_spec.remove_formula(guarantee_to_remove)
         trivial_specs.append(trivial_spec)
 
+    # BUG: unrealisable cores are not necessarily minimal or accurate, uncertain why.
+    # Doing another round of checking and trivialisation to ensure all are realizable.
+    trivial_specs_copy = deepcopy(trivial_specs)
+    for trivial_spec in trivial_specs_copy:
+        unrealisable_cores = run_all_unrealisable_cores(trivial_spec.to_str(is_to_compile=True))
+        if unrealisable_cores:
+            trivial_specs.remove(trivial_spec)
+            trivial_specs.extend(get_all_trivial_solutions_guarantee_only(trivial_spec))
+
     return trivial_specs

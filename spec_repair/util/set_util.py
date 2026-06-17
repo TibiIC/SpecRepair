@@ -20,7 +20,7 @@ def first_minimal_hitting_set(sets):
                 return candidate
     return None  # no hitting set found (should not happen unless input is empty)
 
-def all_minimal_hitting_sets(sets):
+def all_minimum_hitting_sets(sets):
     universe = set().union(*sets)  # all elements appearing
     sets = list(sets)
     minimal_hitting_sets = []
@@ -35,4 +35,33 @@ def all_minimal_hitting_sets(sets):
                     minimal_hitting_sets.append(candidate)
         else:
             break
+    return minimal_hitting_sets
+
+def is_hitting_set(candidate, sets):
+    return all(candidate & s for s in sets)
+
+
+def is_minimal(candidate, sets):
+    # remove one element at a time and check if still hitting
+    for elem in candidate:
+        reduced = candidate - {elem}
+        if reduced and is_hitting_set(reduced, sets):
+            return False
+    return True
+
+
+def all_minimal_hitting_sets(sets):
+    universe = set().union(*sets)
+    sets = list(sets)
+    minimal_hitting_sets = []
+
+    for r in range(1, len(universe) + 1):
+        for combo in combinations(universe, r):
+            candidate = set(combo)
+
+            if is_hitting_set(candidate, sets) and is_minimal(candidate, sets):
+                # avoid duplicates
+                if candidate not in minimal_hitting_sets:
+                    minimal_hitting_sets.append(candidate)
+
     return minimal_hitting_sets

@@ -1,13 +1,23 @@
 import os
 from unittest import TestCase
 
+from spec_repair.components.oracles.spectra_gr1_oracle import SpectraGR1Oracle
 from spec_repair.helpers.spectra_specification import SpectraSpecification
 from spec_repair.ltl_types import GR1FormulaType
-from spec_repair.new_research import get_trivial_solution, get_all_trivial_solution
+from spec_repair.new_research import get_trivial_solution, get_all_trivial_solution, \
+    get_all_trivial_solutions_guarantee_only
 from spec_repair.util.file_util import read_file_lines, write_to_file
+from tests.base_test_case import BaseTestCase
 
 
-class TestNewResearch(TestCase):
+class TestNewResearch(BaseTestCase):
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        cls.merged_spec_file = 'test_files/edge_cases/unrealisable_merged_spec.spectra'
+        cls.sanity_merged_minepump = 'test_files/edge_cases/sanity_merged_minepump.spectra'
+        cls.sanity_merged_minepump_2 = 'test_files/edge_cases/sanity_merged_minepump_2.spectra'
+
     def test_get_trivial_solution_minepump(self):
         dir = 'input-files/case-studies/spectra/minepump'
         trivial_spec = self.get_trivial_spec(dir)
@@ -68,6 +78,37 @@ class TestNewResearch(TestCase):
         trivial_specs = self.get_all_trivial_specs(dir)
         for i, trivial_spec in enumerate(trivial_specs):
             write_to_file(f'tests/test_files/out/trivial_solutions/weird_uc_{i}.spectra', trivial_spec.to_str())
+
+    def test_edge_case_get_all_trivial_solutions_guarantee_only(self):
+        merged_spec = SpectraSpecification.from_file(self.merged_spec_file)
+        new_merged_specs = get_all_trivial_solutions_guarantee_only(merged_spec)
+        oracle = SpectraGR1Oracle()
+        for new_merged_spec in new_merged_specs:
+            self.assertTrue(oracle.is_realisable(new_merged_spec))
+
+    def test_edge_case_get_all_trivial_solutions_guarantee_only_2(self):
+        merged_spec = SpectraSpecification.from_file(self.sanity_merged_minepump)
+        new_merged_specs = get_all_trivial_solutions_guarantee_only(merged_spec)
+        oracle = SpectraGR1Oracle()
+        for new_merged_spec in new_merged_specs:
+            self.assertTrue(oracle.is_realisable(new_merged_spec))
+
+    def test_edge_case_get_all_trivial_solutions_guarantee_only_3(self):
+        merged_spec = SpectraSpecification.from_file(self.sanity_merged_minepump_2)
+        new_merged_specs = get_all_trivial_solutions_guarantee_only(merged_spec)
+        oracle = SpectraGR1Oracle()
+        for new_merged_spec in new_merged_specs:
+            self.assertTrue(oracle.is_realisable(new_merged_spec))
+
+    def test_edge_case_get_all_trivial_solutions_guarantee_only_bad_split(self):
+        merged_spec = SpectraSpecification.from_file(self.sanity_merged_minepump_2)
+        new_merged_specs = get_all_trivial_solutions_guarantee_only(merged_spec)
+        oracle = SpectraGR1Oracle()
+        pre_merge_spec_1 = SpectraSpecification.from_file(self.spec_1)
+        pre_merge_spec_2 = SpectraSpecification.from_file(self.spec_2)
+        for new_merged_spec in new_merged_specs:
+            self.assertTrue(oracle.is_realisable(new_merged_spec))
+            self.assertTrue(pre_merge_spec_1.implies(new_merged_spec, GR1FormulaType.ASM) or pre_merge_spec_2.implies(new_merged_spec, GR1FormulaType.ASM))
 
     def get_trivial_spec(self, dir):
         spec = SpectraSpecification.from_file(

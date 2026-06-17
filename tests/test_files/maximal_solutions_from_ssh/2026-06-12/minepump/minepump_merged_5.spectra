@@ -1,0 +1,52 @@
+module Minepump
+
+env boolean highwater;
+env boolean methane;
+sys boolean pump;
+
+
+assumption -- initial_assumption
+	(highwater=false&methane=false);
+
+guarantee -- initial_guarantee
+	pump=false;
+
+guarantee -- guarantee1_1_0
+	G(((highwater=true&PREV(methane=false))->next(pump=true)));
+
+guarantee -- guarantee1_1_1
+	G(((highwater=true&methane=false)->next(pump=true)));
+
+guarantee -- guarantee2_1_1
+	G(((methane=true&pump=true)->next(pump=false)));
+
+assumption -- assumption1_1
+	G(((PREV(pump=true)&pump=true)->next(highwater=false)));
+
+assumption -- assumption2_1
+	G((pump=true->(highwater=false|methane=false)));
+
+guarantee -- guarantee2_1_2
+	G(((methane=true&highwater=false)->next(pump=false)));
+
+guarantee -- guarantee2_1_3
+	G(((methane=true&PREV(methane=false))->next(pump=false)));
+
+guarantee -- guarantee1_1_3
+	G(((highwater=true&PREV((pump=false&highwater=false)))->next(pump=true)));
+
+guarantee -- guarantee1_1_4
+	G(((highwater=true&PREV(pump=false))->next(pump=true)));
+
+guarantee -- guarantee1_1_5
+	G(((highwater=true&PREV(highwater=true))->next(pump=true)));
+
+guarantee -- guarantee2_1_0
+	G((methane=true->F(next(pump=false))));
+
+guarantee -- guarantee2_1_4
+	G(((methane=true&PREV(pump=true))->next(pump=false)));
+
+guarantee -- guarantee1_1
+	G((highwater=true->F((next(pump=true)|next(methane=true)))));
+

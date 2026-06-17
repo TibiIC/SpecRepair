@@ -161,7 +161,7 @@ class TestRepairBro(BaseTestCase):
         self.run_merge_all_spectra_case_study_ssh_date('arbiter', date_str=DATE)
 
     def test_merge_all_minepump_ssh_date(self):
-        DATE = '2026-06-03'
+        DATE = '2026-06-12'
         self.run_merge_all_spectra_case_study_ssh_date('minepump', date_str=DATE)
 
     def test_merge_all_traffic_single_ssh_date(self):
@@ -173,9 +173,8 @@ class TestRepairBro(BaseTestCase):
         self.run_merge_all_spectra_case_study_ssh_date('traffic_updated', date_str=DATE)
 
     def run_merge_all_spectra_case_study_ssh_date(self, case_study_name: str, date_str: str):
-        DATE = '2026-06-03'
         case_study_path = f'../input-files/case-studies/spectra/{case_study_name}'
-        input_specs_path = f'test_files/maximal_solutions_from_ssh/{DATE}/{case_study_name}'
+        input_specs_path = f'test_files/maximal_solutions_from_ssh/{date_str}/{case_study_name}'
 
         all_spec_files: List[str] = sorted(glob.glob(f"{input_specs_path}/*.spectra"))
         all_specs: List[SpectraSpecification] = [
@@ -190,18 +189,27 @@ class TestRepairBro(BaseTestCase):
             out_test_dir_name = f"./test_files/out_ssh/merge_all/{case_study_name}_{date_str}"
         if not os.path.exists(out_test_dir_name):
             os.makedirs(out_test_dir_name, exist_ok=True)
+        # sanity check: all specifications are realisable
+        oracle = SpectraGR1Oracle()
+        for i, spec in enumerate(all_specs):
+            if not oracle.is_realisable(spec):
+                raise Exception(f"Specification {i} is not realisable\n{spec} ")
         merged_specs: List[SpectraSpecification] = all_specs[0:1]
-        for spec in all_specs[1:]:
+        for i, spec in enumerate(all_specs[1:]):
             new_merged_specs = []
-            for merged_spec in merged_specs:
+            print(f"i = {i}")
+            for j, merged_spec in enumerate(merged_specs):
+                print(f"j = {j}")
                 new_merged_specs.extend(self.run_merge_two(case_study_name, case_study_path, merged_spec, spec,
                                                            out_test_dir_name=out_test_dir_name))
             merged_specs = self._remove_duplicate_specs(new_merged_specs)
         if len(merged_specs) != 1:
             sanity_checked_merged_specs = merged_specs[0:1]
-            for spec in merged_specs[1:]:
+            for i, spec in enumerate(merged_specs[1:]):
                 new_merged_specs = []
-                for merged_spec in merged_specs:
+                print(f"i = {i}")
+                for j, merged_spec in enumerate(merged_specs):
+                    print(f"j = {j}")
                     new_merged_specs.extend(self.run_merge_two(case_study_name, case_study_path, merged_spec, spec,
                                                                out_test_dir_name=out_test_dir_name))
 
