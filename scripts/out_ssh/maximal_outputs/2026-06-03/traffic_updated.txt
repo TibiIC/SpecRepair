@@ -5,16 +5,19 @@ WARNING: Restricted methods will be blocked in a future release unless native ac
 
 JVM started successfully
 Comparison type: None
-Finding maximal specs in directory:  /Users/tg4018/Documents/PhD/SpecRepair/tests/test_files/out_ssh/repair_syn/arbiter_2026-06-12/distinct
-Found 7 maximal specifications in the directory: /Users/tg4018/Documents/PhD/SpecRepair/tests/test_files/out_ssh/repair_syn/arbiter_2026-06-12/distinct
+Finding maximal specs in directory:  /Users/tg4018/Documents/PhD/SpecRepair/tests/test_files/out_ssh/repair_syn/traffic_updated_2026-06-03/distinct
+Found 10 maximal specifications in the directory: /Users/tg4018/Documents/PhD/SpecRepair/tests/test_files/out_ssh/repair_syn/traffic_updated_2026-06-03/distinct
 Maximal specifications found in files:
 spec_7.spectra
-spec_6.spectra
-spec_4.spectra
+spec_11.spectra
+spec_18.spectra
+spec_5.spectra
 spec_10.spectra
-spec_9.spectra
-spec_8.spectra
-spec_38.spectra
+spec_0.spectra
+spec_1.spectra
+spec_14.spectra
+spec_20.spectra
+spec_3.spectra
 Shutting down SpectraTool and SpectraCLI...
 JVM shutdown initiated...
 JVM shutdown complete.

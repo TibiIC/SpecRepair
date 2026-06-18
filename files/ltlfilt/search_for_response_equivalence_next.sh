@@ -18,8 +18,8 @@
 # │ alwEv (state=S0);                                      │ GF(!state)                                    │
 # └────────────────────────────────────────────────────────┴───────────────────────────────────────────────┘
 
-response='G(s -> F(p))'
-pattern='!state & G((!state & ((!s) | (s & p)) & X(!state)) | (!state & (s & !p) & X(state)) | (state & (p) & X(!state)) | (state & (!p) & X(state))) & GF(!state)'
+response='G(s -> F(X(!p)))'
+pattern='!state & G((!state & ((!s) | (s & X(!p))) & X(!state)) | (!state & (s & !X(!p)) & X(state)) | (state & (X(!p)) & X(!state)) |(state & (!X(!p)) & X(state))) & GF(!state)'
 
 output=$(ltlfilt -c -f \
 "$pattern" \

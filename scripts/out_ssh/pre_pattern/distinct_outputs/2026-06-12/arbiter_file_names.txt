@@ -16,7 +16,6 @@ spec_110.spectra
 spec_112.spectra
 spec_113.spectra
 spec_114.spectra
-spec_116.spectra
 spec_118.spectra
 spec_12.spectra
 spec_120.spectra
@@ -35,8 +34,6 @@ spec_134.spectra
 spec_135.spectra
 spec_136.spectra
 spec_137.spectra
-spec_138.spectra
-spec_139.spectra
 spec_14.spectra
 spec_141.spectra
 spec_142.spectra
@@ -75,7 +72,6 @@ spec_183.spectra
 spec_184.spectra
 spec_185.spectra
 spec_186.spectra
-spec_188.spectra
 spec_19.spectra
 spec_190.spectra
 spec_191.spectra
@@ -89,7 +85,6 @@ spec_20.spectra
 spec_21.spectra
 spec_23.spectra
 spec_232.spectra
-spec_235.spectra
 spec_237.spectra
 spec_238.spectra
 spec_240.spectra
@@ -106,11 +101,9 @@ spec_254.spectra
 spec_255.spectra
 spec_256.spectra
 spec_259.spectra
-spec_26.spectra
 spec_260.spectra
 spec_261.spectra
 spec_262.spectra
-spec_264.spectra
 spec_265.spectra
 spec_267.spectra
 spec_268.spectra
@@ -119,15 +112,11 @@ spec_270.spectra
 spec_271.spectra
 spec_272.spectra
 spec_273.spectra
-spec_276.spectra
 spec_278.spectra
 spec_28.spectra
-spec_281.spectra
 spec_283.spectra
-spec_286.spectra
 spec_288.spectra
 spec_29.spectra
-spec_291.spectra
 spec_293.spectra
 spec_294.spectra
 spec_295.spectra
@@ -154,7 +143,6 @@ spec_32.spectra
 spec_320.spectra
 spec_321.spectra
 spec_322.spectra
-spec_323.spectra
 spec_324.spectra
 spec_326.spectra
 spec_327.spectra
@@ -182,7 +170,6 @@ spec_354.spectra
 spec_355.spectra
 spec_356.spectra
 spec_357.spectra
-spec_358.spectra
 spec_359.spectra
 spec_36.spectra
 spec_361.spectra
@@ -207,11 +194,9 @@ spec_38.spectra
 spec_380.spectra
 spec_381.spectra
 spec_382.spectra
-spec_383.spectra
 spec_384.spectra
 spec_386.spectra
 spec_387.spectra
-spec_388.spectra
 spec_389.spectra
 spec_39.spectra
 spec_390.spectra
@@ -220,13 +205,10 @@ spec_393.spectra
 spec_394.spectra
 spec_396.spectra
 spec_397.spectra
-spec_398.spectra
-spec_399.spectra
 spec_4.spectra
 spec_40.spectra
 spec_401.spectra
 spec_402.spectra
-spec_403.spectra
 spec_405.spectra
 spec_406.spectra
 spec_41.spectra

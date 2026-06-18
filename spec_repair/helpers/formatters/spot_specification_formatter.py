@@ -1,9 +1,11 @@
 from copy import deepcopy
-from typing import Optional
+from typing import Optional, List
 
 from spec_repair.helpers.formatters.spot_formula_formatter import SpotFormulaFormatter
+from spec_repair.helpers.gr1_formula import GR1Formula
 from spec_repair.ltl_types import GR1FormulaType, GR1TemporalType
 
+PATTERN = True
 
 class SpotSpecificationFormatter:
     def __init__(self, type: Optional[GR1FormulaType] = None, not_initial: bool = False):
@@ -22,8 +24,8 @@ class SpotSpecificationFormatter:
         """
         # Never risk modifying the original spec
         spec = deepcopy(spec)
-        asm_formulas = []
-        gar_formulas = []
+        asm_formulas: List[GR1Formula] = []
+        gar_formulas: List[GR1Formula] = []
         if self._type is not GR1FormulaType.GAR:
             for _, row in spec._formulas_df[spec._formulas_df.type == GR1FormulaType.ASM].iterrows():
                 if self._not_initial and row.when == GR1TemporalType.INITIAL:
@@ -36,8 +38,21 @@ class SpotSpecificationFormatter:
                     continue
                 gar_formulas.append(row.formula)
 
-        asms = '&'.join([f.to_str(self._formula_formatter) for f in asm_formulas])
-        gars = '&'.join([f.to_str(self._formula_formatter) for f in gar_formulas])
+        if PATTERN:
+            dwyer_index = 0
+            asms = []
+            for f in asm_formulas:
+                asm, dwyer_index = self._formula_formatter.format_dwyer_response_aware(f.to_ltl_formula(), dwyer_index)
+                asms.append(asm)
+            asms = '&'.join(asms)
+            gars = []
+            for f in gar_formulas:
+                gar, dwyer_index = self._formula_formatter.format_dwyer_response_aware(f.to_ltl_formula(), dwyer_index)
+                gars.append(gar)
+            gars = '&'.join(gars)
+        else:
+            asms = '&'.join([f.to_str(self._formula_formatter) for f in asm_formulas])
+            gars = '&'.join([f.to_str(self._formula_formatter) for f in gar_formulas])
         if asms and gars:
             formulas_str = f"({asms})->({gars})"
         elif asms:

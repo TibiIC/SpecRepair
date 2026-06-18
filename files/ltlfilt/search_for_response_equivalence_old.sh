@@ -18,13 +18,10 @@
 # │ alwEv (state=S0);                                      │ GF(!state)                                    │
 # └────────────────────────────────────────────────────────┴───────────────────────────────────────────────┘
 
-response='G(s -> F(p))'
-pattern='!state & G((!state & ((!s) | (s & p)) & X(!state)) | (!state & (s & !p) & X(state)) | (state & (p) & X(!state)) | (state & (!p) & X(state))) & GF(!state)'
-
 output=$(ltlfilt -c -f \
-"$pattern" \
+'!state & G((!state & ((!s) | (s & p)) & X(!state)) | (!state & (s & !p) & X(state)) | (state & (p) & X(!state)) |(state & (!p) & X(state))) & GF(!state)' \
   --imply \
-  "$response")
+  'G(s -> F(p))')
 
 if [ "$output" -eq 1 ]; then
   echo "Pattern->Response"
@@ -33,9 +30,9 @@ else
 fi
 
 output=$(ltlfilt -c -f \
-"$response" \
+'G(s -> F(p))' \
   --imply \
-  "$pattern")
+  '!state & G((!state & ((!s) | (s & p)) & X(!state)) | (!state & (s & !p) & X(state)) | (state & (p) & X(!state)) |(state & (!p) & X(state))) & GF(!state)')
 
 if [ "$output" -eq 1 ]; then
   echo "Response->Pattern"
@@ -44,9 +41,9 @@ else
 fi
 
 output=$(ltlfilt -c -f \
-"$response" \
+'G(s -> F(p))' \
   --equivalent-to \
-  "$pattern")
+  '!state & G((!state & ((!s) | (s & p)) & X(!state)) | (!state & (s & !p) & X(state)) | (state & (p) & X(!state)) |(state & (!p) & X(state))) & GF(!state)')
 
 if [ "$output" -eq 1 ]; then
   echo "Equivalent"

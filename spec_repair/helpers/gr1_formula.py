@@ -95,20 +95,23 @@ class GR1Formula:
             case _:
                 raise ValueError(f"Unsupported temporal type: {self.temp_type}")
 
-    def to_str(self, formatter: ILTLFormatter) -> str:
+    def to_ltl_formula(self) -> LTLFormula:
         if self.antecedent is None:
             implication = deepcopy(self.consequent)
         else:
             implication = deepcopy(Implies(self.antecedent, self.consequent))
         match self.temp_type:
             case GR1TemporalType.INITIAL:
-                return implication.format(formatter=formatter)
+                return implication
             case GR1TemporalType.INVARIANT:
-                return Globally(implication).format(formatter=formatter)
+                return Globally(implication)
             case GR1TemporalType.JUSTICE:
-                return Globally(Eventually(implication)).format(formatter=formatter)
+                return Globally(Eventually(implication))
             case _:
                 raise ValueError(f"Unsupported temporal type: {self.temp_type}")
+
+    def to_str(self, formatter: ILTLFormatter) -> str:
+        return self.to_ltl_formula().format(formatter)
 
     def integrate(self, adaptation: Adaptation):
         # TODO: move this to adaptation_learned.py

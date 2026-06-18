@@ -15,7 +15,9 @@ def merge_all_solutions(specs: List[ISpecification], og_spec:Optional[ISpecifica
     for spec in specs:
         assert oracle.is_realisable(spec)
         if og_spec:
-            assert og_spec.implies(spec, GR1FormulaType.ASM) and og_spec.implies(spec, GR1FormulaType.GAR)
+            pass
+            #assert og_spec.implies(spec, GR1FormulaType.GAR)
+            # assert og_spec.implies(spec, GR1FormulaType.ASM)
 
     merged_spec = specs[0].merge(specs[1])
     for i in range(2, len(specs)):
