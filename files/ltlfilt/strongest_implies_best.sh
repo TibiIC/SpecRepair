@@ -1,32 +1,32 @@
 #!/bin/bash
 
-strong='!pump&G((highwater -> X(pump)))&G((methane -> X(!pump)))'
-best='!pump& G((highwater -> X(pump)))& G((methane -> (X(!pump) | X(methane) & X(highwater))))& G((methane -> F(X(!pump))))'
+original='G((highwater -> X(pump)))&G((methane -> X(!pump)))'
+best=' G((highwater -> X(pump)))& G((methane -> (X(!pump) | X(methane) & X(highwater))))& GF(!methane|!pump)'
 
 output=$(ltlfilt -c -f \
 "$best"\
   --imply \
-  "$strong")
+  "$original")
 
 if [ "$output" -eq 1 ]; then
-  echo "Best->Strong"
+  echo "Best->Original"
 else
-  echo "NOT Best->Strong"
+  echo "NOT Best->Original"
 fi
 
 output=$(ltlfilt -c -f \
-"$strong"\
+"$original"\
   --imply \
   "$best")
 
 if [ "$output" -eq 1 ]; then
-  echo "Strong->Best"
+  echo "Original->Best"
 else
-  echo "NOT Strong->Best"
+  echo "NOT Original->Best"
 fi
 
 output=$(ltlfilt -c -f \
-"$strong"\
+"$original"\
   --equivalent-to \
   "$best")
 
