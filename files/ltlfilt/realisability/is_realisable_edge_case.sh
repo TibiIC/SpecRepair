@@ -51,4 +51,4 @@ echo "  outputs: $OUTPUTS"
 echo
 
 ltlsynt --formula="$PHI" --ins="$INPUTS" --outs="$OUTPUTS" --realizability
-strix --realizability -f "$PHI" --ins="$INPUTS" --outs="$OUTPUTS"
+strix -o hoa -f "$PHI" --ins="$INPUTS" --outs="$OUTPUTS"
