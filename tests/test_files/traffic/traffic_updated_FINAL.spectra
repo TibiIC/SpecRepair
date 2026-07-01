@@ -25,10 +25,8 @@ guarantee -- red_when_emergency
 assumption -- carA_idle_when_red
 	G(carA=true & greenA=false &greenB=true-> next(carA=true));
 
-
 assumption -- carB_idle_when_red
 	G(carB=true & greenB=false &carA=false-> next(carB=true));
-
 
 assumption -- carA_moves_when_green
 	G(carA=true & greenA=true -> next(carA=false));

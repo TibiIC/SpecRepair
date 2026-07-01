@@ -1,17 +1,20 @@
 import os
+import unittest
 from functools import partial
 
+from spec_repair.helpers.counter_strategy import CounterStrategy
 from spec_repair.helpers.counter_trace import CounterTrace, ct_from_cs, complete_cts_from_ct
 from spec_repair.enums import Learning
+from spec_repair.helpers.parsers.spectra_cs_parser import SpectraCSParser
 from spec_repair.helpers.spectra_specification import SpectraSpecification
 from spec_repair.heuristics import first_choice, last_choice, nth_choice
-from spec_repair.ltl_types import CounterStrategy
 from tests.base_test_case import BaseTestCase
 
-cs1: CounterStrategy = \
+cs1: CounterStrategy = SpectraCSParser.from_lines(
     ['INI -> S0 {highwater:false, methane:false} / {pump:false};',
      'S0 -> DEAD {highwater:true, methane:true} / {pump:false};',
      'S0 -> DEAD {highwater:true, methane:true} / {pump:true};']
+)
 
 cs1_1_raw_trace = """\
 not_holds_at(highwater,0,ini_S0_DEAD).
@@ -31,11 +34,12 @@ holds_at(methane,1,ini_S0_DEAD).
 not_holds_at(pump,1,ini_S0_DEAD).
 """
 
-cs2: CounterStrategy = \
+cs2: CounterStrategy = SpectraCSParser.from_lines(
     ['INI -> S0 {highwater:false, methane:false} / {pump:false};',
      'S0 -> S1 {highwater:false, methane:true} / {pump:false};',
      'S0 -> S1 {highwater:false, methane:true} / {pump:true};',
      'S1 -> DEAD {highwater:true, methane:true} / {pump:false};']
+)
 
 cs2_1_raw_trace = """\
 not_holds_at(highwater,0,ini_S0_S1_DEAD).
@@ -49,11 +53,12 @@ holds_at(methane,2,ini_S0_S1_DEAD).
 not_holds_at(pump,2,ini_S0_S1_DEAD).
 """
 
-cs3: CounterStrategy = \
+cs3: CounterStrategy = SpectraCSParser.from_lines(
     ['INI -> S0 {car:true, emergency:false, police:false} / {green:false};',
      'INI -> S0 {car:true, emergency:false, police:false} / {green:true};',
      'S0 -> S0 {car:true, emergency:false, police:false} / {green:false};',
      'S0 -> S0 {car:true, emergency:false, police:false} / {green:true};']
+)
 
 cs3_1_raw_trace = """\
 holds_at(car,0,ini_S0_S0).
@@ -70,7 +75,7 @@ cs3_2_raw_trace = """\
 holds_at(car,0,ini_S0_S0).
 not_holds_at(emergency,0,ini_S0_S0).
 not_holds_at(police,0,ini_S0_S0).
-holds_at(green,0,ini_S0_S0).
+not_holds_at(green,0,ini_S0_S0).
 holds_at(car,1,ini_S0_S0).
 not_holds_at(emergency,1,ini_S0_S0).
 not_holds_at(police,1,ini_S0_S0).
@@ -92,10 +97,11 @@ not_holds_at(police,2,ini_S0_S0_S0).
 not_holds_at(green,2,ini_S0_S0_S0).
 """
 
-cs4: CounterStrategy = \
+cs4: CounterStrategy = SpectraCSParser.from_lines(
     ['INI -> S0 {e:false} / {s:false};',
      'INI -> DEAD {e:false} / {s:true};',
      'S0 -> DEAD {e:true} / {s:false};']
+)
 
 
 class TestCounterTrace(BaseTestCase):
@@ -117,8 +123,13 @@ class TestCounterTrace(BaseTestCase):
         self.assertEqual("ini_S0_S1_DEAD", ct._path)
 
     def test_get_raw_form_cycle(self):
-        ct = ct_from_cs(cs3, heuristic=first_choice)
+        ct = ct_from_cs(cs3, heuristic=partial(nth_choice, -1))
         self.assertEqual(cs3_1_raw_trace, ct.get_raw_trace())
+        self.assertEqual("ini_S0_S0", ct._path)
+
+    def test_get_raw_form_cycle_2(self):
+        ct = ct_from_cs(cs3, heuristic=partial(nth_choice, 2))
+        self.assertEqual(cs3_2_raw_trace, ct.get_raw_trace())
         self.assertEqual("ini_S0_S0", ct._path)
 
     def test_get_named_form_1(self):
@@ -166,6 +177,7 @@ timepoint(1,counter_strat_0_0).
 weak_timepoint(weak_t,counter_strat_0_0).
 next(1,0,counter_strat_0_0).
 next(weak_t,1,counter_strat_0_0).
+next(weak_t,weak_t,counter_strat_0_0).
 
 not_holds_at(highwater,0,counter_strat_0_0).
 not_holds_at(methane,0,counter_strat_0_0).
@@ -192,6 +204,7 @@ weak_timepoint(weak_t,counter_strat_1_0).
 next(1,0,counter_strat_1_0).
 next(2,1,counter_strat_1_0).
 next(weak_t,2,counter_strat_1_0).
+next(weak_t,weak_t,counter_strat_1_0).
 
 not_holds_at(highwater,0,counter_strat_1_0).
 not_holds_at(methane,0,counter_strat_1_0).
@@ -202,6 +215,31 @@ holds_at(pump,1,counter_strat_1_0).
 holds_at(highwater,2,counter_strat_1_0).
 holds_at(methane,2,counter_strat_1_0).
 not_holds_at(pump,2,counter_strat_1_0).
+"""
+        self.assertEqual(expected_ct_asp, ct.get_asp_form())
+
+    def test_get_asp_form_cycle(self):
+        ct = ct_from_cs(cs3, heuristic=partial(nth_choice, -1), cs_id=1)
+        expected_ct_asp = """\
+%---*** Violation Trace ***---
+
+% CS_Path: ini_S0_S0
+
+trace(counter_strat_1_3).
+
+timepoint(0,counter_strat_1_3).
+timepoint(1,counter_strat_1_3).
+next(1,0,counter_strat_1_3).
+next(1,1,counter_strat_1_3).
+
+holds_at(car,0,counter_strat_1_3).
+not_holds_at(emergency,0,counter_strat_1_3).
+not_holds_at(police,0,counter_strat_1_3).
+not_holds_at(green,0,counter_strat_1_3).
+holds_at(car,1,counter_strat_1_3).
+not_holds_at(emergency,1,counter_strat_1_3).
+not_holds_at(police,1,counter_strat_1_3).
+not_holds_at(green,1,counter_strat_1_3).
 """
         self.assertEqual(expected_ct_asp, ct.get_asp_form())
 
@@ -220,6 +258,7 @@ timepoint(1,counter_strat_0_0).
 weak_timepoint(weak_t,counter_strat_0_0).
 next(1,0,counter_strat_0_0).
 next(weak_t,1,counter_strat_0_0).
+next(weak_t,weak_t,counter_strat_0_0).
 not_holds_at(highwater,0,counter_strat_0_0).
 not_holds_at(methane,0,counter_strat_0_0).
 not_holds_at(pump,0,counter_strat_0_0).
@@ -247,6 +286,7 @@ weak_timepoint(weak_t,counter_strat_1_0).
 next(1,0,counter_strat_1_0).
 next(2,1,counter_strat_1_0).
 next(weak_t,2,counter_strat_1_0).
+next(weak_t,weak_t,counter_strat_1_0).
 not_holds_at(highwater,0,counter_strat_1_0).
 not_holds_at(methane,0,counter_strat_1_0).
 not_holds_at(pump,0,counter_strat_1_0).
@@ -294,9 +334,9 @@ not_holds_at(pump,1,counter_strat_1_1).
 holds_at(highwater,2,counter_strat_1_1).
 holds_at(methane,2,counter_strat_1_1).
 not_holds_at(pump,2,counter_strat_1_1).
-not_holds_at(pump,3,counter_strat_1_1).
 holds_at(highwater,3,counter_strat_1_1).
-holds_at(methane,3,counter_strat_1_1).\
+holds_at(methane,3,counter_strat_1_1).
+holds_at(pump,3,counter_strat_1_1).\
 """
         self.assertEqual(expected_ct_raw, ct.get_raw_trace())
 
@@ -332,6 +372,7 @@ weak_timepoint(weak_t,counter_strat_0_0).
 next(1,0,counter_strat_0_0).
 next(2,1,counter_strat_0_0).
 next(weak_t,2,counter_strat_0_0).
+next(weak_t,weak_t,counter_strat_0_0).
 
 not_holds_at(highwater,0,counter_strat_0_0).
 not_holds_at(methane,0,counter_strat_0_0).
@@ -366,6 +407,7 @@ next(1,0,counter_strat_1_1).
 next(2,1,counter_strat_1_1).
 next(3,2,counter_strat_1_1).
 next(weak_t,3,counter_strat_1_1).
+next(weak_t,weak_t,counter_strat_1_1).
 
 not_holds_at(highwater,0,counter_strat_1_1).
 not_holds_at(methane,0,counter_strat_1_1).
@@ -376,9 +418,9 @@ not_holds_at(pump,1,counter_strat_1_1).
 holds_at(highwater,2,counter_strat_1_1).
 holds_at(methane,2,counter_strat_1_1).
 not_holds_at(pump,2,counter_strat_1_1).
-not_holds_at(pump,3,counter_strat_1_1).
 holds_at(highwater,3,counter_strat_1_1).
 holds_at(methane,3,counter_strat_1_1).
+holds_at(pump,3,counter_strat_1_1).
 """
         self.assertEqual(expected_ct_asp, ct.get_asp_form())
 
@@ -399,3 +441,6 @@ holds_at(methane,3,counter_strat_1_1).
         ct1 = CounterTrace(cs1_1_raw_trace, "ini_S0_DEAD", "counter_strat_0_0")
         ct2 = CounterTrace(cs1_2_raw_trace, "ini_S0_DEAD", "counter_strat_0_0")
         self.assertNotEqual(ct1, ct2)
+
+if __name__ == "__main__":
+    unittest.main()

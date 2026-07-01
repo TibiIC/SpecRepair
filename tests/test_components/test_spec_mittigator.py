@@ -1,13 +1,15 @@
+import unittest
 from copy import deepcopy
 from typing import Tuple
 
 from spec_repair.components.repair_data import RepairData
+from spec_repair.helpers.counter_strategy import CounterStrategy
+from spec_repair.helpers.parsers.spectra_cs_parser import SpectraCSParser
 from tests.base_test_case import BaseTestCase
 from spec_repair.components.mitigators.learning_type_spec_mitigator import LearningTypeSpecMitigator
 from spec_repair.enums import Learning
 from spec_repair.helpers.counter_trace import cts_from_cs, CounterTrace
 from spec_repair.helpers.spectra_specification import SpectraSpecification
-from spec_repair.ltl_types import CounterStrategy
 from spec_repair.util.mittigation_strategies import move_one_to_guarantee_weakening, complete_counter_traces
 
 
@@ -33,11 +35,12 @@ class TestSpecMittigator(BaseTestCase):
             'not_holds_at(pump,1,trace_name_0).\n',
             '\n'
         ]
-        cs: CounterStrategy = \
+        cs: CounterStrategy = SpectraCSParser.from_lines(
             ['INI -> S0 {highwater:false, methane:false} / {pump:false};',
              'S0 -> S1 {highwater:false, methane:true} / {pump:false};',
              'S0 -> S1 {highwater:false, methane:true} / {pump:true};',
              'S1 -> DEAD {highwater:true, methane:true} / {pump:false};']
+        )
         cts = [cts_from_cs(cs, 0)[0]]
         learning_type = Learning.ASSUMPTION_WEAKENING
         data = RepairData(trace, counter_traces=cts, learning_type=learning_type, spec_history=[deepcopy(spec)])
@@ -75,11 +78,12 @@ class TestSpecMittigator(BaseTestCase):
             'not_holds_at(pump,1,trace_name_0).\n',
             '\n'
         ]
-        cs: CounterStrategy = \
+        cs: CounterStrategy = SpectraCSParser.from_lines(
             ['INI -> S0 {highwater:false, methane:false} / {pump:false};',
              'S0 -> S1 {highwater:false, methane:true} / {pump:false};',
              'S0 -> S1 {highwater:false, methane:true} / {pump:true};',
              'S1 -> DEAD {highwater:true, methane:true} / {pump:false};']
+        )
         cts = [cts_from_cs(cs, 0)[0]]
         learning_type = Learning.GUARANTEE_WEAKENING
         data = RepairData(trace, counter_traces=cts, learning_type=learning_type)
@@ -95,7 +99,6 @@ class TestSpecMittigator(BaseTestCase):
             self.assertEqual(len(new_data.counter_traces), 1)
             self.assertIsInstance(new_data.counter_traces[0], CounterTrace)
             new_ctss.add(new_data.counter_traces[0])
-       # TODO: Understand why 4 more counter traces were added to this test (first 4, with highwater in last timepoint
         expected_ctss = {
             'CT(!highwater,!methane,!pump;!highwater,methane,pump;highwater,methane,!pump;highwater,methane,pump)',
             'CT(!highwater,!methane,!pump;!highwater,methane,pump;highwater,methane,!pump;highwater,methane,!pump)',
@@ -113,3 +116,7 @@ class TestSpecMittigator(BaseTestCase):
             self.assertEqual(new_cts.get_name(), "counter_strat_0_0")
             self.assertEqual(new_cts.is_deadlock(), False)
         self.assertEqual(len(expected_ctss), 0)
+
+
+if __name__ == "__main__":
+    unittest.main()

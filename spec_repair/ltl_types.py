@@ -5,7 +5,6 @@ import pandas as pd
 
 
 
-CounterStrategy = List[str]
 Spec = pd.DataFrame
 
 

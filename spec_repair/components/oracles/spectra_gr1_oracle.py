@@ -5,9 +5,10 @@ from typing import Optional, List, Tuple
 from spec_repair.components.interfaces.ioracle import IOracle
 from spec_repair.components.new_spec_encoder import NewSpecEncoder
 from spec_repair.components.repair_data import RepairData
+from spec_repair.helpers.counter_strategy import CounterStrategy
 from spec_repair.helpers.counter_trace import cts_from_cs, CounterTrace
+from spec_repair.helpers.parsers.spectra_cs_parser import SpectraCSParser
 from spec_repair.helpers.spectra_specification import SpectraSpecification
-from spec_repair.ltl_types import CounterStrategy
 from spec_repair.util.file_util import generate_temp_filename, write_to_file
 from spec_repair.util.spec_util import synthesise_extract_counter_strategies, run_all_unrealisable_cores
 from spec_repair.wrappers.asp_wrappers import get_violations
@@ -79,9 +80,7 @@ class SpectraGR1Oracle(IOracle):
         """
         output = self._synthesise(spec)
         if re.search("Result: Specification is unrealizable", output):
-            output = str(output).split("\n")
-            counter_strategy = list(filter(re.compile(r"\s*->\s*[^{]*{[^}]*").search, output))
-            return counter_strategy
+            return SpectraCSParser.from_str(output)
         elif re.search("Result: Specification is realizable", output):
             return None
         else:

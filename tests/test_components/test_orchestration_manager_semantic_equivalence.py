@@ -1,8 +1,8 @@
 from copy import deepcopy
-from typing import Any
 
 from spec_repair.components.orchestration_managers.orchestration_manager_semantic_equivalence import \
     OrchestrationManagerSemanticEquivalence
+from spec_repair.components.repair_data import RepairData
 from spec_repair.enums import Learning
 from spec_repair.helpers.counter_trace import CounterTrace
 from spec_repair.helpers.spectra_specification import SpectraSpecification
@@ -26,7 +26,7 @@ class TestOrchestrationManagerSemanticEquivalence(BaseTestCase):
         case_study_path = '../input-files/case-studies/spectra/minepump'
         spec: SpectraSpecification = SpectraSpecification.from_file(f"{case_study_path}/strong.spectra")
         trace: list[str] = read_file_lines(f"{case_study_path}/violation_trace.txt")
-        data: Any = (trace, [], Learning.ASSUMPTION_WEAKENING, [], 0, 0)
+        data: RepairData = RepairData(trace, [], Learning.ASSUMPTION_WEAKENING, [], 0, 0)
         # Check that the stack and visited nodes list are empty
         self.assertEqual(len(om._stack), 0)
         self.assertEqual(len(om._visited_nodes_list), 0)
@@ -44,7 +44,7 @@ class TestOrchestrationManagerSemanticEquivalence(BaseTestCase):
         case_study_path = '../input-files/case-studies/spectra/minepump'
         spec: SpectraSpecification = SpectraSpecification.from_file(f"{case_study_path}/strong.spectra")
         trace: list[str] = read_file_lines(f"{case_study_path}/violation_trace.txt")
-        data: Any = (trace, [], Learning.ASSUMPTION_WEAKENING, [], 0, 0)
+        data: RepairData = RepairData(trace, [], Learning.ASSUMPTION_WEAKENING, [], 0, 0)
         self.assertEqual(len(om._stack), 0)
         self.assertEqual(len(om._visited_nodes_list), 0)
         om.initialise_learning_tasks(spec, data)
@@ -68,9 +68,9 @@ class TestOrchestrationManagerSemanticEquivalence(BaseTestCase):
         self.assertEqual(spec_1, spec_2) # Sanity check
         trace: list[str] = read_file_lines(f"{case_study_path}/violation_trace.txt")
         ct = CounterTrace(raw_trace=ct_raw_trace, raw_path=ct_path, name=ct_name)
-        data: Any = (trace, [], Learning.ASSUMPTION_WEAKENING, [], 0, 0)
-        data_1: Any = (trace, [ct], Learning.ASSUMPTION_WEAKENING, [], 1, 0)
-        data_2: Any = (trace, [ct], Learning.ASSUMPTION_WEAKENING, [], 2, 0)
+        data: RepairData = RepairData(trace, [], Learning.ASSUMPTION_WEAKENING, [], 0, 0)
+        data_1: RepairData = RepairData(trace, [ct], Learning.ASSUMPTION_WEAKENING, [], 1, 0)
+        data_2: RepairData = RepairData(trace, [ct], Learning.ASSUMPTION_WEAKENING, [], 2, 0)
         self.assertEqual(len(om._stack), 0)
         self.assertEqual(len(om._visited_nodes_list), 0)
         om.initialise_learning_tasks(spec, data)
@@ -88,11 +88,11 @@ class TestOrchestrationManagerSemanticEquivalence(BaseTestCase):
         case_study_path = '../input-files/case-studies/spectra/minepump'
         spec_1: SpectraSpecification = SpectraSpecification.from_file(f"{case_study_path}/strong.spectra")
         trace: list[str] = read_file_lines(f"{case_study_path}/violation_trace.txt")
-        data_1: Any = (trace, [], Learning.ASSUMPTION_WEAKENING, [], 0, 0)
+        data_1: RepairData = RepairData(trace, [], Learning.ASSUMPTION_WEAKENING, [], 0, 0)
         om.initialise_learning_tasks(spec_1, data_1)
         spec_2: SpectraSpecification = SpectraSpecification.from_file("./test_files/minepump_aw_methane.spectra")
         ct2 = CounterTrace(raw_trace=ct_raw_trace, raw_path=ct_path, name=ct_name)
-        data_2 = (trace, [ct2], Learning.ASSUMPTION_WEAKENING, [deepcopy(spec_1)], 0, 0)
+        data_2 = RepairData(trace, [ct2], Learning.ASSUMPTION_WEAKENING, [deepcopy(spec_1)], 0, 0)
         om.enqueue_new_tasks(spec_2, data_2)
         self.assertEqual(len(om._stack), 2)
         self.assertEqual(len(om._visited_nodes_list), 2)
@@ -106,13 +106,13 @@ class TestOrchestrationManagerSemanticEquivalence(BaseTestCase):
         case_study_path = '../input-files/case-studies/spectra/minepump'
         spec_1: SpectraSpecification = SpectraSpecification.from_file(f"{case_study_path}/strong.spectra")
         trace: list[str] = read_file_lines(f"{case_study_path}/violation_trace.txt")
-        data_1: Any = (trace, [], Learning.ASSUMPTION_WEAKENING, [], 0, 0)
+        data_1: RepairData = RepairData(trace, [], Learning.ASSUMPTION_WEAKENING, [], 0, 0)
         self.assertFalse(om.has_next())
         om.initialise_learning_tasks(spec_1, data_1)
         self.assertTrue(om.has_next())
         spec_2: SpectraSpecification = SpectraSpecification.from_file("./test_files/minepump_aw_methane.spectra")
         ct2 = CounterTrace(raw_trace=ct_raw_trace, raw_path=ct_path, name=ct_name)
-        data_2 = (trace, [ct2], Learning.ASSUMPTION_WEAKENING, [deepcopy(spec_1)], 0, 0)
+        data_2 = RepairData(trace, [ct2], Learning.ASSUMPTION_WEAKENING, [deepcopy(spec_1)], 0, 0)
         om.enqueue_new_tasks(spec_2, data_2)
         self.assertTrue(om.has_next())
         extracted_spec_1, extracted_data_1 = om.get_next()
@@ -125,11 +125,11 @@ class TestOrchestrationManagerSemanticEquivalence(BaseTestCase):
         case_study_path = '../input-files/case-studies/spectra/minepump'
         spec_1: SpectraSpecification = SpectraSpecification.from_file(f"{case_study_path}/strong.spectra")
         trace: list[str] = read_file_lines(f"{case_study_path}/violation_trace.txt")
-        data_1: Any = (trace, [], Learning.ASSUMPTION_WEAKENING, [], 0, 0)
+        data_1: RepairData = RepairData(trace, [], Learning.ASSUMPTION_WEAKENING, [], 0, 0)
         om.initialise_learning_tasks(spec_1, data_1)
         spec_2: SpectraSpecification = SpectraSpecification.from_file("./test_files/minepump_aw_methane.spectra")
         ct2 = CounterTrace(raw_trace=ct_raw_trace, raw_path=ct_path, name=ct_name)
-        data_2 = (trace, [ct2], Learning.ASSUMPTION_WEAKENING, [deepcopy(spec_1)], 0, 0)
+        data_2 = RepairData(trace, [ct2], Learning.ASSUMPTION_WEAKENING, [deepcopy(spec_1)], 0, 0)
         om.enqueue_new_tasks(spec_2, data_2)
         extracted_spec_1, extracted_data_1 = om.get_next()
         self.assertEqual(extracted_spec_1.to_str(), spec_1.to_str())

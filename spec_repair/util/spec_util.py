@@ -8,9 +8,9 @@ from typing import Set, Dict, Union, List, Optional
 import pandas as pd
 
 from spec_repair.enums import Learning, When, ExpType, SimEnv
+from spec_repair.helpers.counter_strategy import CounterStrategy
 from spec_repair.helpers.spectra_atom import SpectraAtom
 from spec_repair.heuristics import choose_one_with_heuristic, manual_choice, HeuristicType
-from spec_repair.ltl_types import CounterStrategy
 from spec_repair.old.patterns import PRS_REG
 from spec_repair.config import PROJECT_PATH, FASTLAS, PATH_TO_CLI, PATH_TO_TOOLBOX, PATH_TO_JVM
 from spec_repair.old.specification_helper import strip_vars, assign_equalities, create_cmd, run_subprocess
@@ -109,10 +109,8 @@ def cs_to_cs_trace(cs: CounterStrategy, cs_name: str, heuristic: HeuristicType) 
 
 
 def cs_to_named_cs_traces(cs: CounterStrategy) -> dict[str, str]:
-    start = "INI"
-    output = ""
     trace_name_dict: dict[str, str] = {}
-    extract_trace(cs, output, start, 0, "ini", trace_name_dict)
+    extract_trace(cs, "", cs.initial_state, 0, "ini", trace_name_dict)
 
     return trace_name_dict
 
@@ -344,38 +342,38 @@ def create_time_fact(max_timepoint, name, param_list=None):
 
 
 # TODO: replace traces as Dict with a Set[Tuple[str,str]]
-def extract_trace(lines, output, start, timepoint, trace_name, traces: Dict[str, str]) -> Optional[str]:
-    if len(re.findall(start, trace_name)) > 1 or start == "DEAD":
-        output = re.sub("trace_name", trace_name, output)
-        return output
-    pattern = re.compile("^" + start)
-    states = list(filter(pattern.search, lines))
-    env = re.compile("{(.*)}\s*/", ).search(states[0]).group(1)
+def extract_trace(cs: CounterStrategy, output: str, state: str, timepoint: int, trace_name: str,
+                  traces: Dict[str, str]) -> Optional[str]:
+    # Terminate on reaching the dead state, or on detecting a cycle (the same
+    # state appearing more than once in the path built so far).
+    if trace_name.split("_").count(state) > 1 or state == cs.dead_state:
+        return re.sub("trace_name", trace_name, output)
+    transitions = cs.transitions_from(state)
+    if not transitions:
+        return None
+    # Inputs (environment-controlled APs) are shared across all transitions
+    # from the same source state, so it's safe to read them off the first one.
+    env = transitions[0].inputs
     output += vars_to_asp(env, timepoint)
-    for state in states:
-        sys = re.compile("/\s*{(.*)}", ).search(state).group(1)
+    for t in transitions:
         out_copy = copy.deepcopy(output)
-        out_copy += vars_to_asp(sys, timepoint)
-        next = extract_string_within("->\s*([^\s]*)\s", state)
-        new_trace_name = trace_name + "_" + next
-        new_output = extract_trace(lines, out_copy, next, timepoint + 1, new_trace_name, traces)
+        out_copy += vars_to_asp(t.outputs, timepoint)
+        new_trace_name = trace_name + "_" + t.target
+        new_output = extract_trace(cs, out_copy, t.target, timepoint + 1, new_trace_name, traces)
         if new_output is not None:
             traces[new_output] = new_trace_name
+    return None
 
 
-def vars_to_asp(sys, timepoint) -> str:
-    vars = re.split(",\s*", sys)
-    output = "\n".join([var_to_asp(var, timepoint) for var in vars])
+def vars_to_asp(assignments: Dict[str, bool], timepoint: int) -> str:
+    output = "\n".join(var_to_asp(var, value, timepoint) for var, value in assignments.items())
     output += "\n"  # TODO: consider removing this last line
     return output
 
 
-def var_to_asp(var, timepoint) -> str:
-    parts = var.split(":")
-    suffix = ""
-    if parts[1] == "false":
-        suffix = "not_"
-    params = [parts[0], str(timepoint), "trace_name"]
+def var_to_asp(var: str, value: bool, timepoint: int) -> str:
+    suffix = "" if value else "not_"
+    params = [var, str(timepoint), "trace_name"]
     return f"{suffix}holds_at({','.join(params)})."
 
 
