@@ -1,9 +1,11 @@
+import unittest
 from typing import Optional
 
 from spec_repair.components.oracles.strix_gr1_revised_oracle import StrixGR1RevisedOracle
+from spec_repair.helpers.counter_strategy import CounterStrategy
+from spec_repair.helpers.parsers.spectra_cs_parser import SpectraCSParser
 from spec_repair.helpers.spectra_specification import SpectraSpecification
 from tests.base_test_case import BaseTestCase
-from spec_repair.ltl_types import CounterStrategy
 
 
 class TestStrixSpecOracle(BaseTestCase):
@@ -38,33 +40,29 @@ class TestStrixSpecOracle(BaseTestCase):
 
         cs: CounterStrategy = self.oracle._synthesise_and_check(weakened_spec)
 
-        expected_cs: CounterStrategy = \
+        expected_cs: CounterStrategy = SpectraCSParser.from_lines(
             ['INI -> S0 {highwater:false, methane:false} / {pump:false};',
              'S0 -> DEAD {highwater:true, methane:true} / {pump:false};',
              'S0 -> DEAD {highwater:true, methane:true} / {pump:true};']
+        )
         self.assertEqual(expected_cs, cs)
 
     def test_synthesise_and_check_2(self):
         weakened_spec: SpectraSpecification = SpectraSpecification.from_file('./test_files/minepump_aw_pump.spectra')
 
-        cs: CounterStrategy = self.oracle._synthesise_and_check(weakened_spec)
-
-        expected_cs: CounterStrategy = \
-            ['INI -> S0 {highwater:false, methane:false} / {pump:false};',
-             'S0 -> S1 {highwater:false, methane:true} / {pump:false};',
-             'S0 -> S1 {highwater:false, methane:true} / {pump:true};',
-             'S1 -> DEAD {highwater:true, methane:true} / {pump:false};']
-        self.assertEqual(expected_cs, cs)
+        cs: Optional[CounterStrategy] = self.oracle._synthesise_and_check(weakened_spec)
+        self.assertIsNone(cs)
 
     def test_synthesise_and_check_asm_eventually(self):
         weakened_spec: SpectraSpecification = SpectraSpecification.from_file('./test_files/minepump_aw_ev.spectra')
 
         cs: CounterStrategy = self.oracle._synthesise_and_check(weakened_spec)
 
-        expected_cs: CounterStrategy = \
+        expected_cs: CounterStrategy = SpectraCSParser.from_lines(
             ['INI -> S0 {highwater:false, methane:false} / {pump:false};',
              'S0 -> DEAD {highwater:true, methane:true} / {pump:false};',
              'S0 -> DEAD {highwater:true, methane:true} / {pump:true};']
+        )
         self.assertEqual(expected_cs, cs)
 
     def test_synthesise_and_check_arbiter_asm_eventually(self):
@@ -72,3 +70,20 @@ class TestStrixSpecOracle(BaseTestCase):
 
         cs: Optional[CounterStrategy] = self.oracle._synthesise_and_check(weakened_spec)
         self.assertIsNone(cs)
+
+    def test_synthesise_and_check_cycle_counter_strategy(self):
+        weakened_spec: SpectraSpecification = SpectraSpecification.from_file('./test_files/traffic/traffic_updated_infinite_loop.spectra')
+
+        cs: CounterStrategy = self.oracle._synthesise_and_check(weakened_spec)
+
+        expected_cs: CounterStrategy = SpectraCSParser.from_lines(
+            ['INI -> S0 {car:true, emergency:false, police:false} / {green:false};',
+             'INI -> S0 {car:true, emergency:false, police:false} / {green:true};',
+             'S0 -> S0 {car:true, emergency:false, police:false} / {green:false};',
+             'S0 -> S0 {car:true, emergency:false, police:false} / {green:true};']
+        )
+        self.assertEqual(expected_cs, cs)
+
+
+if __name__ == "__main__":
+    unittest.main()

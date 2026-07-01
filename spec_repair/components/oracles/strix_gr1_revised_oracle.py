@@ -5,14 +5,15 @@ from typing import Optional, List, Tuple
 from spec_repair.components.interfaces.ioracle import IOracle
 from spec_repair.components.new_spec_encoder import NewSpecEncoder
 from spec_repair.components.repair_data import RepairData
+from spec_repair.helpers.counter_strategy import CounterStrategy
 from spec_repair.helpers.counter_trace import cts_from_cs, CounterTrace
 from spec_repair.helpers.formatters.spot_specification_formatter import SpotSpecificationFormatter
+from spec_repair.helpers.parsers.strix_cs_parser import StrixCSParser
 from spec_repair.helpers.spectra_specification import SpectraSpecification
-from spec_repair.ltl_types import CounterStrategy
 from spec_repair.util.file_util import generate_temp_filename, write_to_file
 from spec_repair.util.spec_util import synthesise_extract_counter_strategies, run_all_unrealisable_cores
 from spec_repair.wrappers.asp_wrappers import get_violations
-from spec_repair.wrappers.strix import Strix
+from spec_repair.wrappers.strix import Strix, StrixResult
 
 from spec_repair.ltl_types import GR1AtomType
 
@@ -52,7 +53,6 @@ class StrixGR1RevisedOracle(IOracle):
             new_spec: SpectraSpecification,
             data: RepairData
     ) -> Optional[List[Tuple[CounterTrace, RepairData]]]:
-        raise NotImplementedError("This oracle does not support counter arguments")
         counter_strategy = self._synthesise_and_check(new_spec)
         if counter_strategy:
             all_counter_traces = cts_from_cs(counter_strategy, cs_id=self._ct_cnt)
@@ -80,23 +80,12 @@ class StrixGR1RevisedOracle(IOracle):
         Uses Spectra under the hood to check whether specifcation is realisable.
         If it is, nothing is returned. Otherwise, it returns a CounterStrategy.
         """
-        raise NotImplementedError("This oracle does not support counter arguments")
-        output = self._synthesise(spec)
-        if re.search("Result: Specification is unrealizable", output):
-            output = str(output).split("\n")
-            counter_strategy = list(filter(re.compile(r"\s*->\s*[^{]*{[^}]*").search, output))
+        result: StrixResult = self._call_synthesise(spec)
+        if not result.realizable:
+            counter_strategy = StrixCSParser.from_str(result.output)
             return counter_strategy
-        elif re.search("Result: Specification is realizable", output):
-            return None
         else:
-            raise Exception(output)
-
-    @staticmethod
-    def _synthesise(spec: SpectraSpecification):
-        spec_str = spec.to_str(is_to_compile=True)
-        spectra_file: str = generate_temp_filename(ext=".spectra")
-        write_to_file(spectra_file, spec_str)
-        return synthesise_extract_counter_strategies(spectra_file)
+            return None
 
     def _call_realisability_check_strix(self, spec: SpectraSpecification) -> bool:
         # TODO: make formula use the revised realisability formula from
@@ -111,3 +100,17 @@ class StrixGR1RevisedOracle(IOracle):
             env_atom_names,
             sys_atom_names
         ).realizable
+
+    def _call_synthesise(self, spec: SpectraSpecification) -> StrixResult:
+        # TODO: make formula use the revised realisability formula from
+        #  "Revisiting Synthesis of GR(1) Specifications" by Uri Klein & Amir Pnueli
+        formula = spec.to_formatted_string(SpotSpecificationFormatter())
+        atoms = spec.get_atoms()
+        env_atom_names = [atom.name for atom in atoms if atom.atom_type == GR1AtomType.ENV]
+        sys_atom_names = [atom.name for atom in atoms if atom.atom_type == GR1AtomType.SYS]
+
+        return self._strix.synthesize(
+            formula,
+            env_atom_names,
+            sys_atom_names
+        )
