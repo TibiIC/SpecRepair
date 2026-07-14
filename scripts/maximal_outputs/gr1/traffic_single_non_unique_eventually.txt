@@ -1,0 +1,8 @@
+Comparing specs in directory: /Users/tg4018/Documents/PhD/SpecRepair/tests/test_files/out/traffic_single_non_unique_eventually
+Unique ID Maximal GR1 Specs: dict_keys(['traffic_test_fix_7', 'traffic_test_fix_29', 'traffic_test_fix_6'])
+TOTAL SPECS: 32
+Max GR1 SPECS: 16
+Not Max GR1 SPECS: 16
+Impossible GR1 SPECS: 0
+Unrelated GR1 SPECS: 24
+{'traffic_test_fix_16', 'traffic_test_fix_22', 'traffic_test_fix_17', 'traffic_test_fix_0', 'traffic_test_fix_4', 'traffic_test_fix_27', 'traffic_test_fix_13', 'traffic_test_fix_2', 'traffic_test_fix_10', 'traffic_test_fix_1', 'traffic_test_fix_26', 'traffic_test_fix_30', 'traffic_test_fix_6', 'traffic_test_fix_12', 'traffic_test_fix_3', 'traffic_test_fix_5', 'traffic_test_fix_23', 'traffic_test_fix_31', 'traffic_test_fix_7', 'traffic_test_fix_29', 'traffic_test_fix_8', 'traffic_test_fix_9', 'traffic_test_fix_28', 'traffic_test_fix_11'}

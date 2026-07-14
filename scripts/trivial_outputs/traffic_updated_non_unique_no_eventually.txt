@@ -1,0 +1,21 @@
+TOTAL SPECS: 0
+==============================================
+Trivial False Assumptions False Guarantees: 0
+Trivial False Assumptions True Guarantees: 0
+Trivial True Assumptions False Guarantees: 0
+Trivial True Assumptions True Guarantees: 0
+Trivial False Assumptions Only: 0
+Trivial True Assumptions Only: 0
+Trivial False Guarantees Only: 0
+Trivial True Guarantees Only: 0
+Neither Trivial Assumptions nor Guarantees: 0
+==============================================
+Trivial False Assumptions False Guarantees: 0
+Trivial False Assumptions True Guarantees: 0
+Trivial True Assumptions False Guarantees: 0
+Trivial True Assumptions True Guarantees: 0
+Trivial False Assumptions Only: 0
+Trivial True Assumptions Only: 0
+Trivial False Guarantees Only: 0
+Trivial True Guarantees Only: 0
+Neither Trivial Assumptions nor Guarantees: 0

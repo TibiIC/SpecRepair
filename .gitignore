@@ -29,3 +29,30 @@ scripts/visualisations/remote/asm.png
 /build/
 /tests/test_files/out
 /tests/test_files/out_ssh/
+
+# External reference repo, not part of this project's history
+/gr1-weakness/
+
+# Run logs
+**/spec_repair.log
+hs_err_pid*.log
+/tests/debug_logs/
+
+# pyvis-generated visualization demo outputs (web/simple_usage.py, web/visualise_graph_in_browser.py)
+/web/lib/
+/web/graph.html
+/web/visualization_*.html
+
+# ltlfilt / formula intermediate outputs
+/files/ltlfilt/*.hoa
+/scripts/formula.aut
+/scripts/formula.hoa
+/scripts/formula.ltl
+
+# Loose debug scratch (files/debug/FastLAS/ subfolder stays tracked)
+/files/debug/*.txt
+/files/debug/*.lp
+
+# Regenerable via scripts/texify_spec.py; "old" is a superseded run
+/tests/test_files/maximal_solutions_from_ssh/texified/
+/tests/test_files/maximal_solutions_from_ssh/old/

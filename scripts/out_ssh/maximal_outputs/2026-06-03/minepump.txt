@@ -1,0 +1,31 @@
+WARNING: A restricted method in java.lang.System has been called
+WARNING: java.lang.System::load has been called by org.jpype.JPypeContext in an unnamed module (file:/Users/tg4018/miniforge3/envs/arm_env/lib/python3.10/site-packages/org.jpype.jar)
+WARNING: Use --enable-native-access=ALL-UNNAMED to avoid a warning for callers in this module
+WARNING: Restricted methods will be blocked in a future release unless native access is enabled
+
+JVM started successfully
+Comparison type: None
+Finding maximal specs in directory:  /Users/tg4018/Documents/PhD/SpecRepair/tests/test_files/out_ssh/repair_syn/minepump_2026-06-03/final
+Found 18 maximal specifications in the directory: /Users/tg4018/Documents/PhD/SpecRepair/tests/test_files/out_ssh/repair_syn/minepump_2026-06-03/final
+Maximal specifications found in files:
+spec_14.spectra
+spec_16.spectra
+spec_20.spectra
+spec_22.spectra
+spec_23.spectra
+spec_24.spectra
+spec_25.spectra
+spec_28.spectra
+spec_30.spectra
+spec_32.spectra
+spec_33.spectra
+spec_34.spectra
+spec_35.spectra
+spec_36.spectra
+spec_51.spectra
+spec_366.spectra
+spec_430.spectra
+spec_521.spectra
+Shutting down SpectraTool and SpectraCLI...
+JVM shutdown initiated...
+JVM shutdown complete.

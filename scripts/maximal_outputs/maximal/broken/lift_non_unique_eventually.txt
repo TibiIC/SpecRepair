@@ -1,0 +1,20 @@
+Comparing specs in directory: /Users/tg4018/Documents/PhD/SpecRepair/tests/test_files/out/lift_non_unique_eventually
+Unique ID Maximal Assumption Specs: set()
+Unique ID Maximal Guarantee Specs: {'traffic_test_fix_7', 'traffic_test_fix_5', 'traffic_test_fix_6'}
+Unique ID Maximal Both Specs: {'traffic_test_fix_3', 'traffic_test_fix_4'}
+TOTAL SPECS: 8
+Max Asm SPECS: 0
+Not Max Asm SPECS: 0
+Impossible Asm SPECS: 0
+Unrelated Asm SPECS: 0
+set()
+Max Gar SPECS: 8
+Not Max Gar SPECS: 0
+Impossible Gar SPECS: 0
+Unrelated Gar SPECS: 0
+set()
+Max Both SPECS: 2
+Not Max Both SPECS: 6
+Impossible Both SPECS: 0
+Unrelated Both SPECS: 4
+{'traffic_test_fix_3', 'traffic_test_fix_5', 'traffic_test_fix_6', 'traffic_test_fix_4'}

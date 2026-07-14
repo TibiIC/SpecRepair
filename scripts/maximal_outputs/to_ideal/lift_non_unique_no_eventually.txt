@@ -1,0 +1,86 @@
+Comparing specs in directory:  /Users/tg4018/Documents/PhD/SpecRepair/tests/test_files/out/lift_non_unique_no_eventually
+with ideal spec:  /Users/tg4018/Documents/PhD/SpecRepair/input-files/case-studies/spectra/lift/ideal.spectra
+Unique ID Maximal Assumption Specs: set()
+Unique ID Maximal Guarantee Specs: {'traffic_test_fix_0', 'traffic_test_fix_5', 'traffic_test_fix_6'}
+Unique ID Maximal Both Specs: {'traffic_test_fix_3', 'traffic_test_fix_4'}
+Max Asm SPECS: 0
+Not Max Asm SPECS: 0
+Impossible Asm SPECS: 0
+Unrelated Asm SPECS: 7
+{'traffic_test_fix_3', 'traffic_test_fix_0', 'traffic_test_fix_5', 'traffic_test_fix_2', 'traffic_test_fix_6', 'traffic_test_fix_4', 'traffic_test_fix_1'}
+Max Gar SPECS: 7
+Not Max Gar SPECS: 0
+Impossible Gar SPECS: 0
+Unrelated Gar SPECS: 0
+set()
+Max Both SPECS: 2
+Not Max Both SPECS: 5
+Impossible Both SPECS: 0
+Unrelated Both SPECS: 0
+set()
+Comparing ideal spec with maximal assumption specs
+TOTAL SPECS: 0
+AwGw SPECS: 0
+AwGi SPECS: 0
+AwGs SPECS: 0
+AwGu SPECS: 0
+AiGw SPECS: 0
+AiGi SPECS: 0
+AiGs SPECS: 0
+AiGu SPECS: 0
+AsGw SPECS: 0
+AsGi SPECS: 0
+AsGs SPECS: 0
+AsGu SPECS: 0
+AuGw SPECS: 0
+AuGi SPECS: 0
+AuGs SPECS: 0
+AuGu SPECS: 0
+A->G WEAKER SPECS: 0
+A->G STRONGER SPECS: 0
+A->G IDENTICAL SPECS: 0
+A->G UNRELATED SPECS: 0
+Comparing ideal spec with maximal guarantee specs
+TOTAL SPECS: 7
+AwGw SPECS: 0
+AwGi SPECS: 0
+AwGs SPECS: 0
+AwGu SPECS: 0
+AiGw SPECS: 0
+AiGi SPECS: 3
+AiGs SPECS: 0
+AiGu SPECS: 0
+AsGw SPECS: 0
+AsGi SPECS: 4
+AsGs SPECS: 0
+AsGu SPECS: 0
+AuGw SPECS: 0
+AuGi SPECS: 0
+AuGs SPECS: 0
+AuGu SPECS: 0
+A->G WEAKER SPECS: 4
+A->G STRONGER SPECS: 0
+A->G IDENTICAL SPECS: 3
+A->G UNRELATED SPECS: 0
+Comparing ideal spec with maximal both specs
+TOTAL SPECS: 2
+AwGw SPECS: 0
+AwGi SPECS: 0
+AwGs SPECS: 0
+AwGu SPECS: 0
+AiGw SPECS: 0
+AiGi SPECS: 0
+AiGs SPECS: 0
+AiGu SPECS: 0
+AsGw SPECS: 0
+AsGi SPECS: 2
+AsGs SPECS: 0
+AsGu SPECS: 0
+AuGw SPECS: 0
+AuGi SPECS: 0
+AuGs SPECS: 0
+AuGu SPECS: 0
+A->G WEAKER SPECS: 2
+A->G STRONGER SPECS: 0
+A->G IDENTICAL SPECS: 0
+A->G UNRELATED SPECS: 0

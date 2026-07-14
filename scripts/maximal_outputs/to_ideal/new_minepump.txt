@@ -1,0 +1,86 @@
+Comparing specs in directory:  /Users/tg4018/Documents/PhD/SpecRepair/tests/test_files/out/new_minepump_test_bfs_non_unique
+with ideal spec:  /Users/tg4018/Documents/PhD/SpecRepair/input-files/case-studies/spectra/arbiter/ideal.spectra
+Unique ID Maximal Assumption Specs: {'minepump_test_fix_579', 'minepump_test_fix_370', 'minepump_test_fix_473', 'minepump_test_fix_569', 'minepump_test_fix_69', 'minepump_test_fix_150', 'minepump_test_fix_487', 'minepump_test_fix_24', 'minepump_test_fix_56', 'minepump_test_fix_665', 'minepump_test_fix_379', 'minepump_test_fix_152', 'minepump_test_fix_182', 'minepump_test_fix_411', 'minepump_test_fix_620', 'minepump_test_fix_455', 'minepump_test_fix_395'}
+Unique ID Maximal Guarantee Specs: {'minepump_test_fix_8', 'minepump_test_fix_674', 'minepump_test_fix_675', 'minepump_test_fix_46'}
+Unique ID Maximal Both Specs: {'minepump_test_fix_19', 'minepump_test_fix_617', 'minepump_test_fix_268', 'minepump_test_fix_335', 'minepump_test_fix_73', 'minepump_test_fix_540', 'minepump_test_fix_34', 'minepump_test_fix_151'}
+Max Asm SPECS: 268
+Not Max Asm SPECS: 432
+Impossible Asm SPECS: 0
+Unrelated Asm SPECS: 0
+set()
+Max Gar SPECS: 48
+Not Max Gar SPECS: 512
+Impossible Gar SPECS: 0
+Unrelated Gar SPECS: 140
+{'minepump_test_fix_546', 'minepump_test_fix_207', 'minepump_test_fix_111', 'minepump_test_fix_253', 'minepump_test_fix_601', 'minepump_test_fix_315', 'minepump_test_fix_482', 'minepump_test_fix_467', 'minepump_test_fix_655', 'minepump_test_fix_141', 'minepump_test_fix_313', 'minepump_test_fix_105', 'minepump_test_fix_524', 'minepump_test_fix_362', 'minepump_test_fix_72', 'minepump_test_fix_102', 'minepump_test_fix_245', 'minepump_test_fix_544', 'minepump_test_fix_579', 'minepump_test_fix_699', 'minepump_test_fix_5', 'minepump_test_fix_284', 'minepump_test_fix_244', 'minepump_test_fix_18', 'minepump_test_fix_376', 'minepump_test_fix_201', 'minepump_test_fix_487', 'minepump_test_fix_516', 'minepump_test_fix_505', 'minepump_test_fix_525', 'minepump_test_fix_602', 'minepump_test_fix_474', 'minepump_test_fix_673', 'minepump_test_fix_402', 'minepump_test_fix_502', 'minepump_test_fix_119', 'minepump_test_fix_551', 'minepump_test_fix_290', 'minepump_test_fix_539', 'minepump_test_fix_158', 'minepump_test_fix_257', 'minepump_test_fix_126', 'minepump_test_fix_342', 'minepump_test_fix_231', 'minepump_test_fix_561', 'minepump_test_fix_346', 'minepump_test_fix_562', 'minepump_test_fix_684', 'minepump_test_fix_542', 'minepump_test_fix_565', 'minepump_test_fix_24', 'minepump_test_fix_600', 'minepump_test_fix_56', 'minepump_test_fix_213', 'minepump_test_fix_590', 'minepump_test_fix_441', 'minepump_test_fix_104', 'minepump_test_fix_35', 'minepump_test_fix_246', 'minepump_test_fix_86', 'minepump_test_fix_159', 'minepump_test_fix_337', 'minepump_test_fix_237', 'minepump_test_fix_383', 'minepump_test_fix_97', 'minepump_test_fix_147', 'minepump_test_fix_189', 'minepump_test_fix_371', 'minepump_test_fix_533', 'minepump_test_fix_173', 'minepump_test_fix_365', 'minepump_test_fix_361', 'minepump_test_fix_341', 'minepump_test_fix_344', 'minepump_test_fix_0', 'minepump_test_fix_626', 'minepump_test_fix_535', 'minepump_test_fix_475', 'minepump_test_fix_70', 'minepump_test_fix_358', 'minepump_test_fix_249', 'minepump_test_fix_29', 'minepump_test_fix_3', 'minepump_test_fix_656', 'minepump_test_fix_494', 'minepump_test_fix_98', 'minepump_test_fix_639', 'minepump_test_fix_397', 'minepump_test_fix_310', 'minepump_test_fix_270', 'minepump_test_fix_22', 'minepump_test_fix_599', 'minepump_test_fix_663', 'minepump_test_fix_277', 'minepump_test_fix_440', 'minepump_test_fix_179', 'minepump_test_fix_194', 'minepump_test_fix_679', 'minepump_test_fix_490', 'minepump_test_fix_220', 'minepump_test_fix_333', 'minepump_test_fix_617', 'minepump_test_fix_122', 'minepump_test_fix_59', 'minepump_test_fix_42', 'minepump_test_fix_392', 'minepump_test_fix_373', 'minepump_test_fix_101', 'minepump_test_fix_54', 'minepump_test_fix_259', 'minepump_test_fix_619', 'minepump_test_fix_288', 'minepump_test_fix_420', 'minepump_test_fix_317', 'minepump_test_fix_576', 'minepump_test_fix_615', 'minepump_test_fix_380', 'minepump_test_fix_51', 'minepump_test_fix_107', 'minepump_test_fix_537', 'minepump_test_fix_185', 'minepump_test_fix_452', 'minepump_test_fix_574', 'minepump_test_fix_30', 'minepump_test_fix_49', 'minepump_test_fix_415', 'minepump_test_fix_573', 'minepump_test_fix_226', 'minepump_test_fix_486', 'minepump_test_fix_671', 'minepump_test_fix_472', 'minepump_test_fix_652', 'minepump_test_fix_357', 'minepump_test_fix_37', 'minepump_test_fix_443', 'minepump_test_fix_570', 'minepump_test_fix_685', 'minepump_test_fix_152', 'minepump_test_fix_47', 'minepump_test_fix_211'}
+Max Both SPECS: 28
+Not Max Both SPECS: 628
+Impossible Both SPECS: 0
+Unrelated Both SPECS: 44
+{'minepump_test_fix_546', 'minepump_test_fix_361', 'minepump_test_fix_158', 'minepump_test_fix_0', 'minepump_test_fix_253', 'minepump_test_fix_126', 'minepump_test_fix_619', 'minepump_test_fix_111', 'minepump_test_fix_342', 'minepump_test_fix_288', 'minepump_test_fix_346', 'minepump_test_fix_561', 'minepump_test_fix_420', 'minepump_test_fix_317', 'minepump_test_fix_542', 'minepump_test_fix_467', 'minepump_test_fix_24', 'minepump_test_fix_615', 'minepump_test_fix_51', 'minepump_test_fix_56', 'minepump_test_fix_141', 'minepump_test_fix_590', 'minepump_test_fix_494', 'minepump_test_fix_452', 'minepump_test_fix_579', 'minepump_test_fix_49', 'minepump_test_fix_310', 'minepump_test_fix_5', 'minepump_test_fix_486', 'minepump_test_fix_201', 'minepump_test_fix_487', 'minepump_test_fix_237', 'minepump_test_fix_679', 'minepump_test_fix_333', 'minepump_test_fix_220', 'minepump_test_fix_570', 'minepump_test_fix_122', 'minepump_test_fix_189', 'minepump_test_fix_42', 'minepump_test_fix_402', 'minepump_test_fix_502', 'minepump_test_fix_392', 'minepump_test_fix_119', 'minepump_test_fix_47'}
+Comparing ideal spec with maximal assumption specs
+TOTAL SPECS: 268
+AwGw SPECS: 0
+AwGi SPECS: 0
+AwGs SPECS: 0
+AwGu SPECS: 0
+AiGw SPECS: 0
+AiGi SPECS: 0
+AiGs SPECS: 0
+AiGu SPECS: 0
+AsGw SPECS: 0
+AsGi SPECS: 0
+AsGs SPECS: 0
+AsGu SPECS: 0
+AuGw SPECS: 0
+AuGi SPECS: 0
+AuGs SPECS: 0
+AuGu SPECS: 268
+A->G WEAKER SPECS: 0
+A->G STRONGER SPECS: 0
+A->G IDENTICAL SPECS: 0
+A->G UNRELATED SPECS: 268
+Comparing ideal spec with maximal guarantee specs
+TOTAL SPECS: 48
+AwGw SPECS: 0
+AwGi SPECS: 0
+AwGs SPECS: 0
+AwGu SPECS: 0
+AiGw SPECS: 0
+AiGi SPECS: 0
+AiGs SPECS: 0
+AiGu SPECS: 0
+AsGw SPECS: 0
+AsGi SPECS: 0
+AsGs SPECS: 0
+AsGu SPECS: 0
+AuGw SPECS: 0
+AuGi SPECS: 0
+AuGs SPECS: 0
+AuGu SPECS: 48
+A->G WEAKER SPECS: 0
+A->G STRONGER SPECS: 0
+A->G IDENTICAL SPECS: 0
+A->G UNRELATED SPECS: 48
+Comparing ideal spec with maximal both specs
+TOTAL SPECS: 28
+AwGw SPECS: 0
+AwGi SPECS: 0
+AwGs SPECS: 0
+AwGu SPECS: 0
+AiGw SPECS: 0
+AiGi SPECS: 0
+AiGs SPECS: 0
+AiGu SPECS: 0
+AsGw SPECS: 0
+AsGi SPECS: 0
+AsGs SPECS: 0
+AsGu SPECS: 0
+AuGw SPECS: 0
+AuGi SPECS: 0
+AuGs SPECS: 0
+AuGu SPECS: 28
+A->G WEAKER SPECS: 0
+A->G STRONGER SPECS: 0
+A->G IDENTICAL SPECS: 0
+A->G UNRELATED SPECS: 28

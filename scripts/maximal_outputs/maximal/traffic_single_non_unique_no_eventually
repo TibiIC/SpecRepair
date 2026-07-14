@@ -1,0 +1,19 @@
+Comparing specs in directory: /Users/tg4018/Documents/PhD/SpecRepair/tests/test_files/out/traffic_single_non_unique_no_eventually
+Unique ID Maximal Assumption Specs: set()
+Unique ID Maximal Guarantee Specs: set()
+Unique ID Maximal Both Specs: {'traffic_test_fix_6'}
+Max Asm SPECS: 0
+Not Max Asm SPECS: 0
+Impossible Asm SPECS: 0
+Unrelated Asm SPECS: 25
+{'traffic_test_fix_20', 'traffic_test_fix_5', 'traffic_test_fix_11', 'traffic_test_fix_24', 'traffic_test_fix_7', 'traffic_test_fix_12', 'traffic_test_fix_13', 'traffic_test_fix_16', 'traffic_test_fix_6', 'traffic_test_fix_23', 'traffic_test_fix_22', 'traffic_test_fix_19', 'traffic_test_fix_8', 'traffic_test_fix_10', 'traffic_test_fix_9', 'traffic_test_fix_17', 'traffic_test_fix_2', 'traffic_test_fix_4', 'traffic_test_fix_1', 'traffic_test_fix_14', 'traffic_test_fix_15', 'traffic_test_fix_3', 'traffic_test_fix_0', 'traffic_test_fix_21', 'traffic_test_fix_18'}
+Max Gar SPECS: 0
+Not Max Gar SPECS: 0
+Impossible Gar SPECS: 0
+Unrelated Gar SPECS: 25
+{'traffic_test_fix_20', 'traffic_test_fix_5', 'traffic_test_fix_11', 'traffic_test_fix_24', 'traffic_test_fix_7', 'traffic_test_fix_12', 'traffic_test_fix_13', 'traffic_test_fix_16', 'traffic_test_fix_6', 'traffic_test_fix_23', 'traffic_test_fix_22', 'traffic_test_fix_19', 'traffic_test_fix_8', 'traffic_test_fix_10', 'traffic_test_fix_9', 'traffic_test_fix_17', 'traffic_test_fix_2', 'traffic_test_fix_4', 'traffic_test_fix_1', 'traffic_test_fix_14', 'traffic_test_fix_15', 'traffic_test_fix_3', 'traffic_test_fix_0', 'traffic_test_fix_21', 'traffic_test_fix_18'}
+Max Both SPECS: 7
+Not Max Both SPECS: 18
+Impossible Both SPECS: 0
+Unrelated Both SPECS: 0
+set()

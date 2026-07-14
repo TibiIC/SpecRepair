@@ -1,0 +1,86 @@
+Comparing specs in directory:  /Users/tg4018/Documents/PhD/SpecRepair/tests/test_files/out/minepump_test_bfs_non_unique_no_eventually
+with ideal spec:  /Users/tg4018/Documents/PhD/SpecRepair/input-files/case-studies/spectra/minepump/ideal.spectra
+Unique ID Maximal Assumption Specs: {'minepump_test_fix_84', 'minepump_test_fix_313'}
+Unique ID Maximal Guarantee Specs: {'minepump_test_fix_325', 'minepump_test_fix_226', 'minepump_test_fix_335', 'minepump_test_fix_122'}
+Unique ID Maximal Both Specs: {'minepump_test_fix_244', 'minepump_test_fix_175', 'minepump_test_fix_319', 'minepump_test_fix_344'}
+Max Asm SPECS: 42
+Not Max Asm SPECS: 304
+Impossible Asm SPECS: 0
+Unrelated Asm SPECS: 0
+set()
+Max Gar SPECS: 182
+Not Max Gar SPECS: 158
+Impossible Gar SPECS: 0
+Unrelated Gar SPECS: 6
+{'minepump_test_fix_320', 'minepump_test_fix_316', 'minepump_test_fix_319', 'minepump_test_fix_317', 'minepump_test_fix_318', 'minepump_test_fix_321'}
+Max Both SPECS: 28
+Not Max Both SPECS: 310
+Impossible Both SPECS: 0
+Unrelated Both SPECS: 8
+{'minepump_test_fix_322', 'minepump_test_fix_325', 'minepump_test_fix_324', 'minepump_test_fix_329', 'minepump_test_fix_328', 'minepump_test_fix_323', 'minepump_test_fix_326', 'minepump_test_fix_327'}
+Comparing ideal spec with maximal assumption specs
+TOTAL SPECS: 42
+AwGw SPECS: 0
+AwGi SPECS: 0
+AwGs SPECS: 0
+AwGu SPECS: 0
+AiGw SPECS: 0
+AiGi SPECS: 0
+AiGs SPECS: 0
+AiGu SPECS: 0
+AsGw SPECS: 8
+AsGi SPECS: 8
+AsGs SPECS: 0
+AsGu SPECS: 26
+AuGw SPECS: 0
+AuGi SPECS: 0
+AuGs SPECS: 0
+AuGu SPECS: 0
+A->G WEAKER SPECS: 24
+A->G STRONGER SPECS: 0
+A->G IDENTICAL SPECS: 0
+A->G UNRELATED SPECS: 18
+Comparing ideal spec with maximal guarantee specs
+TOTAL SPECS: 182
+AwGw SPECS: 0
+AwGi SPECS: 0
+AwGs SPECS: 0
+AwGu SPECS: 0
+AiGw SPECS: 0
+AiGi SPECS: 80
+AiGs SPECS: 0
+AiGu SPECS: 80
+AsGw SPECS: 0
+AsGi SPECS: 8
+AsGs SPECS: 0
+AsGu SPECS: 14
+AuGw SPECS: 0
+AuGi SPECS: 0
+AuGs SPECS: 0
+AuGu SPECS: 0
+A->G WEAKER SPECS: 16
+A->G STRONGER SPECS: 0
+A->G IDENTICAL SPECS: 80
+A->G UNRELATED SPECS: 86
+Comparing ideal spec with maximal both specs
+TOTAL SPECS: 28
+AwGw SPECS: 0
+AwGi SPECS: 0
+AwGs SPECS: 0
+AwGu SPECS: 0
+AiGw SPECS: 0
+AiGi SPECS: 0
+AiGs SPECS: 0
+AiGu SPECS: 0
+AsGw SPECS: 0
+AsGi SPECS: 8
+AsGs SPECS: 0
+AsGu SPECS: 20
+AuGw SPECS: 0
+AuGi SPECS: 0
+AuGs SPECS: 0
+AuGu SPECS: 0
+A->G WEAKER SPECS: 16
+A->G STRONGER SPECS: 0
+A->G IDENTICAL SPECS: 0
+A->G UNRELATED SPECS: 12

@@ -1,0 +1,3 @@
+name_experiment,num_specs,num_unique_specs,num_unique_maximal_specs,num_awgw,num_awge,num_awgs,num_aegw,num_aege,num_aegs,num_asgw,num_asge,num_asgs
+lift_test_bfs,8,5,2,0,4,0,0,1,0,0,0,0
+traffic_non_unique_no_eventually,10,9,4,0,0,0,0,1,0,0,2,0

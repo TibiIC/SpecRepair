@@ -1,0 +1,19 @@
+Comparing specs in directory: /Users/tg4018/Documents/PhD/SpecRepair/tests/test_files/out/minepump_test_bfs_non_unique_no_eventually
+Unique ID Maximal Assumption Specs: {'minepump_test_fix_313', 'minepump_test_fix_84'}
+Unique ID Maximal Guarantee Specs: {'minepump_test_fix_335', 'minepump_test_fix_325', 'minepump_test_fix_226', 'minepump_test_fix_122'}
+Unique ID Maximal Both Specs: {'minepump_test_fix_175', 'minepump_test_fix_344', 'minepump_test_fix_319', 'minepump_test_fix_244'}
+Max Asm SPECS: 42
+Not Max Asm SPECS: 304
+Impossible Asm SPECS: 0
+Unrelated Asm SPECS: 0
+set()
+Max Gar SPECS: 182
+Not Max Gar SPECS: 158
+Impossible Gar SPECS: 0
+Unrelated Gar SPECS: 6
+{'minepump_test_fix_320', 'minepump_test_fix_319', 'minepump_test_fix_318', 'minepump_test_fix_317', 'minepump_test_fix_316', 'minepump_test_fix_321'}
+Max Both SPECS: 28
+Not Max Both SPECS: 310
+Impossible Both SPECS: 0
+Unrelated Both SPECS: 8
+{'minepump_test_fix_326', 'minepump_test_fix_324', 'minepump_test_fix_325', 'minepump_test_fix_323', 'minepump_test_fix_328', 'minepump_test_fix_327', 'minepump_test_fix_329', 'minepump_test_fix_322'}

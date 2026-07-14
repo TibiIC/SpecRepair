@@ -1,0 +1,8 @@
+Comparing specs in directory: /Users/tg4018/Documents/PhD/SpecRepair/tests/test_files/out/traffic_non_unique_eventually
+Unique ID Maximal GR1 Specs: dict_keys(['traffic_test_fix_9'])
+TOTAL SPECS: 10
+Max GR1 SPECS: 4
+Not Max GR1 SPECS: 6
+Impossible GR1 SPECS: 0
+Unrelated GR1 SPECS: 0
+set()
