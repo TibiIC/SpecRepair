@@ -1,0 +1,33 @@
+HOA: v1
+tool: "strix" "21.0.0"
+States: 5
+Start: 0
+AP: 3 "methane" "highwater" "pump"
+controllable-AP: 0 1
+acc-name: all
+Acceptance: 0 t
+--BODY--
+State: 0 "[0]"
+[(!(0 | 1)) & (!2)] 1
+[(!(0 | 1)) & (2)] 2
+State: 1 "[1]"
+[(0 & 1) & (!2)] 3
+[(0 & 1) & (2)] 2
+State: 2 "[2]"
+[(t) & (!2)] 3
+[(t) & (2)] 4
+State: 3 "[3]"
+[(t) & (!2)] 3
+[(t) & (2)] 2
+State: 4 "[4]"
+[(!1) & (!2)] 3
+[(!1) & (2)] 4
+--END--
+
+'((!highwater & !methane)&
+G(((pump & X(pump)) -> X(X(!highwater))))&
+G((!methane -> (!highwater | !methane))))
+->
+(!pump&
+G((highwater -> X(pump)))&
+G((methane -> X(!pump))))'

@@ -13,7 +13,7 @@ from spec_repair.helpers.spectra_specification import SpectraSpecification
 from spec_repair.util.file_util import generate_temp_filename, write_to_file
 from spec_repair.util.spec_util import synthesise_extract_counter_strategies, run_all_unrealisable_cores
 from spec_repair.wrappers.asp_wrappers import get_violations
-from spec_repair.wrappers.strix import Strix, StrixResult
+from spec_repair.wrappers.strix import Strix, StrixResult, OutputFormat, LabelEncoding
 
 from spec_repair.ltl_types import GR1AtomType
 
@@ -112,5 +112,6 @@ class StrixGR1RevisedOracle(IOracle):
         return self._strix.synthesize(
             formula,
             env_atom_names,
-            sys_atom_names
+            sys_atom_names,
+            output_format=OutputFormat.HOA
         )

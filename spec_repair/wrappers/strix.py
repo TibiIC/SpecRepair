@@ -13,6 +13,8 @@ class OutputFormat(str, Enum):
     HOA = "hoa"
     AAG = "aag"
     AIGER = "aiger"
+    BDD = "bdd"
+    PG = "pg"
 
 
 class LabelEncoding(str, Enum):

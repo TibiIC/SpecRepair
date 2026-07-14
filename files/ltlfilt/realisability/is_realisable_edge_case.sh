@@ -4,7 +4,7 @@ INPUTS="methane,highwater"
 OUTPUTS="pump"
 
 INIT_ENV="(!highwater&!methane)"
-INVARIANT_ENV="((pump->(!highwater|!methane)))"
+INVARIANT_ENV="((!methane->(!highwater|!methane)))"
 JUSTICE_ENV=()
 
 # System guarantees
@@ -41,8 +41,9 @@ COND_1="(($INIT_ENV) -> ($INIT_SYS))"
 COND_2="($INIT_ENV -> (G(($INVARIANT_ENV) -> ($INVARIANT_SYS)) W !($INVARIANT_ENV)))"
 COND_3="(($INIT_ENV & G($INVARIANT_ENV)) -> ($JE_CONJ->$JS_CONJ))"
 
-# PHI="$COND_1 & $COND_2 & $COND_3"
 PHI="$COND_1 & $COND_2 & $COND_3"
+#PHI="$COND_1 & $COND_2 & $COND_3"
+# PHI="((($INIT_ENV) & G($INVARIANT_ENV) & ($JE_CONJ)) -> (($INIT_SYS) & G($INVARIANT_SYS) & ($JS_CONJ)))"
 
 echo "Checking realizability of:"
 echo "  $PHI"

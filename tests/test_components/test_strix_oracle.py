@@ -72,7 +72,8 @@ class TestStrixSpecOracle(BaseTestCase):
         self.assertIsNone(cs)
 
     def test_synthesise_and_check_cycle_counter_strategy(self):
-        weakened_spec: SpectraSpecification = SpectraSpecification.from_file('./test_files/traffic/traffic_updated_infinite_loop.spectra')
+        weakened_spec: SpectraSpecification = SpectraSpecification.from_file(
+            './test_files/traffic/traffic_updated_infinite_loop.spectra')
 
         cs: CounterStrategy = self.oracle._synthesise_and_check(weakened_spec)
 

@@ -33,16 +33,16 @@ join_conj() {
 JE_CONJ=$(join_conj "${JUSTICE_ENV[@]}")
 JS_CONJ=$(join_conj "${JUSTICE_SYS[@]}")
 
-COND_1="(($INIT_ENV) -> ($INIT_SYS))"
+# COND_1="(($INIT_ENV) -> ($INIT_SYS))"
 # COND_2="(($INIT_ENV) -> G(H($INVARIANT_ENV)->$INVARIANT_SYS))" historically doesn't exist
 # G(H(p)->q) eq G((p & q) | !p | (!p W (p & !q & G!p)))
 #COND_2="($INIT_ENV -> G(($INVARIANT_ENV & $INVARIANT_SYS) | !$INVARIANT_ENV | (!$INVARIANT_ENV W ($INVARIANT_ENV & !$INVARIANT_SYS & G!$INVARIANT_ENV))))"
 # G(H(p)->q) eq G(p -> q) W !p
-COND_2="($INIT_ENV -> (G(($INVARIANT_ENV) -> ($INVARIANT_SYS)) W !($INVARIANT_ENV)))"
-COND_3="(($INIT_ENV & G($INVARIANT_ENV)) -> ($JE_CONJ->$JS_CONJ))"
+# COND_2="($INIT_ENV -> (G(($INVARIANT_ENV) -> ($INVARIANT_SYS)) W !($INVARIANT_ENV)))"
+# COND_3="(($INIT_ENV & G($INVARIANT_ENV)) -> ($JE_CONJ->$JS_CONJ))"
 
 # PHI="$COND_1 & $COND_2 & $COND_3"
-PHI="$COND_1 & $COND_2 & $COND_3"
+PHI="((($INIT_ENV) & G($INVARIANT_ENV) & ($JE_CONJ)) -> (($INIT_SYS) & G($INVARIANT_SYS) & ($JS_CONJ)))"
 
 echo "Checking realizability of:"
 echo "  $PHI"
@@ -51,3 +51,4 @@ echo "  outputs: $OUTPUTS"
 echo
 
 ltlsynt --formula="$PHI" --ins="$INPUTS" --outs="$OUTPUTS" --realizability
+strix -o hoa -f "$PHI" --ins="$INPUTS" --outs="$OUTPUTS"

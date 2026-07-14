@@ -1,0 +1,22 @@
+HOA: v1
+tool: "strix" "21.0.0"
+States: 4
+Start: 0
+AP: 4 "police" "emergency" "car" "green"
+controllable-AP: 0 1 2
+acc-name: all
+Acceptance: 0 t
+--BODY--
+State: 0 "[0]"
+[(!(0 | !2)) & (!3)] 1
+[(!(0 | !2)) & (3)] 2
+State: 1 "[1]"
+[(!(0 | !2)) & (!3)] 1
+[(!(0 | !2)) & (3)] 2
+State: 2 "[2]"
+[(!(0 | !2)) & (!3)] 3
+[(!(0 | !2)) & (3)] 2
+State: 3 "[3]"
+[(!(0 | !2)) & (!3)] 3
+[(!(0 | !2)) & (3)] 2
+--END--
