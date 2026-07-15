@@ -7,7 +7,7 @@ from py_ltl.formula import LTLFormula, AtomicProposition, Not, And, Or, Until, N
 
 from collections import defaultdict
 
-from spec_repair.util.formula_util import get_disjuncts_from_disjunction
+from spec_repair.util.ltl_formula_util import get_disjuncts_from_disjunction
 
 
 def antecedent_boilerplate(time, ops, start_root_id=0):

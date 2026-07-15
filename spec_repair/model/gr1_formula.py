@@ -7,8 +7,7 @@ from spec_repair.model.adaptation_learned import Adaptation
 from spec_repair.helpers.formatters.spot_formula_formatter import SpotFormulaFormatter
 from spec_repair.helpers.parsers.spectra_formula_parser import SpectraFormulaParser
 from spec_repair.ltl_types import GR1TemporalType
-from spec_repair.util.formula_util import disjoin_all, get_disjuncts_from_disjunction
-from spec_repair.util.ltl_formula_util import normalize_to_pattern
+from spec_repair.util.ltl_formula_util import normalize_to_pattern, disjoin_all, get_disjuncts_from_disjunction
 from spec_repair.util.spec_util import replace_false_true
 
 from py_ltl.parser import ILTLParser
