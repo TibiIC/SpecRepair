@@ -1,4 +1,5 @@
 import re
+from abc import ABC
 
 
 PRS_REG = re.compile(r"^\s*G[^-]*->\s*F")
@@ -53,3 +54,49 @@ goal_targets_pa = [['gname', 'gc_pa', 'pos']]
 
 assumption_conditions_pa = [['gname', 'ac_pa', 'pos']]
 assumption_targets_pa = [['gname', 'ac_pa', 'pos']]
+
+
+class ExceptionRule(ABC):
+    pass
+
+
+class AntecedentExceptionRule(ExceptionRule):
+    pattern = re.compile(r"^antecedent_exception\(([^,]+,){3}[^,]+\)\s*:-\s*(not_)?holds_at\(([^,]+,){2}[^,]+\).$")
+
+
+class ConsequentExceptionRule(ExceptionRule):
+    pattern = re.compile(r"^consequent_exception\(([^,]+,){2}[^,]+\)\s*:-\s*(not_)?holds_at\(([^,]+,){2}[^,]+\).$")
+
+
+class EventuallyConsequentRule(ExceptionRule):
+    pattern = re.compile(
+        r"^consequent_exception\(([^,]+,){2}[^,]+\)\s*:-\s*root_consequent_holds\(([^,]+,){4}[^,]+\).$")
+
+
+class HoldsAtAtom:
+    NEG_PREFIX = 1
+    ATOM = 2
+    pattern = re.compile(r"^(not_)?holds_at\(([^,]+),([^,]+),[^,]+\).?$")
+
+
+class GR1FormulaPattern:
+    TEMP_OP = 1
+    FORMULA = 2
+    pattern = re.compile(r"\s*(inv|alw|alwEv|G|GF)?\((.*)\);?$")
+
+class GR1Atom:
+    ATOM_TYPE = 1
+    VALUE_TYPE = 2
+    NAME = 3
+    pattern = re.compile(r'^\s*(env|sys)\s+([a-zA-Z0-9_-]+)\s+([a-zA-Z0-9_-]+);?\s*$')
+
+class DeadlockAtomSet:
+    ATOM_NAME = 1
+    ATOM_VALUE = 2
+    pattern = re.compile(r"^atom_set_to\(([^,]+),([^,]+)\).?$")
+
+class DeadlockViolations:
+    VIOLATED_EXP_NAME = 1
+    VIOLATED_TIMEPOINT = 2
+    VIOLATING_TRACE_NAME = 3
+    pattern = re.compile(r"^violation_holds\(([^,]+),([^,]+),([^,]+)\).?$")

@@ -10,11 +10,11 @@ import pandas as pd
 from spec_repair.enums import Learning, When, ExpType, SimEnv
 from spec_repair.model.counter_strategy import CounterStrategy
 from spec_repair.model.spectra_atom import SpectraAtom
-from spec_repair.heuristics import choose_one_with_heuristic, manual_choice, HeuristicType
+from spec_repair.helpers.heuristics import choose_one_with_heuristic, manual_choice, HeuristicType
 from spec_repair.util.patterns import PRS_REG
 from spec_repair.config import PROJECT_PATH, FASTLAS, PATH_TO_CLI, PATH_TO_TOOLBOX, PATH_TO_JVM
 from spec_repair.util.specification_helper import strip_vars, assign_equalities, create_cmd, run_subprocess
-from spec_repair.special_types import HoldsAtAtom
+from spec_repair.util.patterns import HoldsAtAtom
 from spec_repair.util.file_util import read_file_lines, write_file, generate_temp_filename, write_to_file, \
     get_line_from_file
 

@@ -1,5 +1,5 @@
 from spec_repair.ltl_types import GR1AtomType
-from spec_repair.special_types import GR1Atom
+from spec_repair.util.patterns import GR1Atom
 
 
 class SpectraAtom:

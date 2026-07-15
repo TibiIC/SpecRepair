@@ -1,7 +1,7 @@
 import re
 from unittest import TestCase
 
-from spec_repair.special_types import EventuallyConsequentRule, ConsequentExceptionRule, AntecedentExceptionRule
+from spec_repair.util.patterns import EventuallyConsequentRule, ConsequentExceptionRule, AntecedentExceptionRule
 
 
 class TestRegex(TestCase):

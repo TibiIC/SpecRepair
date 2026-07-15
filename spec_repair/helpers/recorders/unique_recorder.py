@@ -1,7 +1,7 @@
 from typing import Optional, List
 
 from spec_repair.helpers.recorders.irecorder import IRecorder
-from spec_repair.heuristics import T
+from spec_repair.helpers.heuristics import T
 
 
 class UniqueRecorder(IRecorder[T]):

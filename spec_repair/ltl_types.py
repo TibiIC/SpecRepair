@@ -1,5 +1,8 @@
 from enum import Enum
-from typing import Set, List
+from typing import Set, List, Callable, TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from spec_repair.model.counter_trace import CounterTrace
 
 class GR1FormulaType(Enum):
     ASM = "assumption|asm"
@@ -69,3 +72,6 @@ class LTLFiltOperation(Enum):
 
     def flag(self) -> str:
         return f"--{self.value}"
+
+
+StopHeuristicType = Callable[[List[str], List["CounterTrace"]], bool]

@@ -7,7 +7,7 @@ from spec_repair.model.counter_trace import CounterTrace, ct_from_cs, complete_c
 from spec_repair.enums import Learning
 from spec_repair.helpers.parsers.spectra_cs_parser import SpectraCSParser
 from spec_repair.model.spectra_specification import SpectraSpecification
-from spec_repair.heuristics import first_choice, last_choice, nth_choice
+from spec_repair.helpers.heuristics import first_choice, last_choice, nth_choice
 from tests.base_test_case import BaseTestCase
 
 cs1: CounterStrategy = SpectraCSParser.from_lines(
