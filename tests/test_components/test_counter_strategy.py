@@ -1,7 +1,7 @@
 import unittest
 from unittest import TestCase
 
-from spec_repair.helpers.counter_strategy import CounterStrategy
+from spec_repair.model.counter_strategy import CounterStrategy
 from spec_repair.helpers.parsers.spectra_cs_parser import SpectraCSParser
 
 
@@ -148,7 +148,7 @@ class TestCounterStrategyCycles(TestCase):
         self.assertIn('winning=mixed', repr(cs))
 
     def test_repr_empty(self):
-        from spec_repair.helpers.counter_strategy import CounterStrategy
+        from spec_repair.model.counter_strategy import CounterStrategy
         cs = CounterStrategy(transitions=[])
         self.assertIn('winning=unknown', repr(cs))
 
@@ -203,7 +203,7 @@ class TestCounterStrategyEquality(TestCase):
             'S0 -> DEAD {highwater:true, methane:true} / {pump:false};',
             'S0 -> DEAD {highwater:true, methane:true} / {pump:true};',
         ])
-        from spec_repair.helpers.counter_strategy import CounterStrategy, CSTransition
+        from spec_repair.model.counter_strategy import CounterStrategy, CSTransition
         cs_renamed = CounterStrategy([
             CSTransition('A', 'B', {'highwater': False, 'methane': False}, {'pump': False}),
             CSTransition('B', 'C', {'highwater': True, 'methane': True}, {'pump': False}),
@@ -219,7 +219,7 @@ class TestCounterStrategyEquality(TestCase):
             'S0 -> S0 {car:true, emergency:false, police:false} / {green:false};',
             'S0 -> S0 {car:true, emergency:false, police:false} / {green:true};',
         ])
-        from spec_repair.helpers.counter_strategy import CounterStrategy, CSTransition
+        from spec_repair.model.counter_strategy import CounterStrategy, CSTransition
         cs2 = CounterStrategy([
             CSTransition('A', 'B', {'car': True, 'emergency': False, 'police': False}, {'green': False}),
             CSTransition('A', 'B', {'car': True, 'emergency': False, 'police': False}, {'green': True}),

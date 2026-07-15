@@ -3,13 +3,13 @@ import pandas as pd
 import spot
 
 from spec_repair.enums import Learning
-from spec_repair.helpers.adaptation_learned import Adaptation
-from spec_repair.helpers.gr1_formula import GR1Formula
+from spec_repair.model.adaptation_learned import Adaptation
+from spec_repair.model.gr1_formula import GR1Formula
 from spec_repair.helpers.heuristic_managers.no_filter_heuristic_manager import NoFilterHeuristicManager
 from spec_repair.helpers.formatters.spectra_formula_formatter import SpectraFormulaFormatter
 from spec_repair.helpers.parsers.spectra_formula_parser import SpectraFormulaParser
-from spec_repair.helpers.spectra_specification import SpectraSpecification
-from spec_repair.helpers.spectra_atom import SpectraAtom
+from spec_repair.model.spectra_specification import SpectraSpecification
+from spec_repair.model.spectra_atom import SpectraAtom
 from spec_repair.helpers.formatters.spot_specification_formatter import SpotSpecificationFormatter
 from spec_repair.ltl_types import GR1FormulaType, GR1TemporalType
 from spec_repair.helpers.weakness_measurement.weakness_user_friendly import Weakness

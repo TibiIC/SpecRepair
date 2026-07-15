@@ -2,7 +2,7 @@ import argparse
 import os
 import pandas as pd
 
-from spec_repair.helpers.spectra_specification import SpectraSpecification
+from spec_repair.model.spectra_specification import SpectraSpecification
 from util import filter_maximal_specifications, get_files_with_specs_from_directory, \
     filter_semantically_unique_specifications, print_spec_names, ComparisonType, filter_compared_specifications
 

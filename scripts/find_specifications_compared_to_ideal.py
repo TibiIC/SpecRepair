@@ -1,7 +1,7 @@
 import argparse
 import os
 
-from spec_repair.helpers.spectra_specification import SpectraSpecification
+from spec_repair.model.spectra_specification import SpectraSpecification
 from util import ComparisonType, filter_compared_specifications, make_plural, print_spec_names, \
     get_files_with_specs_from_directory
 

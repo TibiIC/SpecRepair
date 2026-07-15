@@ -2,7 +2,7 @@ from copy import deepcopy
 from typing import Optional, List
 
 from spec_repair.helpers.formatters.spot_formula_formatter import SpotFormulaFormatter
-from spec_repair.helpers.gr1_formula import GR1Formula
+from spec_repair.model.gr1_formula import GR1Formula
 from spec_repair.ltl_types import GR1FormulaType, GR1TemporalType
 
 class SpotSpecificationFormatter:

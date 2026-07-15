@@ -2,9 +2,9 @@ import unittest
 from typing import Optional
 
 from spec_repair.components.oracles.spectra_gr1_oracle import SpectraGR1Oracle
-from spec_repair.helpers.counter_strategy import CounterStrategy
+from spec_repair.model.counter_strategy import CounterStrategy
 from spec_repair.helpers.parsers.spectra_cs_parser import SpectraCSParser
-from spec_repair.helpers.spectra_specification import SpectraSpecification
+from spec_repair.model.spectra_specification import SpectraSpecification
 from tests.base_test_case import BaseTestCase
 
 

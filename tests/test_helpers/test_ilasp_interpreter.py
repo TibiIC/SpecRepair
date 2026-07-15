@@ -1,8 +1,8 @@
 from typing import List, Tuple
 from unittest import TestCase
 
-from spec_repair.helpers.adaptation_learned import Adaptation
-from spec_repair.helpers.ilasp_interpreter import ILASPInterpreter
+from spec_repair.model.adaptation_learned import Adaptation
+from spec_repair.model.ilasp_interpreter import ILASPInterpreter
 
 def filter_useful_adaptations(potential_adaptations: List[Tuple[int, List[Adaptation]]]) -> List[List[Adaptation]]:
     ev_adaptations = [(score, adaptations) for score, adaptations in potential_adaptations if "ev_temp_op" in [adaptation.type for adaptation in adaptations] ]

@@ -8,7 +8,7 @@ import networkx as nx
 
 from typing import Dict, Optional
 
-from spec_repair.helpers.spectra_specification import SpectraSpecification
+from spec_repair.model.spectra_specification import SpectraSpecification
 from spec_repair.util.file_util import read_file
 from spec_repair.ltl_types import GR1FormulaType
 from spec_repair.util.graph_util import remove_reflexive_relations, merge_on_bidirectional_edges, \

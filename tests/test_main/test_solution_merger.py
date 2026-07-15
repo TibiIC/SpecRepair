@@ -7,7 +7,7 @@ from spec_repair.components.oracles.spectra_gr1_oracle import SpectraGR1Oracle
 from spec_repair.helpers.formatters.spectra_formula_formatter import SpectraFormulaFormatter
 from spec_repair.helpers.formatters.spot_specification_formatter import SpotSpecificationFormatter
 from spec_repair.helpers.parsers.spectra_formula_parser import SpectraFormulaParser
-from spec_repair.helpers.spectra_specification import SpectraSpecification, Self
+from spec_repair.model.spectra_specification import SpectraSpecification, Self
 from spec_repair.ltl_types import GR1FormulaType
 from spec_repair.util.file_util import write_to_file
 from tests.base_test_case import BaseTestCase

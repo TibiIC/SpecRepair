@@ -3,7 +3,7 @@ from enum import Enum
 from typing import Optional, Tuple, List
 import pandas as pd
 
-from spec_repair.helpers.spectra_specification import SpectraSpecification
+from spec_repair.model.spectra_specification import SpectraSpecification
 from spec_repair.ltl_types import GR1FormulaType
 
 

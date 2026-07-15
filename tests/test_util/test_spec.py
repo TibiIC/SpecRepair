@@ -3,8 +3,8 @@ import re
 from unittest import TestCase
 
 from spec_repair.enums import Learning
-from spec_repair.helpers.spectra_atom import SpectraAtom
-from spec_repair.helpers.spectra_specification import SpectraSpecification
+from spec_repair.model.spectra_atom import SpectraAtom
+from spec_repair.model.spectra_specification import SpectraSpecification
 from spec_repair.ltl_types import GR1AtomType
 from spec_repair.util.spec_util import create_trace, trace_list_to_asp_form, trace_list_to_ilasp_form, \
     run_all_unrealisable_cores_raw, run_all_unrealisable_cores, create_atom_signature_asp

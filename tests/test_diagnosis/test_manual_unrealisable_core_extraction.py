@@ -1,7 +1,7 @@
 from spec_repair.components.oracles.spectra_gr1_oracle import SpectraGR1Oracle
 from spec_repair.components.oracles.strix_gr1_revised_oracle import StrixGR1RevisedOracle
 from spec_repair.diagnosis.manual_unrealisable_core_extraction import get_unrealisable_cores
-from spec_repair.helpers.spectra_specification import SpectraSpecification
+from spec_repair.model.spectra_specification import SpectraSpecification
 from tests.base_test_case import BaseTestCase
 
 

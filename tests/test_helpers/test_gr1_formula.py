@@ -1,8 +1,8 @@
 from unittest import TestCase
 
-from spec_repair.helpers.adaptation_learned import Adaptation
+from spec_repair.model.adaptation_learned import Adaptation
 from spec_repair.helpers.formatters.spot_formula_formatter import SpotFormulaFormatter
-from spec_repair.helpers.gr1_formula import GR1Formula
+from spec_repair.model.gr1_formula import GR1Formula
 from spec_repair.helpers.formatters.spectra_formula_formatter import SpectraFormulaFormatter
 from spec_repair.helpers.parsers.spectra_formula_parser import SpectraFormulaParser
 from spec_repair.ltl_types import GR1TemporalType

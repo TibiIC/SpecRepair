@@ -10,12 +10,12 @@ import spot
 
 from spec_repair.interfaces.ispecification import ISpecification
 # from spec_repair.components.oracles.new_spec_oracle import NewSpecOracle
-from spec_repair.helpers.adaptation_learned import Adaptation
+from spec_repair.model.adaptation_learned import Adaptation
 from spec_repair.helpers.formatters.asp_exception_formatter import ASPExceptionFormatter
 from spec_repair.helpers.heuristic_managers.iheuristic_manager import IHeuristicManager
 from spec_repair.helpers.heuristic_managers.no_filter_heuristic_manager import NoFilterHeuristicManager
-from spec_repair.helpers.spectra_atom import SpectraAtom
-from spec_repair.helpers.gr1_formula import GR1Formula
+from spec_repair.model.spectra_atom import SpectraAtom
+from spec_repair.model.gr1_formula import GR1Formula
 from spec_repair.helpers.formatters.spectra_formula_formatter import SpectraFormulaFormatter
 from spec_repair.helpers.parsers.spectra_formula_parser import SpectraFormulaParser
 from spec_repair.helpers.formatters.spot_specification_formatter import SpotSpecificationFormatter

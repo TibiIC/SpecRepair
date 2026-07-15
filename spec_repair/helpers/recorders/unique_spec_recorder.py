@@ -1,7 +1,7 @@
 from typing import Optional
 
 from spec_repair.helpers.recorders.unique_recorder import UniqueRecorder
-from spec_repair.helpers.spectra_specification import SpectraSpecification
+from spec_repair.model.spectra_specification import SpectraSpecification
 from spec_repair.util.file_util import write_to_file
 
 class UniqueSpecRecorder(UniqueRecorder[SpectraSpecification]):

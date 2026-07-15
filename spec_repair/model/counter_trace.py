@@ -11,7 +11,7 @@ from py_ltl.formula import AtomicProposition
 from spec_repair.interfaces.ispecification import ISpecification
 from spec_repair.components.new_spec_encoder import NewSpecEncoder
 from spec_repair.enums import Learning
-from spec_repair.helpers.counter_strategy import CounterStrategy
+from spec_repair.model.counter_strategy import CounterStrategy
 from spec_repair.helpers.parsers.spectra_formula_parser import SpectraFormulaParser
 from spec_repair.heuristics import choose_one_with_heuristic, HeuristicType, random_choice
 from spec_repair.ltl_types import GR1FormulaType

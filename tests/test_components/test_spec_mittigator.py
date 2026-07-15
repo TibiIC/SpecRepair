@@ -3,13 +3,13 @@ from copy import deepcopy
 from typing import Tuple
 
 from spec_repair.components.repair_data import RepairData
-from spec_repair.helpers.counter_strategy import CounterStrategy
+from spec_repair.model.counter_strategy import CounterStrategy
 from spec_repair.helpers.parsers.spectra_cs_parser import SpectraCSParser
 from tests.base_test_case import BaseTestCase
 from spec_repair.components.mitigators.learning_type_spec_mitigator import LearningTypeSpecMitigator
 from spec_repair.enums import Learning
-from spec_repair.helpers.counter_trace import cts_from_cs, CounterTrace
-from spec_repair.helpers.spectra_specification import SpectraSpecification
+from spec_repair.model.counter_trace import cts_from_cs, CounterTrace
+from spec_repair.model.spectra_specification import SpectraSpecification
 from spec_repair.strategies.mitigation_strategies import move_one_to_guarantee_weakening, complete_counter_traces
 
 

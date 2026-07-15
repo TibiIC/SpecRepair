@@ -1,8 +1,8 @@
 from typing import Any, Optional, List
 
 from spec_repair.enums import Learning
-from spec_repair.helpers.adaptation_learned import Adaptation
-from spec_repair.helpers.counter_trace import CounterTrace
+from spec_repair.model.adaptation_learned import Adaptation
+from spec_repair.model.counter_trace import CounterTrace
 
 
 class RepairData:

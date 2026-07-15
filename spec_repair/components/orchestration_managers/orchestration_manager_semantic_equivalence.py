@@ -5,7 +5,7 @@ from spec_repair.components.orchestration_managers.a_orchestration_manager_with_
     AOrchestrationManagerWithStackAndGraph
 from spec_repair.components.repair_data import RepairData
 from spec_repair.enums import Learning
-from spec_repair.helpers.counter_trace import CounterTrace
+from spec_repair.model.counter_trace import CounterTrace
 
 RED = "#ff4444"
 GREEN = "#44ff44"

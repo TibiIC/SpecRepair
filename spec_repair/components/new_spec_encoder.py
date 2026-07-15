@@ -13,7 +13,7 @@ from spec_repair.util.spec_util import trace_list_to_asp_form, trace_list_to_ila
 from spec_repair.components.spec_generator import SpecGenerator
 
 if TYPE_CHECKING:
-    from spec_repair.helpers.counter_trace import CounterTrace
+    from spec_repair.model.counter_trace import CounterTrace
 
 
 class NewSpecEncoder:

@@ -4,7 +4,7 @@ from unittest import TestCase
 
 from py_ltl.formula import AtomicProposition
 
-from spec_repair.helpers.trace import Trace
+from spec_repair.model.trace import Trace
 from spec_repair.util.file_util import read_file_lines
 from tests.base_test_case import BaseTestCase
 

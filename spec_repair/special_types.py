@@ -3,7 +3,7 @@ from abc import ABC
 from typing import Callable, List, Any
 
 
-# from spec_repair.helpers.counter_trace import CounterTrace
+# from spec_repair.model.counter_trace import CounterTrace
 
 
 class ExceptionRule(ABC):

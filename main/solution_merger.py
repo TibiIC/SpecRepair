@@ -7,8 +7,8 @@ from spec_repair.interfaces.ispecification import ISpecification
 from spec_repair.helpers.formatters.spectra_formula_formatter import SpectraFormulaFormatter
 from spec_repair.helpers.formatters.spot_formula_formatter import SpotFormulaFormatter
 from spec_repair.helpers.formatters.spot_specification_formatter import SpotSpecificationFormatter
-from spec_repair.helpers.gr1_formula import GR1Formula
-from spec_repair.helpers.spectra_specification import SpectraSpecification
+from spec_repair.model.gr1_formula import GR1Formula
+from spec_repair.model.spectra_specification import SpectraSpecification
 from spec_repair.ltl_types import GR1FormulaType, GR1TemporalType
 from spec_repair.new_research import get_all_trivial_solutions_guarantee_only
 from spec_repair.util.spot_ltl_conjoining_util import conjoin_and_simplify

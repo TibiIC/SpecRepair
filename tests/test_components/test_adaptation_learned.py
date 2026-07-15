@@ -1,6 +1,6 @@
 from unittest import TestCase
 
-from spec_repair.helpers.adaptation_learned import Adaptation
+from spec_repair.model.adaptation_learned import Adaptation
 
 
 class TestAdaptationLearned(TestCase):

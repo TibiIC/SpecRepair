@@ -5,9 +5,9 @@ from spec_repair.interfaces.imitigator import IMitigator
 from spec_repair.interfaces.ispecification import ISpecification
 from spec_repair.components.repair_data import RepairData
 from spec_repair.enums import Learning
-from spec_repair.helpers.counter_trace import CounterTrace
+from spec_repair.model.counter_trace import CounterTrace
 from spec_repair.helpers.heuristic_managers.no_filter_heuristic_manager import NoFilterHeuristicManager
-from spec_repair.helpers.spectra_specification import SpectraSpecification
+from spec_repair.model.spectra_specification import SpectraSpecification
 
 
 class LearningTypeSpecMitigator(IMitigator):

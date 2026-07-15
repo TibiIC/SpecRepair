@@ -14,7 +14,7 @@ from __future__ import annotations
 
 import re
 
-from spec_repair.helpers.counter_strategy import CounterStrategy, CSTransition
+from spec_repair.model.counter_strategy import CounterStrategy, CSTransition
 
 
 class SpectraCSParser:

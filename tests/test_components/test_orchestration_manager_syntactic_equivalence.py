@@ -5,8 +5,8 @@ from spec_repair.components.orchestration_managers.orchestration_manager_syntact
     OrchestrationManagerSyntacticEquivalence
 from spec_repair.components.repair_data import RepairData
 from spec_repair.enums import Learning
-from spec_repair.helpers.counter_trace import CounterTrace
-from spec_repair.helpers.spectra_specification import SpectraSpecification
+from spec_repair.model.counter_trace import CounterTrace
+from spec_repair.model.spectra_specification import SpectraSpecification
 from spec_repair.util.file_util import read_file_lines
 from tests.base_test_case import BaseTestCase
 

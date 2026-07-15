@@ -8,8 +8,8 @@ from typing import Set, Dict, Union, List, Optional
 import pandas as pd
 
 from spec_repair.enums import Learning, When, ExpType, SimEnv
-from spec_repair.helpers.counter_strategy import CounterStrategy
-from spec_repair.helpers.spectra_atom import SpectraAtom
+from spec_repair.model.counter_strategy import CounterStrategy
+from spec_repair.model.spectra_atom import SpectraAtom
 from spec_repair.heuristics import choose_one_with_heuristic, manual_choice, HeuristicType
 from spec_repair.util.patterns import PRS_REG
 from spec_repair.config import PROJECT_PATH, FASTLAS, PATH_TO_CLI, PATH_TO_TOOLBOX, PATH_TO_JVM

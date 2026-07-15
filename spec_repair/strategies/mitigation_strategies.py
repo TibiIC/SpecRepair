@@ -7,8 +7,8 @@ from spec_repair.components.new_spec_encoder import NewSpecEncoder
 from spec_repair.components.repair_data import RepairData
 from spec_repair.enums import Learning
 from spec_repair.exceptions import NoViolationException
-from spec_repair.helpers.counter_trace import CounterTrace, complete_cts_from_ct
-from spec_repair.helpers.spectra_specification import SpectraSpecification
+from spec_repair.model.counter_trace import CounterTrace, complete_cts_from_ct
+from spec_repair.model.spectra_specification import SpectraSpecification
 from spec_repair.wrappers.asp_wrappers import get_violations
 
 

@@ -57,7 +57,7 @@ from __future__ import annotations
 import re
 from itertools import product
 
-from spec_repair.helpers.counter_strategy import CounterStrategy, CSTransition
+from spec_repair.model.counter_strategy import CounterStrategy, CSTransition
 
 
 # ── Boolean formula AST ───────────────────────────────────────────────────────

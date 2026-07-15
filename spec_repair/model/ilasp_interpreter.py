@@ -2,7 +2,7 @@ import re
 from typing import Optional, List, Tuple
 
 from spec_repair.exceptions import NoViolationException
-from spec_repair.helpers.adaptation_learned import Adaptation
+from spec_repair.model.adaptation_learned import Adaptation
 
 
 class ILASPInterpreter:

@@ -3,7 +3,7 @@ from typing import TypeVar, Optional
 
 import spot
 
-from spec_repair.helpers.adaptation_learned import Adaptation
+from spec_repair.model.adaptation_learned import Adaptation
 from spec_repair.helpers.formatters.spot_formula_formatter import SpotFormulaFormatter
 from spec_repair.helpers.parsers.spectra_formula_parser import SpectraFormulaParser
 from spec_repair.ltl_types import GR1TemporalType

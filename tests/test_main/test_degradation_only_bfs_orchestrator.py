@@ -19,7 +19,7 @@ from spec_repair.components.repair_data import RepairData
 from spec_repair.enums import Learning
 from spec_repair.helpers.heuristic_managers.no_filter_heuristic_manager import NoFilterHeuristicManager
 from spec_repair.helpers.recorders.unique_spec_recorder import UniqueSpecRecorder
-from spec_repair.helpers.spectra_specification import SpectraSpecification
+from spec_repair.model.spectra_specification import SpectraSpecification
 from spec_repair.util.file_util import write_to_file
 from spec_repair.strategies.mitigation_strategies import complete_counter_traces
 from tests.base_test_case import BaseTestCase

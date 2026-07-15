@@ -15,7 +15,7 @@ Infinite loop (liveness violation)
 import unittest
 from unittest import TestCase
 
-from spec_repair.helpers.counter_strategy import CounterStrategy, CSTransition
+from spec_repair.model.counter_strategy import CounterStrategy, CSTransition
 from spec_repair.helpers.parsers.strix_cs_parser import StrixCSParser
 
 # ---------------------------------------------------------------------------
