@@ -53,6 +53,5 @@ hs_err_pid*.log
 /files/debug/*.txt
 /files/debug/*.lp
 
-# Regenerable via scripts/texify_spec.py; "old" is a superseded run
+# Regenerable via scripts/texify_spec.py
 /tests/test_files/maximal_solutions_from_ssh/texified/
-/tests/test_files/maximal_solutions_from_ssh/old/

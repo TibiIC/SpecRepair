@@ -182,7 +182,7 @@ def get_expression_names_of_type(asp_text: list[str], exp_type: str):
 
 def get_unrealisable_core_expression_names(spec: ISpecification) -> List[str]:
     unrealisable_cores = run_all_unrealisable_cores(spec.to_str(is_to_compile=True))
-    return list(set().union(*unrealisable_cores))
+    return sorted(set().union(*unrealisable_cores))
 
 
 def get_violated_expression_names(violations: list[str]) -> list[str]:

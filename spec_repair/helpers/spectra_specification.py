@@ -23,7 +23,7 @@ from spec_repair.ltl_types import GR1FormulaType, GR1TemporalType
 from spec_repair.util.file_util import read_file_lines, validate_spectra_file
 from spec_repair.util.formula_util import get_disjuncts_from_disjunction
 from spec_repair.util.spec_util import format_spec
-from spec_repair.weakness_measurement_davide.weakness_user_friendly import computeWeakness, Weakness
+from spec_repair.helpers.weakness_measurement.weakness_user_friendly import computeWeakness, Weakness
 from spec_repair.exceptions import NameClashException
 
 

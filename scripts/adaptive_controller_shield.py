@@ -7,7 +7,7 @@ import sys
 
 from scripts.controller_shield import ControllerShield
 from spec_repair.config import PATH_TO_CLI
-from spec_repair.old.specification_helper import run_subprocess
+from spec_repair.util.specification_helper import run_subprocess
 from spec_repair.util.file_util import write_to_file
 
 

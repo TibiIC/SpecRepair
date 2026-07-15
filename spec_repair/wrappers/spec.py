@@ -2,20 +2,15 @@ import re
 import subprocess
 from typing import Optional
 
-from IPython.core.hooks import deprecated
-
 from spec_repair.ltl_types import GR1FormulaType, LTLFiltOperation
-from spec_repair.old.specification_helper import strip_vars
+from spec_repair.util.specification_helper import strip_vars
 from spec_repair.util.spec_util import simplify_assignments, shift_prev_to_next
 
 
-@deprecated("Spec class is deprecated", since="1.0.0")
 class Spec:
-    @deprecated("Spec class is deprecated", since="1.0.0")
     def __init__(self, spec: str):
         self.text: str = spec
 
-    @deprecated("Spec class is deprecated", since="1.0.0")
     def swap_rule(self, name: str, new_rule: str):
         # Use re.sub with a callback function to replace the next line after the pattern
         def replace_line(match):
@@ -29,7 +24,6 @@ class Spec:
         regex_pattern = re.compile(rf'({re.escape(name)}.*?\n)((.*?)\n)', re.DOTALL)
         self.text = re.sub(regex_pattern, replace_line, self.text)
 
-    @deprecated("Spec class is deprecated", since="1.0.0")
     def __eq__(self, other):
         asm_eq = self.equivalent_to(other, GR1FormulaType.ASM)
         if not asm_eq:
@@ -37,16 +31,13 @@ class Spec:
         gar_eq = self.equivalent_to(other, GR1FormulaType.GAR)
         return asm_eq and gar_eq
 
-    @deprecated("Spec class is deprecated", since="1.0.0")
     def __ne__(self, other):
         # Define the not equal comparison
         return not self.__eq__(other)
 
-    @deprecated("Spec class is deprecated", since="1.0.0")
     def __hash__(self) -> int:
         return self.text.__hash__()
 
-    @deprecated("Spec class is deprecated", since="1.0.0")
     def to_spot(self, exp_type: Optional[GR1FormulaType] = None, ignore_initial: bool=False) -> str:
         """
         Returns spec as string that can be operated on by SPOT
@@ -62,40 +53,32 @@ class Spec:
                 exps = f"({exps_asm})->({exps_gar})"
                 return exps
 
-    @deprecated("Spec class is deprecated", since="1.0.0")
     def implied_by(self, other, formula_type: Optional[GR1FormulaType] = None):
         return other.implies(self, formula_type)
 
-    @deprecated("Spec class is deprecated", since="1.0.0")
     def implies(self, other, formula_type: Optional[GR1FormulaType] = None):
         ltl_op = LTLFiltOperation.IMPLIES
         return self.compare_to(other, formula_type, ltl_op)
 
-    @deprecated("Spec class is deprecated", since="1.0.0")
     def equivalent_to(self, other, formula_type: GR1FormulaType):
         ltl_op = LTLFiltOperation.EQUIVALENT
         return self.compare_to(other, formula_type, ltl_op)
 
-    @deprecated("Spec class is deprecated", since="1.0.0")
     def compare_to(self, other, formula_type: GR1FormulaType, ltl_op: LTLFiltOperation):
         this_exps = self.to_spot(formula_type)
         other_exps = other.to_spot(formula_type)
         return is_left_cmp_right(this_exps, ltl_op, other_exps)
 
-    @deprecated("Spec class is deprecated", since="1.0.0")
     def get_spec(self):
         return self.text
 
-    @deprecated("Spec class is deprecated", since="1.0.0")
     def is_equivalent_to_spot(self, spot_formula: str, formula_type: Optional[GR1FormulaType]=None, ignore_initial=False) -> bool:
         this_formula = self.to_spot(formula_type, ignore_initial)
         return is_left_cmp_right(this_formula, LTLFiltOperation.EQUIVALENT, spot_formula)
 
-    @deprecated("Spec class is deprecated", since="1.0.0")
     def is_trivial_true(self, formula_type: Optional[GR1FormulaType]=None, ignore_initial=False) -> bool:
         return self.is_equivalent_to_spot("G(true)", formula_type, ignore_initial)
 
-    @deprecated("Spec class is deprecated", since="1.0.0")
     def is_trivial_false(self, formula_type: Optional[GR1FormulaType]=None, ignore_initial=False) -> bool:
         return self.is_equivalent_to_spot("G(false)", formula_type, ignore_initial)
 

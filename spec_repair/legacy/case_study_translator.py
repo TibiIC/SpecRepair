@@ -5,7 +5,7 @@ import re
 
 from spec_repair.util.spec_util import pRespondsToS_substitution, parenthetic_contents, \
     realizable, negate, push_negations
-from spec_repair.old.specification_helper import get_name
+from spec_repair.util.specification_helper import get_name
 from spec_repair.util.file_util import read_file_lines, write_file
 
 

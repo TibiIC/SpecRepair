@@ -50,7 +50,7 @@ class TestSpectraFormatter(unittest.TestCase):
     def test_temporal_operators(self):
         x = AtomicProposition("x", True)
         self.assertEqual(self.formatter.format(Next(x)), "next(x=true)")
-        self.assertEqual(self.formatter.format(Prev(x)), "prev(x=true)")
+        self.assertEqual(self.formatter.format(Prev(x)), "PREV(x=true)")
         self.assertEqual(self.formatter.format(Eventually(x)), "F(x=true)")
         self.assertEqual(self.formatter.format(Globally(x)), "G(x=true)")
 

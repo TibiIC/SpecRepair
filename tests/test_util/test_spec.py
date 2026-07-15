@@ -17,11 +17,11 @@ def is_ascending(timepoint_poss: list[int]) -> bool:
 
 class TestSpec(BaseTestCase):
     minepump_spec_file = '../input-files/examples/Minepump/minepump_strong.spectra'
-    traffic_spec_file = '../input-files/case-studies/spectra/traffic-single/strong.spectra'
+    traffic_spec_file = '../input-files/case-studies/spectra/traffic_single/strong.spectra'
     traffic_updated_spec_file = 'test_files/traffic/traffic_updated_strong.spectra'
 
     def test_all_unrealisable_cores_raw_ideal(self):
-        ideal_spec_file_path = "input-files/case-studies/spectra/minepump/ideal.spectra"
+        ideal_spec_file_path = "../input-files/case-studies/spectra/minepump/ideal.spectra"
         try:
             raw_cores = run_all_unrealisable_cores_raw(ideal_spec_file_path)
             self.assertIsNotNone(raw_cores, "Raw cores output should not be None")
@@ -32,7 +32,7 @@ class TestSpec(BaseTestCase):
             self.fail(f"Command line execution failed with error: {str(e)}")
 
     def test_all_unrealisable_cores_raw_one(self):
-        minepump_spec_file_path = "tests/test_files/unrealisable_core_util_tests/minepump_uc.spectra"
+        minepump_spec_file_path = "./test_files/unrealisable_core_util_tests/minepump_uc.spectra"
         try:
             raw_cores = run_all_unrealisable_cores_raw(minepump_spec_file_path)
             self.assertIsNotNone(raw_cores, "Raw cores output should not be None")
@@ -43,7 +43,7 @@ class TestSpec(BaseTestCase):
             self.fail(f"Command line execution failed with error: {str(e)}")
 
     def test_all_unrealisable_cores_raw_multiple(self):
-        arbiter_spec_file_path = "tests/test_files/unrealisable_core_util_tests/arbiter_uc_pRespondsToS.spectra"
+        arbiter_spec_file_path = "./test_files/unrealisable_core_util_tests/arbiter_uc_pRespondsToS.spectra"
         try:
             raw_cores = run_all_unrealisable_cores_raw(arbiter_spec_file_path)
             self.assertIsNotNone(raw_cores, "Raw cores output should not be None")

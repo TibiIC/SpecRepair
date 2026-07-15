@@ -1,7 +1,7 @@
 import numpy as np
 
-from spec_repair.weakness_measurement_davide import automaton as a
-from spec_repair.weakness_measurement_davide import syntax_utils as su
+from spec_repair.helpers.weakness_measurement import automaton as a
+from spec_repair.helpers.weakness_measurement import syntax_utils as su
 
 
 class Weakness:

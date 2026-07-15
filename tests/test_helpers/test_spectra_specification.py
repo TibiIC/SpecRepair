@@ -12,7 +12,7 @@ from spec_repair.helpers.spectra_specification import SpectraSpecification
 from spec_repair.helpers.spectra_atom import SpectraAtom
 from spec_repair.helpers.formatters.spot_specification_formatter import SpotSpecificationFormatter
 from spec_repair.ltl_types import GR1FormulaType, GR1TemporalType
-from spec_repair.weakness_measurement_davide.weakness_user_friendly import Weakness
+from spec_repair.helpers.weakness_measurement.weakness_user_friendly import Weakness
 from spec_repair.exceptions import NameClashException
 from tests.base_test_case import BaseTestCase
 from tests.test_common_utility_strings.specs import spec_perf, spec_fixed_perf, spec_fixed_imperf, \
@@ -128,32 +128,32 @@ class TestSpectraSpecification(BaseTestCase):
         self.assertTrue(spot.are_equivalent(spot.formula(expected_spot_gar), spot.formula(spec_merged_spot_gar)))
 
     def test_merge_two_specifications_where_asms_only_differ(self):
-        input_specs_dir = "./test_files/maximal_solutions_from_ssh"
+        input_specs_dir = "./test_files/maximal_solutions_from_ssh/old"
         spec_names = ["arbiter_0.spectra", "arbiter_1.spectra"]
         self._test_merge_specifications([f"{input_specs_dir}/{spec_names}" for spec_names in spec_names])
 
     def test_merge_three_specifications_where_asms_only_differ(self):
-        input_specs_dir = "./test_files/maximal_solutions_from_ssh"
+        input_specs_dir = "./test_files/maximal_solutions_from_ssh/old"
         spec_names = ["arbiter_0.spectra", "arbiter_1.spectra", "arbiter_2.spectra"]
         self._test_merge_specifications([f"{input_specs_dir}/{spec_names}" for spec_names in spec_names])
 
     def test_merge_four_specifications_where_asms_only_differ(self):
-        input_specs_dir = "./test_files/maximal_solutions_from_ssh"
+        input_specs_dir = "./test_files/maximal_solutions_from_ssh/old"
         spec_names = ["arbiter_0.spectra", "arbiter_1.spectra", "arbiter_2.spectra", "arbiter_3.spectra"]
         self._test_merge_specifications([f"{input_specs_dir}/{spec_names}" for spec_names in spec_names])
 
     def test_merge_five_specifications_where_asms_only_differ(self):
-        input_specs_dir = "./test_files/maximal_solutions_from_ssh"
+        input_specs_dir = "./test_files/maximal_solutions_from_ssh/old"
         spec_names = ["arbiter_0.spectra", "arbiter_1.spectra", "arbiter_2.spectra", "arbiter_3.spectra", "arbiter_4.spectra"]
         self._test_merge_specifications([f"{input_specs_dir}/{spec_names}" for spec_names in spec_names])
 
     def test_merge_six_specifications_where_asms_only_differ(self):
-        input_specs_dir = "./test_files/maximal_solutions_from_ssh"
+        input_specs_dir = "./test_files/maximal_solutions_from_ssh/old"
         spec_names = ["arbiter_0.spectra", "arbiter_1.spectra", "arbiter_2.spectra", "arbiter_3.spectra", "arbiter_4.spectra", "arbiter_5.spectra"]
         self._test_merge_specifications([f"{input_specs_dir}/{spec_names}" for spec_names in spec_names])
 
     def test_merge_two_specifications_where_asms_are_equivalent_but_names_of_asms_differ(self):
-        input_specs_dir = "./test_files/maximal_solutions_from_ssh"
+        input_specs_dir = "./test_files/maximal_solutions_from_ssh/old"
         spec_0 = SpectraSpecification.from_file(f"{input_specs_dir}/arbiter_0.spectra")
         spec_1 = SpectraSpecification.from_file(f"{input_specs_dir}/arbiter_0.spectra")
         spec_1.rename_formula("a_always", "a_always_1")
@@ -182,7 +182,7 @@ class TestSpectraSpecification(BaseTestCase):
         print(spec._atoms)
 
     def test_file_to_specification_works_weird_edge_case(self):
-        spec_file = "./test_files/out_ssh/repair_syn/minepump_2026-06-03/final/spec_1655.spectra"
+        spec_file = "./test_files/edge_cases/spec_1655.spectra"
         spec = SpectraSpecification.from_file(spec_file)
         print(spec._atoms)
 
@@ -511,14 +511,14 @@ root_consequent_holds(OP,guarantee4,0,1,T1,S):-
         self.assertFalse(spec_strong.is_trivial_true(GR1FormulaType.ASM))
         self.assertFalse(spec_strong.is_trivial_false(GR1FormulaType.ASM))
 
-    def test_minepump_strongest_against_best_repair(self):
+    def test_minepump_strongest_equivalent_to_best_repair(self):
         spec_strong: SpectraSpecification = SpectraSpecification.from_file(
             "../input-files/case-studies/spectra/minepump/strong.spectra")
         spec_best: SpectraSpecification = SpectraSpecification.from_file(
-            "../tests/test_files/out_ssh/repair_syn/minepump_2026-06-12/best/merged_14.spectra")
+            "./test_files/expected/minepump_best_repair/merged_14.spectra")
 
         self.assertTrue(spec_strong.implies(spec_best, GR1FormulaType.GAR))
-        self.assertFalse(spec_best.implies(spec_strong, GR1FormulaType.GAR))
+        self.assertTrue(spec_best.implies(spec_strong, GR1FormulaType.GAR))
 
     def test_extract_gr1_expressions_of_type_spot(self):
         spec_ideal: SpectraSpecification = SpectraSpecification.from_file(

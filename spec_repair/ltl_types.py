@@ -1,13 +1,6 @@
 from enum import Enum
 from typing import Set, List
 
-import pandas as pd
-
-
-
-Spec = pd.DataFrame
-
-
 class GR1FormulaType(Enum):
     ASM = "assumption|asm"
     GAR = "guarantee|gar"
