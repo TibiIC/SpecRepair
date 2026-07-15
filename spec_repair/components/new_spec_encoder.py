@@ -3,7 +3,7 @@ import re
 from collections import defaultdict
 from typing import List, Optional, TYPE_CHECKING
 
-from spec_repair.components.interfaces.ispecification import ISpecification
+from spec_repair.interfaces.ispecification import ISpecification
 from spec_repair.enums import Learning, When
 from spec_repair.helpers.heuristic_managers.iheuristic_manager import IHeuristicManager
 from spec_repair.helpers.heuristic_managers.no_filter_heuristic_manager import NoFilterHeuristicManager

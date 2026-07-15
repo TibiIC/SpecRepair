@@ -1,7 +1,7 @@
 from copy import deepcopy
 from typing import FrozenSet
 
-from spec_repair.components.interfaces.ioracle import IOracle
+from spec_repair.interfaces.ioracle import IOracle
 from spec_repair.helpers.spectra_specification import SpectraSpecification
 from spec_repair.ltl_types import GR1FormulaType
 

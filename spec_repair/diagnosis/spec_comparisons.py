@@ -1,4 +1,4 @@
-from spec_repair.components.interfaces.ispecification import ISpecification
+from spec_repair.interfaces.ispecification import ISpecification
 
 
 def semantic_check_of_equivalence_between(

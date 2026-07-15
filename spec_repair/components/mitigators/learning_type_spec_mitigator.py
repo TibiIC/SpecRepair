@@ -1,8 +1,8 @@
 from copy import deepcopy
 from typing import List, Tuple, Callable, Dict
 
-from spec_repair.components.interfaces.imitigator import IMitigator
-from spec_repair.components.interfaces.ispecification import ISpecification
+from spec_repair.interfaces.imitigator import IMitigator
+from spec_repair.interfaces.ispecification import ISpecification
 from spec_repair.components.repair_data import RepairData
 from spec_repair.enums import Learning
 from spec_repair.helpers.counter_trace import CounterTrace

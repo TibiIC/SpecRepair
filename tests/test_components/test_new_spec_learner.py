@@ -1,6 +1,6 @@
 from typing import Any, Tuple
 
-from spec_repair.components.interfaces.ispecification import ISpecification
+from spec_repair.interfaces.ispecification import ISpecification
 from spec_repair.components.learners.optimising_final_spec_learner import OptimisingSpecLearner
 from spec_repair.components.repair_data import RepairData
 from spec_repair.enums import Learning

@@ -1,7 +1,7 @@
 from typing import Any, Tuple
 
-from spec_repair.components.interfaces.idiscriminator import IDiscriminator
-from spec_repair.components.interfaces.ispecification import ISpecification
+from spec_repair.interfaces.idiscriminator import IDiscriminator
+from spec_repair.interfaces.ispecification import ISpecification
 from spec_repair.components.repair_data import RepairData
 from spec_repair.enums import Learning
 from spec_repair.helpers.counter_trace import CounterTrace

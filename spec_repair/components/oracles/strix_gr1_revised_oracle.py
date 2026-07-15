@@ -2,7 +2,7 @@ import re
 from copy import deepcopy
 from typing import Optional, List, Tuple
 
-from spec_repair.components.interfaces.ioracle import IOracle
+from spec_repair.interfaces.ioracle import IOracle
 from spec_repair.components.new_spec_encoder import NewSpecEncoder
 from spec_repair.components.repair_data import RepairData
 from spec_repair.helpers.counter_strategy import CounterStrategy

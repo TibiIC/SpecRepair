@@ -11,7 +11,7 @@ from main.bfs_repair_orchestrator import BFSRepairOrchestrator
 from spec_repair.components.orchestration_managers.orchestration_manager_semantic_equivalence_aw_merge import \
     OrchestrationManagerSemanticEquivalenceAsmOnly
 from spec_repair.loggers.spec_logger import SpecLogger
-from spec_repair.components.interfaces.ilearner import ILearner
+from spec_repair.interfaces.ilearner import ILearner
 from spec_repair.components.learners.optimising_final_spec_learner import OptimisingSpecLearner
 from spec_repair.components.mitigators.learning_type_spec_mitigator import LearningTypeSpecMitigator
 from spec_repair.components.discriminators.spectra_discriminator import SpectraDiscriminator
@@ -27,7 +27,7 @@ from spec_repair.helpers.heuristic_managers.no_filter_heuristic_manager import N
 from spec_repair.helpers.recorders.unique_spec_recorder import UniqueSpecRecorder
 from spec_repair.helpers.spectra_specification import SpectraSpecification
 from spec_repair.util.file_util import read_file_lines, write_to_file
-from spec_repair.util.mittigation_strategies import move_one_to_guarantee_weakening, complete_counter_traces, \
+from spec_repair.strategies.mitigation_strategies import move_one_to_guarantee_weakening, complete_counter_traces, \
     finish_here_return_nothing
 from spec_repair.util.spec_util import synthesise_controller
 from tests.base_test_case import BaseTestCase

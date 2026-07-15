@@ -1,7 +1,7 @@
 from abc import abstractmethod
 from typing import Tuple, Any, Optional
 
-from spec_repair.components.interfaces.ispecification import ISpecification
+from spec_repair.interfaces.ispecification import ISpecification
 
 
 class IOrchestrationManager:

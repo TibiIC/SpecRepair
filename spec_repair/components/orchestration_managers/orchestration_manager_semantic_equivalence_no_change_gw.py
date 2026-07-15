@@ -3,8 +3,8 @@ from typing import Deque, Tuple, Any, Optional
 
 import networkx as nx
 
-from spec_repair.components.interfaces.iorchestration_manager import IOrchestrationManager
-from spec_repair.components.interfaces.ispecification import ISpecification
+from spec_repair.interfaces.iorchestration_manager import IOrchestrationManager
+from spec_repair.interfaces.ispecification import ISpecification
 from spec_repair.components.repair_data import RepairData
 from spec_repair.enums import Learning
 from spec_repair.helpers.recorders.unique_recorder import UniqueRecorder

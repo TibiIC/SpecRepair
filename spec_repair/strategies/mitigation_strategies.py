@@ -2,7 +2,7 @@ import re
 from copy import deepcopy, copy
 from typing import List, Tuple, Set, Any, cast
 
-from spec_repair.components.interfaces.ispecification import ISpecification
+from spec_repair.interfaces.ispecification import ISpecification
 from spec_repair.components.new_spec_encoder import NewSpecEncoder
 from spec_repair.components.repair_data import RepairData
 from spec_repair.enums import Learning

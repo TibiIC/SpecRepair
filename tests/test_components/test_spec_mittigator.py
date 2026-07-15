@@ -10,7 +10,7 @@ from spec_repair.components.mitigators.learning_type_spec_mitigator import Learn
 from spec_repair.enums import Learning
 from spec_repair.helpers.counter_trace import cts_from_cs, CounterTrace
 from spec_repair.helpers.spectra_specification import SpectraSpecification
-from spec_repair.util.mittigation_strategies import move_one_to_guarantee_weakening, complete_counter_traces
+from spec_repair.strategies.mitigation_strategies import move_one_to_guarantee_weakening, complete_counter_traces
 
 
 class TestSpecMittigator(BaseTestCase):

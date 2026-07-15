@@ -2,7 +2,7 @@ import re
 from copy import deepcopy
 from typing import List, Tuple, Optional
 
-from spec_repair.components.interfaces.ilearner import ILearner
+from spec_repair.interfaces.ilearner import ILearner
 from spec_repair.components.new_spec_encoder import NewSpecEncoder
 from spec_repair.helpers.adaptation_learned import Adaptation
 from spec_repair.helpers.counter_trace import CounterTrace, complete_cts_from_ct

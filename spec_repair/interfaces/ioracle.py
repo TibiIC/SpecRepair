@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 
-from spec_repair.components.interfaces.ispecification import ISpecification
+from spec_repair.interfaces.ispecification import ISpecification
 
 
 class IOracle(ABC):

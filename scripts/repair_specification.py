@@ -3,7 +3,7 @@ from typing import Optional
 
 from main.bfs_repair_orchestrator import BFSRepairOrchestrator
 from spec_repair.loggers.spec_logger import SpecLogger
-from spec_repair.components.interfaces.ilearner import ILearner
+from spec_repair.interfaces.ilearner import ILearner
 from spec_repair.components.learners.optimising_final_spec_learner import OptimisingSpecLearner
 from spec_repair.components.oracles.spectra_gr1_oracle import SpectraGR1Oracle
 from spec_repair.components.mitigators.learning_type_spec_mitigator import LearningTypeSpecMitigator
@@ -16,7 +16,7 @@ from spec_repair.util.file_util import write_to_file, read_file_lines
 
 from typing import Dict
 
-from spec_repair.util.mittigation_strategies import move_one_to_guarantee_weakening, complete_counter_traces
+from spec_repair.strategies.mitigation_strategies import move_one_to_guarantee_weakening, complete_counter_traces
 
 
 def run_single_repair(spec_path: str, trace_path: str, out_spec_path, out_test_dir_name: Optional[str] = None):

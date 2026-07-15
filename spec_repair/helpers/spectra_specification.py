@@ -8,7 +8,7 @@ from typing import TypedDict, Optional, TypeVar, List, Set, Any, Callable
 import pandas as pd
 import spot
 
-from spec_repair.components.interfaces.ispecification import ISpecification
+from spec_repair.interfaces.ispecification import ISpecification
 # from spec_repair.components.oracles.new_spec_oracle import NewSpecOracle
 from spec_repair.helpers.adaptation_learned import Adaptation
 from spec_repair.helpers.formatters.asp_exception_formatter import ASPExceptionFormatter

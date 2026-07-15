@@ -1,11 +1,11 @@
 from typing import Dict, List, Tuple
 
-from spec_repair.components.interfaces.idiscriminator import IDiscriminator
-from spec_repair.components.interfaces.ilearner import ILearner
-from spec_repair.components.interfaces.imitigator import IMitigator
-from spec_repair.components.interfaces.ioracle import IOracle
-from spec_repair.components.interfaces.iorchestration_manager import IOrchestrationManager
-from spec_repair.components.interfaces.ispecification import ISpecification
+from spec_repair.interfaces.idiscriminator import IDiscriminator
+from spec_repair.interfaces.ilearner import ILearner
+from spec_repair.interfaces.imitigator import IMitigator
+from spec_repair.interfaces.ioracle import IOracle
+from spec_repair.interfaces.iorchestration_manager import IOrchestrationManager
+from spec_repair.interfaces.ispecification import ISpecification
 from spec_repair.components.orchestration_managers.orchestration_manager_semantic_equivalence import \
     OrchestrationManagerSemanticEquivalence
 from spec_repair.components.repair_data import RepairData

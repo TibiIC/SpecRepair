@@ -8,7 +8,7 @@ from typing import Optional, List, Set, Tuple, Any
 
 from py_ltl.formula import AtomicProposition
 
-from spec_repair.components.interfaces.ispecification import ISpecification
+from spec_repair.interfaces.ispecification import ISpecification
 from spec_repair.components.new_spec_encoder import NewSpecEncoder
 from spec_repair.enums import Learning
 from spec_repair.helpers.counter_strategy import CounterStrategy

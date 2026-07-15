@@ -1,6 +1,6 @@
 from typing import Deque, Tuple, Any, Optional
 
-from spec_repair.components.interfaces.ispecification import ISpecification
+from spec_repair.interfaces.ispecification import ISpecification
 from spec_repair.components.orchestration_managers.a_orchestration_manager_with_graph import \
     AOrchestrationManagerWithStackAndGraph
 from spec_repair.components.repair_data import RepairData

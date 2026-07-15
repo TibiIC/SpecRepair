@@ -2,8 +2,8 @@ from typing import List
 
 import spot
 
-from spec_repair.components.interfaces.ioracle import IOracle
-from spec_repair.components.interfaces.ispecification import ISpecification
+from spec_repair.interfaces.ioracle import IOracle
+from spec_repair.interfaces.ispecification import ISpecification
 from spec_repair.helpers.formatters.spectra_formula_formatter import SpectraFormulaFormatter
 from spec_repair.helpers.formatters.spot_formula_formatter import SpotFormulaFormatter
 from spec_repair.helpers.formatters.spot_specification_formatter import SpotSpecificationFormatter

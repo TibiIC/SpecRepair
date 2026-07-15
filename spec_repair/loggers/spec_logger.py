@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from spec_repair.components.interfaces.ispecification import ISpecification
+from spec_repair.interfaces.ispecification import ISpecification
 from spec_repair.components.repair_data import RepairData
 
 
