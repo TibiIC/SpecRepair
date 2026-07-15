@@ -1,7 +1,7 @@
 import unittest
 from unittest import TestCase
 
-from spec_repair.util.spec_util import cs_to_named_cs_traces
+from spec_repair.util.asp_trace_util import cs_to_named_cs_traces
 from spec_repair.helpers.parsers.spectra_cs_parser import SpectraCSParser
 
 

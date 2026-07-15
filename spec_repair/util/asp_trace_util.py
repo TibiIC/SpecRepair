@@ -1,0 +1,630 @@
+import copy
+import re
+import subprocess
+from typing import Dict, List, Optional, Set, Union
+
+from spec_repair.enums import Learning
+from spec_repair.model.counter_strategy import CounterStrategy
+from spec_repair.model.spectra_atom import SpectraAtom
+from spec_repair.helpers.heuristics import choose_one_with_heuristic, manual_choice, HeuristicType
+from spec_repair.config import PROJECT_PATH
+from spec_repair.util.file_util import read_file_lines, write_file, generate_temp_filename, write_to_file, \
+    write_trace
+from spec_repair.util.formula_string_util import remove_multiple_newlines, extract_all_expressions, spectra_to_DNF
+from spec_repair.util.patterns import PRS_REG
+from spec_repair.util.specification_helper import strip_vars, create_cmd
+
+
+def pRespondsToS_substitution(output_filename):
+    spec = read_file_lines(output_filename)
+    found = False
+    for i, line in enumerate(spec):
+        line = line.strip("\t|\n|;")
+        if PRS_REG.search(line):
+            found = True
+            s = re.search(r"G\(([^-]*)", line).group(1)
+            p = re.search(r"F\((.*)", line).group(1)
+            if p[-2:] == "))":
+                p = p[0:-2]
+            else:
+                print("Trouble extracting p from: " + line)
+                exit(1)
+                # return "No_file_written:" + line
+            replacement = "\tpRespondsToS(" + s + "," + p + ");\n"
+            spec[i] = replacement
+    if found:
+        spec.append(''.join(read_file_lines(f"{PROJECT_PATH}/files/pRespondsToS.txt")))
+        new_filename = generate_temp_filename('.spectra')
+        write_file(new_filename, spec)
+        return new_filename
+    return output_filename
+
+
+def create_atom_signature_asp(spec_atoms: Set[SpectraAtom]):
+    output = "%---*** Signature  ***---\n\n"
+    for atom in sorted(spec_atoms):
+        output += f"atom({atom.name}).\n"
+    output += "\n\n"
+    return output
+
+
+class CSTraces:
+    trace: str
+    raw_trace: str
+    is_deadlock: bool
+
+    def __init__(self, trace, raw_trace, is_deadlock):
+        self.trace = trace
+        self.raw_trace = raw_trace
+        self.is_deadlock = is_deadlock
+
+
+def cs_to_cs_trace(cs: CounterStrategy, cs_name: str, heuristic: HeuristicType) -> CSTraces:
+    trace_name_dict: dict[str, str] = cs_to_named_cs_traces(cs)
+    cs_trace_raw, cs_trace_path = choose_one_with_heuristic(list(trace_name_dict.items()), heuristic)
+    cs_trace = trace_replace_name(cs_trace_raw, cs_trace_path, cs_name)
+    is_deadlock = "DEAD" in cs_trace_path
+    return CSTraces(cs_trace, cs_trace_raw, is_deadlock)
+
+
+def cs_to_named_cs_traces(cs: CounterStrategy) -> dict[str, str]:
+    trace_name_dict: dict[str, str] = {}
+    extract_trace(cs, "", cs.initial_state, 0, "ini", trace_name_dict)
+
+    return trace_name_dict
+
+
+def trace_replace_name(trace: str, old_name: str, new_name: str) -> str:
+    reg = re.compile(rf"\b{old_name}\b")
+    trace = reg.sub(new_name, trace)
+    trace = re.sub(rf"(trace\({new_name})", rf"% CS_Path: {old_name}\n\n\1", trace)
+    return trace
+
+
+# TODO: generate multiple counter-strategies
+def create_cs_traces(ilasp, learning_type: Learning, cs_list: List[CounterStrategy]) \
+        -> Dict[str, CSTraces]:
+    count = 0
+    traces_dict: dict[str, CSTraces] = {}
+    for lines in cs_list:
+        trace_name_dict = cs_to_named_cs_traces(lines)
+        cs_trace, cs_trace_path = choose_one_with_heuristic(list(trace_name_dict.items()), manual_choice)
+        cs_trace_list = [cs_trace]
+        # TODO: make it clear that a single trace/name pair is created for each element in the list
+        trace, trace_names = create_trace(cs_trace_list, ilasp=ilasp, counter_strat=True,
+                                          learning_type=learning_type)
+        replacement = rf"counter_strat_{count}"
+        for name in trace_names:
+            trace = trace_replace_name(trace, name, replacement)
+        count += 1
+        # Add trace to counter-strat collection:
+        is_deadlock = "DEAD" in cs_trace_path
+        traces_dict[replacement] = CSTraces(trace, cs_trace, is_deadlock)
+
+    return traces_dict
+
+
+def create_trace(violation_file: Union[str, List[str]], ilasp=False, counter_strat=False,
+                 learning_type=Learning.ASSUMPTION_WEAKENING):
+    # This is for starting with unrealizable spec - an experiment
+    if violation_file == "":
+        return ""
+    if type(violation_file) is not list:
+        trace = read_file_lines(violation_file)
+    else:
+        trace = violation_file
+    trace = re.sub("\n+", "\n", '\n'.join(trace)).split("\n")
+    output = "%---*** Violation Trace ***---\n\n"
+    trace_names: Set[str] = set(map(lambda match: match.group(1),
+                                    filter(None,
+                                           map(lambda line: re.search(r",\s*([^,]*)\)\.", line),
+                                               trace)
+                                           )
+                                    )
+                                )
+    for name in trace_names:
+        reg = re.compile(re.escape(name))
+        sub_trace = list(filter(reg.search, trace))
+
+        # TODO: understand infinite traces & use to rework counter-strategy trees
+        # TODO: replace is_infinite with Sx->Sy->Sx->Sy and not "DEAD" in name
+        is_infinite = bool(re.search("ini_S\d", name))
+        # This is for making counter strategies positive when guarantee weakening:
+        if learning_type == Learning.GUARANTEE_WEAKENING:
+            pos_int = False
+        else:
+            pos_int = counter_strat
+        output = create_pos_interpretation(ilasp, output, sub_trace, is_infinite, pos_int)
+    if counter_strat:
+        return output, trace_names
+    else:
+        return output
+
+
+def create_pos_interpretation(ilasp: bool, output: str, trace: List[str], is_infinite: bool,
+                              counter_strat: bool) -> str:
+    max_timepoint = 0
+    for line in trace:
+        line = re.sub(r"\s", "", line)
+        timepoint = line.split(",")[-2]
+        max_timepoint = max(max_timepoint, int(timepoint))
+    # TODO: understand why violation name is the last line of the trace
+    violation_name = trace[-1].split(",")[-1].replace(").", "")
+    if is_infinite:
+        states = violation_name.split("_")
+        state_count = [states.count(i) for i in states]
+        if 2 in state_count:
+            loop = state_count.index(2)
+        else:
+            is_infinite = False
+    if ilasp and not counter_strat:
+        output += "#pos({entailed(" + violation_name + ")},{},{\n"
+    if ilasp and counter_strat:
+        output += "#pos({},{entailed(" + violation_name + ")},{\n"
+    output += f"trace({violation_name}).\n\n"
+    output += create_time_fact(max_timepoint + 1, "timepoint", [0, violation_name])
+    output += create_time_fact(max_timepoint, "next", [1, 0, violation_name])
+    if is_infinite:
+        output += create_time_fact(1, "next", [loop, max_timepoint, violation_name])
+    output += '\n' + '\n'.join(trace) + '\n'
+    if ilasp:
+        output += "\n}).\n\n"
+    return output
+
+
+def trace_list_to_ilasp_form(asp_trace: str, learning: Learning) -> str:
+    output = "%---*** Violation Trace ***---\n\n"
+    asp_trace = asp_trace.split('\n')
+    individual_traces = get_individual_traces(asp_trace)
+    for trace in individual_traces:
+        output += trace_single_asp_to_ilasp_form(trace, learning)
+    return output
+
+
+def trace_list_to_asp_form(traces: List[str]) -> str:
+    output = "%---*** Violation Trace ***---\n\n"
+    traces = remove_multiple_newlines(traces)
+    individual_traces = get_individual_traces(traces)
+    for trace in individual_traces:
+        output += trace_single_to_asp_form(trace)
+    return output
+
+
+def get_individual_traces(traces: List[str]) -> List[List[str]]:
+    """
+    There may be multiple states of traces of different names.
+    We isolate them based on their names
+    """
+    individual_traces = []
+    trace_names: Set[str] = get_trace_names(traces)
+    for name in trace_names:
+        sub_trace = isolate_trace_of_name(traces, name)
+        individual_traces.append(sub_trace)
+    return individual_traces
+
+
+def isolate_trace_of_name(trace: List[str], name: str):
+    """
+    There may be multiple states of traces of different names.
+    We have the names, now we only need to isolate the specific
+    individual trace by its name.
+    e.g. names: trace_name_0, ini_S0_S1, ini_S0_S1_S1
+    """
+    reg = re.compile(re.escape(name))
+    sub_trace = list(filter(reg.search, trace))
+    return sub_trace
+
+
+def get_trace_names(trace: List[str]) -> Set[str]:
+    return set(map(lambda match: match.group(1),
+                   filter(None,
+                          map(lambda line: re.search(r",\s*([^,]*)\)\.", line),
+                              trace)
+                          )
+                   )
+               )
+
+
+def trace_single_to_asp_form(trace: List[str]) -> str:
+    max_timepoint = 0
+    for line in trace:
+        line = re.sub(r"\s", "", line)
+        timepoint = line.split(",")[-2]
+        max_timepoint = max(max_timepoint, int(timepoint))
+    # TODO: understand why violation name is the last line of the trace
+    violation_name = trace[-1].split(",")[-1].replace(").", "")
+    loop_completion = complete_loop_if_necessary(violation_name, max_timepoint)
+    output = f"trace({violation_name}).\n\n"
+    output += create_time_fact(max_timepoint + 1, "timepoint", [0, violation_name])
+    if not loop_completion:
+        output += f"weak_timepoint(weak_t,{violation_name}).\n"
+    output += create_time_fact(max_timepoint, "next", [1, 0, violation_name])
+    if not loop_completion:
+        output += f"next(weak_t,{max_timepoint},{violation_name}).\n"
+        output += f"next(weak_t,weak_t,{violation_name}).\n"
+
+    output += loop_completion
+    output += '\n' + '\n'.join(trace) + '\n'
+    return output
+
+
+def trace_single_asp_to_ilasp_form(trace: List[str], learning: Learning) -> str:
+    """
+    Pre: a single trace, with a single name, is provided
+    """
+    name = get_trace_names(trace).pop()
+    raw_pattern = r'ini_(S\d+)_.*'
+    cs_pattern = r'counter_strat_\d+'
+    is_counter_strat: bool = bool(re.match(raw_pattern, name) or re.match(cs_pattern, name))
+    if learning == Learning.ASSUMPTION_WEAKENING and is_counter_strat:
+        output = f"#pos({{}},{{entailed({name})}},{{\n"
+    else:
+        output = f"#pos({{entailed({name})}},{{}},{{\n"
+    output += '\n' + '\n'.join(trace) + '\n}).\n'
+    return output
+
+
+def complete_loop_if_necessary(violation_name, max_timepoint) -> str:
+    states = get_state_numbers(violation_name)
+    if not states:
+        return ""
+    max_state = max(states)
+    state_timepoint_diff = max_timepoint - max_state
+    match states[-2:]:
+        case [s1, s2]:
+            if s1 >= s2:
+                return f"next({s2 + state_timepoint_diff},{s1 + state_timepoint_diff},{violation_name}).\n"
+    return ""
+
+
+def get_state_numbers(name: str) -> List[int]:
+    """
+    Extract numeric values of ini_S1_S2_...SN
+    """
+    pattern = r'ini_(S\d+)_.*'
+    match = re.match(pattern, name)
+
+    if match:
+        numbers_list = re.findall(r'\d+', name)
+        return [int(num) for num in numbers_list]
+    return []
+
+
+def create_time_fact(max_timepoint, name, param_list=None):
+    if param_list is None:
+        param_list = []
+    output = ""
+    for i in range(max_timepoint):
+        strings = [str(i + x) if type(x) == int else x for x in param_list]
+        output += f"{name}({','.join(strings)}).\n"
+    return output
+
+
+# TODO: replace traces as Dict with a Set[Tuple[str,str]]
+def extract_trace(cs: CounterStrategy, output: str, state: str, timepoint: int, trace_name: str,
+                  traces: Dict[str, str]) -> Optional[str]:
+    # Terminate on reaching the dead state, or on detecting a cycle (the same
+    # state appearing more than once in the path built so far).
+    if trace_name.split("_").count(state) > 1 or state == cs.dead_state:
+        return re.sub("trace_name", trace_name, output)
+    transitions = cs.transitions_from(state)
+    if not transitions:
+        return None
+    # Inputs (environment-controlled APs) are shared across all transitions
+    # from the same source state, so it's safe to read them off the first one.
+    env = transitions[0].inputs
+    output += vars_to_asp(env, timepoint)
+    for t in transitions:
+        out_copy = copy.deepcopy(output)
+        out_copy += vars_to_asp(t.outputs, timepoint)
+        new_trace_name = trace_name + "_" + t.target
+        new_output = extract_trace(cs, out_copy, t.target, timepoint + 1, new_trace_name, traces)
+        if new_output is not None:
+            traces[new_output] = new_trace_name
+    return None
+
+
+def vars_to_asp(assignments: Dict[str, bool], timepoint: int) -> str:
+    output = "\n".join(var_to_asp(var, value, timepoint) for var, value in assignments.items())
+    output += "\n"  # TODO: consider removing this last line
+    return output
+
+
+def var_to_asp(var: str, value: bool, timepoint: int) -> str:
+    suffix = "" if value else "not_"
+    params = [var, str(timepoint), "trace_name"]
+    return f"{suffix}holds_at({','.join(params)})."
+
+
+def log_to_asp_trace(lines: str, trace_name: str = "trace_name_0") -> str:
+    """
+    Converts a runtime log into a workable trace string
+    i.e.
+    ->
+    :param lines: Lines from log file
+    :param trace_name: Name of Log
+    :return: Trace string
+    """
+    ret = ""
+    for i, line in enumerate(lines.split("\n")):
+        ret += log_line_to_asp_trace(line, i, trace_name)
+        ret += "\n"
+    return ret
+
+
+def log_line_to_asp_trace(line: str, idx: int = 0, trace_name: str = "trace_name_0") -> str:
+    """
+    Converts one line from a runtime log into a workable trace string
+    i.e.
+    ->
+    :param line: <highwater:false, methane:false, pump:false, PREV_aux_0:false, Zn:0>
+    :param idx: index where log line resides
+    :param trace_name:
+    :return:     not_holds_at(current,highwater,idx,trace_name).
+                 not_holds_at(current,methane,idx,trace_name).
+                 not_holds_at(current,pump,idx0,trace_name).
+    """
+    pairs = extract_string_boolean_pairs(line)
+    filtered_pairs = [(key, value == 'true') for key, value in pairs if not key.startswith(('PREV', 'NEXT', 'Zn'))]
+    ret = ""
+    for env_var, is_true in filtered_pairs:
+        ret += f"{'' if is_true else 'not_'}holds_at(current,{env_var},{idx},{trace_name}).\n"
+
+    return ret
+
+
+def extract_string_boolean_pairs(line):
+    """
+    Get all pairs of strings and booleans of form 'name:val'
+    :param line:
+    :return:
+    """
+    pattern = r"\b([a-zA-Z_][\w]*):(\btrue\b|\bfalse\b)"
+    pairs = re.findall(pattern, line)
+    return pairs
+
+
+def generate_trace_asp(strong_spec_file, ideal_spec_file, trace_file):
+    try:
+        old_trace = read_file_lines(trace_file)
+    except FileNotFoundError:
+        old_trace = []
+    asp_restrictions = compose_old_traces(old_trace)
+
+    trace = {}
+
+    initial_expressions, prevs, primed_expressions, unprimed_expressions, variables \
+        = extract_expressions_from_file(ideal_spec_file, counter_strat=True)
+    initial_expressions_s, prevs_s, primed_expressions_s, unprimed_expressions_s, variables_s \
+        = extract_expressions_from_file(strong_spec_file, counter_strat=True)
+
+    # To include starting guarantees:
+    ie_g, prevs_g, pe_g, upe_g, v_g = extract_expressions_from_file(strong_spec_file, guarantee_only=True)
+    initial_expressions += ie_g
+    primed_expressions += pe_g
+    unprimed_expressions += upe_g
+
+    # initial_expressions_sa, prevs_sa, primed_expressions_sa, unprimed_expressions_sa, variables_sa = extract_expressions(
+    #     start_file, counter_strat=True)
+
+    # This adds starting guarantees to final assumptions
+    # initial_expressions += [x for x in initial_expressions_s if x not in initial_expressions_sa]
+    # primed_expressions += [x for x in primed_expressions_s if x not in primed_expressions_sa]
+    # unprimed_expressions += [x for x in unprimed_expressions_s if x not in unprimed_expressions_sa]
+
+    expressions = primed_expressions + unprimed_expressions
+    neg_expressions = primed_expressions_s + unprimed_expressions_s
+
+    variables = [var for var in variables if not re.search("prev|next", var)]
+
+    # Lowercasing PREV in expressions
+    expressions = [re.sub(r"PREV\((!*)([^\|^\(]*)\)", r"\1prev_\2", x) for x in expressions]
+    neg_expressions = [re.sub(r"PREV\((!*)([^\|^\(]*)\)", r"\1prev_\2", x) for x in neg_expressions]
+    # Removing braces around next function args (`next(sth)` -> `next_sth`)
+    expressions = [re.sub(r"next\((!*)([^\|^\(]*)\)", r"\1next_\2", x) for x in expressions]
+    neg_expressions = [re.sub(r"next\((!*)([^\|^\(]*)\)", r"\1next_\2", x) for x in neg_expressions]
+
+    one_point_exp = [re.sub(r"(" + '|'.join(variables) + r")", r"prev_\1", x) for x in
+                     unprimed_expressions + initial_expressions]
+    expressions += one_point_exp
+    expressions += [re.sub(r"(" + '|'.join(variables) + r")", r"next_\1", x) for x in unprimed_expressions]
+    neg_one_point_exp = [re.sub(r"(" + '|'.join(variables) + r")", r"prev_\1", x) for x in
+                         unprimed_expressions_s + initial_expressions_s]
+    neg_expressions += neg_one_point_exp
+    neg_expressions += [re.sub(r"(" + '|'.join(variables) + r")", r"next_\1", x) for x in unprimed_expressions_s]
+
+    expressions += two_period_primed_expressions(primed_expressions, variables)
+    neg_expressions += two_period_primed_expressions(primed_expressions_s, variables)
+
+    # Can it be done with one time point?
+    state, violation = generate_model(one_point_exp,
+                                      neg_one_point_exp,
+                                      variables, scratch=True,
+                                      asp_restrictions=asp_restrictions)
+    if state is not None and len(neg_one_point_exp) > 0:
+        trace[0] = [re.sub(r"prev_", "", var) for var in state[0] if re.search("prev_", var)]
+        write_trace(trace, trace_file)
+        return trace_file, violation
+
+    # Can it be done with two time points?
+    two_point_exp = [x for x in expressions if not re.search("next", x)]
+    two_point_neg_exp = [x for x in neg_expressions if not re.search("next", x)]
+    state, violation = generate_model(two_point_exp,
+                                      two_point_neg_exp, variables, scratch=True,
+                                      asp_restrictions=asp_restrictions)
+    if state is not None and len(two_point_neg_exp) > 0:
+        trace[0] = [re.sub(r"prev_", "", var) for var in state[0] if re.search("prev_", var)]
+        trace[1] = [var for var in state[0] if not re.search("prev_|next_", var)]
+        write_trace(trace, trace_file)
+        return trace_file, violation
+
+    # Can it be done with three time points?
+    state, violation = generate_model(expressions, neg_expressions, variables, scratch=True,
+                                      asp_restrictions=asp_restrictions)
+    if state is None or len(neg_expressions) == 0:
+        return None, None
+    trace[0] = [re.sub(r"prev_", "", var) for var in state[0] if re.search("prev_", var)]
+    trace[1] = [var for var in state[0] if not re.search("prev_|next_", var)]
+    trace[2] = [re.sub(r"next_", "", var) for var in state[0] if re.search("next_", var)]
+    write_trace(trace, trace_file)
+    return trace_file, violation
+
+
+def compose_old_traces(old_trace):
+    if old_trace == []:
+        return ""
+    string = ''.join(old_trace)
+    traces = re.findall(r"trace_name_\d*", string)
+    traces = list(dict.fromkeys(traces))
+    output = "\n"
+    for i, name in enumerate(traces):
+        assignments = []
+        for n in range(3):
+            as_name = "as" + str(i) + "_" + str(n)
+            assignments += asp_trace_to_spectra(name, string, n)
+            output += as_name + " :- " + ','.join(assignments) + ".\n"
+            output += ":- " + as_name + ".\n"
+    return output
+
+
+def two_period_primed_expressions(primed_expressions, variables):
+    nexts = [x for x in primed_expressions if not re.search("PREV|prev", x)]
+    prevs = [x for x in primed_expressions if not re.search("next", x)]
+    next2_3 = [re.sub(r"next\((!*)([^\|^\(]*)\)", r"\1next_\2", x) for x in nexts]
+    next1_2 = [re.sub("(" + "|".join(variables) + ")", r"prev_\1", x) for x in nexts]
+    next1_2 = [re.sub(r"next\((!*)([^\|^\(]*)\)", r"\1next_\2", x) for x in next1_2]
+    next1_2 = [re.sub(r"next_prev_", "", x) for x in next1_2]
+
+    prev1_2 = [re.sub(r"PREV\((!*)([^\|^\(]*)\)", r"\1prev_\2", x) for x in prevs]
+    prev2_3 = [re.sub("(" + "|".join(variables) + ")", r"next_\1", x) for x in prevs]
+    prev2_3 = [re.sub(r"PREV\((!*)([^\|^\(]*)\)", r"\1prev_\2", x) for x in prev2_3]
+    prev2_3 = [re.sub(r"prev_next_", "", x) for x in prev2_3]
+    return next1_2 + next2_3 + prev1_2 + prev2_3
+
+
+def extract_expressions_from_file(file, counter_strat=False, guarantee_only=False):
+    spec = read_file_lines(file)
+    return extract_expressions_from_spec(spec, counter_strat, guarantee_only)
+
+
+def extract_expressions_from_spec(spec: list[str], counter_strat=False, guarantee_only=False):
+    variables = strip_vars(spec)
+    spec = simplify_assignments(spec, variables)
+    assumptions = extract_non_liveness(spec, "assumption")
+    guarantees = extract_non_liveness(spec, "guarantee")
+    if counter_strat:
+        guarantees = []
+    if guarantee_only:
+        assumptions = []
+    prev_expressions = [re.search(r"G\((.*)\);", x).group(1) for x in assumptions + guarantees if
+                        re.search(r"PREV", x) and re.search("G", x)]
+    list_of_prevs = [f"PREV\\({s}\\)" for s in variables + [f"!{x}" for x in variables]]
+    prev_occurances = [re.findall('|'.join(list_of_prevs), exp) for exp in prev_expressions]
+    prevs = [item for sublist in prev_occurances for item in sublist]
+    prevs = [re.sub(r"PREV\(!*(.*)\)", r"prev_\1", x) for x in prevs]
+    prevs = list(dict.fromkeys(prevs))
+    variables += prevs
+    variables.sort()
+
+    unprimed_expressions = [re.search(r"G\(([^F]*)\);", x).group(1) for x in assumptions + guarantees if
+                            not re.search(r"PREV|next", x) and re.search(r"G\s*\(", x)]
+    primed_expressions = [re.search(r"G\(([^F]*)\);", x).group(1) for x in assumptions + guarantees if
+                          re.search(r"PREV|next", x) and re.search("G", x)]
+    initial_expressions = [x.strip(";") for x in assumptions + guarantees if not re.search(r"G\(|GF\(", x)]
+    return initial_expressions, prevs, primed_expressions, unprimed_expressions, variables
+
+
+def extract_non_liveness(spec, exp_type):
+    output = extract_all_expressions(exp_type, spec)
+    return [spectra_to_DNF(x) for x in output if not re.search("F", x)]
+
+
+def generate_model(expressions, neg_expressions, variables, scratch=False, asp_restrictions="", force=False):
+    if scratch:
+        prevs = ["prev_" + var for var in variables]
+        nexts = ["next_" + var for var in variables]
+        if any([re.search("next", x) for x in expressions + neg_expressions]):
+            variables = variables + prevs + nexts
+        # TODO: double check regex, ensure it's correct
+        elif any([re.search(r"\b" + r"|\b".join(variables), x) for x in expressions + neg_expressions]):
+            variables = variables + prevs
+        else:
+            variables = prevs
+        output = asp_restrictions + "\n"
+    else:
+        output = ""
+    expressions = aspify(expressions)
+    for i, rule in enumerate(expressions):
+        name = f"t{i}"
+        disjuncts = [x.strip() for x in rule.split(";")]
+        for disjunct in disjuncts:
+            output += f"{name} :- {disjunct}.\n"
+        output += f"s{name} :- not {name}.\n"
+        output += f":- s{name}.\n"
+
+    for variable in variables:
+        output += f"{{{variable}}}.\n"
+
+    neg_expressions = aspify(neg_expressions)
+    rules = []
+    for i, rule in enumerate(neg_expressions):
+        name = f"rule{i}"
+        disjuncts = [x.strip() for x in rule.split(";")]
+        for disjunct in disjuncts:
+            output += f"{name} :- {disjunct}.\n"
+        rules.append(name)
+
+    if len(rules) > 0:
+        output += f":- {','.join(rules)}.\n"
+    for var in variables:
+        output += f"#show {var}/0.\n"
+
+    file = "/tmp/temp_asp.lp"
+    write_file(file, output)
+    clingo_out = run_clingo_raw(file, n_models=0)
+    violation = True
+
+    matches = re.findall(r'Answer:\s*\d+(?:.*)?\r?\n([^\r\n]*)', clingo_out)
+
+    if not matches:
+        # print(clingo_out)
+        # print("Something not right with model generation")
+        return None, None
+    states = [match.split() for match in matches]
+    for state in states:
+        [state.append(f"!{x}") for x in variables if x not in state]
+    return states, violation
+
+
+def asp_trace_to_spectra(name, string, n):
+    tups = re.findall(r"\b(.*)holds_at\((.*)," + str(n) + "," + name + r"\)", string)
+    prefix = ""
+    if n == 2:
+        prefix = "next_"
+    if n == 0:
+        prefix = "prev_"
+    output = ["not " + prefix + tup[1] if tup[0] == "not_" else prefix + tup[1] for tup in tups]
+    return output
+
+
+def simplify_assignments(spec, variables):
+    vars = "|".join(variables)
+    spec = [re.sub(rf"({vars})=true", r"\1", line) for line in spec]
+    spec = [re.sub(rf"({vars})=false", r"!\1", line) for line in spec]
+    return spec
+
+
+def aspify(expressions):
+    # is this first one ok?
+    expressions = [re.sub(r"\(|\)", "", x) for x in expressions]
+    expressions = [re.sub(r"\|", ";", x) for x in expressions]
+    expressions = [re.sub(r"!", " not ", x) for x in expressions]
+    expressions = [re.sub(r"&", ",", x) for x in expressions]
+    return expressions
+
+
+def run_clingo_raw(filename, n_models: int = 1) -> str:
+    filepath = f"{filename}"
+    cmd = create_cmd(['clingo', f'--models={n_models}', filepath])
+    output = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE).communicate()[0]
+    return output.decode('utf-8')

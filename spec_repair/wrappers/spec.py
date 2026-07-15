@@ -4,7 +4,8 @@ from typing import Optional
 
 from spec_repair.ltl_types import GR1FormulaType, LTLFiltOperation
 from spec_repair.util.specification_helper import strip_vars
-from spec_repair.util.spec_util import simplify_assignments, shift_prev_to_next
+from spec_repair.util.asp_trace_util import simplify_assignments
+from spec_repair.util.formula_string_util import shift_prev_to_next
 
 
 class Spec:

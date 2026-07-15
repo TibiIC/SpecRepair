@@ -8,7 +8,7 @@ from spec_repair.helpers.formatters.spot_formula_formatter import SpotFormulaFor
 from spec_repair.helpers.parsers.spectra_formula_parser import SpectraFormulaParser
 from spec_repair.ltl_types import GR1TemporalType
 from spec_repair.util.ltl_formula_util import normalize_to_pattern, disjoin_all, get_disjuncts_from_disjunction
-from spec_repair.util.spec_util import replace_false_true
+from spec_repair.util.formula_string_util import replace_false_true
 
 from py_ltl.parser import ILTLParser
 from py_ltl.formatter import ILTLFormatter

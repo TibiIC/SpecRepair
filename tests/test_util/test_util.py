@@ -2,7 +2,8 @@ from unittest import TestCase
 
 from spec_repair.config import PROJECT_PATH
 from spec_repair.util.file_util import is_file_format
-from spec_repair.util.spec_util import synthesise_controller, spread_temporal_operator
+from spec_repair.wrappers.spectra_toolbox import synthesise_controller
+from spec_repair.util.formula_string_util import spread_temporal_operator
 
 
 class TestUtil(TestCase):

@@ -10,7 +10,7 @@ from spec_repair.model.counter_trace import cts_from_cs, CounterTrace
 from spec_repair.helpers.parsers.spectra_cs_parser import SpectraCSParser
 from spec_repair.model.spectra_specification import SpectraSpecification
 from spec_repair.util.file_util import generate_temp_filename, write_to_file
-from spec_repair.util.spec_util import synthesise_extract_counter_strategies, run_all_unrealisable_cores
+from spec_repair.wrappers.spectra_toolbox import synthesise_extract_counter_strategies, run_all_unrealisable_cores
 from spec_repair.wrappers.asp_wrappers import get_violations
 
 

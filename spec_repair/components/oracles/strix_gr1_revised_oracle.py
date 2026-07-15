@@ -11,7 +11,7 @@ from spec_repair.helpers.formatters.spot_specification_formatter import SpotSpec
 from spec_repair.helpers.parsers.strix_cs_parser import StrixCSParser
 from spec_repair.model.spectra_specification import SpectraSpecification
 from spec_repair.util.file_util import generate_temp_filename, write_to_file
-from spec_repair.util.spec_util import synthesise_extract_counter_strategies, run_all_unrealisable_cores
+from spec_repair.wrappers.spectra_toolbox import synthesise_extract_counter_strategies, run_all_unrealisable_cores
 from spec_repair.wrappers.asp_wrappers import get_violations
 from spec_repair.wrappers.strix import Strix, StrixResult, OutputFormat, LabelEncoding
 

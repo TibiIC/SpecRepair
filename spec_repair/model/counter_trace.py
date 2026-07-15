@@ -17,8 +17,9 @@ from spec_repair.helpers.heuristics import choose_one_with_heuristic, HeuristicT
 from spec_repair.ltl_types import GR1FormulaType
 from spec_repair.util.patterns import DeadlockAtomSet, DeadlockViolations
 from spec_repair.util.ltl_formula_util import satisfies_ltl_formula
-from spec_repair.util.spec_util import cs_to_named_cs_traces, trace_replace_name, trace_list_to_asp_form, \
-    trace_list_to_ilasp_form, generate_model, run_all_unrealisable_cores
+from spec_repair.util.asp_trace_util import cs_to_named_cs_traces, trace_replace_name, trace_list_to_asp_form, \
+    trace_list_to_ilasp_form, generate_model
+from spec_repair.wrappers.spectra_toolbox import run_all_unrealisable_cores
 from spec_repair.wrappers.asp_wrappers import run_clingo
 
 

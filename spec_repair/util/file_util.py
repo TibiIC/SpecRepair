@@ -108,3 +108,25 @@ def make_directories_if_needed(output_filename):
         # re.sub(r"/[^/]*$", "", folder) == folder
         make_directories_if_needed(folder)
         os.mkdir(folder)
+
+
+def write_trace(trace, filename):
+    try:
+        prev = read_file_lines(filename)
+        timepoint = int(max(re.findall(r"trace_name_(\d*)", ''.join(prev)))) + 1
+    except FileNotFoundError:
+        timepoint = 0
+    trace_name = "trace_name_" + str(timepoint)
+    output = ""
+    for timepoint in trace.keys():
+        variables = list(trace[timepoint])
+        for var in variables:
+            if not re.search(r"prev_", var):
+                prefix = ""
+                if var[0] == "!":
+                    prefix = "not_"
+                    var = var[1:]
+                output += prefix + "holds_at(" + var + "," + str(timepoint) + "," + trace_name + ").\n"
+        output += "\n"
+    with open(filename, 'a', newline='\n') as file:
+        file.write(output)

@@ -7,7 +7,7 @@ from spec_repair.enums import Learning
 from spec_repair.model.spectra_specification import SpectraSpecification
 from spec_repair.ltl_types import GR1FormulaType
 from spec_repair.util.set_util import first_minimal_hitting_set, all_minimal_hitting_sets
-from spec_repair.util.spec_util import run_all_unrealisable_cores
+from spec_repair.wrappers.spectra_toolbox import run_all_unrealisable_cores
 
 
 def get_trivial_solution(spec: SpectraSpecification, violation_trace: list[str]) -> SpectraSpecification:

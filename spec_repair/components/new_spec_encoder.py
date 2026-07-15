@@ -8,8 +8,10 @@ from spec_repair.enums import Learning, When
 from spec_repair.helpers.heuristic_managers.iheuristic_manager import IHeuristicManager
 from spec_repair.helpers.heuristic_managers.no_filter_heuristic_manager import NoFilterHeuristicManager
 from spec_repair.ltl_types import GR1FormulaType, GR1AtomType
-from spec_repair.util.spec_util import trace_list_to_asp_form, trace_list_to_ilasp_form, parse_formula_str, \
-    create_atom_signature_asp, run_all_unrealisable_cores
+from spec_repair.util.asp_trace_util import trace_list_to_asp_form, trace_list_to_ilasp_form, \
+    create_atom_signature_asp
+from spec_repair.util.formula_string_util import parse_formula_str
+from spec_repair.wrappers.spectra_toolbox import run_all_unrealisable_cores
 from spec_repair.components.spec_generator import SpecGenerator
 
 if TYPE_CHECKING:
