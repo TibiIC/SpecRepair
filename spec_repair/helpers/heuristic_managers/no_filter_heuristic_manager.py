@@ -1,6 +1,6 @@
 from typing import List, Any
 
-from spec_repair.helpers.heuristic_managers.iheuristic_manager import IHeuristicManager
+from spec_repair.interfaces.iheuristic_manager import IHeuristicManager
 
 
 class NoFilterHeuristicManager(IHeuristicManager):

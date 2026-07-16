@@ -9,7 +9,7 @@ from spec_repair.interfaces.iorchestration_manager import IOrchestrationManager
 from spec_repair.interfaces.ispecification import ISpecification
 from spec_repair.components.repair_data import RepairData
 from spec_repair.enums import Learning
-from spec_repair.helpers.recorders.irecorder import IRecorder
+from spec_repair.interfaces.irecorder import IRecorder
 from spec_repair.helpers.recorders.unique_recorder import UniqueRecorder
 
 RED = "#ff4444"

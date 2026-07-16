@@ -1,6 +1,6 @@
 from typing import Optional, List
 
-from spec_repair.helpers.recorders.irecorder import IRecorder
+from spec_repair.interfaces.irecorder import IRecorder
 from spec_repair.helpers.heuristics import T
 
 

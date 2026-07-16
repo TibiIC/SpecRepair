@@ -10,7 +10,7 @@ from spec_repair.model.counter_trace import CounterTrace, complete_cts_from_ct
 from spec_repair.enums import Learning
 from spec_repair.exceptions import NoViolationException, NoWeakeningException, DeadlockRequiredException, \
     NoAssumptionWeakeningException
-from spec_repair.helpers.heuristic_managers.iheuristic_manager import IHeuristicManager
+from spec_repair.interfaces.iheuristic_manager import IHeuristicManager
 from spec_repair.helpers.heuristic_managers.no_filter_heuristic_manager import NoFilterHeuristicManager
 from spec_repair.model.ilasp_interpreter import ILASPInterpreter
 from spec_repair.model.spectra_specification import SpectraSpecification
