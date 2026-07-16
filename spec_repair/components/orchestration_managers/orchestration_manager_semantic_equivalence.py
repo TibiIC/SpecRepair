@@ -39,7 +39,10 @@ class OrchestrationManagerSemanticEquivalence(AOrchestrationManagerWithStackAndG
         node: Tuple[ISpecification, Any] = (spec, data)
         for task_id, past_node in enumerate(self._visited_nodes_list):
             past_spec, past_data = past_node
-            if visited_node[0] == past_spec and visited_node[1] == past_data:
+            # Check the cheap (counter-traces, learning_type) comparison before the
+            # expensive semantic spec equality (deepcopy + SPOT equivalence) so most
+            # non-matches short-circuit without ever touching the spec comparison.
+            if visited_node[1] == past_data and visited_node[0] == past_spec:
                 self._add_edge_data_to_graph(data, prev, failed_spec, task_id)
                 return task_id
         task_id = len(self._visited_nodes_list)
@@ -71,6 +74,6 @@ class OrchestrationManagerSemanticEquivalence(AOrchestrationManagerWithStackAndG
             visited_node: Tuple[ISpecification, Any] = (spec, (data.counter_traces, data.learning_type))
         for task_id, past_node in enumerate(self._visited_nodes_list):
             past_spec, past_data = past_node
-            if visited_node[0] == past_spec and visited_node[1] == past_data:
+            if visited_node[1] == past_data and visited_node[0] == past_spec:
                 return task_id
         raise ValueError("No such task")
