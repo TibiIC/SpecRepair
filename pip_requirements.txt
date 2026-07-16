@@ -66,6 +66,7 @@ pyparsing @ file:///private/var/folders/sy/f16zz6x50xz3113nwtb9bvq00000gp/T/abs_
 PySocks @ file:///Users/builder/ci_310/pysocks_1642536366386/work
 pytest==7.4.2
 pytest-benchmark==4.0.0
+pytest-timeout==2.4.0
 python-dateutil @ file:///tmp/build/80754af9/python-dateutil_1626374649649/work
 pytz @ file:///private/var/folders/sy/f16zz6x50xz3113nwtb9bvq00000gp/T/abs_ddzpsmm2_f/croot/pytz_1671697430473/work
 PyYAML==6.0.1

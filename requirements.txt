@@ -108,6 +108,7 @@ pygraphviz=1.10=py310h392a28d_3
 pyparsing=3.2.5=pypi_0
 pytest=7.4.2=pypi_0
 pytest-benchmark=4.0.0=pypi_0
+pytest-timeout=2.4.0=pypi_0
 python=3.10.13=h2469fbe_1_cpython
 python-dateutil=2.9.0post0=py310hca03da5_2
 python-tzdata=2025.2=pyhd3eb1b0_0
