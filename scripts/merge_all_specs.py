@@ -6,7 +6,7 @@ from spec_repair.interfaces.ispecification import ISpecification
 from spec_repair.components.oracles.spectra_gr1_oracle import SpectraGR1Oracle
 from spec_repair.model.spectra_specification import SpectraSpecification
 from spec_repair.ltl_types import GR1FormulaType
-from spec_repair.new_research import get_all_trivial_solutions_guarantee_only
+from spec_repair.diagnosis.trivial_solution import get_all_trivial_solutions_guarantee_only
 from spec_repair.util.file_util import write_to_file
 
 def merge_all_solutions(specs: List[ISpecification], og_spec:Optional[ISpecification]=None) -> List[ISpecification]:

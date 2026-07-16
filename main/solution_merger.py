@@ -10,7 +10,7 @@ from spec_repair.helpers.formatters.spot_specification_formatter import SpotSpec
 from spec_repair.model.gr1_formula import GR1Formula
 from spec_repair.model.spectra_specification import SpectraSpecification
 from spec_repair.ltl_types import GR1FormulaType, GR1TemporalType
-from spec_repair.new_research import get_all_trivial_solutions_guarantee_only
+from spec_repair.diagnosis.trivial_solution import get_all_trivial_solutions_guarantee_only
 from spec_repair.util.spot_ltl_conjoining_util import conjoin_and_simplify
 
 

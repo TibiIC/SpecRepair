@@ -21,7 +21,7 @@ from spec_repair.components.heuristic_managers.no_filter_heuristic_manager impor
 from spec_repair.components.recorders.unique_spec_recorder import UniqueSpecRecorder
 from spec_repair.model.spectra_specification import SpectraSpecification
 from spec_repair.util.file_util import write_to_file
-from spec_repair.strategies.mitigation_strategies import complete_counter_traces
+from spec_repair.components.mitigators.mitigation_strategies import complete_counter_traces
 from tests.base_test_case import BaseTestCase
 
 def save_layered_graph(G: nx.DiGraph, filepath: str):

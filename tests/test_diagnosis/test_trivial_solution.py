@@ -4,13 +4,13 @@ import unittest
 from spec_repair.components.oracles.spectra_gr1_oracle import SpectraGR1Oracle
 from spec_repair.model.spectra_specification import SpectraSpecification
 from spec_repair.ltl_types import GR1FormulaType
-from spec_repair.new_research import get_trivial_solution, get_all_trivial_solution, \
+from spec_repair.diagnosis.trivial_solution import get_trivial_solution, get_all_trivial_solution, \
     get_all_trivial_solutions_guarantee_only
 from spec_repair.util.file_util import read_file_lines, write_to_file
 from tests.base_test_case import BaseTestCase
 
 
-class TestNewResearch(BaseTestCase):
+class TestTrivialSolution(BaseTestCase):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()

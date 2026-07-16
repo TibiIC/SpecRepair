@@ -16,7 +16,7 @@ from spec_repair.util.file_util import write_to_file, read_file_lines
 
 from typing import Dict
 
-from spec_repair.strategies.mitigation_strategies import move_one_to_guarantee_weakening, complete_counter_traces
+from spec_repair.components.mitigators.mitigation_strategies import move_one_to_guarantee_weakening, complete_counter_traces
 
 
 def run_single_repair(spec_path: str, trace_path: str, out_spec_path, out_test_dir_name: Optional[str] = None):

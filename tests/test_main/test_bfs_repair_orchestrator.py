@@ -27,7 +27,7 @@ from spec_repair.components.heuristic_managers.no_filter_heuristic_manager impor
 from spec_repair.components.recorders.unique_spec_recorder import UniqueSpecRecorder
 from spec_repair.model.spectra_specification import SpectraSpecification
 from spec_repair.util.file_util import read_file_lines, write_to_file
-from spec_repair.strategies.mitigation_strategies import move_one_to_guarantee_weakening, complete_counter_traces, \
+from spec_repair.components.mitigators.mitigation_strategies import move_one_to_guarantee_weakening, complete_counter_traces, \
     finish_here_return_nothing
 from spec_repair.wrappers.spectra_toolbox import synthesise_controller
 from tests.base_test_case import BaseTestCase
