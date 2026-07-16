@@ -11,7 +11,7 @@ from spec_repair.exceptions import NoViolationException, NoWeakeningException, D
     NoAssumptionWeakeningException
 from spec_repair.interfaces.iheuristic_manager import IHeuristicManager
 from spec_repair.components.heuristic_managers.no_filter_heuristic_manager import NoFilterHeuristicManager
-from spec_repair.model.ilasp_interpreter import ILASPInterpreter
+from spec_repair.helpers.parsers.ilasp_interpreter import ILASPInterpreter
 from spec_repair.model.spectra_specification import SpectraSpecification
 
 from spec_repair.wrappers.asp_wrappers import get_violations, run_ILASP

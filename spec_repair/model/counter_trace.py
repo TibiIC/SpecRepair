@@ -17,8 +17,7 @@ from spec_repair.helpers.heuristics import choose_one_with_heuristic, HeuristicT
 from spec_repair.ltl_types import GR1FormulaType
 from spec_repair.util.patterns import DeadlockAtomSet, DeadlockViolations
 from spec_repair.util.ltl_formula_util import satisfies_ltl_formula
-from spec_repair.util.asp_trace_util import cs_to_named_cs_traces, trace_replace_name, trace_list_to_asp_form, \
-    trace_list_to_ilasp_form, generate_model
+from spec_repair.util.asp_trace_util import trace_list_to_asp_form, trace_list_to_ilasp_form, generate_model
 from spec_repair.wrappers.spectra_toolbox import run_all_unrealisable_cores
 from spec_repair.wrappers.asp_wrappers import run_clingo
 
@@ -148,6 +147,56 @@ def cts_from_cs(cs: CounterStrategy, cs_id: Optional[int] = None) -> list[Counte
 
 def ct_from_cs(cs: CounterStrategy, heuristic: HeuristicType, cs_id: Optional[int] = None) -> CounterTrace:
     return choose_one_with_heuristic(cts_from_cs(cs, cs_id), heuristic)
+
+
+def cs_to_named_cs_traces(cs: CounterStrategy) -> dict[str, str]:
+    trace_name_dict: dict[str, str] = {}
+    extract_trace(cs, "", cs.initial_state, 0, "ini", trace_name_dict)
+
+    return trace_name_dict
+
+
+def trace_replace_name(trace: str, old_name: str, new_name: str) -> str:
+    reg = re.compile(rf"\b{old_name}\b")
+    trace = reg.sub(new_name, trace)
+    trace = re.sub(rf"(trace\({new_name})", rf"% CS_Path: {old_name}\n\n\1", trace)
+    return trace
+
+
+# TODO: replace traces as Dict with a Set[Tuple[str,str]]
+def extract_trace(cs: CounterStrategy, output: str, state: str, timepoint: int, trace_name: str,
+                  traces: dict[str, str]) -> Optional[str]:
+    # Terminate on reaching the dead state, or on detecting a cycle (the same
+    # state appearing more than once in the path built so far).
+    if trace_name.split("_").count(state) > 1 or state == cs.dead_state:
+        return re.sub("trace_name", trace_name, output)
+    transitions = cs.transitions_from(state)
+    if not transitions:
+        return None
+    # Inputs (environment-controlled APs) are shared across all transitions
+    # from the same source state, so it's safe to read them off the first one.
+    env = transitions[0].inputs
+    output += vars_to_asp(env, timepoint)
+    for t in transitions:
+        out_copy = deepcopy(output)
+        out_copy += vars_to_asp(t.outputs, timepoint)
+        new_trace_name = trace_name + "_" + t.target
+        new_output = extract_trace(cs, out_copy, t.target, timepoint + 1, new_trace_name, traces)
+        if new_output is not None:
+            traces[new_output] = new_trace_name
+    return None
+
+
+def vars_to_asp(assignments: dict[str, bool], timepoint: int) -> str:
+    output = "\n".join(var_to_asp(var, value, timepoint) for var, value in assignments.items())
+    output += "\n"  # TODO: consider removing this last line
+    return output
+
+
+def var_to_asp(var: str, value: bool, timepoint: int) -> str:
+    suffix = "" if value else "not_"
+    params = [var, str(timepoint), "trace_name"]
+    return f"{suffix}holds_at({','.join(params)})."
 
 
 # CODE BELOW DEALS WITH DEADLOCK COMPLETION

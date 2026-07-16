@@ -1,12 +1,9 @@
-import copy
 import re
 import subprocess
-from typing import Dict, List, Optional, Set, Union
+from typing import List, Set, Union
 
 from spec_repair.enums import Learning
-from spec_repair.model.counter_strategy import CounterStrategy
 from spec_repair.model.spectra_atom import SpectraAtom
-from spec_repair.helpers.heuristics import choose_one_with_heuristic, manual_choice, HeuristicType
 from spec_repair.config import PROJECT_PATH
 from spec_repair.util.file_util import read_file_lines, write_file, generate_temp_filename, write_to_file, \
     write_trace
@@ -46,62 +43,6 @@ def create_atom_signature_asp(spec_atoms: Set[SpectraAtom]):
         output += f"atom({atom.name}).\n"
     output += "\n\n"
     return output
-
-
-class CSTraces:
-    trace: str
-    raw_trace: str
-    is_deadlock: bool
-
-    def __init__(self, trace, raw_trace, is_deadlock):
-        self.trace = trace
-        self.raw_trace = raw_trace
-        self.is_deadlock = is_deadlock
-
-
-def cs_to_cs_trace(cs: CounterStrategy, cs_name: str, heuristic: HeuristicType) -> CSTraces:
-    trace_name_dict: dict[str, str] = cs_to_named_cs_traces(cs)
-    cs_trace_raw, cs_trace_path = choose_one_with_heuristic(list(trace_name_dict.items()), heuristic)
-    cs_trace = trace_replace_name(cs_trace_raw, cs_trace_path, cs_name)
-    is_deadlock = "DEAD" in cs_trace_path
-    return CSTraces(cs_trace, cs_trace_raw, is_deadlock)
-
-
-def cs_to_named_cs_traces(cs: CounterStrategy) -> dict[str, str]:
-    trace_name_dict: dict[str, str] = {}
-    extract_trace(cs, "", cs.initial_state, 0, "ini", trace_name_dict)
-
-    return trace_name_dict
-
-
-def trace_replace_name(trace: str, old_name: str, new_name: str) -> str:
-    reg = re.compile(rf"\b{old_name}\b")
-    trace = reg.sub(new_name, trace)
-    trace = re.sub(rf"(trace\({new_name})", rf"% CS_Path: {old_name}\n\n\1", trace)
-    return trace
-
-
-# TODO: generate multiple counter-strategies
-def create_cs_traces(ilasp, learning_type: Learning, cs_list: List[CounterStrategy]) \
-        -> Dict[str, CSTraces]:
-    count = 0
-    traces_dict: dict[str, CSTraces] = {}
-    for lines in cs_list:
-        trace_name_dict = cs_to_named_cs_traces(lines)
-        cs_trace, cs_trace_path = choose_one_with_heuristic(list(trace_name_dict.items()), manual_choice)
-        cs_trace_list = [cs_trace]
-        # TODO: make it clear that a single trace/name pair is created for each element in the list
-        trace, trace_names = create_trace(cs_trace_list, ilasp=ilasp, counter_strat=True,
-                                          learning_type=learning_type)
-        replacement = rf"counter_strat_{count}"
-        for name in trace_names:
-            trace = trace_replace_name(trace, name, replacement)
-        count += 1
-        # Add trace to counter-strat collection:
-        is_deadlock = "DEAD" in cs_trace_path
-        traces_dict[replacement] = CSTraces(trace, cs_trace, is_deadlock)
-
-    return traces_dict
 
 
 def create_trace(violation_file: Union[str, List[str]], ilasp=False, counter_strat=False,
@@ -298,42 +239,6 @@ def create_time_fact(max_timepoint, name, param_list=None):
         strings = [str(i + x) if type(x) == int else x for x in param_list]
         output += f"{name}({','.join(strings)}).\n"
     return output
-
-
-# TODO: replace traces as Dict with a Set[Tuple[str,str]]
-def extract_trace(cs: CounterStrategy, output: str, state: str, timepoint: int, trace_name: str,
-                  traces: Dict[str, str]) -> Optional[str]:
-    # Terminate on reaching the dead state, or on detecting a cycle (the same
-    # state appearing more than once in the path built so far).
-    if trace_name.split("_").count(state) > 1 or state == cs.dead_state:
-        return re.sub("trace_name", trace_name, output)
-    transitions = cs.transitions_from(state)
-    if not transitions:
-        return None
-    # Inputs (environment-controlled APs) are shared across all transitions
-    # from the same source state, so it's safe to read them off the first one.
-    env = transitions[0].inputs
-    output += vars_to_asp(env, timepoint)
-    for t in transitions:
-        out_copy = copy.deepcopy(output)
-        out_copy += vars_to_asp(t.outputs, timepoint)
-        new_trace_name = trace_name + "_" + t.target
-        new_output = extract_trace(cs, out_copy, t.target, timepoint + 1, new_trace_name, traces)
-        if new_output is not None:
-            traces[new_output] = new_trace_name
-    return None
-
-
-def vars_to_asp(assignments: Dict[str, bool], timepoint: int) -> str:
-    output = "\n".join(var_to_asp(var, value, timepoint) for var, value in assignments.items())
-    output += "\n"  # TODO: consider removing this last line
-    return output
-
-
-def var_to_asp(var: str, value: bool, timepoint: int) -> str:
-    suffix = "" if value else "not_"
-    params = [var, str(timepoint), "trace_name"]
-    return f"{suffix}holds_at({','.join(params)})."
 
 
 def log_to_asp_trace(lines: str, trace_name: str = "trace_name_0") -> str:

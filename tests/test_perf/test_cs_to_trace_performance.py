@@ -5,7 +5,7 @@ import time
 
 sys.path.append("/Users/tg4018/Documents/PhD/SpectraASPTranslators")
 
-from spec_repair.util.asp_trace_util import extract_trace
+from spec_repair.model.counter_trace import extract_trace
 
 # List all files in the current directory with full paths
 cs_lines: list = [
