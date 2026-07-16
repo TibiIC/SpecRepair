@@ -1,24 +1,17 @@
-import atexit
 import os.path
 import re
 import subprocess
-import threading
 from typing import List, Set
 
 import jpype
-import jpype.imports
 from jpype.types import *
 
-from spec_repair.config import PATH_TO_CLI, PATH_TO_JVM, PATH_TO_TOOLBOX
+import spec_repair.wrappers.jvm  # noqa: F401 - import side effect starts the shared JVM
 from spec_repair.enums import SimEnv
 from spec_repair.util.asp_trace_util import pRespondsToS_substitution, simplify_assignments
 from spec_repair.util.file_util import generate_temp_filename, get_line_from_file, read_file_lines, write_to_file
 from spec_repair.util.formula_string_util import shift_prev_to_next
 from spec_repair.util.formula_string_util import strip_vars
-
-if not jpype.isJVMStarted():
-    jpype.startJVM(PATH_TO_JVM, "-ea", classpath=[f"{PATH_TO_TOOLBOX}:{PATH_TO_CLI}"])
-    print("JVM started successfully")
 
 SpectraToolbox = jpype.JClass('cores.SpectraToolbox')
 SpectraCLI = jpype.JClass('tau.smlab.syntech.Spectra.cli.SpectraCliTool')
@@ -225,9 +218,9 @@ def run_spectra_cli(args: list[str]) -> str:
         raise RuntimeError("JVM is not started. Start it with jpype.startJVM() before calling this function.")
 
     # Import Java system classes
-    java_lang_System = jpype.JPackage("java.lang").System
-    java_io_ByteArrayOutputStream = jpype.JPackage("java.io").ByteArrayOutputStream
-    java_io_PrintStream = jpype.JPackage("java.io").PrintStream
+    java_lang_System = jpype.JClass("java.lang.System")
+    java_io_ByteArrayOutputStream = jpype.JClass("java.io.ByteArrayOutputStream")
+    java_io_PrintStream = jpype.JClass("java.io.PrintStream")
 
     # Backup original System.out
     original_out = java_lang_System.out
@@ -258,23 +251,3 @@ def run_spectra_cli(args: list[str]) -> str:
         java_lang_System.setOut(original_out)
 
     return output_str
-
-
-def shutdown():
-    def force_exit():
-        print("Shutdown taking too long, forcing exit.")
-        os._exit(1)
-
-    print("Shutting down SpectraTool and SpectraCLI...")
-    timer = threading.Timer(10, force_exit)
-    timer.start()
-
-    # SpectraToolbox.shutdownNow()
-    jpype.shutdownJVM()
-
-    print("JVM shutdown initiated...")
-    timer.cancel()
-    print("JVM shutdown complete.")
-
-
-atexit.register(shutdown)

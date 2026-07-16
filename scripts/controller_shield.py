@@ -1,40 +1,13 @@
-import os
-import threading
 from typing import Optional, Dict
 
 import jpype
-import jpype.imports
-import atexit
 from jpype.types import *
 
-from spec_repair.config import PATH_TO_JVM, PATH_TO_TOOLBOX, PATH_TO_CLI
+import spec_repair.wrappers.jvm  # noqa: F401 - import side effect starts the shared JVM
 
 PATH_TO_CONTROLLER = "/Users/tg4018/Documents/PhD/spectra-executor/bdd_files/static/Minepump"
-PATH_TO_SHIELD = "/Users/tg4018/Documents/PhD/SpecRepair/easy-downloads/spectra-executor.jar"
-if not jpype.isJVMStarted():
-    jpype.startJVM(PATH_TO_JVM, "-ea", classpath=[f"{PATH_TO_SHIELD}"])
-    print("JVM started successfully")
 
 AdaptiveShield = jpype.JClass('uk.ac.imperial.logix.AdaptiveShield')
-
-def shutdown():
-    def force_exit():
-        print("Shutdown taking too long, forcing exit.")
-        os._exit(1)
-
-    print("Shutting down JVM...")
-    timer = threading.Timer(10, force_exit)
-    timer.start()
-
-    # SpectraToolbox.shutdownNow()
-    jpype.shutdownJVM()
-
-    print("JVM shutdown initiated...")
-    timer.cancel()
-    print("JVM shutdown complete.")
-
-
-atexit.register(shutdown)
 
 def dict_to_java_hashmap(py_dict):
     HashMap = jpype.JClass('java.util.HashMap')

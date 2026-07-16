@@ -7,6 +7,7 @@ PATH_TO_TOOLBOX = os.path.expanduser("~/Tools/spectra_toolbox.jar")
 PATH_TO_JVM = "/opt/homebrew/Cellar/openjdk/25/libexec/openjdk.jdk/Contents/Home/lib/server/libjvm.dylib"
 PATH_TO_ILASP = os.path.expanduser('~/Tools/bin/ILASP')
 PATH_TO_FASTLAS = os.path.expanduser('~/Tools/bin/FastLAS')
+PATH_TO_SHIELD = os.path.expanduser("~/Documents/PhD/SpecRepair/easy-downloads/spectra-executor.jar")
 PRINT_CS = False
 FASTLAS = False  # TODO: modify into enum (inductive ASP tool)
 RESTORE_FIRST_HYPOTHESIS = True
