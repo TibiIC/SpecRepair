@@ -4,8 +4,8 @@ from copy import deepcopy
 from typing import Optional
 
 from spec_repair.enums import Learning
-from spec_repair.helpers.repair_nodes.candidate_repair_node import CandidateRepairNode
-from spec_repair.helpers.repair_nodes.repair_node import RepairNode
+from spec_repair.legacy.repair_nodes.candidate_repair_node import CandidateRepairNode
+from spec_repair.legacy.repair_nodes.repair_node import RepairNode
 
 
 class StartRepairNode(RepairNode):

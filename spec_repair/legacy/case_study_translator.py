@@ -3,9 +3,10 @@ import os
 import copy
 import re
 
-from spec_repair.util.spec_util import pRespondsToS_substitution, parenthetic_contents, \
-    realizable, negate, push_negations
-from spec_repair.util.specification_helper import get_name
+from spec_repair.util.asp_trace_util import pRespondsToS_substitution
+from spec_repair.util.formula_string_util import parenthetic_contents, negate, push_negations
+from spec_repair.wrappers.spectra_toolbox import realizable
+from spec_repair.legacy.case_study_helpers import get_name
 from spec_repair.util.file_util import read_file_lines, write_file
 
 

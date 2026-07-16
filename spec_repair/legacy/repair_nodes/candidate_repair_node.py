@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import Optional, List
 
 from spec_repair.enums import Learning
-from spec_repair.helpers.repair_nodes.repair_node import RepairNode
+from spec_repair.legacy.repair_nodes.repair_node import RepairNode
 
 
 class CandidateRepairNode(RepairNode):

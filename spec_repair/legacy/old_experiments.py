@@ -18,18 +18,19 @@ from matplotlib import pyplot as plt
 from sympy import parse_expr
 
 from spec_repair.util.patterns import PRS_REG
-from spec_repair.util.spec_util import format_spec, extract_df_content, generate_trace_asp, write_trace, \
-    extract_expressions_from_file, generate_model, simplify_assignments, extract_all_expressions, run_clingo_raw, \
-    semantically_identical_spot, extract_all_expressions_spot, realizable, negate
+from spec_repair.util.formula_string_util import format_spec, extract_all_expressions, negate, strip_vars
+from spec_repair.legacy.spec_dataframe_util import extract_df_content
+from spec_repair.util.asp_trace_util import generate_trace_asp, generate_model, simplify_assignments, run_clingo_raw
+from spec_repair.wrappers.spectra_toolbox import semantically_identical_spot, extract_all_expressions_spot, realizable
 from spec_repair.legacy.case_study_translator import delete_files, parenthetic_contents_with_function, translate_case_study, negate_and_simplify
 from spec_repair.config import PROJECT_PATH, FASTLAS, GENERATE_MULTIPLE_TRACES, PATH_TO_CLI, PRINT_CS
 from spec_repair.enums import SimEnv, Outcome, Learning, When
 from spec_repair.legacy.latex_translator import spectra_to_latex, violation_to_latex
-from spec_repair.util.specification_helper import strip_vars, get_folders, \
-    CASE_STUDY_EXCLUSION_LIST, \
-    dict_to_text, print_dict, CASE_STUDY_FINALS, run_subprocess
+from spec_repair.util.subprocess_util import run_subprocess
+from spec_repair.legacy.case_study_helpers import get_folders, CASE_STUDY_EXCLUSION_LIST, \
+    dict_to_text, print_dict, CASE_STUDY_FINALS
 from spec_repair.util.file_util import generate_filename, generate_random_string, read_file_lines, write_file, \
-    generate_temp_filename
+    generate_temp_filename, write_trace
 
 
 def traffic_weakening_modified(include_prev, unguided_learning=False):

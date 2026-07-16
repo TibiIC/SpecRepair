@@ -1,15 +1,15 @@
 import re
-import subprocess
-from typing import List, Set, Union
+from typing import List, Set, Tuple, Union
 
 from spec_repair.enums import Learning
 from spec_repair.model.spectra_atom import SpectraAtom
 from spec_repair.config import PROJECT_PATH
 from spec_repair.util.file_util import read_file_lines, write_file, generate_temp_filename, write_to_file, \
     write_trace
-from spec_repair.util.formula_string_util import remove_multiple_newlines, extract_all_expressions, spectra_to_DNF
+from spec_repair.util.formula_string_util import remove_multiple_newlines, extract_all_expressions, spectra_to_DNF, \
+    strip_vars
 from spec_repair.util.patterns import PRS_REG
-from spec_repair.util.specification_helper import strip_vars, create_cmd
+from spec_repair.util.subprocess_util import create_cmd, run_subprocess
 
 
 def pRespondsToS_substitution(output_filename):
@@ -56,16 +56,9 @@ def create_trace(violation_file: Union[str, List[str]], ilasp=False, counter_str
         trace = violation_file
     trace = re.sub("\n+", "\n", '\n'.join(trace)).split("\n")
     output = "%---*** Violation Trace ***---\n\n"
-    trace_names: Set[str] = set(map(lambda match: match.group(1),
-                                    filter(None,
-                                           map(lambda line: re.search(r",\s*([^,]*)\)\.", line),
-                                               trace)
-                                           )
-                                    )
-                                )
+    trace_names: Set[str] = get_trace_names(trace)
     for name in trace_names:
-        reg = re.compile(re.escape(name))
-        sub_trace = list(filter(reg.search, trace))
+        sub_trace = isolate_trace_of_name(trace, name)
 
         # TODO: understand infinite traces & use to rework counter-strategy trees
         # TODO: replace is_infinite with Sx->Sy->Sx->Sy and not "DEAD" in name
@@ -82,8 +75,7 @@ def create_trace(violation_file: Union[str, List[str]], ilasp=False, counter_str
         return output
 
 
-def create_pos_interpretation(ilasp: bool, output: str, trace: List[str], is_infinite: bool,
-                              counter_strat: bool) -> str:
+def max_timepoint_and_violation_name(trace: List[str]) -> Tuple[int, str]:
     max_timepoint = 0
     for line in trace:
         line = re.sub(r"\s", "", line)
@@ -91,6 +83,12 @@ def create_pos_interpretation(ilasp: bool, output: str, trace: List[str], is_inf
         max_timepoint = max(max_timepoint, int(timepoint))
     # TODO: understand why violation name is the last line of the trace
     violation_name = trace[-1].split(",")[-1].replace(").", "")
+    return max_timepoint, violation_name
+
+
+def create_pos_interpretation(ilasp: bool, output: str, trace: List[str], is_infinite: bool,
+                              counter_strat: bool) -> str:
+    max_timepoint, violation_name = max_timepoint_and_violation_name(trace)
     if is_infinite:
         states = violation_name.split("_")
         state_count = [states.count(i) for i in states]
@@ -167,13 +165,7 @@ def get_trace_names(trace: List[str]) -> Set[str]:
 
 
 def trace_single_to_asp_form(trace: List[str]) -> str:
-    max_timepoint = 0
-    for line in trace:
-        line = re.sub(r"\s", "", line)
-        timepoint = line.split(",")[-2]
-        max_timepoint = max(max_timepoint, int(timepoint))
-    # TODO: understand why violation name is the last line of the trace
-    violation_name = trace[-1].split(",")[-1].replace(").", "")
+    max_timepoint, violation_name = max_timepoint_and_violation_name(trace)
     loop_completion = complete_loop_if_necessary(violation_name, max_timepoint)
     output = f"trace({violation_name}).\n\n"
     output += create_time_fact(max_timepoint + 1, "timepoint", [0, violation_name])
@@ -484,7 +476,7 @@ def generate_model(expressions, neg_expressions, variables, scratch=False, asp_r
     for var in variables:
         output += f"#show {var}/0.\n"
 
-    file = "/tmp/temp_asp.lp"
+    file = generate_temp_filename('.lp')
     write_file(file, output)
     clingo_out = run_clingo_raw(file, n_models=0)
     violation = True
@@ -529,7 +521,5 @@ def aspify(expressions):
 
 
 def run_clingo_raw(filename, n_models: int = 1) -> str:
-    filepath = f"{filename}"
-    cmd = create_cmd(['clingo', f'--models={n_models}', filepath])
-    output = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE).communicate()[0]
-    return output.decode('utf-8')
+    cmd = create_cmd(['clingo', f'--models={n_models}', filename])
+    return run_subprocess(cmd)
