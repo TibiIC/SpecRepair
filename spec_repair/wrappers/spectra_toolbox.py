@@ -14,7 +14,7 @@ from spec_repair.enums import SimEnv
 from spec_repair.util.asp_trace_util import pRespondsToS_substitution, simplify_assignments
 from spec_repair.util.file_util import generate_temp_filename, get_line_from_file, read_file_lines, write_to_file
 from spec_repair.util.formula_string_util import shift_prev_to_next
-from spec_repair.util.specification_helper import strip_vars
+from spec_repair.util.formula_string_util import strip_vars
 
 if not jpype.isJVMStarted():
     jpype.startJVM(PATH_TO_JVM, "-ea", classpath=[f"{PATH_TO_TOOLBOX}:{PATH_TO_CLI}"])

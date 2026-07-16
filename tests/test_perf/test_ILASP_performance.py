@@ -3,7 +3,7 @@ import pytest
 import subprocess
 import time
 
-from spec_repair.util.specification_helper import create_cmd
+from spec_repair.util.subprocess_util import create_cmd
 
 current_directory = os.path.dirname(os.path.abspath(__file__))
 las_directory_path = os.path.join(current_directory, "las_files")

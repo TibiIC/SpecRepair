@@ -2,7 +2,17 @@ import re
 from collections import defaultdict
 
 from spec_repair.enums import Learning
-from spec_repair.util.specification_helper import strip_vars, assign_equalities
+
+
+def assign_equalities(formula_n, variables):
+    for var in variables:
+        formula_n = re.sub("!" + var + "(?!=|[a-z])", var + "=false", formula_n)
+        formula_n = re.sub("(?<![a-z])" + var + "(?!=|[a-z])", var + "=true", formula_n)
+    return formula_n
+
+
+def strip_vars(spec, sub=["env", "sys"]):
+    return re.findall(r"[" + '|'.join(sub) + r"]\s*boolean\s*(.*)\s*;", '\n'.join(spec))
 
 
 def extract_string_within(pattern, line, strip_whitespace=False):
