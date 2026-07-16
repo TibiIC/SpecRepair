@@ -1,7 +1,7 @@
 import os
 from unittest import TestCase
 
-from spec_repair.helpers.heuristic_managers.no_filter_heuristic_manager import NoFilterHeuristicManager
+from spec_repair.components.heuristic_managers.no_filter_heuristic_manager import NoFilterHeuristicManager
 from spec_repair.model.spectra_specification import SpectraSpecification
 from spec_repair.util.asp_trace_util import generate_trace_asp
 

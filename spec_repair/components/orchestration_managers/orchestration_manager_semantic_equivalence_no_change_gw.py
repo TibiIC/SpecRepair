@@ -7,7 +7,7 @@ from spec_repair.interfaces.iorchestration_manager import IOrchestrationManager
 from spec_repair.interfaces.ispecification import ISpecification
 from spec_repair.components.repair_data import RepairData
 from spec_repair.enums import Learning
-from spec_repair.helpers.recorders.unique_recorder import UniqueRecorder
+from spec_repair.components.recorders.unique_recorder import UniqueRecorder
 
 
 class OrchestrationManagerSemanticEquivalenceNoGWChange(IOrchestrationManager):

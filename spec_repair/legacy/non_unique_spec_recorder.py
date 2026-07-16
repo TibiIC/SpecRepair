@@ -1,6 +1,6 @@
 from typing import Optional
 
-from spec_repair.helpers.recorders.non_unique_recorder import NonUniqueRecorder
+from spec_repair.legacy.non_unique_recorder import NonUniqueRecorder
 from spec_repair.util.file_util import write_to_file
 from spec_repair.wrappers.spec import Spec
 

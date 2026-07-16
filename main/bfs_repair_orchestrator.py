@@ -11,9 +11,9 @@ from spec_repair.components.orchestration_managers.orchestration_manager_semanti
 from spec_repair.components.repair_data import RepairData
 from spec_repair.model.counter_trace import CounterTrace
 from spec_repair.interfaces.iheuristic_manager import IHeuristicManager
-from spec_repair.helpers.heuristic_managers.no_filter_heuristic_manager import NoFilterHeuristicManager
+from spec_repair.components.heuristic_managers.no_filter_heuristic_manager import NoFilterHeuristicManager
 from spec_repair.interfaces.irecorder import IRecorder
-from spec_repair.helpers.recorders.unique_recorder import UniqueRecorder
+from spec_repair.components.recorders.unique_recorder import UniqueRecorder
 from spec_repair.loggers.spec_logger import SpecLogger
 
 

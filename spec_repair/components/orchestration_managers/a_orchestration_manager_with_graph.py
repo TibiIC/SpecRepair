@@ -10,7 +10,7 @@ from spec_repair.interfaces.ispecification import ISpecification
 from spec_repair.components.repair_data import RepairData
 from spec_repair.enums import Learning
 from spec_repair.interfaces.irecorder import IRecorder
-from spec_repair.helpers.recorders.unique_recorder import UniqueRecorder
+from spec_repair.components.recorders.unique_recorder import UniqueRecorder
 
 RED = "#ff4444"
 GREEN = "#44ff44"

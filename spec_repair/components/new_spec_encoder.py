@@ -6,7 +6,7 @@ from typing import List, Optional, TYPE_CHECKING
 from spec_repair.interfaces.ispecification import ISpecification
 from spec_repair.enums import Learning, When
 from spec_repair.interfaces.iheuristic_manager import IHeuristicManager
-from spec_repair.helpers.heuristic_managers.no_filter_heuristic_manager import NoFilterHeuristicManager
+from spec_repair.components.heuristic_managers.no_filter_heuristic_manager import NoFilterHeuristicManager
 from spec_repair.ltl_types import GR1FormulaType, GR1AtomType
 from spec_repair.util.asp_trace_util import trace_list_to_asp_form, trace_list_to_ilasp_form, \
     create_atom_signature_asp

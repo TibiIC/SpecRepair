@@ -9,8 +9,8 @@ from spec_repair.components.oracles.spectra_gr1_oracle import SpectraGR1Oracle
 from spec_repair.components.mitigators.learning_type_spec_mitigator import LearningTypeSpecMitigator
 from spec_repair.components.discriminators.spectra_discriminator import SpectraDiscriminator
 from spec_repair.enums import Learning
-from spec_repair.helpers.heuristic_managers.choose_first_heuristic_manager import ChooseFirstHeuristicManager
-from spec_repair.helpers.recorders.unique_spec_recorder import UniqueSpecRecorder
+from spec_repair.components.heuristic_managers.choose_first_heuristic_manager import ChooseFirstHeuristicManager
+from spec_repair.components.recorders.unique_spec_recorder import UniqueSpecRecorder
 from spec_repair.model.spectra_specification import SpectraSpecification
 from spec_repair.util.file_util import write_to_file, read_file_lines
 

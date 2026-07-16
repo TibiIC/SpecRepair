@@ -1,6 +1,6 @@
 from typing import List
 
-from spec_repair.helpers.heuristic_managers.no_filter_heuristic_manager import NoFilterHeuristicManager
+from spec_repair.components.heuristic_managers.no_filter_heuristic_manager import NoFilterHeuristicManager
 
 
 class NoEventuallyHypothesisHeuristicManager(NoFilterHeuristicManager):

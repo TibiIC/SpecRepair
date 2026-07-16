@@ -13,7 +13,7 @@ from spec_repair.interfaces.ispecification import ISpecification
 from spec_repair.model.adaptation_learned import Adaptation
 from spec_repair.helpers.formatters.asp_exception_formatter import ASPExceptionFormatter
 from spec_repair.interfaces.iheuristic_manager import IHeuristicManager
-from spec_repair.helpers.heuristic_managers.no_filter_heuristic_manager import NoFilterHeuristicManager
+from spec_repair.components.heuristic_managers.no_filter_heuristic_manager import NoFilterHeuristicManager
 from spec_repair.model.spectra_atom import SpectraAtom
 from spec_repair.model.gr1_formula import GR1Formula
 from spec_repair.helpers.formatters.spectra_formula_formatter import SpectraFormulaFormatter

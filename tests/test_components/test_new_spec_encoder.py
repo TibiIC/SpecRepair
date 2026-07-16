@@ -1,9 +1,9 @@
 from tests.base_test_case import BaseTestCase
 from spec_repair.components.new_spec_encoder import NewSpecEncoder
 from spec_repair.enums import Learning, ExpType
-from spec_repair.helpers.heuristic_managers.no_eventually_hypothesis_heuristic_manager import \
+from spec_repair.components.heuristic_managers.no_eventually_hypothesis_heuristic_manager import \
     NoEventuallyHypothesisHeuristicManager
-from spec_repair.helpers.heuristic_managers.no_filter_heuristic_manager import NoFilterHeuristicManager
+from spec_repair.components.heuristic_managers.no_filter_heuristic_manager import NoFilterHeuristicManager
 from spec_repair.model.spectra_specification import SpectraSpecification
 from spec_repair.util.file_util import read_file
 from spec_repair.wrappers.asp_wrappers import get_violations

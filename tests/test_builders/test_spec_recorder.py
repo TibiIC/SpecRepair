@@ -1,7 +1,7 @@
 import copy
 from unittest import TestCase
 
-from spec_repair.helpers.recorders.unique_spec_recorder import UniqueSpecRecorder
+from spec_repair.components.recorders.unique_spec_recorder import UniqueSpecRecorder
 from spec_repair.wrappers.spec import Spec
 from tests.test_common_utility_strings.specs import *
 

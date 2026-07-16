@@ -10,7 +10,7 @@ from spec_repair.builders.abstract_builder import AbstractBuilder
 from spec_repair.builders.choicesbuilder import ChoicesBuilder
 from spec_repair.builders.enums import RecordingState, ChoiceType
 from spec_repair.builders.rulebuilder import RuleBuilder
-from spec_repair.helpers.recorders.unique_spec_recorder import UniqueSpecRecorder
+from spec_repair.components.recorders.unique_spec_recorder import UniqueSpecRecorder
 from spec_repair.builders.summarybuilder import SummaryBuilder
 from spec_repair.util.file_util import generate_temp_filename
 from spec_repair.wrappers.spec import Spec
