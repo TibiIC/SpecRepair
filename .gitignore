@@ -43,6 +43,9 @@ hs_err_pid*.log
 /web/graph.html
 /web/visualization_*.html
 
+# pyvis-generated visualization outputs (tests/test_main/test_*_orchestrator.py)
+/tests/lib/
+
 # ltlfilt / formula intermediate outputs
 /files/ltlfilt/*.hoa
 /scripts/formula.aut
