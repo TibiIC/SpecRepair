@@ -330,6 +330,18 @@ def get_disjuncts_from_disjunction(disjunction: Optional[LTLFormula]) -> List[LT
     disjuncts.reverse()
     return disjuncts
 
+
+def get_conjuncts_from_conjunction(conjunction: Optional[LTLFormula]) -> List[LTLFormula]:
+    if not conjunction:
+        return []
+    conjuncts = []
+    while isinstance(conjunction, And):
+        conjuncts.append(conjunction.right)
+        conjunction = conjunction.left
+    conjuncts.append(conjunction)
+    conjuncts.reverse()
+    return conjuncts
+
 def disjoin_all(formulas: list[LTLFormula]) -> LTLFormula:
     if not formulas:
         raise ValueError("Cannot disjoin an empty list of formulas")

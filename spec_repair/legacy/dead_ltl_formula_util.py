@@ -3,7 +3,8 @@ from typing import List, Optional
 from py_ltl.formula import LTLFormula, AtomicProposition, Not, Top, Bottom, Eventually, Globally, And, Or, Next, \
     Prev, Until
 
-from spec_repair.util.ltl_formula_util import is_conjunction_of_literals, get_disjuncts_from_disjunction
+from spec_repair.util.ltl_formula_util import is_conjunction_of_literals, get_disjuncts_from_disjunction, \
+    get_conjuncts_from_conjunction
 
 
 def is_disjunction_of_conjunctions(f: LTLFormula) -> bool:
@@ -16,18 +17,6 @@ def is_disjunction_of_conjunctions(f: LTLFormula) -> bool:
 
 def is_dnf(f: LTLFormula) -> bool:
     return is_disjunction_of_conjunctions(f)
-
-
-def get_conjuncts_from_conjunction(conjunction: Optional[LTLFormula]) -> List[LTLFormula]:
-    if not conjunction:
-        return []
-    conjuncts = []
-    while isinstance(conjunction, And):
-        conjuncts.append(conjunction.right)
-        conjunction = conjunction.left
-    conjuncts.append(conjunction)
-    conjuncts.reverse()
-    return conjuncts
 
 
 def skip_first_temp_op(this_formula: LTLFormula) -> LTLFormula:
