@@ -295,19 +295,26 @@ def generate_trace_asp(strong_spec_file, ideal_spec_file, trace_file):
     initial_expressions_s, prevs_s, primed_expressions_s, unprimed_expressions_s, variables_s \
         = extract_expressions_from_file(strong_spec_file, counter_strat=True)
 
-    # To include starting guarantees:
-    ie_g, prevs_g, pe_g, upe_g, v_g = extract_expressions_from_file(strong_spec_file, guarantee_only=True)
+    # Must-hold side gets the ideal spec's own guarantees. Using the strong
+    # (mutated) spec's guarantees here would force the trace to satisfy
+    # whatever stronger guarantee is under test, making it impossible to
+    # ever witness a violation of a strengthened guarantee.
+    ie_g, prevs_g, pe_g, upe_g, v_g = extract_expressions_from_file(ideal_spec_file, guarantee_only=True)
     initial_expressions += ie_g
     primed_expressions += pe_g
     unprimed_expressions += upe_g
 
-    # initial_expressions_sa, prevs_sa, primed_expressions_sa, unprimed_expressions_sa, variables_sa = extract_expressions(
-    #     start_file, counter_strat=True)
-
-    # This adds starting guarantees to final assumptions
-    # initial_expressions += [x for x in initial_expressions_s if x not in initial_expressions_sa]
-    # primed_expressions += [x for x in primed_expressions_s if x not in primed_expressions_sa]
-    # unprimed_expressions += [x for x in unprimed_expressions_s if x not in unprimed_expressions_sa]
+    # Must-violate side gets the strong spec's guarantees too, so a trace
+    # that violates a strengthened guarantee (while still honouring the
+    # strengthened assumptions) counts as a genuine violation, not just
+    # assumption violations. When guarantees are unmutated (strong ==
+    # ideal), these duplicate the guarantees just pinned true on the
+    # must-hold side above, so they can never be the ones that fail here -
+    # falling back to today's assumption-only-violation behaviour exactly.
+    ie_g_s, prevs_g_s, pe_g_s, upe_g_s, v_g_s = extract_expressions_from_file(strong_spec_file, guarantee_only=True)
+    initial_expressions_s += ie_g_s
+    primed_expressions_s += pe_g_s
+    unprimed_expressions_s += upe_g_s
 
     expressions = primed_expressions + unprimed_expressions
     neg_expressions = primed_expressions_s + unprimed_expressions_s

@@ -63,6 +63,11 @@ class TestMutatedSpecGenerator(BaseTestCase):
                 mutated_spec.equivalent_to(ideal_spec, GR1FormulaType.ASM),
                 f"Mutation {i} of {case_study_name} should be strictly stronger than the ideal spec, not equivalent"
             )
+            self.assertTrue(
+                mutated_spec.implies(ideal_spec, GR1FormulaType.GAR),
+                f"Mutation {i} of {case_study_name} should have guarantees at least as strong as the ideal spec's "
+                f"(guarantees may be untouched by a given mutation, but never weakened)"
+            )
 
             write_to_file(f"{out_dir}/mutation_{i}.spectra", mutated_spec.to_str())
             self.assertGreater(len(traces), 0, f"Mutation {i} of {case_study_name} should have at least one violation trace")
