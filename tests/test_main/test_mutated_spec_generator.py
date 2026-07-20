@@ -34,6 +34,9 @@ class TestMutatedSpecGenerator(BaseTestCase):
     def test_generate_stronger_specs_elevator(self):
         self._generate_and_check("elevator")
 
+    def test_generate_stronger_specs_gyro(self):
+        self._generate_and_check("gyro")
+
     def _generate_and_check(self, case_study_name: str, n_mutations: int = 3, n_traces_per_mutation: int = 1):
         ideal_file = f"../input-files/case-studies/spectra/{case_study_name}/ideal.spectra"
         ideal_spec = SpectraSpecification.from_file(ideal_file)
