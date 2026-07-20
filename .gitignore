@@ -58,3 +58,9 @@ hs_err_pid*.log
 
 # Regenerable via scripts/texify_spec.py
 /tests/test_files/maximal_solutions_from_ssh/texified/
+
+# External benchmark corpora (SYNTECH15/17/19), not part of this repo's own
+# case studies - source material for input-files/case-studies/spectra/ rewrites
+/files/SYNTECH15/
+/files/SYNTECH17/
+/files/SYNTECH19/
