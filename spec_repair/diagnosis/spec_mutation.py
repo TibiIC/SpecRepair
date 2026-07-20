@@ -36,7 +36,7 @@ observed in this repo's own case-study fixtures
 """
 import random
 from copy import deepcopy
-from typing import Callable, Iterable, List, Optional
+from typing import Iterable, List, Optional
 
 from py_ltl.formula import Eventually, LTLFormula
 
@@ -55,44 +55,53 @@ def _try_strengthen(formula: GR1Formula, rng: random.Random) -> Optional[GR1Form
     Randomly pick one strengthening pattern applicable to `formula` and
     apply it, returning a new, strictly stronger GR1Formula. Returns None
     if no pattern applies (e.g. every consequent/antecedent is already a
-    single literal, and the formula is already an invariant).
+    single literal, and the formula is already an invariant), or if every
+    applicable pattern only produces results that are semantically
+    equivalent to `formula` itself.
+
+    That last case is real, not defensive: a formula can contain a
+    redundant disjunct/conjunct - e.g. a tautological clause like
+    `!highwater -> !highwater|!methane`, where dropping `!methane` leaves
+    `!highwater -> !highwater`, syntactically different but logically
+    identical to the original (still a tautology) - so not every
+    syntactically-valid drop is an actual strengthening. GR1Formula's
+    `__eq__` already does the semantic (spot-backed) equivalence check
+    needed to catch this; candidates are generated exhaustively per move
+    (rather than one random pick per move) specifically so the vacuous ones
+    can be filtered out before choosing among what's left.
     """
     is_response = isinstance(formula.consequent, Eventually)
     consequent_target: LTLFormula = formula.consequent.formula if is_response else formula.consequent
     consequent_disjuncts = get_disjuncts_from_disjunction(consequent_target)
     antecedent_conjuncts = get_conjuncts_from_conjunction(formula.antecedent)
 
-    moves: List[Callable[[], GR1Formula]] = []
+    candidates: List[GR1Formula] = []
 
     if len(consequent_disjuncts) > 1:
-        def drop_consequent_disjunct() -> GR1Formula:
+        for i in range(len(consequent_disjuncts)):
             remaining = list(consequent_disjuncts)
-            remaining.pop(rng.randrange(len(remaining)))
+            remaining.pop(i)
             new_consequent = disjoin_all(remaining)
             if is_response:
                 new_consequent = Eventually(new_consequent)
-            return GR1Formula(formula.temp_type, deepcopy(formula.antecedent), new_consequent)
-
-        moves.append(drop_consequent_disjunct)
+            candidates.append(GR1Formula(formula.temp_type, deepcopy(formula.antecedent), new_consequent))
 
     if len(antecedent_conjuncts) > 1:
-        def drop_antecedent_conjunct() -> GR1Formula:
+        for i in range(len(antecedent_conjuncts)):
             remaining = list(antecedent_conjuncts)
-            remaining.pop(rng.randrange(len(remaining)))
+            remaining.pop(i)
             new_antecedent = conjoin(remaining)
-            return GR1Formula(formula.temp_type, new_antecedent, deepcopy(formula.consequent))
-
-        moves.append(drop_antecedent_conjunct)
+            candidates.append(GR1Formula(formula.temp_type, new_antecedent, deepcopy(formula.consequent)))
 
     if formula.temp_type == GR1TemporalType.JUSTICE:
-        def justice_to_invariant() -> GR1Formula:
-            return GR1Formula(GR1TemporalType.INVARIANT, deepcopy(formula.antecedent), deepcopy(formula.consequent))
+        candidates.append(
+            GR1Formula(GR1TemporalType.INVARIANT, deepcopy(formula.antecedent), deepcopy(formula.consequent))
+        )
 
-        moves.append(justice_to_invariant)
-
-    if not moves:
+    candidates = [candidate for candidate in candidates if candidate != formula]
+    if not candidates:
         return None
-    return rng.choice(moves)()
+    return rng.choice(candidates)
 
 
 def strengthen_random_formula(
