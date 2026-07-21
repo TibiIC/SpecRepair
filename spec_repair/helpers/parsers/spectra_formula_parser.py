@@ -16,6 +16,7 @@ class Token:
 
 class LTLTokenizer:
     token_spec = [
+        ('IFF', r'<->'),
         ('IMPLIES', r'->'),
         ('UNTIL', r'\bU\b'),
         ('NEXT', r'\bX\b|\bnext\b'),
@@ -26,10 +27,12 @@ class LTLTokenizer:
         ('FALSE', r'\bfalse\b'),
         ('AND', r'&'),
         ('OR', r'\|'),
+        ('NEQ', r'!='),
         ('NOT', r'!'),
         ('EQ', r'='),
         ('LPAREN', r'\('),
         ('RPAREN', r'\)'),
+        ('COMMA', r','),
         ('SEMI', r';'),
         ('ID', r'[A-Za-z_][A-Za-z0-9_]*'),
         ('SKIP', r'[ \t]+'),
@@ -151,10 +154,10 @@ class SpectraFormulaParser:
             return Not(self.atom())
         elif tok.type == 'NEXT':
             self.lexer.consume()
-            return Next(self.atom())
+            return Next(self._temporal_operand())
         elif tok.type == 'PREV':
             self.lexer.consume()
-            return Prev(self.atom())
+            return Prev(self._temporal_operand())
         elif tok.type == 'GLOBALLY':
             self.lexer.consume()
             return Globally(self.atom())
@@ -170,15 +173,64 @@ class SpectraFormulaParser:
         elif tok.type == 'ID':
             id_token = self.lexer.consume()
             next_tok = self.lexer.peek()
-            if next_tok and next_tok.type == 'EQ':
-                self.lexer.consume('EQ')
+            if next_tok and next_tok.type in ('EQ', 'NEQ'):
+                is_neq = next_tok.type == 'NEQ'
+                self.lexer.consume(next_tok.type)
                 val_tok = self.lexer.consume()
                 value = self._parse_value(val_tok.value)
-                return AtomicProposition(id_token.value, value)
+                atom = AtomicProposition(id_token.value, value)
+                return Not(atom) if is_neq else atom
+            elif next_tok and next_tok.type == 'LPAREN' and id_token.value in self.known_pattern_calls:
+                return self._pattern_call(id_token.value)
             else:
                 return AtomicProposition(id_token.value, True)
         else:
             raise ValueError(f"Unexpected token in atom: {tok.type}")
+
+    def _temporal_operand(self) -> "LTLFormula":
+        """
+        Parses the operand of next(...)/prev(...), then also accepts a
+        trailing =VALUE/!=VALUE (e.g. `next(spec_pausing)=pause`, equality
+        applied to the *result* of the temporal operator rather than written
+        inside it as `next(spec_pausing=pause)`) - both spellings are used
+        interchangeably across the SYNTECH corpus for the same meaning, so
+        the trailing form gets rewritten onto the wrapped atom instead of
+        being left dangling for the caller to choke on.
+        """
+        operand = self.atom()
+        next_tok = self.lexer.peek()
+        if next_tok and next_tok.type in ('EQ', 'NEQ') and isinstance(operand, AtomicProposition):
+            is_neq = next_tok.type == 'NEQ'
+            self.lexer.consume(next_tok.type)
+            val_tok = self.lexer.consume()
+            value = self._parse_value(val_tok.value)
+            atom = AtomicProposition(operand.name, value)
+            return Not(atom) if is_neq else atom
+        return operand
+
+    # The only custom `pattern NAME(...) { ... }` blocks this parser knows how
+    # to translate, keyed by name -> handler(args) -> LTLFormula. Derived by
+    # hand from each pattern's auxiliary-variable definition; a call to any
+    # other pattern name is treated as a plain (undefined) atom instead of
+    # guessed at, and will fail downstream rather than being silently wrong.
+    known_pattern_calls = {"respondsTo"}
+
+    def _pattern_call(self, name: str) -> "LTLFormula":
+        self.lexer.consume('LPAREN')
+        args = [self.expression()]
+        while self.lexer.peek() and self.lexer.peek().type == 'COMMA':
+            self.lexer.consume('COMMA')
+            args.append(self.expression())
+        self.lexer.consume('RPAREN')
+        if name == "respondsTo":
+            if len(args) != 2:
+                raise ValueError(f"respondsTo(...) expects 2 arguments, got {len(args)}")
+            trigger, response = args
+            # respondsTo(trigger, response): a helper boolean that resets on
+            # trigger-without-response and must hold infinitely often - the
+            # standard LTL response pattern G(trigger -> F(response)).
+            return Globally(Implies(trigger, Eventually(response)))
+        raise NotImplementedError(f"No translation registered for pattern call {name!r}")
 
     def _parse_value(self, val: str):
         if val.lower() == 'true':
@@ -193,6 +245,10 @@ class SpectraFormulaParser:
         'AND': (10, 'left', lambda a, b: And(a, b)),
         'OR': (9, 'left', lambda a, b: Or(a, b)),
         'IMPLIES': (5, 'right', lambda a, b: Implies(a, b)),
+        # A<->B === (A&B)|(!A&!B) - built directly as AST here (rather than
+        # via text substitution) so it composes correctly with the parser's
+        # own precedence/paren handling regardless of nesting depth.
+        'IFF': (3, 'left', lambda a, b: Or(And(a, b), And(Not(a), Not(b)))),
         #'UNTIL': (8, 'left', lambda a, b: Until(a, b)),
         'UNTIL': (8, 'left', lambda a, b: (_ for _ in ()).throw(NotImplementedError("Until operator is not supported"))),
     }

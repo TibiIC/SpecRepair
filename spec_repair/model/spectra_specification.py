@@ -3,7 +3,7 @@ import re
 import subprocess
 from collections import Counter
 from copy import deepcopy
-from typing import TypedDict, Optional, TypeVar, List, Set, Any, Callable
+from typing import TypedDict, Optional, TypeVar, List, Set, Dict, Any, Callable
 
 import pandas as pd
 import spot
@@ -23,6 +23,7 @@ from spec_repair.ltl_types import GR1FormulaType, GR1TemporalType
 from spec_repair.util.file_util import read_file_lines, validate_spectra_file
 from spec_repair.util.ltl_formula_util import get_disjuncts_from_disjunction
 from spec_repair.util.formula_string_util import format_spec
+from spec_repair.util.patterns import GR1TypeAlias
 from spec_repair.helpers.weakness_measurement.weakness_user_friendly import computeWeakness, Weakness
 from spec_repair.exceptions import NameClashException
 
@@ -55,33 +56,76 @@ class SpectraSpecification(ISpecification):
       alwEv (state=S0);
     }"""
 
+    _HEADER_RE = re.compile(r'^\s*(asm|assumption|gar|guarantee)\b(\s*--\s*(.*))?\s*$')
+
     def __init__(self, spec_txt: str):
         spec_txt = copy.deepcopy(spec_txt)
         self._formulas_df: pd.DataFrame = pd.DataFrame(columns=["name", "type", "when", "formula"])
         self._module_name: str
         self._atoms: Set[SpectraAtom] = set()
+        self._type_aliases: Dict[str, List[str]] = {}
         self._parser = SpectraFormulaParser()
         self._formater = SpectraFormulaFormatter()
         self._asp_formatter = ASPExceptionFormatter()
-        spec_lines = spec_txt.splitlines()
+        spec_lines = self._strip_comments(spec_txt).splitlines()
+        unnamed_counters: Dict[GR1FormulaType, int] = {}
+        i = 0
+        n = len(spec_lines)
         try:
-            for i, line in enumerate(spec_lines):
+            while i < n:
+                line = spec_lines[i]
+                if not line.strip():
+                    i += 1
+                    continue
                 if line.find("module") >= 0:
                     self._module_name = line.split()[1]
-                elif line.find("--") >= 0:
-                    name: str = re.search(r'--\s*(.+)', line).group(1)
-                    type_txt: str = re.search(r'\s*(asm|assumption|gar|guarantee)\s*--', line).group(1)
-                    formula_type: GR1FormulaType = GR1FormulaType.from_str(type_txt)
-                    formula_txt: str = re.sub('\s*', '', spec_lines[i + 1])
+                    i += 1
+                    continue
+                alias_match = GR1TypeAlias.pattern.match(line)
+                if alias_match:
+                    self._type_aliases[alias_match.group(GR1TypeAlias.NAME)] = [
+                        v.strip() for v in alias_match.group(GR1TypeAlias.VALUES).split(",")
+                    ]
+                    i += 1
+                    continue
+                header_match = self._HEADER_RE.match(line)
+                if header_match:
+                    formula_type: GR1FormulaType = GR1FormulaType.from_str(header_match.group(1))
+                    name = (header_match.group(3) or "").strip()
+                    body_lines: List[str] = []
+                    j = i + 1
+                    while j < n and ';' not in spec_lines[j]:
+                        if spec_lines[j].strip():
+                            body_lines.append(spec_lines[j].strip())
+                        j += 1
+                    if j >= n:
+                        raise ValueError(f"formula after '{line.strip()}' has no terminating ';'")
+                    body_lines.append(spec_lines[j].split(';')[0].strip())
+                    formula_txt: str = re.sub(r'\s*', '', "".join(body_lines))
+                    if not name:
+                        unnamed_counters[formula_type] = unnamed_counters.get(formula_type, 0) + 1
+                        name = f"unnamed_{formula_type.name.lower()}_{unnamed_counters[formula_type]}"
                     formula: GR1Formula = GR1Formula.from_str(formula_txt, self._parser)
                     self.add_formula(formula, name, formula_type)
-                else:
-                    atom: Optional[SpectraAtom] = SpectraAtom.from_str(line)
-                    if atom:
-                        self._atoms.add(atom)
-
+                    i = j + 1
+                    continue
+                atom: Optional[SpectraAtom] = SpectraAtom.from_str(line)
+                if atom:
+                    self._atoms.add(atom)
+                i += 1
         except AttributeError as e:
             raise e
+        self._resolve_type_alias_domains()
+
+    @staticmethod
+    def _strip_comments(text: str) -> str:
+        text = re.sub(r'/\*.*?\*/', '', text, flags=re.DOTALL)
+        return '\n'.join(re.sub(r'//.*$', '', line) for line in text.splitlines())
+
+    def _resolve_type_alias_domains(self):
+        for atom in self._atoms:
+            if atom.domain is None and atom.value_type in self._type_aliases:
+                atom.domain = self._type_aliases[atom.value_type]
 
     def integrate_multiple(self, adaptations: List[Adaptation]):
         for adaptation in adaptations:

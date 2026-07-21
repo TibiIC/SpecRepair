@@ -28,6 +28,17 @@ class GR1Atom:
     NAME = 3
     pattern = re.compile(r'^\s*(env|sys)\s+([a-zA-Z0-9_-]+)\s+([a-zA-Z0-9_-]+);?\s*$')
 
+class GR1InlineEnumAtom:
+    ATOM_TYPE = 1
+    VALUES = 2
+    NAME = 3
+    pattern = re.compile(r'^\s*(env|sys)\s*\{([^}]*)\}\s*([a-zA-Z0-9_-]+);?\s*$')
+
+class GR1TypeAlias:
+    NAME = 1
+    VALUES = 2
+    pattern = re.compile(r'^\s*type\s+([a-zA-Z0-9_-]+)\s*=\s*\{([^}]*)\}\s*;?\s*$')
+
 class DeadlockAtomSet:
     ATOM_NAME = 1
     ATOM_VALUE = 2

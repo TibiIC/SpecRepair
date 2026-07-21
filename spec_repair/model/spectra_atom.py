@@ -1,15 +1,29 @@
+from typing import List, Optional
+
 from spec_repair.ltl_types import GR1AtomType
-from spec_repair.util.patterns import GR1Atom
+from spec_repair.util.patterns import GR1Atom, GR1InlineEnumAtom
 
 
 class SpectraAtom:
-    def __init__(self, name: str, value_type: str, atom_type: GR1AtomType):
+    def __init__(self, name: str, value_type: str, atom_type: GR1AtomType, domain: Optional[List[str]] = None):
         self.name = name
         self.value_type = value_type
         self.atom_type = atom_type
+        # Finite set of values this atom can take (enum-typed atoms only).
+        # None means "not a known finite domain" (boolean, Int, or an
+        # unresolved named type) - callers that care about multi-valued
+        # domains should treat None as "no enum domain info available",
+        # not as "this is boolean".
+        self.domain = domain
 
     @staticmethod
     def from_str(atom_str: str):
+        inline_definition = GR1InlineEnumAtom.pattern.match(atom_str)
+        if inline_definition:
+            atom_type = inline_definition.group(GR1InlineEnumAtom.ATOM_TYPE)
+            domain = [v.strip() for v in inline_definition.group(GR1InlineEnumAtom.VALUES).split(",")]
+            name = inline_definition.group(GR1InlineEnumAtom.NAME)
+            return SpectraAtom(name, "enum", GR1AtomType.from_str(atom_type), domain)
         atom_definition = GR1Atom.pattern.match(atom_str)
         if atom_definition:
             name = atom_definition.group(GR1Atom.NAME)

@@ -31,8 +31,11 @@ def format_spec(spec):
     spec = word_sub(spec, "ini", "I ( ")
     spec = word_sub(spec, "asm", "assumption --")
     spec = word_sub(spec, "gar", "guarantee --")
-    # This bit deals with multivalued 'enums'
-    spec, new_vars = enumerate_spec(spec)
+    # Enum-typed ('multivalued') variables are left untouched here - they're
+    # parsed natively (declarations resolved to a domain, `name=value`/
+    # `name!=value` formulas parsed as-is) by SpectraSpecification/
+    # SpectraAtom instead of being desugared to booleans at this stage.
+    new_vars = []
     for i, line in enumerate(spec):
         words = line.strip("\t").split(" ")
         words = [x for x in words if x != ""]
@@ -52,30 +55,6 @@ def format_spec(spec):
     spec = [re.sub('--[A-Z]', lambda m: m.group(0).lower(), x) for x in spec]
     return spec
 
-
-def enumerate_spec(spec):
-    new_vars = []
-    for i, line in enumerate(spec):
-        line = re.sub(r"\s", "", line)
-        words = line.split(" ")
-        reg = re.search(r"(env|sys){", line)
-        if reg:
-            # if words[0] in ['env', 'sys'] and line.find("{") >= 0:
-            enum = extract_string_within("{(.*)}", line, True).split(",")
-            name = extract_string_within("}(.*);", line, True)
-            for value in enum:
-                pattern = f"{name}\s*=\s*{value}"
-                replacement = f"{name}_{value}"
-                new_vars.append(replacement)
-                spec = [re.sub(pattern, replacement, x) for x in spec]
-                pattern = pattern.replace("=", "!=")
-                replacement = f"!{replacement}"
-                spec = [re.sub(pattern, replacement, x) for x in spec]
-            replacement_line = ""
-            for var in new_vars:
-                replacement_line += reg.group(1) + " boolean " + var + ";\n\n"
-            spec[i] = replacement_line
-    return spec, new_vars
 
 def split_top_level(expr, sep):
     parts = []
