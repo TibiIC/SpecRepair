@@ -103,7 +103,21 @@ def to_dnf(f: LTLFormula) -> LTLFormula:
         # all), which is why this looked safe under the existing spot-based
         # test suite. Whatever PREV's true value is at t=0 in Spectra's
         # game, negating from outside vs. pushing the negation inside
-        # doesn't commute across that boundary - stays unimplemented.
+        # doesn't commute across that boundary, so no such rewrite is
+        # applied here - !Prev(x) is left as an opaque, terminal literal
+        # instead (the identity transformation can never be wrong, unlike
+        # guessing an equivalent form). The one thing that *is* still safe
+        # to do first: Prev(A|B)===Prev(A)|Prev(B) doesn't cross the t=0
+        # boundary (see the distribution case below), so if what's inside
+        # Prev reduces to a disjunction, pull it out and De Morgan the
+        # resulting Or of two now-separate Prev(...) terms - standard
+        # boolean De Morgan on an already-computed disjunction, not the
+        # unsafe move of reaching *through* a single Prev.
+        if isinstance(formula, Prev):
+            inner_dnf = to_dnf(formula)
+            if isinstance(inner_dnf, Or):
+                return to_dnf(And(Not(inner_dnf.left), Not(inner_dnf.right)))
+            return Not(inner_dnf)
         raise NotImplementedError("Negation push-down for this formula not implemented")
     if isinstance(f, And):
         left = to_dnf(f.left)
@@ -220,6 +234,20 @@ def is_conjunction_of_literals_and_temporals(f: LTLFormula) -> bool:
             next_count += 1
         elif isinstance(item, Prev):
             if not is_conjunction_of_literals(item.formula):
+                return False
+            prev_count += 1
+        elif isinstance(item, Not) and isinstance(item.formula, Prev):
+            # !Prev(x) that to_dnf left as an opaque literal (it can't be
+            # safely simplified further - !Prev(x) is not Prev(!x) under
+            # Spectra's real semantics, see to_dnf). Still a Prev-reference
+            # for cardinality purposes: this and a bare Prev(...) in the
+            # same conjunct are two independent previous-timestep
+            # references that can't be safely merged into one (that would
+            # need the same false identity), so this must count toward the
+            # same limit rather than bypass it via is_literal - deliberately
+            # not added there, since is_literal's callers elsewhere would
+            # then silently skip this counting too.
+            if not is_conjunction_of_literals(item.formula.formula):
                 return False
             prev_count += 1
         else:
