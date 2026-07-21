@@ -6,7 +6,8 @@ from py_ltl.formula import LTLFormula, Globally, Implies, AtomicProposition, Not
 
 from spec_repair.helpers.parsers.spectra_formula_parser import SpectraFormulaParser
 from spec_repair.helpers.formatters.spot_formula_formatter import SpotFormulaFormatter
-from spec_repair.util.ltl_formula_util import normalize_to_pattern, satisfies_ltl_formula, to_dnf
+from spec_repair.util.ltl_formula_util import normalize_to_pattern, satisfies_ltl_formula, to_dnf, \
+    is_conjunction_of_literals_and_temporals
 
 
 class TestLTLNormalization(unittest.TestCase):
@@ -320,9 +321,9 @@ class TestToDnf(unittest.TestCase):
         self.assertTrue(self._equiv(result, Next(Not(self.a))))
         self._assert_trace_equiv(f, result)
 
-    def test_negated_prev_of_atom_not_implemented(self):
+    def test_negated_prev_of_atom_left_opaque(self):
         """
-        !P(a) is deliberately NOT rewritten to P(!a). This looked like a
+        !P(a) is deliberately NOT rewritten to P(!a) - that looked like a
         safe textbook identity (single-step temporal operators are
         bijective, so negation "should" commute through them same as
         Next), spot agreed both forms were equivalent, and 25 tests here
@@ -335,12 +336,19 @@ class TestToDnf(unittest.TestCase):
         first realizable and the second unrealizable, on the exact same
         variables. SpotFormulaFormatter's shift-based rendering of Prev
         doesn't model the t=0 boundary at all, which is why spot didn't
-        catch this. Whatever the fix eventually is, it isn't "just push
-        the negation through" - stays NotImplementedError until there is one.
+        catch this.
+
+        Instead, to_dnf leaves !Prev(x) as an opaque, terminal literal -
+        the identity transformation, which can never be wrong (unlike
+        guessing an equivalent form). is_conjunction_of_literals_and_
+        temporals recognises this shape too, so formulas containing it
+        don't get rejected downstream just because to_dnf declined to
+        simplify them.
         """
         f = Not(Prev(self.a))
-        with self.assertRaises(NotImplementedError):
-            to_dnf(f)
+        result = to_dnf(f)
+        self.assertTrue(self._equiv(result, f))
+        self.assertEqual(str(result), str(f))  # truly unchanged, not just equivalent
 
     def test_negated_next_of_conjunction(self):
         # !X(a&b) === X(!a)|X(!b) - De Morgan has to reach *through* the Next
@@ -350,10 +358,13 @@ class TestToDnf(unittest.TestCase):
         self.assertTrue(self._equiv(result, expected))
         self._assert_trace_equiv(f, result)
 
-    def test_negated_prev_of_conjunction_not_implemented(self):
+    def test_negated_prev_of_conjunction_left_opaque(self):
+        # !P(a&b) - inner content is already a conjunction of literals, so
+        # there's no Or for the safe Prev(A|B)-distribution case to pull
+        # out first; stays opaque, unchanged.
         f = Not(Prev(And(self.a, self.b)))
-        with self.assertRaises(NotImplementedError):
-            to_dnf(f)
+        result = to_dnf(f)
+        self.assertEqual(str(result), str(f))
 
     def test_negated_next_of_disjunction(self):
         # !X(a|b) === X(!a)&X(!b)
@@ -363,12 +374,33 @@ class TestToDnf(unittest.TestCase):
         self.assertTrue(self._equiv(result, expected))
         self._assert_trace_equiv(f, result)
 
-    def test_negated_prev_of_negation_not_implemented(self):
-        # !P(!a) - same as test_negated_prev_of_atom_not_implemented, just
-        # with the operand itself already negated.
+    def test_negated_prev_of_negation_left_opaque(self):
+        # !P(!a) - same shape as test_negated_prev_of_atom_left_opaque,
+        # just with the operand itself already negated (this is exactly
+        # the ColorSort building block: PREV(b=false) desugars to Prev(!b),
+        # then <->-expansion negates the whole conjunct containing it).
         f = Not(Prev(Not(self.a)))
-        with self.assertRaises(NotImplementedError):
-            to_dnf(f)
+        result = to_dnf(f)
+        self.assertEqual(str(result), str(f))
+
+    def test_negated_prev_of_disjunction_distributes_first(self):
+        """
+        !P(a|b): unlike the atom/conjunction cases above, there IS a safe
+        simplification available here, just not the unsafe "push negation
+        through Prev" one. P(a|b)===P(a)|P(b) doesn't cross the t=0
+        boundary (verified in test_prev_of_or_distributes_out below), so
+        to_dnf pulls the Or out of the Prev first, THEN applies ordinary
+        De Morgan to negate the resulting (ordinary, non-temporal)
+        disjunction of two now-separate P(a)/P(b) terms - standard boolean
+        De Morgan on an already-computed value, not reaching through a
+        single Prev. Confirmed directly against the real Spectra CLI with
+        a G(c -> !PREV(a|b)) / G(!c | (!PREV(a) & !PREV(b))) pair - both
+        realizable, on the same variables.
+        """
+        f = Not(Prev(Or(self.a, self.b)))
+        expected = And(Not(Prev(self.a)), Not(Prev(self.b)))
+        result = to_dnf(f)
+        self.assertTrue(self._equiv(result, expected))
 
     # --- Next/Prev distribution (no negation crossing the Prev boundary,
     # so this stays safe even at t=0 - see the module-level comment in
@@ -390,35 +422,50 @@ class TestToDnf(unittest.TestCase):
         self.assertTrue(self._equiv(result, expected))
         self._assert_trace_equiv(f, result)
 
-    def test_negated_and_containing_prev_not_implemented(self):
-        # This is the literal ColorSort shape that started this
-        # investigation: !(a & PREV(!b)). Confirmed via the real Spectra
-        # CLI (see test_negated_prev_of_atom_not_implemented) that treating
-        # this as !a | PREV(b) is actually wrong, so it correctly raises
-        # instead of silently producing an incorrect DNF.
+    def test_negated_and_containing_prev(self):
+        # The literal ColorSort shape that started this investigation:
+        # !(a & PREV(!b)). De Morgan through the (non-temporal) And is
+        # always safe; what's left of the Prev side, !PREV(!b), is left
+        # opaque rather than "simplified" into the false !PREV(!b)===PREV(b).
         f = Not(And(self.a, Prev(Not(self.b))))
-        with self.assertRaises(NotImplementedError):
-            to_dnf(f)
+        expected = Or(Not(self.a), Not(Prev(Not(self.b))))
+        result = to_dnf(f)
+        self.assertTrue(self._equiv(result, expected))
 
-    def test_full_colorsort_iff_expansion_not_implemented(self):
+    def test_full_colorsort_iff_expansion(self):
         # (a & PREV(!b) & c) | (!(a & PREV(!b)) & !c) - the exact shape
         # produced by desugaring `a & PREV(b=false) <-> c` via A<->B ===
         # (A&B)|(!A&!B), taken directly from ColorSortLTL2_621's
         # `haltButton=PRESS & PREV(haltButton=RELEASE) <-> ...` formula.
-        # Correctly refuses rather than silently computing a wrong DNF.
+        # Confirmed directly against the real Spectra CLI: this exact
+        # shape (as a G(...) guarantee) and its raw, un-normalized form
+        # are both realizable, on the same variables.
         conj = And(self.a, Prev(Not(self.b)))
         f = Or(And(conj, self.c), And(Not(conj), Not(self.c)))
-        with self.assertRaises(NotImplementedError):
-            to_dnf(f)
+        result = to_dnf(f)  # must not raise
+        self._assert_trace_equiv(f, result)
 
-    def test_double_nested_next_prev_negation_not_implemented(self):
+    def test_double_nested_next_prev_negation(self):
         # !X(P(a)): to_dnf correctly pushes the negation through the Next
-        # (safe), but what's left, !P(a), still isn't implemented - the
-        # unsafety of negating Prev doesn't go away just because it's
-        # nested one level deeper.
+        # (safe - verified above), leaving !P(a) opaque underneath it,
+        # exactly as test_negated_prev_of_atom_left_opaque would on its own.
         f = Not(Next(Prev(self.a)))
-        with self.assertRaises(NotImplementedError):
-            to_dnf(f)
+        result = to_dnf(f)
+        self.assertEqual(str(result), str(Next(Not(Prev(self.a)))))
+
+    def test_conflicting_bare_and_negated_prev_in_same_conjunct_rejected(self):
+        """
+        Prev(a) & !Prev(b) in one conjunct: two independent
+        previous-timestep references that can't be safely merged into "at
+        most one Prev" without the same false !Prev(x)===Prev(!x) identity
+        - is_conjunction_of_literals_and_temporals must count the opaque
+        !Prev(b) term toward the same limit as the bare Prev(a), not
+        silently let it slip through as a generic literal (which would
+        undercount and wrongly validate a formula group_temporals_in_and
+        can't actually consolidate into one Prev term).
+        """
+        f = And(Prev(self.a), Not(Prev(self.b)))
+        self.assertFalse(is_conjunction_of_literals_and_temporals(f))
 
 
 if __name__ == "__main__":
