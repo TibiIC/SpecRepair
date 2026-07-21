@@ -178,6 +178,28 @@ def synthesise_extract_counter_strategies(file):
     return output
 
 
+def synthesise_check_realisability_only(file):
+    """
+    Same as synthesise_extract_counter_strategies, minus --counter-strategy:
+    for callers that only need the yes/no realizability verdict (its
+    "Result: Specification is (un)?realizable" line) and never touch the
+    strategy. --counter-strategy makes the BDD-based synthesis compute and
+    materialize a full counter-strategy even when nothing downstream reads
+    it, which can be dramatically more expensive - confirmed on a spec with
+    a large boolean-expanded state space where --counter-strategy ran the
+    JVM's BDD engine past 12.8M nodes and out of heap memory, while this
+    (otherwise identical) call completed in seconds.
+    """
+    if violations_in_initial_conditions(file):
+        print("Spectra file in wrong format for CLI realizability check: (initial conditions)")
+        print(file)
+        return None
+    file = pRespondsToS_substitution(file)
+    args = ["-i", file, "--jtlv"]
+    output = run_spectra_cli(args)
+    return output
+
+
 def synthesise_controller(spec_file_path, output_folder_path, suppress=False) -> bool:
     if violations_in_initial_conditions(spec_file_path):
         print("Spectra file in wrong format for CLI realizability check: (initial conditions)")

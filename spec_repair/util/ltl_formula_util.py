@@ -84,13 +84,26 @@ def to_dnf(f: LTLFormula) -> LTLFormula:
             return to_dnf(Or(Not(formula.left), Not(formula.right)))
         if isinstance(formula, Or):
             return to_dnf(And(Not(formula.left), Not(formula.right)))
-        # !Next(x) === Next(!x), !Prev(x) === Prev(!x) - single-step
-        # temporal operators are bijective per-step, so negation commutes
-        # through them just like it does through And/Or above.
+        # !Next(x) === Next(!x): Next never hits a real boundary in
+        # Spectra's realizability game (it's forward-infinite, so there's
+        # always a next state to talk about), so negation commutes through
+        # it same as And/Or above - confirmed by checking the real Spectra
+        # CLI directly on both forms of a minimal <->-shaped example.
         if isinstance(formula, Next):
             return to_dnf(Next(Not(formula.formula)))
-        if isinstance(formula, Prev):
-            return to_dnf(Prev(Not(formula.formula)))
+        # !Prev(x) is deliberately NOT rewritten to Prev(!x): unlike Next,
+        # Prev has a real, unavoidable boundary at the very first state
+        # (t=0) even in a forward-infinite game - there's no "before the
+        # beginning". Confirmed directly against the real Spectra CLI this
+        # identity is FALSE there: a minimal <->-shaped spec built with
+        # !(a&PREV(!a)) was realizable, the algebraically-"equivalent"
+        # Prev(a)-pushed-through form was not, on the exact same variables.
+        # Spot said they were equivalent (its SpotFormulaFormatter renders
+        # PREV via a shift trick that doesn't model the t=0 boundary at
+        # all), which is why this looked safe under the existing spot-based
+        # test suite. Whatever PREV's true value is at t=0 in Spectra's
+        # game, negating from outside vs. pushing the negation inside
+        # doesn't commute across that boundary - stays unimplemented.
         raise NotImplementedError("Negation push-down for this formula not implemented")
     if isinstance(f, And):
         left = to_dnf(f.left)
@@ -112,7 +125,11 @@ def to_dnf(f: LTLFormula) -> LTLFormula:
     # Next(A|B) === Next(A)|Next(B), Prev(A|B) === Prev(A)|Prev(B) - distribute
     # out of the temporal wrapper so a disjunction produced by De Morgan above
     # doesn't get stuck inside a Next/Prev that group_temporals_in_and only
-    # ever expects to wrap a conjunction of literals.
+    # ever expects to wrap a conjunction of literals. Both directions are
+    # safe even at Prev's t=0 boundary (unlike negation above): whatever
+    # vacuous value Prev(x) takes there, both sides of this identity get it
+    # the same way, since no negation is flipping one side of the boundary
+    # and not the other - confirmed directly against the real Spectra CLI.
     if isinstance(f, Next):
         inner = to_dnf(f.formula)
         if isinstance(inner, Or):

@@ -320,12 +320,27 @@ class TestToDnf(unittest.TestCase):
         self.assertTrue(self._equiv(result, Next(Not(self.a))))
         self._assert_trace_equiv(f, result)
 
-    def test_negated_prev_of_atom(self):
-        # !P(a) === P(!a)
+    def test_negated_prev_of_atom_not_implemented(self):
+        """
+        !P(a) is deliberately NOT rewritten to P(!a). This looked like a
+        safe textbook identity (single-step temporal operators are
+        bijective, so negation "should" commute through them same as
+        Next), spot agreed both forms were equivalent, and 25 tests here
+        confirmed no regressions - but it's actually FALSE under real
+        Spectra semantics specifically because Prev has a genuine boundary
+        at t=0 that Next never hits in a forward-infinite realizability
+        game. Confirmed directly against the real Spectra CLI: built a
+        minimal <->-shaped spec using !(a&PREV(!a)) as one guarantee and
+        the "equivalent" Prev-pushed form as another - the CLI called the
+        first realizable and the second unrealizable, on the exact same
+        variables. SpotFormulaFormatter's shift-based rendering of Prev
+        doesn't model the t=0 boundary at all, which is why spot didn't
+        catch this. Whatever the fix eventually is, it isn't "just push
+        the negation through" - stays NotImplementedError until there is one.
+        """
         f = Not(Prev(self.a))
-        result = to_dnf(f)
-        self.assertTrue(self._equiv(result, Prev(Not(self.a))))
-        self._assert_trace_equiv(f, result)
+        with self.assertRaises(NotImplementedError):
+            to_dnf(f)
 
     def test_negated_next_of_conjunction(self):
         # !X(a&b) === X(!a)|X(!b) - De Morgan has to reach *through* the Next
@@ -335,12 +350,10 @@ class TestToDnf(unittest.TestCase):
         self.assertTrue(self._equiv(result, expected))
         self._assert_trace_equiv(f, result)
 
-    def test_negated_prev_of_conjunction(self):
+    def test_negated_prev_of_conjunction_not_implemented(self):
         f = Not(Prev(And(self.a, self.b)))
-        expected = Or(Prev(Not(self.a)), Prev(Not(self.b)))
-        result = to_dnf(f)
-        self.assertTrue(self._equiv(result, expected))
-        self._assert_trace_equiv(f, result)
+        with self.assertRaises(NotImplementedError):
+            to_dnf(f)
 
     def test_negated_next_of_disjunction(self):
         # !X(a|b) === X(!a)&X(!b)
@@ -350,16 +363,18 @@ class TestToDnf(unittest.TestCase):
         self.assertTrue(self._equiv(result, expected))
         self._assert_trace_equiv(f, result)
 
-    def test_negated_prev_of_negation(self):
-        # !P(!a) === P(a)
+    def test_negated_prev_of_negation_not_implemented(self):
+        # !P(!a) - same as test_negated_prev_of_atom_not_implemented, just
+        # with the operand itself already negated.
         f = Not(Prev(Not(self.a)))
-        result = to_dnf(f)
-        self.assertTrue(self._equiv(result, Prev(self.a)))
-        self._assert_trace_equiv(f, result)
+        with self.assertRaises(NotImplementedError):
+            to_dnf(f)
 
-    # --- Next/Prev distribution: a disjunction produced *inside* the
-    # wrapper (e.g. by De Morgan) must escape it, since nothing downstream
-    # expects Next/Prev to ever wrap an Or ---
+    # --- Next/Prev distribution (no negation crossing the Prev boundary,
+    # so this stays safe even at t=0 - see the module-level comment in
+    # to_dnf): a disjunction produced *inside* the wrapper (e.g. by De
+    # Morgan on a Next) must escape it, since nothing downstream expects
+    # Next/Prev to ever wrap an Or ---
 
     def test_next_of_or_distributes_out(self):
         f = Next(Or(self.a, self.b))
@@ -375,87 +390,35 @@ class TestToDnf(unittest.TestCase):
         self.assertTrue(self._equiv(result, expected))
         self._assert_trace_equiv(f, result)
 
-    def test_negated_and_containing_prev_distributes_out(self):
-        # This is the literal ColorSort shape: !(a & PREV(!b)) === !a | PREV(b)
+    def test_negated_and_containing_prev_not_implemented(self):
+        # This is the literal ColorSort shape that started this
+        # investigation: !(a & PREV(!b)). Confirmed via the real Spectra
+        # CLI (see test_negated_prev_of_atom_not_implemented) that treating
+        # this as !a | PREV(b) is actually wrong, so it correctly raises
+        # instead of silently producing an incorrect DNF.
         f = Not(And(self.a, Prev(Not(self.b))))
-        expected = Or(Not(self.a), Prev(self.b))
-        result = to_dnf(f)
-        self.assertTrue(self._equiv(result, expected))
-        self._assert_trace_equiv(f, result)
+        with self.assertRaises(NotImplementedError):
+            to_dnf(f)
 
-    def test_full_colorsort_iff_expansion_does_not_raise(self):
+    def test_full_colorsort_iff_expansion_not_implemented(self):
         # (a & PREV(!b) & c) | (!(a & PREV(!b)) & !c) - the exact shape
         # produced by desugaring `a & PREV(b=false) <-> c` via A<->B ===
         # (A&B)|(!A&!B), taken directly from ColorSortLTL2_621's
         # `haltButton=PRESS & PREV(haltButton=RELEASE) <-> ...` formula.
-        #
-        # Deliberately not spot-checked here (unlike the other tests in this
-        # class): SpotFormulaFormatter renders Prev via a shift-compensation
-        # trick (wrap the rest of the formula in extra X(...) to line up
-        # timeframes) that's only reliable when Prev sits at a consistent
-        # depth relative to its siblings. to_dnf's distribution genuinely
-        # changes that depth (confirmed - the formatted strings for `f` and
-        # `result` end up with different absolute X(...) nesting even though
-        # both are correct), so spot.are_equivalent on the two would be
-        # comparing apples to oranges - a formatter limitation, not a to_dnf
-        # bug. _assert_trace_equiv (a direct AST-level interpreter, no
-        # text/shift trick involved) is the trustworthy check here.
+        # Correctly refuses rather than silently computing a wrong DNF.
         conj = And(self.a, Prev(Not(self.b)))
         f = Or(And(conj, self.c), And(Not(conj), Not(self.c)))
-        result = to_dnf(f)  # must not raise NotImplementedError
-        self._assert_trace_equiv(f, result)
+        with self.assertRaises(NotImplementedError):
+            to_dnf(f)
 
-    def test_double_nested_next_prev_negation(self):
-        # !X(P(a)) === X(!P(a)) - to_dnf doesn't need to look inside P(a)
-        # any further since it's already a literal-wrapping-Prev.
+    def test_double_nested_next_prev_negation_not_implemented(self):
+        # !X(P(a)): to_dnf correctly pushes the negation through the Next
+        # (safe), but what's left, !P(a), still isn't implemented - the
+        # unsafety of negating Prev doesn't go away just because it's
+        # nested one level deeper.
         f = Not(Next(Prev(self.a)))
-        result = to_dnf(f)
-        self.assertTrue(self._equiv(result, Next(Not(Prev(self.a)))))
-        self._assert_trace_equiv(f, result)
-
-    def test_next_prev_negation_disagrees_at_trace_boundary(self):
-        """
-        Documents a real, pre-existing (not introduced by this fix) quirk:
-        !Next(x)/Next(!x) and !Prev(x)/Prev(!x) are only equivalent at
-        *interior* trace positions under satisfies_ltl_formula's specific
-        finite-trace convention, which is proper LTL equivalence (as spot,
-        the actual semantic authority, confirms - see test_negated_next_of_atom/
-        test_negated_prev_of_atom's _equiv assertions) but not something a
-        finite-trace evaluator can preserve exactly at the edges: Next at
-        the last state and Prev at the first are hard-coded to vacuously
-        return False *regardless of what they wrap* (predates to_dnf
-        entirely - the same rule test_next_false_end_of_trace already
-        exercises for Next alone), so a negation on the *outside* of the
-        operator (True at the boundary) and a negation pushed *inside* it
-        (still forced False by the same rule) genuinely part ways there.
-        Not a live bug: satisfies_ltl_formula is never called on a
-        to_dnf'd formula in production (the real repair/diagnosis pipeline
-        checks realizability via the actual Spectra CLI on the round-tripped
-        formula text, not via this interpreter), only directly on freshly
-        parsed formulas (see spec_repair/model/counter_trace.py's
-        `satisfies`, always called at t=0 on a single-state trace, so this
-        never manifests there either).
-        """
-        a = self.a
-        trace = [{"a"}, {"b"}, {"a", "b"}]
-
-        # Prev boundary: t=0, no previous state.
-        original_prev = Not(Prev(a))
-        dnf_prev = to_dnf(original_prev)
-        self.assertTrue(self._equiv(dnf_prev, Prev(Not(a))))  # equivalent under spot...
-        self.assertNotEqual(
-            satisfies_ltl_formula(original_prev, trace, 0),
-            satisfies_ltl_formula(dnf_prev, trace, 0),
-        )  # ...but not at t=0 under this interpreter's vacuous-boundary rule
-
-        # Next boundary: t=len(trace)-1, no next state.
-        original_next = Not(Next(a))
-        dnf_next = to_dnf(original_next)
-        self.assertTrue(self._equiv(dnf_next, Next(Not(a))))
-        self.assertNotEqual(
-            satisfies_ltl_formula(original_next, trace, len(trace) - 1),
-            satisfies_ltl_formula(dnf_next, trace, len(trace) - 1),
-        )
+        with self.assertRaises(NotImplementedError):
+            to_dnf(f)
 
 
 if __name__ == "__main__":
