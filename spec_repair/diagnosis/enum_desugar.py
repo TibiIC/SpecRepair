@@ -268,16 +268,101 @@ def _normalize_temporal_operand_equality(formula: str) -> str:
     return _TEMPORAL_OPERAND_EQ_RE.sub(r'\1(\2\3\4)', formula)
 
 
+def _value_expr(var_name: str, enum_var: EnumVar, value_index: int) -> str:
+    """
+    Boolean expression for "var_name equals its value_index-th domain
+    value": the bare indicator for one of the first n_indicators values, or
+    the negated-conjunction-of-all-indicators "else" expression for the one
+    remaining value with no indicator of its own.
+    """
+    if value_index < enum_var.n_indicators:
+        return enum_var.indicator_name(var_name, value_index)
+    negated = " & ".join(
+        f"!{enum_var.indicator_name(var_name, k)}" for k in range(enum_var.n_indicators)
+    )
+    return f"({negated})"
+
+
+_ENUM_TO_ENUM_CMP_RE = re.compile(
+    r'\b(?:(?P<lop>next|prev|PREV)\((?P<lvar1>[A-Za-z_][A-Za-z0-9_]*)\)|(?P<lvar2>[A-Za-z_][A-Za-z0-9_]*))'
+    r'(?P<neq>!?=)'
+    r'(?:(?P<rop>next|prev|PREV)\((?P<rvar1>[A-Za-z_][A-Za-z0-9_]*)\)|(?P<rvar2>[A-Za-z_][A-Za-z0-9_]*))'
+)
+
+
+def _substitute_enum_to_enum_comparisons(formula: str, enum_vars: Dict[str, EnumVar]) -> str:
+    """
+    detect=spec_currentColor, detect!=spec_currentColor, color=next(spec_
+    currentColor), next(spec_currentColor)=spec_currentColor: comparing two
+    enum-typed variables to each other (optionally with one side wrapped in
+    next(...)/prev(...)) rather than comparing one to a literal domain
+    value - _substitute_enum_comparisons only handles the latter (it tries
+    to match the right-hand identifier against each of the *left* variable's
+    own domain values, which silently never fires when the right-hand side
+    is itself another enum variable's name). Must run before that function
+    and before _normalize_temporal_operand_equality, since a match here
+    consumes the whole comparison outright rather than just relocating a
+    next(...) wrapper - if left unhandled here first, e.g.
+    next(spec_currentColor)=spec_currentColor would get normalized to
+    next(spec_currentColor=spec_currentColor) and then silently fail to
+    substitute at all, since "spec_currentColor" isn't one of its own
+    domain values.
+
+    "var1 = var2" desugars to a disjunction of "both sides pick the same
+    shared domain value" - values that exist in only one variable's domain
+    can never make the comparison true, so they're simply skipped (matching
+    the strong spec's assumption of well-typed enum comparisons where
+    var1's and var2's domains are meant to overlap in practice).
+
+    "var1 != var2" is deliberately *not* generated as a negation of that
+    disjunction: to_dnf's De Morgan step would turn each equal-value
+    conjunct into a 2-literal disjunction, and distributing AND back over
+    N such disjuncts is exponential in N - confirmed, a 6-value color enum
+    already blows the recursion limit that way. Instead it's generated
+    directly as the disjunction of *unequal*-value pairs (any (lv, rv)
+    with lv != rv, over the full cross-product of both domains, not just
+    shared values - a value unique to one side always makes them unequal
+    regardless of what the other side is): already flat EDNF as-is, so
+    to_dnf never needs to distribute anything, at the cost of more (but
+    only polynomially more, not exponentially) disjuncts.
+    """
+    def replace(m: re.Match) -> str:
+        lvar = m.group("lvar1") or m.group("lvar2")
+        rvar = m.group("rvar1") or m.group("rvar2")
+        if lvar not in enum_vars or rvar not in enum_vars:
+            return m.group(0)
+        lop, rop = m.group("lop"), m.group("rop")
+        left_enum, right_enum = enum_vars[lvar], enum_vars[rvar]
+        is_neq = m.group("neq") == "!="
+        value_pairs = (
+            [(lv, rv) for lv in left_enum.values for rv in right_enum.values if lv != rv]
+            if is_neq
+            else [(v, v) for v in left_enum.values if v in right_enum.values]
+        )
+        if not value_pairs:
+            # Equals with no shared values: can never match. Not-equals
+            # with no unequal pairs: both domains reduce to the same single
+            # value, so they're forced equal, so "not equal" never holds
+            # either. Both cases are simply "false".
+            return "false"
+        disjuncts = []
+        for lv, rv in value_pairs:
+            left = _value_expr(lvar, left_enum, left_enum.values.index(lv))
+            right = _value_expr(rvar, right_enum, right_enum.values.index(rv))
+            if lop:
+                left = f"{lop}({left})"
+            if rop:
+                right = f"{rop}({right})"
+            disjuncts.append(f"({left}&{right})")
+        return "(" + "|".join(disjuncts) + ")"
+
+    return _ENUM_TO_ENUM_CMP_RE.sub(replace, formula)
+
+
 def _substitute_enum_comparisons(formula: str, enum_vars: Dict[str, EnumVar]) -> str:
     for var_name, enum_var in enum_vars.items():
         for i, value in enumerate(enum_var.values):
-            if i < enum_var.n_indicators:
-                replacement = enum_var.indicator_name(var_name, i)
-            else:
-                negated = " & ".join(
-                    f"!{enum_var.indicator_name(var_name, k)}" for k in range(enum_var.n_indicators)
-                )
-                replacement = f"({negated})"
+            replacement = _value_expr(var_name, enum_var, i)
             eq_pattern = re.compile(rf'\b{re.escape(var_name)}\s*=\s*{re.escape(value)}\b')
             formula = eq_pattern.sub(replacement, formula)
             if i < enum_var.n_indicators:
@@ -315,12 +400,25 @@ def _substitute_pattern_calls(formula: str) -> str:
     return formula
 
 
-def _mutual_exclusion_formula(var_name: str, enum_var: EnumVar) -> Optional[str]:
+def _mutual_exclusion_formulas(var_name: str, enum_var: EnumVar) -> List[str]:
+    """
+    One G(!(a&b)); formula per indicator pair, rather than a single
+    G(pair1 & pair2 & ...); conjoining all of them - semantically identical
+    (G distributes over & - G(A&B&...) === G(A)&G(B)&...), but a single
+    big conjunction of many negated-pair clauses forces to_dnf to fully
+    distribute AND over the OR each De Morgan'd clause becomes, which is
+    exponential in the number of pairs (confirmed: 10 pairs, from a 6-value
+    enum, already blows Python's recursion limit converting it to DNF).
+    Splitting per pair means to_dnf only ever sees one tiny 2-literal
+    disjunction per formula.
+    """
     if enum_var.n_indicators < 2:
-        return None
+        return []
     indicators = [enum_var.indicator_name(var_name, i) for i in range(enum_var.n_indicators)]
-    pairs = [f"!({a}&{b})" for idx, a in enumerate(indicators) for b in indicators[idx + 1:]]
-    return f"G({' & '.join(pairs)});"
+    return [
+        f"G(!({a}&{b}));"
+        for idx, a in enumerate(indicators) for b in indicators[idx + 1:]
+    ]
 
 
 def desugar_spectra_text(raw_text: str) -> DesugarResult:
@@ -345,6 +443,7 @@ def desugar_spectra_text(raw_text: str) -> DesugarResult:
 
     formulas: List[Tuple[str, str, str]] = []  # (keyword, name, body)
     unnamed_counters: Dict[str, int] = {}
+    seen_names: Dict[str, int] = {}
     i = 0
     n = len(lines)
     while i < n:
@@ -367,6 +466,18 @@ def desugar_spectra_text(raw_text: str) -> DesugarResult:
         if not name:
             unnamed_counters[keyword] = unnamed_counters.get(keyword, 0) + 1
             name = f"unnamed_{keyword}_{unnamed_counters[keyword]}"
+        if name in seen_names:
+            # SYNTECH source files sometimes reuse the same descriptive
+            # comment as the name for multiple distinct formulas (e.g. every
+            # speed-transition rule in ColorSort named "if the speed button
+            # is pressed, increase the speed by one level") - harmless as a
+            # comment, but SpectraSpecification requires unique formula
+            # names, so disambiguate with a counter suffix rather than
+            # erroring out on what's really just a naming collision.
+            seen_names[name] += 1
+            name = f"{name} ({seen_names[name]})"
+        else:
+            seen_names[name] = 1
         formulas.append((keyword, name, body))
         i = j + 1
 
@@ -377,6 +488,7 @@ def desugar_spectra_text(raw_text: str) -> DesugarResult:
         rewritten_formulas = []
         for keyword, name, body in formulas:
             body = _substitute_pattern_calls(body)
+            body = _substitute_enum_to_enum_comparisons(body, enum_vars)
             body = _normalize_temporal_operand_equality(body)
             body = _substitute_enum_comparisons(body, enum_vars)
             body = _desugar_iff(body)
@@ -400,10 +512,12 @@ def desugar_spectra_text(raw_text: str) -> DesugarResult:
         out_lines.append("")
 
     for var_name, enum_var in enum_vars.items():
-        mutex = _mutual_exclusion_formula(var_name, enum_var)
-        if mutex:
-            formula_keyword = "assumption" if enum_var.kind == "env" else "guarantee"
-            out_lines.append(f"{formula_keyword} -- {var_name}_mutual_exclusion")
+        mutex_formulas = _mutual_exclusion_formulas(var_name, enum_var)
+        formula_keyword = "assumption" if enum_var.kind == "env" else "guarantee"
+        for idx, mutex in enumerate(mutex_formulas, start=1):
+            base_name = f"{var_name}_mutual_exclusion"
+            name = base_name if len(mutex_formulas) == 1 else f"{base_name}_{idx}"
+            out_lines.append(f"{formula_keyword} -- {name}")
             out_lines.append(f"\t{mutex}")
             out_lines.append("")
 
