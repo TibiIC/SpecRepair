@@ -246,6 +246,28 @@ def _desugar_iff(formula: str) -> str:
     return "".join(result)
 
 
+_TEMPORAL_OPERAND_EQ_RE = re.compile(r'\b(next|prev|PREV)\(([A-Za-z_][A-Za-z0-9_]*)\)(!?=)([A-Za-z0-9_]+)')
+
+
+def _normalize_temporal_operand_equality(formula: str) -> str:
+    """
+    next(var)=VALUE and next(var)!=VALUE (equality applied to the temporal
+    operator's *result*) are used interchangeably with next(var=VALUE) /
+    next(var!=VALUE) (equality written *inside* it) across the SYNTECH
+    corpus for the same meaning - e.g. `next(spec_stage)=WAIT` alongside
+    `PREV(spec_pausing=GO)` in the same ColorSort file. _substitute_enum_
+    comparisons only recognises the "inside" spelling (its regex requires
+    the var name immediately followed by =/!=), so the "outside" spelling
+    silently passes through untouched, leaving a bare unresolved enum var
+    name next to a dangling comparison. Rewriting it onto the "inside"
+    spelling first means the rest of the pipeline needs no separate case
+    for it, and next(...)/prev(...) end up wrapping only a plain boolean
+    comparison either way - exactly what the (unmodified) downstream
+    boolean-only parser already accepts.
+    """
+    return _TEMPORAL_OPERAND_EQ_RE.sub(r'\1(\2\3\4)', formula)
+
+
 def _substitute_enum_comparisons(formula: str, enum_vars: Dict[str, EnumVar]) -> str:
     for var_name, enum_var in enum_vars.items():
         for i, value in enumerate(enum_var.values):
@@ -355,6 +377,7 @@ def desugar_spectra_text(raw_text: str) -> DesugarResult:
         rewritten_formulas = []
         for keyword, name, body in formulas:
             body = _substitute_pattern_calls(body)
+            body = _normalize_temporal_operand_equality(body)
             body = _substitute_enum_comparisons(body, enum_vars)
             body = _desugar_iff(body)
             body = _distribute_next_over_or(body)

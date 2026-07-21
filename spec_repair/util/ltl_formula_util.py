@@ -84,6 +84,13 @@ def to_dnf(f: LTLFormula) -> LTLFormula:
             return to_dnf(Or(Not(formula.left), Not(formula.right)))
         if isinstance(formula, Or):
             return to_dnf(And(Not(formula.left), Not(formula.right)))
+        # !Next(x) === Next(!x), !Prev(x) === Prev(!x) - single-step
+        # temporal operators are bijective per-step, so negation commutes
+        # through them just like it does through And/Or above.
+        if isinstance(formula, Next):
+            return to_dnf(Next(Not(formula.formula)))
+        if isinstance(formula, Prev):
+            return to_dnf(Prev(Not(formula.formula)))
         raise NotImplementedError("Negation push-down for this formula not implemented")
     if isinstance(f, And):
         left = to_dnf(f.left)
@@ -102,8 +109,21 @@ def to_dnf(f: LTLFormula) -> LTLFormula:
         return Or(left, right)
     if isinstance(f, Implies):
         return to_dnf(Or(Not(f.left), f.right))
-    # Temporal operators and others we don't convert to DNF:
-    # Return as-is or raise
+    # Next(A|B) === Next(A)|Next(B), Prev(A|B) === Prev(A)|Prev(B) - distribute
+    # out of the temporal wrapper so a disjunction produced by De Morgan above
+    # doesn't get stuck inside a Next/Prev that group_temporals_in_and only
+    # ever expects to wrap a conjunction of literals.
+    if isinstance(f, Next):
+        inner = to_dnf(f.formula)
+        if isinstance(inner, Or):
+            return to_dnf(Or(Next(inner.left), Next(inner.right)))
+        return Next(inner)
+    if isinstance(f, Prev):
+        inner = to_dnf(f.formula)
+        if isinstance(inner, Or):
+            return to_dnf(Or(Prev(inner.left), Prev(inner.right)))
+        return Prev(inner)
+    # Other constructs we don't convert to DNF: return as-is
     return f
 
 
@@ -271,7 +291,7 @@ def satisfies_ltl_formula(this_formula: LTLFormula, trace: List[Set[str]], t: in
             return satisfies_ltl_formula(formula, trace, t + 1)
         case Prev(formula=formula):
             if t - 1 >= 0:
-                satisfies_ltl_formula(formula, trace, t - 1)
+                return satisfies_ltl_formula(formula, trace, t - 1)
             return False
         case Eventually(formula=formula):
             return any(satisfies_ltl_formula(formula, trace, j) for j in range(t, len(trace)))
