@@ -198,10 +198,20 @@ class ASPExceptionFormatter(ILTLFormatter):
         return output
 
     def format_boilerplate_root_antecedent_holds(self, atoms, i):
+        # PARTIAL FIX - see docs/session-notes/2026-07-23-next-antecedent-prev-consequent-asp-gaps.md
+        # not weak_timepoint(T2,S): the synthetic boundary timepoint is what lets an
+        # unresolved consequent-side Next/Eventually get the benefit of the doubt at
+        # trace truncation (both holds_at and not_holds_at are true there). Reused
+        # for an antecedent, that same trick unconditionally satisfies e.g. next(x)
+        # at the trace's last real timepoint regardless of actual data, manufacturing
+        # a violation that isn't really in the trace. Excluding T2=weak here makes
+        # that antecedent branch simply fail to derive at the boundary instead - a
+        # no-op for current/prev (T2 can never be the synthetic timepoint for those).
         output = f"root_antecedent_holds(OP,{{name}},{i},T1,S):-\n"
         output += "\ttrace(S),\n"
         output += "\ttimepoint(T1,S),\n"
         output += "\ttimepoint(T2,S),\n"
+        output += "\tnot weak_timepoint(T2,S),\n"
         output += "\ttemporal_operator(OP),\n"
         output += "\ttimepoint_of_op(OP,T1,T2,S)"
         for atom in atoms:

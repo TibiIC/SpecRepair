@@ -496,6 +496,7 @@ root_antecedent_holds(OP,{name},0,T1,S):-
 \ttrace(S),
 \ttimepoint(T1,S),
 \ttimepoint(T2,S),
+\tnot weak_timepoint(T2,S),
 \ttemporal_operator(OP),
 \ttimepoint_of_op(OP,T1,T2,S),
 \tholds_at(a,T2,S).
@@ -530,6 +531,7 @@ root_antecedent_holds(OP,{name},0,T1,S):-
 \ttrace(S),
 \ttimepoint(T1,S),
 \ttimepoint(T2,S),
+\tnot weak_timepoint(T2,S),
 \ttemporal_operator(OP),
 \ttimepoint_of_op(OP,T1,T2,S),
 \tnot_holds_at(a,T2,S).
@@ -564,6 +566,7 @@ root_antecedent_holds(OP,{name},0,T1,S):-
 \ttrace(S),
 \ttimepoint(T1,S),
 \ttimepoint(T2,S),
+\tnot weak_timepoint(T2,S),
 \ttemporal_operator(OP),
 \ttimepoint_of_op(OP,T1,T2,S),
 \tnot_holds_at(a,T2,S).
@@ -596,6 +599,7 @@ root_antecedent_holds(OP,{name},0,T1,S):-
 \ttrace(S),
 \ttimepoint(T1,S),
 \ttimepoint(T2,S),
+\tnot weak_timepoint(T2,S),
 \ttemporal_operator(OP),
 \ttimepoint_of_op(OP,T1,T2,S),
 \tholds_at(b,T2,S).
@@ -630,6 +634,7 @@ root_antecedent_holds(OP,{name},0,T1,S):-
 \ttrace(S),
 \ttimepoint(T1,S),
 \ttimepoint(T2,S),
+\tnot weak_timepoint(T2,S),
 \ttemporal_operator(OP),
 \ttimepoint_of_op(OP,T1,T2,S),
 \tholds_at(a,T2,S),
@@ -667,6 +672,7 @@ root_antecedent_holds(OP,{name},0,T1,S):-
 \ttrace(S),
 \ttimepoint(T1,S),
 \ttimepoint(T2,S),
+\tnot weak_timepoint(T2,S),
 \ttemporal_operator(OP),
 \ttimepoint_of_op(OP,T1,T2,S),
 \tholds_at(a,T2,S).
@@ -675,6 +681,7 @@ root_antecedent_holds(OP,{name},1,T1,S):-
 \ttrace(S),
 \ttimepoint(T1,S),
 \ttimepoint(T2,S),
+\tnot weak_timepoint(T2,S),
 \ttemporal_operator(OP),
 \ttimepoint_of_op(OP,T1,T2,S),
 \tholds_at(b,T2,S).
@@ -711,6 +718,7 @@ root_antecedent_holds(OP,{name},0,T1,S):-
 \ttrace(S),
 \ttimepoint(T1,S),
 \ttimepoint(T2,S),
+\tnot weak_timepoint(T2,S),
 \ttemporal_operator(OP),
 \ttimepoint_of_op(OP,T1,T2,S),
 \tholds_at(a,T2,S),
@@ -748,6 +756,7 @@ root_antecedent_holds(OP,{name},0,T1,S):-
 \ttrace(S),
 \ttimepoint(T1,S),
 \ttimepoint(T2,S),
+\tnot weak_timepoint(T2,S),
 \ttemporal_operator(OP),
 \ttimepoint_of_op(OP,T1,T2,S),
 \tholds_at(a,T2,S).
@@ -762,6 +771,7 @@ root_antecedent_holds(OP,{name},1,T1,S):-
 \ttrace(S),
 \ttimepoint(T1,S),
 \ttimepoint(T2,S),
+\tnot weak_timepoint(T2,S),
 \ttemporal_operator(OP),
 \ttimepoint_of_op(OP,T1,T2,S),
 \tholds_at(b,T2,S).
@@ -798,6 +808,7 @@ root_antecedent_holds(OP,{name},0,T1,S):-
 \ttrace(S),
 \ttimepoint(T1,S),
 \ttimepoint(T2,S),
+\tnot weak_timepoint(T2,S),
 \ttemporal_operator(OP),
 \ttimepoint_of_op(OP,T1,T2,S),
 \tholds_at(a,T2,S).
@@ -812,6 +823,7 @@ root_antecedent_holds(OP,{name},1,T1,S):-
 \ttrace(S),
 \ttimepoint(T1,S),
 \ttimepoint(T2,S),
+\tnot weak_timepoint(T2,S),
 \ttemporal_operator(OP),
 \ttimepoint_of_op(OP,T1,T2,S),
 \tholds_at(b,T2,S).
@@ -826,6 +838,7 @@ root_antecedent_holds(OP,{name},2,T1,S):-
 \ttrace(S),
 \ttimepoint(T1,S),
 \ttimepoint(T2,S),
+\tnot weak_timepoint(T2,S),
 \ttemporal_operator(OP),
 \ttimepoint_of_op(OP,T1,T2,S),
 \tholds_at(c,T2,S).
@@ -869,6 +882,7 @@ root_antecedent_holds(OP,{name},0,T1,S):-
 \ttrace(S),
 \ttimepoint(T1,S),
 \ttimepoint(T2,S),
+\tnot weak_timepoint(T2,S),
 \ttemporal_operator(OP),
 \ttimepoint_of_op(OP,T1,T2,S),
 \tholds_at(a,T2,S),
@@ -885,6 +899,7 @@ root_antecedent_holds(OP,{name},1,T1,S):-
 \ttrace(S),
 \ttimepoint(T1,S),
 \ttimepoint(T2,S),
+\tnot weak_timepoint(T2,S),
 \ttemporal_operator(OP),
 \ttimepoint_of_op(OP,T1,T2,S),
 \tholds_at(d,T2,S),
@@ -901,6 +916,7 @@ root_antecedent_holds(OP,{name},2,T1,S):-
 \ttrace(S),
 \ttimepoint(T1,S),
 \ttimepoint(T2,S),
+\tnot weak_timepoint(T2,S),
 \ttemporal_operator(OP),
 \ttimepoint_of_op(OP,T1,T2,S),
 \tholds_at(g,T2,S),
@@ -948,6 +964,7 @@ root_antecedent_holds(OP,{name},0,T1,S):-
 \ttrace(S),
 \ttimepoint(T1,S),
 \ttimepoint(T2,S),
+\tnot weak_timepoint(T2,S),
 \ttemporal_operator(OP),
 \ttimepoint_of_op(OP,T1,T2,S),
 \tholds_at(a,T2,S).
@@ -956,6 +973,7 @@ root_antecedent_holds(OP,{name},1,T1,S):-
 \ttrace(S),
 \ttimepoint(T1,S),
 \ttimepoint(T2,S),
+\tnot weak_timepoint(T2,S),
 \ttemporal_operator(OP),
 \ttimepoint_of_op(OP,T1,T2,S),
 \tholds_at(b,T2,S).
@@ -964,6 +982,7 @@ root_antecedent_holds(OP,{name},2,T1,S):-
 \ttrace(S),
 \ttimepoint(T1,S),
 \ttimepoint(T2,S),
+\tnot weak_timepoint(T2,S),
 \ttemporal_operator(OP),
 \ttimepoint_of_op(OP,T1,T2,S),
 \tholds_at(c,T2,S).
@@ -980,6 +999,7 @@ root_antecedent_holds(OP,{name},3,T1,S):-
 \ttrace(S),
 \ttimepoint(T1,S),
 \ttimepoint(T2,S),
+\tnot weak_timepoint(T2,S),
 \ttemporal_operator(OP),
 \ttimepoint_of_op(OP,T1,T2,S),
 \tholds_at(d,T2,S).
@@ -988,6 +1008,7 @@ root_antecedent_holds(OP,{name},4,T1,S):-
 \ttrace(S),
 \ttimepoint(T1,S),
 \ttimepoint(T2,S),
+\tnot weak_timepoint(T2,S),
 \ttemporal_operator(OP),
 \ttimepoint_of_op(OP,T1,T2,S),
 \tholds_at(e,T2,S).
@@ -996,6 +1017,7 @@ root_antecedent_holds(OP,{name},5,T1,S):-
 \ttrace(S),
 \ttimepoint(T1,S),
 \ttimepoint(T2,S),
+\tnot weak_timepoint(T2,S),
 \ttemporal_operator(OP),
 \ttimepoint_of_op(OP,T1,T2,S),
 \tholds_at(f,T2,S).
@@ -1012,6 +1034,7 @@ root_antecedent_holds(OP,{name},6,T1,S):-
 \ttrace(S),
 \ttimepoint(T1,S),
 \ttimepoint(T2,S),
+\tnot weak_timepoint(T2,S),
 \ttemporal_operator(OP),
 \ttimepoint_of_op(OP,T1,T2,S),
 \tholds_at(g,T2,S).
@@ -1020,6 +1043,7 @@ root_antecedent_holds(OP,{name},7,T1,S):-
 \ttrace(S),
 \ttimepoint(T1,S),
 \ttimepoint(T2,S),
+\tnot weak_timepoint(T2,S),
 \ttemporal_operator(OP),
 \ttimepoint_of_op(OP,T1,T2,S),
 \tholds_at(h,T2,S).
@@ -1028,6 +1052,7 @@ root_antecedent_holds(OP,{name},8,T1,S):-
 \ttrace(S),
 \ttimepoint(T1,S),
 \ttimepoint(T2,S),
+\tnot weak_timepoint(T2,S),
 \ttemporal_operator(OP),
 \ttimepoint_of_op(OP,T1,T2,S),
 \tholds_at(i,T2,S).
@@ -1728,6 +1753,7 @@ root_antecedent_holds(OP,{name},0,T1,S):-
 \ttrace(S),
 \ttimepoint(T1,S),
 \ttimepoint(T2,S),
+\tnot weak_timepoint(T2,S),
 \ttemporal_operator(OP),
 \ttimepoint_of_op(OP,T1,T2,S),
 \tholds_at(a,T2,S).
@@ -1762,6 +1788,7 @@ root_antecedent_holds(OP,{name},0,T1,S):-
 \ttrace(S),
 \ttimepoint(T1,S),
 \ttimepoint(T2,S),
+\tnot weak_timepoint(T2,S),
 \ttemporal_operator(OP),
 \ttimepoint_of_op(OP,T1,T2,S),
 \tnot_holds_at(a,T2,S).
@@ -1796,6 +1823,7 @@ root_antecedent_holds(OP,{name},0,T1,S):-
 \ttrace(S),
 \ttimepoint(T1,S),
 \ttimepoint(T2,S),
+\tnot weak_timepoint(T2,S),
 \ttemporal_operator(OP),
 \ttimepoint_of_op(OP,T1,T2,S),
 \tnot_holds_at(a,T2,S).
@@ -1828,6 +1856,7 @@ root_antecedent_holds(OP,{name},0,T1,S):-
 \ttrace(S),
 \ttimepoint(T1,S),
 \ttimepoint(T2,S),
+\tnot weak_timepoint(T2,S),
 \ttemporal_operator(OP),
 \ttimepoint_of_op(OP,T1,T2,S),
 \tholds_at(b,T2,S).
@@ -1862,6 +1891,7 @@ root_antecedent_holds(OP,{name},0,T1,S):-
 \ttrace(S),
 \ttimepoint(T1,S),
 \ttimepoint(T2,S),
+\tnot weak_timepoint(T2,S),
 \ttemporal_operator(OP),
 \ttimepoint_of_op(OP,T1,T2,S),
 \tholds_at(a,T2,S),
@@ -1899,6 +1929,7 @@ root_antecedent_holds(OP,{name},0,T1,S):-
 \ttrace(S),
 \ttimepoint(T1,S),
 \ttimepoint(T2,S),
+\tnot weak_timepoint(T2,S),
 \ttemporal_operator(OP),
 \ttimepoint_of_op(OP,T1,T2,S),
 \tholds_at(a,T2,S).
@@ -1907,6 +1938,7 @@ root_antecedent_holds(OP,{name},1,T1,S):-
 \ttrace(S),
 \ttimepoint(T1,S),
 \ttimepoint(T2,S),
+\tnot weak_timepoint(T2,S),
 \ttemporal_operator(OP),
 \ttimepoint_of_op(OP,T1,T2,S),
 \tholds_at(b,T2,S).
@@ -1943,6 +1975,7 @@ root_antecedent_holds(OP,{name},0,T1,S):-
 \ttrace(S),
 \ttimepoint(T1,S),
 \ttimepoint(T2,S),
+\tnot weak_timepoint(T2,S),
 \ttemporal_operator(OP),
 \ttimepoint_of_op(OP,T1,T2,S),
 \tholds_at(a,T2,S),
@@ -1980,6 +2013,7 @@ root_antecedent_holds(OP,{name},0,T1,S):-
 \ttrace(S),
 \ttimepoint(T1,S),
 \ttimepoint(T2,S),
+\tnot weak_timepoint(T2,S),
 \ttemporal_operator(OP),
 \ttimepoint_of_op(OP,T1,T2,S),
 \tholds_at(a,T2,S).
@@ -1994,6 +2028,7 @@ root_antecedent_holds(OP,{name},1,T1,S):-
 \ttrace(S),
 \ttimepoint(T1,S),
 \ttimepoint(T2,S),
+\tnot weak_timepoint(T2,S),
 \ttemporal_operator(OP),
 \ttimepoint_of_op(OP,T1,T2,S),
 \tholds_at(b,T2,S).
@@ -2030,6 +2065,7 @@ root_antecedent_holds(OP,{name},0,T1,S):-
 \ttrace(S),
 \ttimepoint(T1,S),
 \ttimepoint(T2,S),
+\tnot weak_timepoint(T2,S),
 \ttemporal_operator(OP),
 \ttimepoint_of_op(OP,T1,T2,S),
 \tholds_at(a,T2,S).
@@ -2044,6 +2080,7 @@ root_antecedent_holds(OP,{name},1,T1,S):-
 \ttrace(S),
 \ttimepoint(T1,S),
 \ttimepoint(T2,S),
+\tnot weak_timepoint(T2,S),
 \ttemporal_operator(OP),
 \ttimepoint_of_op(OP,T1,T2,S),
 \tholds_at(b,T2,S).
@@ -2058,6 +2095,7 @@ root_antecedent_holds(OP,{name},2,T1,S):-
 \ttrace(S),
 \ttimepoint(T1,S),
 \ttimepoint(T2,S),
+\tnot weak_timepoint(T2,S),
 \ttemporal_operator(OP),
 \ttimepoint_of_op(OP,T1,T2,S),
 \tholds_at(c,T2,S).
@@ -2102,6 +2140,7 @@ root_antecedent_holds(OP,{name},0,T1,S):-
 \ttrace(S),
 \ttimepoint(T1,S),
 \ttimepoint(T2,S),
+\tnot weak_timepoint(T2,S),
 \ttemporal_operator(OP),
 \ttimepoint_of_op(OP,T1,T2,S),
 \tholds_at(a,T2,S),
@@ -2118,6 +2157,7 @@ root_antecedent_holds(OP,{name},1,T1,S):-
 \ttrace(S),
 \ttimepoint(T1,S),
 \ttimepoint(T2,S),
+\tnot weak_timepoint(T2,S),
 \ttemporal_operator(OP),
 \ttimepoint_of_op(OP,T1,T2,S),
 \tholds_at(d,T2,S),
@@ -2134,6 +2174,7 @@ root_antecedent_holds(OP,{name},2,T1,S):-
 \ttrace(S),
 \ttimepoint(T1,S),
 \ttimepoint(T2,S),
+\tnot weak_timepoint(T2,S),
 \ttemporal_operator(OP),
 \ttimepoint_of_op(OP,T1,T2,S),
 \tholds_at(g,T2,S),
@@ -2182,6 +2223,7 @@ root_antecedent_holds(OP,{name},0,T1,S):-
 \ttrace(S),
 \ttimepoint(T1,S),
 \ttimepoint(T2,S),
+\tnot weak_timepoint(T2,S),
 \ttemporal_operator(OP),
 \ttimepoint_of_op(OP,T1,T2,S),
 \tholds_at(a,T2,S).
@@ -2190,6 +2232,7 @@ root_antecedent_holds(OP,{name},1,T1,S):-
 \ttrace(S),
 \ttimepoint(T1,S),
 \ttimepoint(T2,S),
+\tnot weak_timepoint(T2,S),
 \ttemporal_operator(OP),
 \ttimepoint_of_op(OP,T1,T2,S),
 \tholds_at(b,T2,S).
@@ -2198,6 +2241,7 @@ root_antecedent_holds(OP,{name},2,T1,S):-
 \ttrace(S),
 \ttimepoint(T1,S),
 \ttimepoint(T2,S),
+\tnot weak_timepoint(T2,S),
 \ttemporal_operator(OP),
 \ttimepoint_of_op(OP,T1,T2,S),
 \tholds_at(c,T2,S).
@@ -2214,6 +2258,7 @@ root_antecedent_holds(OP,{name},3,T1,S):-
 \ttrace(S),
 \ttimepoint(T1,S),
 \ttimepoint(T2,S),
+\tnot weak_timepoint(T2,S),
 \ttemporal_operator(OP),
 \ttimepoint_of_op(OP,T1,T2,S),
 \tholds_at(d,T2,S).
@@ -2222,6 +2267,7 @@ root_antecedent_holds(OP,{name},4,T1,S):-
 \ttrace(S),
 \ttimepoint(T1,S),
 \ttimepoint(T2,S),
+\tnot weak_timepoint(T2,S),
 \ttemporal_operator(OP),
 \ttimepoint_of_op(OP,T1,T2,S),
 \tholds_at(e,T2,S).
@@ -2230,6 +2276,7 @@ root_antecedent_holds(OP,{name},5,T1,S):-
 \ttrace(S),
 \ttimepoint(T1,S),
 \ttimepoint(T2,S),
+\tnot weak_timepoint(T2,S),
 \ttemporal_operator(OP),
 \ttimepoint_of_op(OP,T1,T2,S),
 \tholds_at(f,T2,S).
@@ -2246,6 +2293,7 @@ root_antecedent_holds(OP,{name},6,T1,S):-
 \ttrace(S),
 \ttimepoint(T1,S),
 \ttimepoint(T2,S),
+\tnot weak_timepoint(T2,S),
 \ttemporal_operator(OP),
 \ttimepoint_of_op(OP,T1,T2,S),
 \tholds_at(g,T2,S).
@@ -2254,6 +2302,7 @@ root_antecedent_holds(OP,{name},7,T1,S):-
 \ttrace(S),
 \ttimepoint(T1,S),
 \ttimepoint(T2,S),
+\tnot weak_timepoint(T2,S),
 \ttemporal_operator(OP),
 \ttimepoint_of_op(OP,T1,T2,S),
 \tholds_at(h,T2,S).
@@ -2262,6 +2311,7 @@ root_antecedent_holds(OP,{name},8,T1,S):-
 \ttrace(S),
 \ttimepoint(T1,S),
 \ttimepoint(T2,S),
+\tnot weak_timepoint(T2,S),
 \ttemporal_operator(OP),
 \ttimepoint_of_op(OP,T1,T2,S),
 \tholds_at(i,T2,S).
@@ -2397,6 +2447,7 @@ root_antecedent_holds(OP,{name},0,T1,S):-
 \ttrace(S),
 \ttimepoint(T1,S),
 \ttimepoint(T2,S),
+\tnot weak_timepoint(T2,S),
 \ttemporal_operator(OP),
 \ttimepoint_of_op(OP,T1,T2,S),
 \tholds_at(a,T2,S).

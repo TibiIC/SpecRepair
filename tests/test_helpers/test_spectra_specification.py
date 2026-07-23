@@ -344,6 +344,7 @@ root_antecedent_holds(OP,guarantee1_1,0,T1,S):-
 \ttrace(S),
 \ttimepoint(T1,S),
 \ttimepoint(T2,S),
+\tnot weak_timepoint(T2,S),
 \ttemporal_operator(OP),
 \ttimepoint_of_op(OP,T1,T2,S),
 \tholds_at(r1,T2,S).
@@ -401,6 +402,7 @@ root_antecedent_holds(OP,guarantee3_1,0,T1,S):-
 \ttrace(S),
 \ttimepoint(T1,S),
 \ttimepoint(T2,S),
+\tnot weak_timepoint(T2,S),
 \ttemporal_operator(OP),
 \ttimepoint_of_op(OP,T1,T2,S),
 \tnot_holds_at(a,T2,S).
