@@ -191,6 +191,51 @@ class TestBFSRepairOrchestrator(BaseTestCase):
             is_debug=True
         )
 
+    def test_bfs_repair_spec_colorsort_syn(self):
+        case_study_name = 'colorsort'
+        case_study_path = '../input-files/case-studies/spectra/colorsort'
+        new_spec_strings = self.run_bfs_repair_syn_unique(
+            case_study_name,
+            case_study_path,
+            is_debug=True
+        )
+
+    def test_bfs_repair_spec_gyro_syn(self):
+        case_study_name = 'gyro'
+        case_study_path = '../input-files/case-studies/spectra/gyro'
+        new_spec_strings = self.run_bfs_repair_syn_unique(
+            case_study_name,
+            case_study_path,
+            is_debug=True
+        )
+
+    def test_bfs_repair_spec_elevator_syn(self):
+        case_study_name = 'elevator'
+        case_study_path = '../input-files/case-studies/spectra/elevator'
+        new_spec_strings = self.run_bfs_repair_syn_unique(
+            case_study_name,
+            case_study_path,
+            is_debug=True
+        )
+
+    def test_bfs_repair_spec_humanoid_syn(self):
+        case_study_name = 'humanoid'
+        case_study_path = '../input-files/case-studies/spectra/humanoid'
+        new_spec_strings = self.run_bfs_repair_syn_unique(
+            case_study_name,
+            case_study_path,
+            is_debug=True
+        )
+
+    def test_bfs_repair_spec_pcar_syn(self):
+        case_study_name = 'pcar'
+        case_study_path = '../input-files/case-studies/spectra/pcar'
+        new_spec_strings = self.run_bfs_repair_syn_unique(
+            case_study_name,
+            case_study_path,
+            is_debug=True
+        )
+
     def test_bfs_repair_spec_arbiter_asm_only(self):
         case_study_name = 'arbiter'
         case_study_path = '../input-files/case-studies/spectra/arbiter'
