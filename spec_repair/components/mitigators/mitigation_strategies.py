@@ -13,11 +13,16 @@ from spec_repair.wrappers.asp_wrappers import get_violations
 
 
 def move_one_to_guarantee_weakening(
-        spec: ISpecification,  # ignored
+        spec: ISpecification,
         data: RepairData,
 ) -> List[Tuple[
     ISpecification, RepairData]]:
-    new_spec = data.spec_history[0]
+    # spec_history is only populated once an assumption-weakening candidate has
+    # been learned and then counter-argued (see LearningTypeSpecMitigator.
+    # prepare_learning_task). If assumption weakening finds no violation at all
+    # (e.g. the trace never violates any assumption), spec_history is still
+    # empty here - fall back to the spec this task started from.
+    new_spec = data.spec_history[0] if data.spec_history else spec
     new_data = deepcopy(data)
     new_data.counter_traces = data.counter_traces[0:1]  # Only keep the first counter-trace
     new_data.learning_type = Learning.GUARANTEE_WEAKENING
@@ -58,25 +63,32 @@ def complete_counter_traces(
     ISpecification, RepairData]]:
     ctss: Set[Tuple[CounterTrace, ...]] = {tuple(data.counter_traces)}
     unchanged = False
-    while not unchanged:
-        unchanged = True
-        for cts in deepcopy(ctss):
-            asp: str = NewSpecEncoder.encode_ASP(cast(SpectraSpecification, spec), data.trace, list(cts))
-            violations = get_violations(asp, exp_type=Learning.GUARANTEE_WEAKENING.exp_type())
-            if not violations:
-                raise NoViolationException("Violation trace is not violating!")
-            deadlock_required = re.findall(r"entailed\((counter_strat_\d*_\d*)\)", ''.join(violations))
-            if deadlock_required:
-                set_cts = set(cts)
-                for i, ct in enumerate(copy(cts)):
-                    if ct.is_deadlock() and ct.get_name() in deadlock_required:
-                        new_set_cts = copy(set_cts)
-                        new_set_cts.remove(ct)
-                        ctss |= set([tuple(new_set_cts | {complete_ct}) for complete_ct in
-                                     complete_cts_from_ct(ct, spec, deadlock_required)])
-                        unchanged = False
-                if not unchanged:
-                    ctss.remove(cts)
+    try:
+        while not unchanged:
+            unchanged = True
+            for cts in deepcopy(ctss):
+                asp: str = NewSpecEncoder.encode_ASP(cast(SpectraSpecification, spec), data.trace, list(cts))
+                violations = get_violations(asp, exp_type=Learning.GUARANTEE_WEAKENING.exp_type())
+                if not violations:
+                    raise NoViolationException("Violation trace is not violating!")
+                deadlock_required = re.findall(r"entailed\((counter_strat_\d*_\d*)\)", ''.join(violations))
+                if deadlock_required:
+                    set_cts = set(cts)
+                    for i, ct in enumerate(copy(cts)):
+                        if ct.is_deadlock() and ct.get_name() in deadlock_required:
+                            new_set_cts = copy(set_cts)
+                            new_set_cts.remove(ct)
+                            ctss |= set([tuple(new_set_cts | {complete_ct}) for complete_ct in
+                                         complete_cts_from_ct(ct, spec, deadlock_required)])
+                            unchanged = False
+                    if not unchanged:
+                        ctss.remove(cts)
+    except NoViolationException as e:
+        # The trace violates neither the assumptions nor (here) the guarantees
+        # of this spec - there is nothing left to weaken along this branch, so
+        # give up on it gracefully instead of crashing the whole BFS search.
+        print(f"Weakening failed: NoViolationException thrown and {e}")
+        return []
     possible_cts_list = [list(cts) for cts in ctss]
     alternative_learning_tasks: List[Tuple[ISpecification, Any]] = []
     for possible_cts in possible_cts_list:
