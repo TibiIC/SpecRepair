@@ -64,10 +64,34 @@ anyone's *predecessor* - only `next` can ever bind T2 to it). Updated the
 antecedent_exception,eventually_formula}_formatter.py` and
 `test_spectra_specification.py` to include the new line; all pass.
 
-## What's still open: Prev in consequent
+## Update (2026-07-24): Prev in consequent fixed
 
-`!Prev(x)` as a consequent-side literal still crashes
-(`reformat_conjunction_to_op_atom_conjunction`'s `Not` case only accepts
+Implemented the proposed fix below as designed, on both the antecedent and
+consequent sides (the antecedent-side twin mentioned in passing below is
+now real, not just planned). Given the standing lesson from
+[2026-07-21's Prev-boundary incident](2026-07-21-colorsort-prev-boundary-bug.md)
+- that a plausible, internally-verified `Prev`-boundary rewrite was
+actually wrong under Spectra's real semantics - didn't stop at the 197
+golden-string formatter tests (all pass). Also re-ran
+`test_bfs_repair_spec_colorsort_syn` end to end: this is the exact test
+that started this investigation by crashing on `!Prev(x)`, and its
+`violation_trace.txt` is a single-timepoint trace (T=0, no predecessor) -
+precisely the vacuous-branch boundary case in the truth table below. It
+now passes, and because this test drives `SpectraGR1Oracle` (the real
+Spectra CLI) inside the BFS repair loop, this isn't just the formatter
+agreeing with itself - it's the actual downstream tool exercising the
+boundary case as ground truth. Confirmed via `git stash` that the 9
+pre-existing failures elsewhere in `test_helpers/test_spectra_specification.py`
+are unrelated (identical with and without this fix).
+
+Known limitation stands as originally scoped: `!Prev(x)` nested inside
+another temporal operator (e.g. `Next(!Prev(x))`) still isn't handled -
+that's the harder 2-hop timepoint composition case, not designed here.
+
+## What was open: Prev in consequent
+
+`!Prev(x)` as a consequent-side literal used to crash
+(`reformat_conjunction_to_op_atom_conjunction`'s `Not` case only accepted
 `Not(AtomicProposition)`). Derived a truth table before touching anything
 (cross-checked against the ASP background knowledge's own boundary
 mechanics and last session's real-Spectra reproduction):
@@ -109,11 +133,11 @@ harder fix (2-hop timepoint composition) not designed here.
 
 ## The broader picture
 
-Both gaps come from the same root cause: `asp_exception_formatter.py`'s
+Both gaps came from the same root cause: `asp_exception_formatter.py`'s
 antecedent- and consequent-side code paths were written somewhat
-independently and have drifted out of symmetry - some temporal-operator
-handling that's correct on one side is wrong (Next, now fixed) or missing
-(Prev, still open) on the other. A proper refactor would treat Next and
+independently and had drifted out of symmetry - some temporal-operator
+handling that's correct on one side was wrong (Next) or missing (Prev) on
+the other. Both are now fixed. A proper refactor would treat Next and
 Prev symmetrically across both antecedent and consequent from the start,
 rather than patching each asymmetry as it's discovered. Didn't judge that
 worth a separate branch - the fixes so far are small and independently
