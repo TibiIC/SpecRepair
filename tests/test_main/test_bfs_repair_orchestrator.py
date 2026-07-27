@@ -236,6 +236,74 @@ class TestBFSRepairOrchestrator(BaseTestCase):
             is_debug=True
         )
 
+    # The *_updated case studies below share each original's ideal.spectra but
+    # pair it with a strong.spectra that strengthens at least one assumption
+    # AND at least one guarantee. The original fixtures all happen to be
+    # assumption-only, so these exercise the guarantee-weakening half of the
+    # repair search against a violation that genuinely requires it.
+    def test_bfs_repair_spec_elevator_updated_syn(self):
+        case_study_name = 'elevator_updated'
+        case_study_path = '../input-files/case-studies/spectra/elevator_updated'
+        new_spec_strings = self.run_bfs_repair_syn_unique(
+            case_study_name,
+            case_study_path,
+            is_debug=True
+        )
+
+    def test_bfs_repair_spec_gyro_updated_syn(self):
+        case_study_name = 'gyro_updated'
+        case_study_path = '../input-files/case-studies/spectra/gyro_updated'
+        new_spec_strings = self.run_bfs_repair_syn_unique(
+            case_study_name,
+            case_study_path,
+            is_debug=True
+        )
+
+    def test_bfs_repair_spec_humanoid_updated_syn(self):
+        case_study_name = 'humanoid_updated'
+        case_study_path = '../input-files/case-studies/spectra/humanoid_updated'
+        new_spec_strings = self.run_bfs_repair_syn_unique(
+            case_study_name,
+            case_study_path,
+            is_debug=True
+        )
+
+    def test_bfs_repair_spec_pcar_updated_syn(self):
+        case_study_name = 'pcar_updated'
+        case_study_path = '../input-files/case-studies/spectra/pcar_updated'
+        new_spec_strings = self.run_bfs_repair_syn_unique(
+            case_study_name,
+            case_study_path,
+            is_debug=True
+        )
+
+    def test_bfs_repair_spec_lift_updated_syn(self):
+        case_study_name = 'lift_updated'
+        case_study_path = '../input-files/case-studies/spectra/lift_updated'
+        new_spec_strings = self.run_bfs_repair_syn_unique(
+            case_study_name,
+            case_study_path,
+            is_debug=True
+        )
+
+    def test_bfs_repair_spec_traffic_updated_updated_syn(self):
+        case_study_name = 'traffic_updated_updated'
+        case_study_path = '../input-files/case-studies/spectra/traffic_updated_updated'
+        new_spec_strings = self.run_bfs_repair_syn_unique(
+            case_study_name,
+            case_study_path,
+            is_debug=True
+        )
+
+    def test_bfs_repair_spec_colorsort_updated_syn(self):
+        case_study_name = 'colorsort_updated'
+        case_study_path = '../input-files/case-studies/spectra/colorsort_updated'
+        new_spec_strings = self.run_bfs_repair_syn_unique(
+            case_study_name,
+            case_study_path,
+            is_debug=True
+        )
+
     def test_bfs_repair_spec_arbiter_asm_only(self):
         case_study_name = 'arbiter'
         case_study_path = '../input-files/case-studies/spectra/arbiter'

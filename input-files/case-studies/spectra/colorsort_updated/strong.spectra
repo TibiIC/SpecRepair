@@ -1,0 +1,274 @@
+module ColorSort
+
+env boolean ack_bot_move;
+env boolean ack_ver_hor_move;
+env boolean atEdge_noedge;
+sys boolean botMot_left;
+sys boolean botMot_right;
+sys boolean botMot_stop;
+env boolean color_black;
+env boolean color_blue;
+env boolean color_green;
+env boolean color_red;
+env boolean color_yellow;
+env boolean detect_black;
+env boolean detect_blue;
+env boolean detect_green;
+env boolean detect_red;
+env boolean detect_yellow;
+env boolean haltButton_press;
+sys boolean horMot_move;
+sys boolean motSpeed_level1;
+sys boolean motSpeed_level2;
+env boolean num_of_cubes_zero;
+sys boolean reduce_num_of_cubes_reduce;
+sys boolean spec_allsleep;
+sys boolean spec_currentColor_black;
+sys boolean spec_currentColor_blue;
+sys boolean spec_currentColor_green;
+sys boolean spec_currentColor_red;
+sys boolean spec_currentColor_yellow;
+sys boolean spec_finished_cycle;
+sys boolean spec_haltButtonValidPressed;
+sys boolean spec_pausing_pause;
+sys boolean spec_speedButtonValidPressed;
+sys boolean spec_stage_drop;
+sys boolean spec_stage_kick;
+sys boolean spec_stage_toangleleft;
+sys boolean spec_stage_toangleright;
+sys boolean spec_stage_wait;
+env boolean speedButton_press;
+sys boolean verMot_move;
+
+
+guarantee -- unnamed_guarantee_1
+	G(((((haltButton_press=true&spec_haltButtonValidPressed=true)&PREV(haltButton_press=false))|(!(haltButton_press=true)&!(spec_haltButtonValidPressed=true)))|(!(PREV(haltButton_press=false))&!(spec_haltButtonValidPressed=true))));
+
+guarantee -- unnamed_guarantee_2
+	G((((spec_haltButtonValidPressed=true&spec_pausing_pause=false)|(spec_haltButtonValidPressed=false&spec_pausing_pause=true))->next(spec_pausing_pause=true)));
+
+guarantee -- unnamed_guarantee_3
+	G((((spec_haltButtonValidPressed=false&spec_pausing_pause=false)|(spec_haltButtonValidPressed=true&spec_pausing_pause=true))->next(spec_pausing_pause=false)));
+
+guarantee -- no_pause_is_eternal
+	G(((spec_haltButtonValidPressed=true&spec_pausing_pause=false)->F(spec_haltButtonValidPressed=true)));
+
+guarantee -- if_we_pause_this_means_no_motors_move_and_all_the_rest_of_the_stats_remain_the_same
+	G(((spec_pausing_pause=true|ack_ver_hor_move=true)->(((((((spec_allsleep=true&spec_stage_wait=true)&next(spec_stage_wait=true))|((spec_allsleep=true&spec_stage_kick=true)&next(spec_stage_kick=true)))|((spec_allsleep=true&spec_stage_toangleright=true)&next(spec_stage_toangleright=true)))|((spec_allsleep=true&spec_stage_toangleleft=true)&next(spec_stage_toangleleft=true)))|((spec_allsleep=true&spec_stage_drop=true)&next(spec_stage_drop=true)))|((((((spec_allsleep=true&spec_stage_wait=false)&spec_stage_kick=false)&spec_stage_toangleright=false)&spec_stage_toangleleft=false)&spec_stage_drop=false)&next(((((spec_stage_wait=false&spec_stage_kick=false)&spec_stage_toangleright=false)&spec_stage_toangleleft=false)&spec_stage_drop=false))))));
+
+guarantee -- aside_from_the_WAIT_stage_spec_currentColor_never_changes
+	G((spec_stage_wait=false->((((((next(spec_currentColor_red=true)&spec_currentColor_red=true)|(next(spec_currentColor_green=true)&spec_currentColor_green=true))|(next(spec_currentColor_blue=true)&spec_currentColor_blue=true))|(next(spec_currentColor_black=true)&spec_currentColor_black=true))|(next(spec_currentColor_yellow=true)&spec_currentColor_yellow=true))|(next(((((spec_currentColor_red=false&spec_currentColor_green=false)&spec_currentColor_blue=false)&spec_currentColor_black=false)&spec_currentColor_yellow=false))&((((spec_currentColor_red=false&spec_currentColor_green=false)&spec_currentColor_blue=false)&spec_currentColor_black=false)&spec_currentColor_yellow=false)))));
+
+guarantee -- only_one_motors_moves_at_a_time
+	G((verMot_move=true->(botMot_stop=true&horMot_move=false)));
+
+guarantee -- unnamed_guarantee_4
+	G((horMot_move=true->(botMot_stop=true&verMot_move=false)));
+
+guarantee -- unnamed_guarantee_5
+	G((botMot_stop=false->(verMot_move=false&horMot_move=false)));
+
+guarantee -- spec_allsleep_is_true_iff_all_motors_sleep
+	G(((((((spec_allsleep=true&verMot_move=false)&horMot_move=false)&botMot_stop=true)|(!(spec_allsleep=true)&!(verMot_move=false)))|(!(spec_allsleep=true)&!(horMot_move=false)))|(!(spec_allsleep=true)&!(botMot_stop=true))));
+
+guarantee -- motors_are_asleep_at_the_start
+	((motSpeed_level1=true&spec_stage_wait=true)&spec_pausing_pause=false);
+
+guarantee -- if_there_is_no_cube_and_we_are_not_currently_moving_a_cube_all_motors_sleep
+	G((((color_black=true&spec_stage_wait=true)|(num_of_cubes_zero=true&spec_stage_wait=true))->(spec_allsleep=true&next(spec_stage_wait=true))));
+
+guarantee -- once_seeing_a_cube_verMot_kicks_it_in
+	G(((((color_black=false&num_of_cubes_zero=false)&spec_stage_wait=true)&spec_pausing_pause=false)->(((((((verMot_move=true&color_red=true)&next((spec_currentColor_red=true&spec_stage_kick=true)))|((verMot_move=true&color_green=true)&next((spec_currentColor_green=true&spec_stage_kick=true))))|((verMot_move=true&color_blue=true)&next((spec_currentColor_blue=true&spec_stage_kick=true))))|((verMot_move=true&color_black=true)&next((spec_currentColor_black=true&spec_stage_kick=true))))|((verMot_move=true&color_yellow=true)&next((spec_currentColor_yellow=true&spec_stage_kick=true))))|((((((verMot_move=true&color_red=false)&color_green=false)&color_blue=false)&color_black=false)&color_yellow=false)&next((((((spec_currentColor_red=false&spec_currentColor_green=false)&spec_currentColor_blue=false)&spec_currentColor_black=false)&spec_currentColor_yellow=false)&spec_stage_kick=true))))));
+
+guarantee -- after_the_cube_has_been_kicked_in_move_to_the_right_angle
+	G((((ack_ver_hor_move=false&spec_stage_kick=true)&spec_pausing_pause=false)->(botMot_right=true&next(spec_stage_toangleright=true))));
+
+guarantee -- while_the_bottom_motor_is_moving_see_if_the_color_has_been_found_botMot_is_MOVING_and_the_color_has_NOT_been_found_we_re_GOING_
+	G(((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((atEdge_noedge=true&spec_stage_toangleright=true)&detect_red=true)&spec_currentColor_green=true)&spec_pausing_pause=false)|((((atEdge_noedge=true&spec_stage_toangleright=true)&detect_red=true)&spec_currentColor_blue=true)&spec_pausing_pause=false))|((((atEdge_noedge=true&spec_stage_toangleright=true)&detect_red=true)&spec_currentColor_black=true)&spec_pausing_pause=false))|((((atEdge_noedge=true&spec_stage_toangleright=true)&detect_red=true)&spec_currentColor_yellow=true)&spec_pausing_pause=false))|((((((((atEdge_noedge=true&spec_stage_toangleright=true)&detect_red=true)&spec_currentColor_red=false)&spec_currentColor_green=false)&spec_currentColor_blue=false)&spec_currentColor_black=false)&spec_currentColor_yellow=false)&spec_pausing_pause=false))|((((atEdge_noedge=true&spec_stage_toangleright=true)&detect_green=true)&spec_currentColor_red=true)&spec_pausing_pause=false))|((((atEdge_noedge=true&spec_stage_toangleright=true)&detect_green=true)&spec_currentColor_blue=true)&spec_pausing_pause=false))|((((atEdge_noedge=true&spec_stage_toangleright=true)&detect_green=true)&spec_currentColor_black=true)&spec_pausing_pause=false))|((((atEdge_noedge=true&spec_stage_toangleright=true)&detect_green=true)&spec_currentColor_yellow=true)&spec_pausing_pause=false))|((((((((atEdge_noedge=true&spec_stage_toangleright=true)&detect_green=true)&spec_currentColor_red=false)&spec_currentColor_green=false)&spec_currentColor_blue=false)&spec_currentColor_black=false)&spec_currentColor_yellow=false)&spec_pausing_pause=false))|((((atEdge_noedge=true&spec_stage_toangleright=true)&detect_blue=true)&spec_currentColor_red=true)&spec_pausing_pause=false))|((((atEdge_noedge=true&spec_stage_toangleright=true)&detect_blue=true)&spec_currentColor_green=true)&spec_pausing_pause=false))|((((atEdge_noedge=true&spec_stage_toangleright=true)&detect_blue=true)&spec_currentColor_black=true)&spec_pausing_pause=false))|((((atEdge_noedge=true&spec_stage_toangleright=true)&detect_blue=true)&spec_currentColor_yellow=true)&spec_pausing_pause=false))|((((((((atEdge_noedge=true&spec_stage_toangleright=true)&detect_blue=true)&spec_currentColor_red=false)&spec_currentColor_green=false)&spec_currentColor_blue=false)&spec_currentColor_black=false)&spec_currentColor_yellow=false)&spec_pausing_pause=false))|((((atEdge_noedge=true&spec_stage_toangleright=true)&detect_black=true)&spec_currentColor_red=true)&spec_pausing_pause=false))|((((atEdge_noedge=true&spec_stage_toangleright=true)&detect_black=true)&spec_currentColor_green=true)&spec_pausing_pause=false))|((((atEdge_noedge=true&spec_stage_toangleright=true)&detect_black=true)&spec_currentColor_blue=true)&spec_pausing_pause=false))|((((atEdge_noedge=true&spec_stage_toangleright=true)&detect_black=true)&spec_currentColor_yellow=true)&spec_pausing_pause=false))|((((((((atEdge_noedge=true&spec_stage_toangleright=true)&detect_black=true)&spec_currentColor_red=false)&spec_currentColor_green=false)&spec_currentColor_blue=false)&spec_currentColor_black=false)&spec_currentColor_yellow=false)&spec_pausing_pause=false))|((((atEdge_noedge=true&spec_stage_toangleright=true)&detect_yellow=true)&spec_currentColor_red=true)&spec_pausing_pause=false))|((((atEdge_noedge=true&spec_stage_toangleright=true)&detect_yellow=true)&spec_currentColor_green=true)&spec_pausing_pause=false))|((((atEdge_noedge=true&spec_stage_toangleright=true)&detect_yellow=true)&spec_currentColor_blue=true)&spec_pausing_pause=false))|((((atEdge_noedge=true&spec_stage_toangleright=true)&detect_yellow=true)&spec_currentColor_black=true)&spec_pausing_pause=false))|((((((((atEdge_noedge=true&spec_stage_toangleright=true)&detect_yellow=true)&spec_currentColor_red=false)&spec_currentColor_green=false)&spec_currentColor_blue=false)&spec_currentColor_black=false)&spec_currentColor_yellow=false)&spec_pausing_pause=false))|((((((((atEdge_noedge=true&spec_stage_toangleright=true)&detect_red=false)&detect_green=false)&detect_blue=false)&detect_black=false)&detect_yellow=false)&spec_currentColor_red=true)&spec_pausing_pause=false))|((((((((atEdge_noedge=true&spec_stage_toangleright=true)&detect_red=false)&detect_green=false)&detect_blue=false)&detect_black=false)&detect_yellow=false)&spec_currentColor_green=true)&spec_pausing_pause=false))|((((((((atEdge_noedge=true&spec_stage_toangleright=true)&detect_red=false)&detect_green=false)&detect_blue=false)&detect_black=false)&detect_yellow=false)&spec_currentColor_blue=true)&spec_pausing_pause=false))|((((((((atEdge_noedge=true&spec_stage_toangleright=true)&detect_red=false)&detect_green=false)&detect_blue=false)&detect_black=false)&detect_yellow=false)&spec_currentColor_black=true)&spec_pausing_pause=false))|((((((((atEdge_noedge=true&spec_stage_toangleright=true)&detect_red=false)&detect_green=false)&detect_blue=false)&detect_black=false)&detect_yellow=false)&spec_currentColor_yellow=true)&spec_pausing_pause=false))|((((atEdge_noedge=true&spec_stage_toangleleft=true)&detect_red=true)&spec_currentColor_green=true)&spec_pausing_pause=false))|((((atEdge_noedge=true&spec_stage_toangleleft=true)&detect_red=true)&spec_currentColor_blue=true)&spec_pausing_pause=false))|((((atEdge_noedge=true&spec_stage_toangleleft=true)&detect_red=true)&spec_currentColor_black=true)&spec_pausing_pause=false))|((((atEdge_noedge=true&spec_stage_toangleleft=true)&detect_red=true)&spec_currentColor_yellow=true)&spec_pausing_pause=false))|((((((((atEdge_noedge=true&spec_stage_toangleleft=true)&detect_red=true)&spec_currentColor_red=false)&spec_currentColor_green=false)&spec_currentColor_blue=false)&spec_currentColor_black=false)&spec_currentColor_yellow=false)&spec_pausing_pause=false))|((((atEdge_noedge=true&spec_stage_toangleleft=true)&detect_green=true)&spec_currentColor_red=true)&spec_pausing_pause=false))|((((atEdge_noedge=true&spec_stage_toangleleft=true)&detect_green=true)&spec_currentColor_blue=true)&spec_pausing_pause=false))|((((atEdge_noedge=true&spec_stage_toangleleft=true)&detect_green=true)&spec_currentColor_black=true)&spec_pausing_pause=false))|((((atEdge_noedge=true&spec_stage_toangleleft=true)&detect_green=true)&spec_currentColor_yellow=true)&spec_pausing_pause=false))|((((((((atEdge_noedge=true&spec_stage_toangleleft=true)&detect_green=true)&spec_currentColor_red=false)&spec_currentColor_green=false)&spec_currentColor_blue=false)&spec_currentColor_black=false)&spec_currentColor_yellow=false)&spec_pausing_pause=false))|((((atEdge_noedge=true&spec_stage_toangleleft=true)&detect_blue=true)&spec_currentColor_red=true)&spec_pausing_pause=false))|((((atEdge_noedge=true&spec_stage_toangleleft=true)&detect_blue=true)&spec_currentColor_green=true)&spec_pausing_pause=false))|((((atEdge_noedge=true&spec_stage_toangleleft=true)&detect_blue=true)&spec_currentColor_black=true)&spec_pausing_pause=false))|((((atEdge_noedge=true&spec_stage_toangleleft=true)&detect_blue=true)&spec_currentColor_yellow=true)&spec_pausing_pause=false))|((((((((atEdge_noedge=true&spec_stage_toangleleft=true)&detect_blue=true)&spec_currentColor_red=false)&spec_currentColor_green=false)&spec_currentColor_blue=false)&spec_currentColor_black=false)&spec_currentColor_yellow=false)&spec_pausing_pause=false))|((((atEdge_noedge=true&spec_stage_toangleleft=true)&detect_black=true)&spec_currentColor_red=true)&spec_pausing_pause=false))|((((atEdge_noedge=true&spec_stage_toangleleft=true)&detect_black=true)&spec_currentColor_green=true)&spec_pausing_pause=false))|((((atEdge_noedge=true&spec_stage_toangleleft=true)&detect_black=true)&spec_currentColor_blue=true)&spec_pausing_pause=false))|((((atEdge_noedge=true&spec_stage_toangleleft=true)&detect_black=true)&spec_currentColor_yellow=true)&spec_pausing_pause=false))|((((((((atEdge_noedge=true&spec_stage_toangleleft=true)&detect_black=true)&spec_currentColor_red=false)&spec_currentColor_green=false)&spec_currentColor_blue=false)&spec_currentColor_black=false)&spec_currentColor_yellow=false)&spec_pausing_pause=false))|((((atEdge_noedge=true&spec_stage_toangleleft=true)&detect_yellow=true)&spec_currentColor_red=true)&spec_pausing_pause=false))|((((atEdge_noedge=true&spec_stage_toangleleft=true)&detect_yellow=true)&spec_currentColor_green=true)&spec_pausing_pause=false))|((((atEdge_noedge=true&spec_stage_toangleleft=true)&detect_yellow=true)&spec_currentColor_blue=true)&spec_pausing_pause=false))|((((atEdge_noedge=true&spec_stage_toangleleft=true)&detect_yellow=true)&spec_currentColor_black=true)&spec_pausing_pause=false))|((((((((atEdge_noedge=true&spec_stage_toangleleft=true)&detect_yellow=true)&spec_currentColor_red=false)&spec_currentColor_green=false)&spec_currentColor_blue=false)&spec_currentColor_black=false)&spec_currentColor_yellow=false)&spec_pausing_pause=false))|((((((((atEdge_noedge=true&spec_stage_toangleleft=true)&detect_red=false)&detect_green=false)&detect_blue=false)&detect_black=false)&detect_yellow=false)&spec_currentColor_red=true)&spec_pausing_pause=false))|((((((((atEdge_noedge=true&spec_stage_toangleleft=true)&detect_red=false)&detect_green=false)&detect_blue=false)&detect_black=false)&detect_yellow=false)&spec_currentColor_green=true)&spec_pausing_pause=false))|((((((((atEdge_noedge=true&spec_stage_toangleleft=true)&detect_red=false)&detect_green=false)&detect_blue=false)&detect_black=false)&detect_yellow=false)&spec_currentColor_blue=true)&spec_pausing_pause=false))|((((((((atEdge_noedge=true&spec_stage_toangleleft=true)&detect_red=false)&detect_green=false)&detect_blue=false)&detect_black=false)&detect_yellow=false)&spec_currentColor_black=true)&spec_pausing_pause=false))|((((((((atEdge_noedge=true&spec_stage_toangleleft=true)&detect_red=false)&detect_green=false)&detect_blue=false)&detect_black=false)&detect_yellow=false)&spec_currentColor_yellow=true)&spec_pausing_pause=false))->(((((((((((((((((((((((((!(spec_stage_toangleright=true)&!(spec_stage_toangleleft=true))&spec_stage_wait=true)&next(spec_stage_wait=true))|(((!(spec_stage_toangleright=true)&!(spec_stage_toangleleft=true))&spec_stage_kick=true)&next(spec_stage_kick=true)))|(((!(spec_stage_toangleright=true)&!(spec_stage_toangleleft=true))&spec_stage_toangleright=true)&next(spec_stage_toangleright=true)))|(((!(spec_stage_toangleright=true)&!(spec_stage_toangleleft=true))&spec_stage_toangleleft=true)&next(spec_stage_toangleleft=true)))|(((!(spec_stage_toangleright=true)&!(spec_stage_toangleleft=true))&spec_stage_drop=true)&next(spec_stage_drop=true)))|(((((((!(spec_stage_toangleright=true)&!(spec_stage_toangleleft=true))&spec_stage_wait=false)&spec_stage_kick=false)&spec_stage_toangleright=false)&spec_stage_toangleleft=false)&spec_stage_drop=false)&next(((((spec_stage_wait=false&spec_stage_kick=false)&spec_stage_toangleright=false)&spec_stage_toangleleft=false)&spec_stage_drop=false))))|(((!(spec_stage_toangleright=true)&botMot_left=true)&spec_stage_wait=true)&next(spec_stage_wait=true)))|(((!(spec_stage_toangleright=true)&botMot_left=true)&spec_stage_toangleright=true)&next(spec_stage_toangleright=true)))|(((!(spec_stage_toangleright=true)&botMot_left=true)&spec_stage_toangleleft=true)&next(spec_stage_toangleleft=true)))|(((!(spec_stage_toangleright=true)&botMot_left=true)&spec_stage_drop=true)&next(spec_stage_drop=true)))|(((((((!(spec_stage_toangleright=true)&botMot_left=true)&spec_stage_wait=false)&spec_stage_kick=false)&spec_stage_toangleright=false)&spec_stage_toangleleft=false)&spec_stage_drop=false)&next(((((spec_stage_wait=false&spec_stage_kick=false)&spec_stage_toangleright=false)&spec_stage_toangleleft=false)&spec_stage_drop=false))))|(((botMot_right=true&!(spec_stage_toangleleft=true))&spec_stage_wait=true)&next(spec_stage_wait=true)))|(((botMot_right=true&!(spec_stage_toangleleft=true))&spec_stage_kick=true)&next(spec_stage_kick=true)))|(((botMot_right=true&!(spec_stage_toangleleft=true))&spec_stage_toangleright=true)&next(spec_stage_toangleright=true)))|(((botMot_right=true&!(spec_stage_toangleleft=true))&spec_stage_toangleleft=true)&next(spec_stage_toangleleft=true)))|(((botMot_right=true&!(spec_stage_toangleleft=true))&spec_stage_drop=true)&next(spec_stage_drop=true)))|(((((((botMot_right=true&!(spec_stage_toangleleft=true))&spec_stage_wait=false)&spec_stage_kick=false)&spec_stage_toangleright=false)&spec_stage_toangleleft=false)&spec_stage_drop=false)&next(((((spec_stage_wait=false&spec_stage_kick=false)&spec_stage_toangleright=false)&spec_stage_toangleleft=false)&spec_stage_drop=false))))|(((botMot_right=true&botMot_left=true)&spec_stage_wait=true)&next(spec_stage_wait=true)))|(((botMot_right=true&botMot_left=true)&spec_stage_kick=true)&next(spec_stage_kick=true)))|(((botMot_right=true&botMot_left=true)&spec_stage_toangleright=true)&next(spec_stage_toangleright=true)))|(((botMot_right=true&botMot_left=true)&spec_stage_toangleleft=true)&next(spec_stage_toangleleft=true)))|(((botMot_right=true&botMot_left=true)&spec_stage_drop=true)&next(spec_stage_drop=true)))|(((((((botMot_right=true&botMot_left=true)&spec_stage_wait=false)&spec_stage_kick=false)&spec_stage_toangleright=false)&spec_stage_toangleleft=false)&spec_stage_drop=false)&next(((((spec_stage_wait=false&spec_stage_kick=false)&spec_stage_toangleright=false)&spec_stage_toangleleft=false)&spec_stage_drop=false))))));
+
+guarantee -- while_the_bottom_motor_is_moving_see_if_the_color_has_been_found_botMot_STOPPED_MOVING_and_the_color_has_NOT_been_found_we_re_GOING_
+	G(((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((atEdge_noedge=false&spec_stage_toangleright=true)&spec_pausing_pause=false)&detect_red=true)&spec_currentColor_green=true)|((((atEdge_noedge=false&spec_stage_toangleright=true)&spec_pausing_pause=false)&detect_red=true)&spec_currentColor_blue=true))|((((atEdge_noedge=false&spec_stage_toangleright=true)&spec_pausing_pause=false)&detect_red=true)&spec_currentColor_black=true))|((((atEdge_noedge=false&spec_stage_toangleright=true)&spec_pausing_pause=false)&detect_red=true)&spec_currentColor_yellow=true))|((((((((atEdge_noedge=false&spec_stage_toangleright=true)&spec_pausing_pause=false)&detect_red=true)&spec_currentColor_red=false)&spec_currentColor_green=false)&spec_currentColor_blue=false)&spec_currentColor_black=false)&spec_currentColor_yellow=false))|((((atEdge_noedge=false&spec_stage_toangleright=true)&spec_pausing_pause=false)&detect_green=true)&spec_currentColor_red=true))|((((atEdge_noedge=false&spec_stage_toangleright=true)&spec_pausing_pause=false)&detect_green=true)&spec_currentColor_blue=true))|((((atEdge_noedge=false&spec_stage_toangleright=true)&spec_pausing_pause=false)&detect_green=true)&spec_currentColor_black=true))|((((atEdge_noedge=false&spec_stage_toangleright=true)&spec_pausing_pause=false)&detect_green=true)&spec_currentColor_yellow=true))|((((((((atEdge_noedge=false&spec_stage_toangleright=true)&spec_pausing_pause=false)&detect_green=true)&spec_currentColor_red=false)&spec_currentColor_green=false)&spec_currentColor_blue=false)&spec_currentColor_black=false)&spec_currentColor_yellow=false))|((((atEdge_noedge=false&spec_stage_toangleright=true)&spec_pausing_pause=false)&detect_blue=true)&spec_currentColor_red=true))|((((atEdge_noedge=false&spec_stage_toangleright=true)&spec_pausing_pause=false)&detect_blue=true)&spec_currentColor_green=true))|((((atEdge_noedge=false&spec_stage_toangleright=true)&spec_pausing_pause=false)&detect_blue=true)&spec_currentColor_black=true))|((((atEdge_noedge=false&spec_stage_toangleright=true)&spec_pausing_pause=false)&detect_blue=true)&spec_currentColor_yellow=true))|((((((((atEdge_noedge=false&spec_stage_toangleright=true)&spec_pausing_pause=false)&detect_blue=true)&spec_currentColor_red=false)&spec_currentColor_green=false)&spec_currentColor_blue=false)&spec_currentColor_black=false)&spec_currentColor_yellow=false))|((((atEdge_noedge=false&spec_stage_toangleright=true)&spec_pausing_pause=false)&detect_black=true)&spec_currentColor_red=true))|((((atEdge_noedge=false&spec_stage_toangleright=true)&spec_pausing_pause=false)&detect_black=true)&spec_currentColor_green=true))|((((atEdge_noedge=false&spec_stage_toangleright=true)&spec_pausing_pause=false)&detect_black=true)&spec_currentColor_blue=true))|((((atEdge_noedge=false&spec_stage_toangleright=true)&spec_pausing_pause=false)&detect_black=true)&spec_currentColor_yellow=true))|((((((((atEdge_noedge=false&spec_stage_toangleright=true)&spec_pausing_pause=false)&detect_black=true)&spec_currentColor_red=false)&spec_currentColor_green=false)&spec_currentColor_blue=false)&spec_currentColor_black=false)&spec_currentColor_yellow=false))|((((atEdge_noedge=false&spec_stage_toangleright=true)&spec_pausing_pause=false)&detect_yellow=true)&spec_currentColor_red=true))|((((atEdge_noedge=false&spec_stage_toangleright=true)&spec_pausing_pause=false)&detect_yellow=true)&spec_currentColor_green=true))|((((atEdge_noedge=false&spec_stage_toangleright=true)&spec_pausing_pause=false)&detect_yellow=true)&spec_currentColor_blue=true))|((((atEdge_noedge=false&spec_stage_toangleright=true)&spec_pausing_pause=false)&detect_yellow=true)&spec_currentColor_black=true))|((((((((atEdge_noedge=false&spec_stage_toangleright=true)&spec_pausing_pause=false)&detect_yellow=true)&spec_currentColor_red=false)&spec_currentColor_green=false)&spec_currentColor_blue=false)&spec_currentColor_black=false)&spec_currentColor_yellow=false))|((((((((atEdge_noedge=false&spec_stage_toangleright=true)&spec_pausing_pause=false)&detect_red=false)&detect_green=false)&detect_blue=false)&detect_black=false)&detect_yellow=false)&spec_currentColor_red=true))|((((((((atEdge_noedge=false&spec_stage_toangleright=true)&spec_pausing_pause=false)&detect_red=false)&detect_green=false)&detect_blue=false)&detect_black=false)&detect_yellow=false)&spec_currentColor_green=true))|((((((((atEdge_noedge=false&spec_stage_toangleright=true)&spec_pausing_pause=false)&detect_red=false)&detect_green=false)&detect_blue=false)&detect_black=false)&detect_yellow=false)&spec_currentColor_blue=true))|((((((((atEdge_noedge=false&spec_stage_toangleright=true)&spec_pausing_pause=false)&detect_red=false)&detect_green=false)&detect_blue=false)&detect_black=false)&detect_yellow=false)&spec_currentColor_black=true))|((((((((atEdge_noedge=false&spec_stage_toangleright=true)&spec_pausing_pause=false)&detect_red=false)&detect_green=false)&detect_blue=false)&detect_black=false)&detect_yellow=false)&spec_currentColor_yellow=true))|((((atEdge_noedge=false&spec_stage_toangleleft=true)&spec_pausing_pause=false)&detect_red=true)&spec_currentColor_green=true))|((((atEdge_noedge=false&spec_stage_toangleleft=true)&spec_pausing_pause=false)&detect_red=true)&spec_currentColor_blue=true))|((((atEdge_noedge=false&spec_stage_toangleleft=true)&spec_pausing_pause=false)&detect_red=true)&spec_currentColor_black=true))|((((atEdge_noedge=false&spec_stage_toangleleft=true)&spec_pausing_pause=false)&detect_red=true)&spec_currentColor_yellow=true))|((((((((atEdge_noedge=false&spec_stage_toangleleft=true)&spec_pausing_pause=false)&detect_red=true)&spec_currentColor_red=false)&spec_currentColor_green=false)&spec_currentColor_blue=false)&spec_currentColor_black=false)&spec_currentColor_yellow=false))|((((atEdge_noedge=false&spec_stage_toangleleft=true)&spec_pausing_pause=false)&detect_green=true)&spec_currentColor_red=true))|((((atEdge_noedge=false&spec_stage_toangleleft=true)&spec_pausing_pause=false)&detect_green=true)&spec_currentColor_blue=true))|((((atEdge_noedge=false&spec_stage_toangleleft=true)&spec_pausing_pause=false)&detect_green=true)&spec_currentColor_black=true))|((((atEdge_noedge=false&spec_stage_toangleleft=true)&spec_pausing_pause=false)&detect_green=true)&spec_currentColor_yellow=true))|((((((((atEdge_noedge=false&spec_stage_toangleleft=true)&spec_pausing_pause=false)&detect_green=true)&spec_currentColor_red=false)&spec_currentColor_green=false)&spec_currentColor_blue=false)&spec_currentColor_black=false)&spec_currentColor_yellow=false))|((((atEdge_noedge=false&spec_stage_toangleleft=true)&spec_pausing_pause=false)&detect_blue=true)&spec_currentColor_red=true))|((((atEdge_noedge=false&spec_stage_toangleleft=true)&spec_pausing_pause=false)&detect_blue=true)&spec_currentColor_green=true))|((((atEdge_noedge=false&spec_stage_toangleleft=true)&spec_pausing_pause=false)&detect_blue=true)&spec_currentColor_black=true))|((((atEdge_noedge=false&spec_stage_toangleleft=true)&spec_pausing_pause=false)&detect_blue=true)&spec_currentColor_yellow=true))|((((((((atEdge_noedge=false&spec_stage_toangleleft=true)&spec_pausing_pause=false)&detect_blue=true)&spec_currentColor_red=false)&spec_currentColor_green=false)&spec_currentColor_blue=false)&spec_currentColor_black=false)&spec_currentColor_yellow=false))|((((atEdge_noedge=false&spec_stage_toangleleft=true)&spec_pausing_pause=false)&detect_black=true)&spec_currentColor_red=true))|((((atEdge_noedge=false&spec_stage_toangleleft=true)&spec_pausing_pause=false)&detect_black=true)&spec_currentColor_green=true))|((((atEdge_noedge=false&spec_stage_toangleleft=true)&spec_pausing_pause=false)&detect_black=true)&spec_currentColor_blue=true))|((((atEdge_noedge=false&spec_stage_toangleleft=true)&spec_pausing_pause=false)&detect_black=true)&spec_currentColor_yellow=true))|((((((((atEdge_noedge=false&spec_stage_toangleleft=true)&spec_pausing_pause=false)&detect_black=true)&spec_currentColor_red=false)&spec_currentColor_green=false)&spec_currentColor_blue=false)&spec_currentColor_black=false)&spec_currentColor_yellow=false))|((((atEdge_noedge=false&spec_stage_toangleleft=true)&spec_pausing_pause=false)&detect_yellow=true)&spec_currentColor_red=true))|((((atEdge_noedge=false&spec_stage_toangleleft=true)&spec_pausing_pause=false)&detect_yellow=true)&spec_currentColor_green=true))|((((atEdge_noedge=false&spec_stage_toangleleft=true)&spec_pausing_pause=false)&detect_yellow=true)&spec_currentColor_blue=true))|((((atEdge_noedge=false&spec_stage_toangleleft=true)&spec_pausing_pause=false)&detect_yellow=true)&spec_currentColor_black=true))|((((((((atEdge_noedge=false&spec_stage_toangleleft=true)&spec_pausing_pause=false)&detect_yellow=true)&spec_currentColor_red=false)&spec_currentColor_green=false)&spec_currentColor_blue=false)&spec_currentColor_black=false)&spec_currentColor_yellow=false))|((((((((atEdge_noedge=false&spec_stage_toangleleft=true)&spec_pausing_pause=false)&detect_red=false)&detect_green=false)&detect_blue=false)&detect_black=false)&detect_yellow=false)&spec_currentColor_red=true))|((((((((atEdge_noedge=false&spec_stage_toangleleft=true)&spec_pausing_pause=false)&detect_red=false)&detect_green=false)&detect_blue=false)&detect_black=false)&detect_yellow=false)&spec_currentColor_green=true))|((((((((atEdge_noedge=false&spec_stage_toangleleft=true)&spec_pausing_pause=false)&detect_red=false)&detect_green=false)&detect_blue=false)&detect_black=false)&detect_yellow=false)&spec_currentColor_blue=true))|((((((((atEdge_noedge=false&spec_stage_toangleleft=true)&spec_pausing_pause=false)&detect_red=false)&detect_green=false)&detect_blue=false)&detect_black=false)&detect_yellow=false)&spec_currentColor_black=true))|((((((((atEdge_noedge=false&spec_stage_toangleleft=true)&spec_pausing_pause=false)&detect_red=false)&detect_green=false)&detect_blue=false)&detect_black=false)&detect_yellow=false)&spec_currentColor_yellow=true))->((((!(spec_stage_toangleright=true)&!(spec_stage_toangleleft=true))|((!(spec_stage_toangleright=true)&botMot_right=true)&next(spec_stage_toangleright=true)))|((botMot_left=true&!(spec_stage_toangleleft=true))&next(spec_stage_toangleleft=true)))|((botMot_left=true&botMot_right=true)&next((spec_stage_toangleleft=true&spec_stage_toangleright=true))))));
+
+guarantee -- after_moving_to_the_right_angle_move_the_cube_into_the_heap_we_re_GOING_
+	G((((((((((((((((spec_stage_toangleright=true&spec_pausing_pause=false)&detect_red=true)&spec_currentColor_red=true)|(((spec_stage_toangleright=true&spec_pausing_pause=false)&detect_green=true)&spec_currentColor_green=true))|(((spec_stage_toangleright=true&spec_pausing_pause=false)&detect_blue=true)&spec_currentColor_blue=true))|(((spec_stage_toangleright=true&spec_pausing_pause=false)&detect_black=true)&spec_currentColor_black=true))|(((spec_stage_toangleright=true&spec_pausing_pause=false)&detect_yellow=true)&spec_currentColor_yellow=true))|(((((((((((spec_stage_toangleright=true&spec_pausing_pause=false)&detect_red=false)&detect_green=false)&detect_blue=false)&detect_black=false)&detect_yellow=false)&spec_currentColor_red=false)&spec_currentColor_green=false)&spec_currentColor_blue=false)&spec_currentColor_black=false)&spec_currentColor_yellow=false))|(((spec_stage_toangleleft=true&spec_pausing_pause=false)&detect_red=true)&spec_currentColor_red=true))|(((spec_stage_toangleleft=true&spec_pausing_pause=false)&detect_green=true)&spec_currentColor_green=true))|(((spec_stage_toangleleft=true&spec_pausing_pause=false)&detect_blue=true)&spec_currentColor_blue=true))|(((spec_stage_toangleleft=true&spec_pausing_pause=false)&detect_black=true)&spec_currentColor_black=true))|(((spec_stage_toangleleft=true&spec_pausing_pause=false)&detect_yellow=true)&spec_currentColor_yellow=true))|(((((((((((spec_stage_toangleleft=true&spec_pausing_pause=false)&detect_red=false)&detect_green=false)&detect_blue=false)&detect_black=false)&detect_yellow=false)&spec_currentColor_red=false)&spec_currentColor_green=false)&spec_currentColor_blue=false)&spec_currentColor_black=false)&spec_currentColor_yellow=false))->(((verMot_move=false&horMot_move=true)&botMot_stop=true)&next(spec_stage_drop=true))));
+
+guarantee -- after_the_cube_has_been_dropped_into_the_heap_return_to_original_position_Wait_for_the_motor_to_finish_returning_before_doing_anything_else
+	G((((((ack_ver_hor_move=false&spec_stage_drop=true)&spec_pausing_pause=false)|((((((ack_bot_move=true&spec_stage_wait=false)&spec_stage_kick=false)&spec_stage_toangleright=false)&spec_stage_toangleleft=false)&spec_stage_drop=false)&spec_pausing_pause=false))|(((((((ack_bot_move=false&spec_stage_wait=false)&spec_stage_kick=false)&spec_stage_toangleright=false)&spec_stage_toangleleft=false)&spec_stage_drop=false)&spec_pausing_pause=false)&PREV(spec_pausing_pause=true)))->(((botMot_right=false&botMot_left=false)&botMot_stop=false)&next(((((spec_stage_wait=false&spec_stage_kick=false)&spec_stage_toangleright=false)&spec_stage_toangleleft=false)&spec_stage_drop=false)))));
+
+guarantee -- unnamed_guarantee_6
+	G(((((((((((((((((spec_finished_cycle=true&ack_bot_move=false)&spec_stage_wait=false)&spec_stage_kick=false)&spec_stage_toangleright=false)&spec_stage_toangleleft=false)&spec_stage_drop=false)&spec_pausing_pause=false)&PREV(spec_pausing_pause=false))|(!(spec_finished_cycle=true)&!(ack_bot_move=false)))|(!(spec_finished_cycle=true)&!(PREV(spec_pausing_pause=false))))|(!(spec_finished_cycle=true)&!(spec_stage_wait=false)))|(!(spec_finished_cycle=true)&!(spec_stage_kick=false)))|(!(spec_finished_cycle=true)&!(spec_stage_toangleright=false)))|(!(spec_finished_cycle=true)&!(spec_stage_toangleleft=false)))|(!(spec_finished_cycle=true)&!(spec_stage_drop=false)))|(!(spec_finished_cycle=true)&!(spec_pausing_pause=false))));
+
+guarantee -- after_the_bottom_motor_finished_moving_return_to_starting_stage
+	G((spec_finished_cycle=true->(spec_allsleep=true&next(spec_stage_wait=true))));
+
+guarantee -- reduce_the_number_of_cubes_left_to_soft_iff_a_cycle_has_been_finished
+	G(((spec_finished_cycle=true&reduce_num_of_cubes_reduce=true)|(!(spec_finished_cycle=true)&!(reduce_num_of_cubes_reduce=true))));
+
+guarantee -- unnamed_guarantee_7
+	G(((((speedButton_press=true&spec_speedButtonValidPressed=true)&PREV(speedButton_press=false))|(!(speedButton_press=true)&!(spec_speedButtonValidPressed=true)))|(!(PREV(speedButton_press=false))&!(spec_speedButtonValidPressed=true))));
+
+guarantee -- if_the_speed_button_is_pressed_increase_the_speed_by_one_level
+	G(((spec_speedButtonValidPressed=true&PREV(motSpeed_level1=true))->motSpeed_level2=true));
+
+guarantee -- if_the_speed_button_is_pressed_increase_the_speed_by_one_level (2)
+	G(((spec_speedButtonValidPressed=true&PREV(motSpeed_level2=true))->(motSpeed_level1=false&motSpeed_level2=false)));
+
+guarantee -- if_the_speed_button_is_pressed_increase_the_speed_by_one_level (3)
+	G(((spec_speedButtonValidPressed=true&PREV((motSpeed_level1=false&motSpeed_level2=false)))->motSpeed_level1=true));
+
+guarantee -- if_the_speed_button_is_released_the_speed_remains_the_same
+	G(((spec_speedButtonValidPressed=false&PREV(motSpeed_level1=true))->motSpeed_level1=true));
+
+guarantee -- if_the_speed_button_is_pressed_increase_the_speed_by_one_level (4)
+	G(((spec_speedButtonValidPressed=false&PREV(motSpeed_level2=true))->motSpeed_level2=true));
+
+guarantee -- if_the_speed_button_is_pressed_increase_the_speed_by_one_level (5)
+	G(((spec_speedButtonValidPressed=false&PREV((motSpeed_level1=false&motSpeed_level2=false)))->(motSpeed_level1=false&motSpeed_level2=false)));
+
+assumption -- after_starting_to_move_we_will_sleep_eventually
+	G((ack_ver_hor_move=true->F(ack_ver_hor_move=false)));
+
+assumption -- unnamed_assumption_1
+	G((ack_bot_move=true->F(ack_bot_move=false)));
+
+assumption -- unnamed_assumption_2
+	G(((spec_stage_kick=false&spec_stage_drop=false)->ack_ver_hor_move=false));
+
+assumption -- we_will_always_finish_sorting_the_given_number_of_cubes
+	G((num_of_cubes_zero=false->F(num_of_cubes_zero=true)));
+
+assumption -- there_will_always_be_a_cube
+	GF(color_black=false);
+
+assumption -- color_mutual_exclusion_1
+	G((!(color_red=true)|!(color_green=true)));
+
+assumption -- color_mutual_exclusion_2
+	G((!(color_red=true)|!(color_blue=true)));
+
+assumption -- color_mutual_exclusion_3
+	G(!(color_black=true));
+
+assumption -- color_mutual_exclusion_4
+	G((!(color_red=true)|!(color_yellow=true)));
+
+assumption -- color_mutual_exclusion_5
+	G((!(color_green=true)|!(color_blue=true)));
+
+assumption -- color_mutual_exclusion_6
+	G((!(color_green=true)|!(color_black=true)));
+
+assumption -- color_mutual_exclusion_7
+	G((!(color_green=true)|!(color_yellow=true)));
+
+assumption -- color_mutual_exclusion_8
+	G((!(color_blue=true)|!(color_black=true)));
+
+assumption -- color_mutual_exclusion_9
+	G((!(color_blue=true)|!(color_yellow=true)));
+
+assumption -- color_mutual_exclusion_10
+	G((!(color_black=true)|!(color_yellow=true)));
+
+assumption -- detect_mutual_exclusion_1
+	G((!(detect_red=true)|!(detect_green=true)));
+
+assumption -- detect_mutual_exclusion_2
+	G((!(detect_red=true)|!(detect_blue=true)));
+
+assumption -- detect_mutual_exclusion_3
+	G((!(detect_red=true)|!(detect_black=true)));
+
+assumption -- detect_mutual_exclusion_4
+	G((!(detect_red=true)|!(detect_yellow=true)));
+
+assumption -- detect_mutual_exclusion_5
+	G((!(detect_green=true)|!(detect_blue=true)));
+
+assumption -- detect_mutual_exclusion_6
+	G((!(detect_green=true)|!(detect_black=true)));
+
+assumption -- detect_mutual_exclusion_7
+	G((!(detect_green=true)|!(detect_yellow=true)));
+
+assumption -- detect_mutual_exclusion_8
+	G((!(detect_blue=true)|!(detect_black=true)));
+
+assumption -- detect_mutual_exclusion_9
+	G((!(detect_blue=true)|!(detect_yellow=true)));
+
+assumption -- detect_mutual_exclusion_10
+	G((!(detect_black=true)|!(detect_yellow=true)));
+
+guarantee -- botMot_mutual_exclusion_1
+	G((!(botMot_right=true)|!(botMot_left=true)));
+
+guarantee -- botMot_mutual_exclusion_2
+	G((!(botMot_right=true)|!(botMot_stop=true)));
+
+guarantee -- botMot_mutual_exclusion_3
+	G((!(botMot_left=true)|!(botMot_stop=true)));
+
+guarantee -- motSpeed_mutual_exclusion
+	G((!(motSpeed_level1=true)|!(motSpeed_level2=true)));
+
+guarantee -- spec_currentColor_mutual_exclusion_1
+	G((!(spec_currentColor_red=true)|!(spec_currentColor_green=true)));
+
+guarantee -- spec_currentColor_mutual_exclusion_2
+	G((!(spec_currentColor_red=true)|!(spec_currentColor_blue=true)));
+
+guarantee -- spec_currentColor_mutual_exclusion_3
+	G((!(spec_currentColor_red=true)|!(spec_currentColor_black=true)));
+
+guarantee -- spec_currentColor_mutual_exclusion_4
+	G((!(spec_currentColor_red=true)|!(spec_currentColor_yellow=true)));
+
+guarantee -- spec_currentColor_mutual_exclusion_5
+	G((!(spec_currentColor_green=true)|!(spec_currentColor_blue=true)));
+
+guarantee -- spec_currentColor_mutual_exclusion_6
+	G((!(spec_currentColor_green=true)|!(spec_currentColor_black=true)));
+
+guarantee -- spec_currentColor_mutual_exclusion_7
+	G((!(spec_currentColor_green=true)|!(spec_currentColor_yellow=true)));
+
+guarantee -- spec_currentColor_mutual_exclusion_8
+	G((!(spec_currentColor_blue=true)|!(spec_currentColor_black=true)));
+
+guarantee -- spec_currentColor_mutual_exclusion_9
+	G((!(spec_currentColor_blue=true)|!(spec_currentColor_yellow=true)));
+
+guarantee -- spec_currentColor_mutual_exclusion_10
+	G((!(spec_currentColor_black=true)|!(spec_currentColor_yellow=true)));
+
+guarantee -- spec_stage_mutual_exclusion_1
+	G((!(spec_stage_wait=true)|!(spec_stage_kick=true)));
+
+guarantee -- spec_stage_mutual_exclusion_2
+	G((!(spec_stage_wait=true)|!(spec_stage_toangleright=true)));
+
+guarantee -- spec_stage_mutual_exclusion_3
+	G((!(spec_stage_wait=true)|!(spec_stage_toangleleft=true)));
+
+guarantee -- spec_stage_mutual_exclusion_4
+	G((!(spec_stage_wait=true)|!(spec_stage_drop=true)));
+
+guarantee -- spec_stage_mutual_exclusion_5
+	G((!(spec_stage_kick=true)|!(spec_stage_toangleright=true)));
+
+guarantee -- spec_stage_mutual_exclusion_6
+	G((!(spec_stage_kick=true)|!(spec_stage_toangleleft=true)));
+
+guarantee -- spec_stage_mutual_exclusion_7
+	G((!(spec_stage_kick=true)|!(spec_stage_drop=true)));
+
+guarantee -- spec_stage_mutual_exclusion_8
+	G((!(spec_stage_toangleright=true)|!(spec_stage_toangleleft=true)));
+
+guarantee -- spec_stage_mutual_exclusion_9
+	G((!(spec_stage_toangleright=true)|!(spec_stage_drop=true)));
+
+guarantee -- spec_stage_mutual_exclusion_10
+	G((!(spec_stage_toangleleft=true)|!(spec_stage_drop=true)));
+

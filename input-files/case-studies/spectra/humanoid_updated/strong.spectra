@@ -1,0 +1,45 @@
+module Humanoid
+
+sys boolean headMotor_bwd;
+sys boolean headMotor_fwd;
+env boolean inputMoveMode_fwd;
+env boolean inputMoveMode_turn;
+sys boolean leftMotor_bwd;
+sys boolean leftMotor_fwd;
+env boolean obstacle_clear;
+sys boolean outputMoveMode_fwd;
+sys boolean outputMoveMode_turn;
+sys boolean rightMotor_bwd;
+sys boolean rightMotor_fwd;
+
+
+guarantee -- unnamed_guarantee_1
+	G(((inputMoveMode_fwd=true&obstacle_clear=false)->(((outputMoveMode_fwd=false&outputMoveMode_turn=false)&leftMotor_bwd=true)&rightMotor_fwd=true)));
+
+guarantee -- unnamed_guarantee_2
+	G((((inputMoveMode_fwd=false&inputMoveMode_turn=false)&obstacle_clear=true)->((outputMoveMode_fwd=true&leftMotor_fwd=true)&rightMotor_bwd=true)));
+
+guarantee -- unnamed_guarantee_3
+	G(((inputMoveMode_fwd=true&obstacle_clear=true)->(leftMotor_fwd=true&rightMotor_fwd=true)));
+
+guarantee -- unnamed_guarantee_4
+	G((obstacle_clear=false->(outputMoveMode_fwd=false&outputMoveMode_turn=false)));
+
+assumption -- unnamed_assumption_1
+	G((outputMoveMode_fwd=false->F(obstacle_clear=true)));
+
+assumption -- inputMoveMode_mutual_exclusion
+	G(!(inputMoveMode_fwd=true));
+
+guarantee -- leftMotor_mutual_exclusion
+	G((!(leftMotor_fwd=true)|!(leftMotor_bwd=true)));
+
+guarantee -- rightMotor_mutual_exclusion
+	G((!(rightMotor_fwd=true)|!(rightMotor_bwd=true)));
+
+guarantee -- headMotor_mutual_exclusion
+	G(!(headMotor_fwd=true));
+
+guarantee -- outputMoveMode_mutual_exclusion
+	G((!(outputMoveMode_fwd=true)|!(outputMoveMode_turn=true)));
+

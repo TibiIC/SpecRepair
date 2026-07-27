@@ -7,7 +7,7 @@ from py_ltl.formula import LTLFormula, AtomicProposition, Not, And, Or, Until, N
 
 from collections import defaultdict
 
-from spec_repair.util.ltl_formula_util import get_disjuncts_from_disjunction
+from spec_repair.util.ltl_formula_util import get_disjuncts_from_disjunction, is_literal
 
 
 class ASPExceptionFormatter(ILTLFormatter):
@@ -64,9 +64,9 @@ class ASPExceptionFormatter(ILTLFormatter):
             section = ""
             ops_antecedent_roots: Dict[str, List[LTLFormula]] = reformat_conjunction_to_op_atom_conjunction(disjunct)
             section += self.antecedent_boilerplate(time=time, ops=ops_antecedent_roots.keys(), antecedent_id=d_id, start_root_id=root_id)
-            for i, (_, atoms) in enumerate(ops_antecedent_roots.items()):
+            for i, (op, atoms) in enumerate(ops_antecedent_roots.items()):
                 section += "\n\n"
-                section += self.format_boilerplate_root_antecedent_holds(atoms, root_id + i)
+                section += self.root_antecedent_holds_for_op(op, atoms, root_id + i)
             root_id += len(ops_antecedent_roots)
             sections.append(section)
 
@@ -99,9 +99,9 @@ class ASPExceptionFormatter(ILTLFormatter):
                 output += "\n\n"
                 ops = ["eventually"] * len(ops_consequent_roots)
                 output += self.consequent_boilerplate(time=time, ops=ops, depth_id=depth_id, start_root_id=root_id)
-            for i, (_, atoms) in enumerate(ops_consequent_roots.items()):
+            for i, (op, atoms) in enumerate(ops_consequent_roots.items()):
                 output += "\n\n"
-                output += self.format_boilerplate_root_consequent_holds(atoms, depth_id, root_id + i)
+                output += self.root_consequent_holds_for_op(op, atoms, depth_id, root_id + i)
             root_id += len(ops_consequent_roots)
         return output
 
@@ -118,9 +118,9 @@ class ASPExceptionFormatter(ILTLFormatter):
             ops = ops_consequent_roots.keys()
             output += self.format_boilerplate_inner_root_consequent_holds(ops=ops, depth_id=depth_id, i=0, start_root_id=root_id)
             output = output.replace(",\n\tev_temp_op({name})","")
-            for i, (_, atoms) in enumerate(ops_consequent_roots.items()):
+            for i, (op, atoms) in enumerate(ops_consequent_roots.items()):
                 output += "\n\n"
-                output += self.format_boilerplate_root_consequent_holds(atoms, depth_id + 1, root_id + i)
+                output += self.root_consequent_holds_for_op(op, atoms, depth_id + 1, root_id + i)
             root_id += len(ops_consequent_roots)
         return output
 
@@ -231,6 +231,62 @@ class ASPExceptionFormatter(ILTLFormatter):
         output += "."
         return output
 
+    def format_boilerplate_root_antecedent_holds_not_prev(self, atoms, i):
+        # !Prev(x): true, vacuously, at the trace's first timepoint (no
+        # predecessor to have a real value); at any later timepoint, true iff
+        # x did not hold at the predecessor. See the truth table in
+        # docs/session-notes/2026-07-23-next-antecedent-prev-consequent-asp-gaps.md.
+        # Two rules sharing one head - the disjunctive-definition style already
+        # used for weak_timepoint in files/background_knowledge.txt.
+        [literal] = atoms
+        negated = negate_literal(literal)
+        vacuous_branch = (
+            f"root_antecedent_holds(not_prev,{{name}},{i},T1,S):-\n"
+            "\ttrace(S),\n"
+            "\ttimepoint(T1,S),\n"
+            "\tnot prev_timepoint_exists(T1,S)."
+        )
+        real_branch = (
+            f"root_antecedent_holds(not_prev,{{name}},{i},T1,S):-\n"
+            "\ttrace(S),\n"
+            "\ttimepoint(T1,S),\n"
+            "\ttimepoint(T2,S),\n"
+            "\ttimepoint_of_op(prev,T1,T2,S),\n"
+            f"\t{self.format_exp(negated)}."
+        )
+        return f"{vacuous_branch}\n\n{real_branch}"
+
+    def format_boilerplate_root_consequent_holds_not_prev(self, atoms, depth_id, i):
+        # Consequent-side twin of format_boilerplate_root_antecedent_holds_not_prev -
+        # same truth table, same two-rules-one-head shape.
+        [literal] = atoms
+        negated = negate_literal(literal)
+        vacuous_branch = (
+            f"root_consequent_holds(not_prev,{{name}},{depth_id},{i},T1,S):-\n"
+            "\ttrace(S),\n"
+            "\ttimepoint(T1,S),\n"
+            "\tnot prev_timepoint_exists(T1,S)."
+        )
+        real_branch = (
+            f"root_consequent_holds(not_prev,{{name}},{depth_id},{i},T1,S):-\n"
+            "\ttrace(S),\n"
+            "\ttimepoint(T1,S),\n"
+            "\ttimepoint(T2,S),\n"
+            "\ttimepoint_of_op(prev,T1,T2,S),\n"
+            f"\t{self.format_exp(negated)}."
+        )
+        return f"{vacuous_branch}\n\n{real_branch}"
+
+    def root_antecedent_holds_for_op(self, op, atoms, i):
+        if op == "not_prev":
+            return self.format_boilerplate_root_antecedent_holds_not_prev(atoms, i)
+        return self.format_boilerplate_root_antecedent_holds(atoms, i)
+
+    def root_consequent_holds_for_op(self, op, atoms, depth_id, i):
+        if op == "not_prev":
+            return self.format_boilerplate_root_consequent_holds_not_prev(atoms, depth_id, i)
+        return self.format_boilerplate_root_consequent_holds(atoms, depth_id, i)
+
     def format_boilerplate_inner_root_consequent_holds(self, ops, depth_id, i, start_root_id):
         output = f"root_consequent_holds(OP,{{name}},{depth_id},{i},T1,S):-\n"
         output += "\ttrace(S),\n"
@@ -304,6 +360,14 @@ def reformat_conjunction_to_op_atom_conjunction(this_formula) -> Dict[str, List[
         case Not(formula=formula):
             if isinstance(formula, AtomicProposition):
                 return {"current": [this_formula]}
+            elif isinstance(formula, Prev):
+                inner = formula.formula
+                if not is_literal(inner):
+                    raise ValueError(
+                        "!Prev(...) is only supported when Prev wraps a single literal - "
+                        f"got: {type(inner)}"
+                    )
+                return {"not_prev": [inner]}
             else:
                 raise ValueError("Not operator not supported for this formula")
         case And(left=lhs, right=rhs):
@@ -349,6 +413,15 @@ def reformat_conjunction_to_op_atom_conjunction(this_formula) -> Dict[str, List[
 def complete_implication_part(formatted_string, implication_type: str):
     assert implication_type in ["antecedent", "consequent"]
 
+
+
+def negate_literal(literal: LTLFormula) -> LTLFormula:
+    if isinstance(literal, AtomicProposition):
+        return AtomicProposition(literal.name, not literal.value)
+    if isinstance(literal, Not) and isinstance(literal.formula, AtomicProposition):
+        inner = literal.formula
+        return AtomicProposition(inner.name, not inner.value)
+    raise ValueError(f"Cannot negate a non-literal: {type(literal)}")
 
 
 def merge_dicts(*dicts):
