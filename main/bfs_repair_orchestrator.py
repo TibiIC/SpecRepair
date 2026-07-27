@@ -41,6 +41,16 @@ class BFSRepairOrchestrator:
         self._logger = logger
         self._initialise_repair()
 
+    @property
+    def recorder(self) -> IRecorder[ISpecification]:
+        """The recorder holding the final (fully repaired) specs."""
+        return self._recorder
+
+    @property
+    def intermediate_recorder(self) -> IRecorder[ISpecification]:
+        """The recorder holding specs seen part-way through the search."""
+        return self._intermediate_recorder
+
     def _initialise_repair(self):
         # Counter for recording counter-traces
         self._ct_cnt = 0
