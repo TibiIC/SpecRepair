@@ -1,0 +1,272 @@
+module ColorSort
+
+sys boolean spec_allsleep;
+sys boolean spec_finished_cycle;
+sys boolean spec_speedButtonValidPressed;
+sys boolean spec_haltButtonValidPressed;
+env boolean color_red;
+env boolean color_green;
+env boolean color_blue;
+env boolean color_black;
+env boolean color_yellow;
+env boolean detect_red;
+env boolean detect_green;
+env boolean detect_blue;
+env boolean detect_black;
+env boolean detect_yellow;
+env boolean ack_ver_hor_move;
+env boolean ack_bot_move;
+env boolean atEdge_noedge;
+env boolean num_of_cubes_zero;
+env boolean haltButton_press;
+env boolean speedButton_press;
+sys boolean verMot_move;
+sys boolean horMot_move;
+sys boolean botMot_right;
+sys boolean botMot_left;
+sys boolean botMot_stop;
+sys boolean motSpeed_level1;
+sys boolean motSpeed_level2;
+sys boolean reduce_num_of_cubes_reduce;
+sys boolean spec_currentColor_red;
+sys boolean spec_currentColor_green;
+sys boolean spec_currentColor_blue;
+sys boolean spec_currentColor_black;
+sys boolean spec_currentColor_yellow;
+sys boolean spec_stage_wait;
+sys boolean spec_stage_kick;
+sys boolean spec_stage_toangleright;
+sys boolean spec_stage_toangleleft;
+sys boolean spec_stage_drop;
+sys boolean spec_pausing_pause;
+
+guarantee -- unnamed_guarantee_1
+	G(((haltButton_press&PREV((!haltButton_press)))&(spec_haltButtonValidPressed=true))|(!(haltButton_press&PREV((!haltButton_press)))&!(spec_haltButtonValidPressed=true)));
+
+guarantee -- unnamed_guarantee_2
+	G((spec_haltButtonValidPressed=true&(!spec_pausing_pause))|(spec_haltButtonValidPressed=false&spec_pausing_pause)->next(spec_pausing_pause));
+
+guarantee -- unnamed_guarantee_3
+	G((spec_haltButtonValidPressed=false&(!spec_pausing_pause))|(spec_haltButtonValidPressed=true&spec_pausing_pause)->next((!spec_pausing_pause)));
+
+guarantee -- no pause is eternal
+	G((spec_haltButtonValidPressed=true&(!spec_pausing_pause))->F((spec_haltButtonValidPressed=true)));
+
+guarantee -- if we pause, this means no motors move and all the rest of the stats remain the same
+	G(spec_pausing_pause|ack_ver_hor_move->spec_allsleep=true&((next(spec_stage_wait)&spec_stage_wait)|(next(spec_stage_kick)&spec_stage_kick)|(next(spec_stage_toangleright)&spec_stage_toangleright)|(next(spec_stage_toangleleft)&spec_stage_toangleleft)|(next(spec_stage_drop)&spec_stage_drop)|(next((!spec_stage_wait & !spec_stage_kick & !spec_stage_toangleright & !spec_stage_toangleleft & !spec_stage_drop))&(!spec_stage_wait & !spec_stage_kick & !spec_stage_toangleright & !spec_stage_toangleleft & !spec_stage_drop))));
+
+guarantee -- aside from the WAIT stage, spec_currentColor never changes
+	G(!spec_stage_wait->((next(spec_currentColor_red)&spec_currentColor_red)|(next(spec_currentColor_green)&spec_currentColor_green)|(next(spec_currentColor_blue)&spec_currentColor_blue)|(next(spec_currentColor_black)&spec_currentColor_black)|(next(spec_currentColor_yellow)&spec_currentColor_yellow)|(next((!spec_currentColor_red & !spec_currentColor_green & !spec_currentColor_blue & !spec_currentColor_black & !spec_currentColor_yellow))&(!spec_currentColor_red & !spec_currentColor_green & !spec_currentColor_blue & !spec_currentColor_black & !spec_currentColor_yellow))));
+
+guarantee -- only one motors moves at a time
+	G(verMot_move->(botMot_stop&(!horMot_move)));
+
+guarantee -- unnamed_guarantee_4
+	G(horMot_move->(botMot_stop&(!verMot_move)));
+
+guarantee -- unnamed_guarantee_5
+	G(!botMot_stop->((!verMot_move)&(!horMot_move)));
+
+guarantee -- spec_allsleep is true iff all motors sleep
+	G(((spec_allsleep=true)&((!verMot_move)&(!horMot_move)&botMot_stop))|(!(spec_allsleep=true)&!((!verMot_move)&(!horMot_move)&botMot_stop)));
+
+guarantee -- motors are asleep at the start
+	motSpeed_level1&spec_stage_wait&(!spec_pausing_pause);
+
+guarantee -- if there is no cube and we are not currently moving a cube, all motors sleep
+	G((color_black|num_of_cubes_zero)&spec_stage_wait->spec_allsleep=true&next(spec_stage_wait));
+
+guarantee -- once seeing a cube, verMot kicks it in
+	G(!color_black&!num_of_cubes_zero&spec_stage_wait&(!spec_pausing_pause)->verMot_move&((color_red&next(spec_currentColor_red))|(color_green&next(spec_currentColor_green))|(color_blue&next(spec_currentColor_blue))|(color_black&next(spec_currentColor_black))|(color_yellow&next(spec_currentColor_yellow))|((!color_red & !color_green & !color_blue & !color_black & !color_yellow)&next((!spec_currentColor_red & !spec_currentColor_green & !spec_currentColor_blue & !spec_currentColor_black & !spec_currentColor_yellow))))&next(spec_stage_kick));
+
+guarantee -- after the cube has been kicked in, move to the right angle
+	G((!ack_ver_hor_move)&spec_stage_kick&(!spec_pausing_pause)->botMot_right&next(spec_stage_toangleright));
+
+guarantee -- while the bottom motor is moving, see if the color has been found [botMot is MOVING and the color has NOT been found; we're GOING]
+	G((atEdge_noedge)&(spec_stage_toangleright|spec_stage_toangleleft)&((detect_red&spec_currentColor_green)|(detect_red&spec_currentColor_blue)|(detect_red&spec_currentColor_black)|(detect_red&spec_currentColor_yellow)|(detect_red&(!spec_currentColor_red & !spec_currentColor_green & !spec_currentColor_blue & !spec_currentColor_black & !spec_currentColor_yellow))|(detect_green&spec_currentColor_red)|(detect_green&spec_currentColor_blue)|(detect_green&spec_currentColor_black)|(detect_green&spec_currentColor_yellow)|(detect_green&(!spec_currentColor_red & !spec_currentColor_green & !spec_currentColor_blue & !spec_currentColor_black & !spec_currentColor_yellow))|(detect_blue&spec_currentColor_red)|(detect_blue&spec_currentColor_green)|(detect_blue&spec_currentColor_black)|(detect_blue&spec_currentColor_yellow)|(detect_blue&(!spec_currentColor_red & !spec_currentColor_green & !spec_currentColor_blue & !spec_currentColor_black & !spec_currentColor_yellow))|(detect_black&spec_currentColor_red)|(detect_black&spec_currentColor_green)|(detect_black&spec_currentColor_blue)|(detect_black&spec_currentColor_yellow)|(detect_black&(!spec_currentColor_red & !spec_currentColor_green & !spec_currentColor_blue & !spec_currentColor_black & !spec_currentColor_yellow))|(detect_yellow&spec_currentColor_red)|(detect_yellow&spec_currentColor_green)|(detect_yellow&spec_currentColor_blue)|(detect_yellow&spec_currentColor_black)|(detect_yellow&(!spec_currentColor_red & !spec_currentColor_green & !spec_currentColor_blue & !spec_currentColor_black & !spec_currentColor_yellow))|((!detect_red & !detect_green & !detect_blue & !detect_black & !detect_yellow)&spec_currentColor_red)|((!detect_red & !detect_green & !detect_blue & !detect_black & !detect_yellow)&spec_currentColor_green)|((!detect_red & !detect_green & !detect_blue & !detect_black & !detect_yellow)&spec_currentColor_blue)|((!detect_red & !detect_green & !detect_blue & !detect_black & !detect_yellow)&spec_currentColor_black)|((!detect_red & !detect_green & !detect_blue & !detect_black & !detect_yellow)&spec_currentColor_yellow))&(!spec_pausing_pause)->(spec_stage_toangleright->botMot_right)&(spec_stage_toangleleft->botMot_left)&((next(spec_stage_wait)&spec_stage_wait)|(next(spec_stage_kick)&spec_stage_kick)|(next(spec_stage_toangleright)&spec_stage_toangleright)|(next(spec_stage_toangleleft)&spec_stage_toangleleft)|(next(spec_stage_drop)&spec_stage_drop)|(next((!spec_stage_wait & !spec_stage_kick & !spec_stage_toangleright & !spec_stage_toangleleft & !spec_stage_drop))&(!spec_stage_wait & !spec_stage_kick & !spec_stage_toangleright & !spec_stage_toangleleft & !spec_stage_drop))));
+
+guarantee -- while the bottom motor is moving, see if the color has been found [botMot STOPPED MOVING and the color has NOT been found; we're GOING]
+	G((!atEdge_noedge)&(spec_stage_toangleright|spec_stage_toangleleft)&(!spec_pausing_pause)&((detect_red&spec_currentColor_green)|(detect_red&spec_currentColor_blue)|(detect_red&spec_currentColor_black)|(detect_red&spec_currentColor_yellow)|(detect_red&(!spec_currentColor_red & !spec_currentColor_green & !spec_currentColor_blue & !spec_currentColor_black & !spec_currentColor_yellow))|(detect_green&spec_currentColor_red)|(detect_green&spec_currentColor_blue)|(detect_green&spec_currentColor_black)|(detect_green&spec_currentColor_yellow)|(detect_green&(!spec_currentColor_red & !spec_currentColor_green & !spec_currentColor_blue & !spec_currentColor_black & !spec_currentColor_yellow))|(detect_blue&spec_currentColor_red)|(detect_blue&spec_currentColor_green)|(detect_blue&spec_currentColor_black)|(detect_blue&spec_currentColor_yellow)|(detect_blue&(!spec_currentColor_red & !spec_currentColor_green & !spec_currentColor_blue & !spec_currentColor_black & !spec_currentColor_yellow))|(detect_black&spec_currentColor_red)|(detect_black&spec_currentColor_green)|(detect_black&spec_currentColor_blue)|(detect_black&spec_currentColor_yellow)|(detect_black&(!spec_currentColor_red & !spec_currentColor_green & !spec_currentColor_blue & !spec_currentColor_black & !spec_currentColor_yellow))|(detect_yellow&spec_currentColor_red)|(detect_yellow&spec_currentColor_green)|(detect_yellow&spec_currentColor_blue)|(detect_yellow&spec_currentColor_black)|(detect_yellow&(!spec_currentColor_red & !spec_currentColor_green & !spec_currentColor_blue & !spec_currentColor_black & !spec_currentColor_yellow))|((!detect_red & !detect_green & !detect_blue & !detect_black & !detect_yellow)&spec_currentColor_red)|((!detect_red & !detect_green & !detect_blue & !detect_black & !detect_yellow)&spec_currentColor_green)|((!detect_red & !detect_green & !detect_blue & !detect_black & !detect_yellow)&spec_currentColor_blue)|((!detect_red & !detect_green & !detect_blue & !detect_black & !detect_yellow)&spec_currentColor_black)|((!detect_red & !detect_green & !detect_blue & !detect_black & !detect_yellow)&spec_currentColor_yellow))->(spec_stage_toangleright->botMot_left&next(spec_stage_toangleleft))&(spec_stage_toangleleft->botMot_right&next(spec_stage_toangleright)));
+
+guarantee -- after moving to the right angle, move the cube into the heap [we're GOING]
+	G((spec_stage_toangleright|spec_stage_toangleleft)&(!spec_pausing_pause)&((detect_red&spec_currentColor_red)|(detect_green&spec_currentColor_green)|(detect_blue&spec_currentColor_blue)|(detect_black&spec_currentColor_black)|(detect_yellow&spec_currentColor_yellow)|((!detect_red & !detect_green & !detect_blue & !detect_black & !detect_yellow)&(!spec_currentColor_red & !spec_currentColor_green & !spec_currentColor_blue & !spec_currentColor_black & !spec_currentColor_yellow)))->(!verMot_move)&horMot_move&botMot_stop&next(spec_stage_drop));
+
+guarantee -- after the cube has been dropped into the heap, return to original position. Wait for the motor to finish returning before doing anything else
+	G((((!ack_ver_hor_move)&spec_stage_drop)|((ack_bot_move|((!ack_bot_move)&PREV(spec_pausing_pause)))&(!spec_stage_wait & !spec_stage_kick & !spec_stage_toangleright & !spec_stage_toangleleft & !spec_stage_drop)))&(!spec_pausing_pause)->(!botMot_right & !botMot_left & !botMot_stop)&next((!spec_stage_wait & !spec_stage_kick & !spec_stage_toangleright & !spec_stage_toangleleft & !spec_stage_drop)));
+
+guarantee -- unnamed_guarantee_6
+	G(((spec_finished_cycle)&((!ack_bot_move)&PREV((!spec_pausing_pause))&(!spec_stage_wait & !spec_stage_kick & !spec_stage_toangleright & !spec_stage_toangleleft & !spec_stage_drop)&(!spec_pausing_pause)))|(!(spec_finished_cycle)&!((!ack_bot_move)&PREV((!spec_pausing_pause))&(!spec_stage_wait & !spec_stage_kick & !spec_stage_toangleright & !spec_stage_toangleleft & !spec_stage_drop)&(!spec_pausing_pause))));
+
+guarantee -- after the bottom motor finished moving, return to starting stage
+	G(spec_finished_cycle->spec_allsleep=true&next(spec_stage_wait));
+
+guarantee -- reduce the number of cubes left to soft iff a cycle has been finished
+	G(((spec_finished_cycle)&(reduce_num_of_cubes_reduce))|(!(spec_finished_cycle)&!(reduce_num_of_cubes_reduce)));
+
+guarantee -- unnamed_guarantee_7
+	G(((speedButton_press&PREV((!speedButton_press)))&(spec_speedButtonValidPressed=true))|(!(speedButton_press&PREV((!speedButton_press)))&!(spec_speedButtonValidPressed=true)));
+
+guarantee -- if the speed button is pressed, increase the speed by one level
+	G(spec_speedButtonValidPressed=true&PREV(motSpeed_level1)->motSpeed_level2);
+
+guarantee -- if the speed button is pressed, increase the speed by one level (2)
+	G(spec_speedButtonValidPressed=true&PREV(motSpeed_level2)->(!motSpeed_level1 & !motSpeed_level2));
+
+guarantee -- if the speed button is pressed, increase the speed by one level (3)
+	G(spec_speedButtonValidPressed=true&PREV((!motSpeed_level1 & !motSpeed_level2))->motSpeed_level1);
+
+guarantee -- if the speed button is released, the speed remains the same
+	G(spec_speedButtonValidPressed=false&PREV(motSpeed_level1)->motSpeed_level1);
+
+guarantee -- if the speed button is pressed, increase the speed by one level (4)
+	G(spec_speedButtonValidPressed=false&PREV(motSpeed_level2)->motSpeed_level2);
+
+guarantee -- if the speed button is pressed, increase the speed by one level (5)
+	G(spec_speedButtonValidPressed=false&PREV((!motSpeed_level1 & !motSpeed_level2))->(!motSpeed_level1 & !motSpeed_level2));
+
+assumption -- after starting to move, we will sleep eventually
+	G((ack_ver_hor_move)->F(((!ack_ver_hor_move))));
+
+assumption -- unnamed_assumption_1
+	G((ack_bot_move)->F(((!ack_bot_move))));
+
+assumption -- unnamed_assumption_2
+	G(!spec_stage_kick&!spec_stage_drop->(!ack_ver_hor_move));
+
+assumption -- we will always finish sorting the given number of cubes
+	G((!num_of_cubes_zero)->F((num_of_cubes_zero)));
+
+assumption -- there will always be a cube
+	GF(!color_black);
+
+assumption -- color_mutual_exclusion_1
+	G(!(color_red&color_green));
+
+assumption -- color_mutual_exclusion_2
+	G(!(color_red&color_blue));
+
+assumption -- color_mutual_exclusion_3
+	G(!(color_red&color_black));
+
+assumption -- color_mutual_exclusion_4
+	G(!(color_red&color_yellow));
+
+assumption -- color_mutual_exclusion_5
+	G(!(color_green&color_blue));
+
+assumption -- color_mutual_exclusion_6
+	G(!(color_green&color_black));
+
+assumption -- color_mutual_exclusion_7
+	G(!(color_green&color_yellow));
+
+assumption -- color_mutual_exclusion_8
+	G(!(color_blue&color_black));
+
+assumption -- color_mutual_exclusion_9
+	G(!(color_blue&color_yellow));
+
+assumption -- color_mutual_exclusion_10
+	G(!(color_black&color_yellow));
+
+assumption -- detect_mutual_exclusion_1
+	G(!(detect_red&detect_green));
+
+assumption -- detect_mutual_exclusion_2
+	G(!(detect_red&detect_blue));
+
+assumption -- detect_mutual_exclusion_3
+	G(!(detect_red&detect_black));
+
+assumption -- detect_mutual_exclusion_4
+	G(!(detect_red&detect_yellow));
+
+assumption -- detect_mutual_exclusion_5
+	G(!(detect_green&detect_blue));
+
+assumption -- detect_mutual_exclusion_6
+	G(!(detect_green&detect_black));
+
+assumption -- detect_mutual_exclusion_7
+	G(!(detect_green&detect_yellow));
+
+assumption -- detect_mutual_exclusion_8
+	G(!(detect_blue&detect_black));
+
+assumption -- detect_mutual_exclusion_9
+	G(!(detect_blue&detect_yellow));
+
+assumption -- detect_mutual_exclusion_10
+	G(!(detect_black&detect_yellow));
+
+guarantee -- botMot_mutual_exclusion_1
+	G(!(botMot_right&botMot_left));
+
+guarantee -- botMot_mutual_exclusion_2
+	G(!(botMot_right&botMot_stop));
+
+guarantee -- botMot_mutual_exclusion_3
+	G(!(botMot_left&botMot_stop));
+
+guarantee -- motSpeed_mutual_exclusion
+	G(!(motSpeed_level1&motSpeed_level2));
+
+guarantee -- spec_currentColor_mutual_exclusion_1
+	G(!(spec_currentColor_red&spec_currentColor_green));
+
+guarantee -- spec_currentColor_mutual_exclusion_2
+	G(!(spec_currentColor_red&spec_currentColor_blue));
+
+guarantee -- spec_currentColor_mutual_exclusion_3
+	G(!(spec_currentColor_red&spec_currentColor_black));
+
+guarantee -- spec_currentColor_mutual_exclusion_4
+	G(!(spec_currentColor_red&spec_currentColor_yellow));
+
+guarantee -- spec_currentColor_mutual_exclusion_5
+	G(!(spec_currentColor_green&spec_currentColor_blue));
+
+guarantee -- spec_currentColor_mutual_exclusion_6
+	G(!(spec_currentColor_green&spec_currentColor_black));
+
+guarantee -- spec_currentColor_mutual_exclusion_7
+	G(!(spec_currentColor_green&spec_currentColor_yellow));
+
+guarantee -- spec_currentColor_mutual_exclusion_8
+	G(!(spec_currentColor_blue&spec_currentColor_black));
+
+guarantee -- spec_currentColor_mutual_exclusion_9
+	G(!(spec_currentColor_blue&spec_currentColor_yellow));
+
+guarantee -- spec_currentColor_mutual_exclusion_10
+	G(!(spec_currentColor_black&spec_currentColor_yellow));
+
+guarantee -- spec_stage_mutual_exclusion_1
+	G(!(spec_stage_wait&spec_stage_kick));
+
+guarantee -- spec_stage_mutual_exclusion_2
+	G(!(spec_stage_wait&spec_stage_toangleright));
+
+guarantee -- spec_stage_mutual_exclusion_3
+	G(!(spec_stage_wait&spec_stage_toangleleft));
+
+guarantee -- spec_stage_mutual_exclusion_4
+	G(!(spec_stage_wait&spec_stage_drop));
+
+guarantee -- spec_stage_mutual_exclusion_5
+	G(!(spec_stage_kick&spec_stage_toangleright));
+
+guarantee -- spec_stage_mutual_exclusion_6
+	G(!(spec_stage_kick&spec_stage_toangleleft));
+
+guarantee -- spec_stage_mutual_exclusion_7
+	G(!(spec_stage_kick&spec_stage_drop));
+
+guarantee -- spec_stage_mutual_exclusion_8
+	G(!(spec_stage_toangleright&spec_stage_toangleleft));
+
+guarantee -- spec_stage_mutual_exclusion_9
+	G(!(spec_stage_toangleright&spec_stage_drop));
+
+guarantee -- spec_stage_mutual_exclusion_10
+	G(!(spec_stage_toangleleft&spec_stage_drop));

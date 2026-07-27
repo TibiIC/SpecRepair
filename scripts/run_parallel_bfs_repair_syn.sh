@@ -5,7 +5,15 @@
 
 # List of test names (method names on TestBFSRepairOrchestrator), one tmux
 # window per entry.
-tests=(
+#
+# Select which group to run with the first argument:
+#   ./run_parallel_bfs_repair_syn.sh            # all (default)
+#   ./run_parallel_bfs_repair_syn.sh original   # the assumption-only fixtures
+#   ./run_parallel_bfs_repair_syn.sh updated    # the *_updated fixtures
+# Each *_updated case study shares its original's ideal.spectra but pairs it
+# with a strong.spectra that strengthens at least one assumption AND at least
+# one guarantee, so those runs exercise guarantee weakening too.
+original_tests=(
     "test_bfs_repair_spec_arbiter_syn"
     "test_bfs_repair_spec_traffic_single_syn"
     "test_bfs_repair_spec_traffic_updated_syn"
@@ -18,11 +26,33 @@ tests=(
     "test_bfs_repair_spec_pcar_syn"
 )
 
-# Name of the tmux session
-SESSION="parallel_tests"
+updated_tests=(
+    "test_bfs_repair_spec_traffic_updated_updated_syn"
+    "test_bfs_repair_spec_lift_updated_syn"
+    "test_bfs_repair_spec_colorsort_updated_syn"
+    "test_bfs_repair_spec_gyro_updated_syn"
+    "test_bfs_repair_spec_elevator_updated_syn"
+    "test_bfs_repair_spec_humanoid_updated_syn"
+    "test_bfs_repair_spec_pcar_updated_syn"
+)
+
+case "${1:-all}" in
+    original) tests=("${original_tests[@]}") ;;
+    updated)  tests=("${updated_tests[@]}") ;;
+    all)      tests=("${original_tests[@]}" "${updated_tests[@]}") ;;
+    *)
+        echo "Unknown group '$1'. Use one of: all (default), original, updated." >&2
+        exit 1
+        ;;
+esac
+
+# Name of the tmux session - group-scoped, so an "updated" run can be started
+# alongside an already-running "original" one without the has-session check
+# below rejecting it.
+SESSION="parallel_tests_${1:-all}"
 CONDA_ENV="logic"
 WORKDIR="/vol/bitbucket/tg4018/PhD/SpecRepair"  # Optional working directory
-LOGDIR="$WORKDIR/logs/parallel_tests/$(date +%Y-%m-%d_%H%M%S)"
+LOGDIR="$WORKDIR/logs/parallel_tests/${1:-all}_$(date +%Y-%m-%d_%H%M%S)"
 
 if tmux has-session -t "$SESSION" 2>/dev/null; then
     echo "tmux session '$SESSION' already exists - attach to it, or rename/kill it before re-running this script." >&2

@@ -1,0 +1,44 @@
+module GyroAspect
+
+env boolean distSense_blocked;
+env boolean isReady;
+sys boolean balancer_fwd;
+sys boolean balancer_bwd;
+sys boolean balancer_turn_left;
+sys boolean balancer_turn_right;
+
+assumption -- initially_not_ready
+	!isReady;
+
+assumption -- ready_infinitely_often
+	GF(isReady);
+
+assumption -- ready_stays_ready
+	G(isReady->next(isReady));
+
+assumption -- turning_or_backward_leads_to_clear
+	G((balancer_bwd|balancer_turn_left|balancer_turn_right)->F(!distSense_blocked));
+
+guarantee -- initial_state
+	!balancer_fwd & !balancer_bwd & !balancer_turn_left & !balancer_turn_right;
+
+guarantee -- balancer_mutual_exclusion
+	G(!(balancer_fwd&balancer_bwd) & !(balancer_fwd&balancer_turn_left) & !(balancer_fwd&balancer_turn_right) & !(balancer_bwd&balancer_turn_left) & !(balancer_bwd&balancer_turn_right) & !(balancer_turn_left&balancer_turn_right));
+
+guarantee -- not_ready_implies_stopped
+	G(!isReady->(!balancer_fwd&!balancer_bwd&!balancer_turn_left&!balancer_turn_right));
+
+guarantee -- safety_requirement
+	G((distSense_blocked&isReady)->!balancer_fwd);
+
+guarantee -- goal_of_gyro
+	GF(balancer_fwd);
+
+guarantee -- clear_and_ready_implies_forward
+	G((!distSense_blocked&isReady)->balancer_fwd);
+
+guarantee -- forward_implies_next_not_turning
+	G(balancer_fwd->next(!balancer_turn_right&!balancer_turn_left));
+
+guarantee -- blocked_and_stopped_and_ready_implies_next_moves
+	G((distSense_blocked&(!balancer_fwd&!balancer_bwd&!balancer_turn_left&!balancer_turn_right)&isReady)->(next(balancer_fwd)|next(balancer_bwd)|next(balancer_turn_left)|next(balancer_turn_right)));
