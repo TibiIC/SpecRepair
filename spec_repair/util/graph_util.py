@@ -73,7 +73,16 @@ def remove_transitive_relations(graph: nx.DiGraph, root_node: str):
     :param graph: directed graph with no reflexive relations
     :param root_node: starting node for direct transitive relations to be considered
     :return: same directed graph, without edges for transitivity
+
+    Only the part of the graph reachable from `root_node` is walked, so callers
+    with several disconnected components (or with no node literally named "0")
+    should use remove_all_transitive_relations instead.
     """
+    if root_node not in graph:
+        raise ValueError(
+            f"root_node {root_node!r} is not in the graph; "
+            f"available nodes: {sorted(graph.nodes())[:10]}"
+        )
     nodes_to_check = deque()
     visited_nodes = set()
     nodes_to_check.append(root_node)
@@ -96,3 +105,20 @@ def remove_transitive_relations(graph: nx.DiGraph, root_node: str):
         for u in graph.successors(cur_node):
             if u not in visited_nodes:
                 nodes_to_check.append(u)
+
+
+def remove_all_transitive_relations(graph: nx.DiGraph):
+    """
+    Transitive reduction over the whole graph, regardless of node naming or
+    connectivity.
+
+    remove_transitive_relations only walks what is reachable from a single named
+    root - which worked when nodes were numbered and "0" was the ideal spec, but
+    breaks as soon as nodes carry meaningful names or the graph has several
+    components. Running it from every node covers all of them; nodes already
+    visited via another root are cheap, since their transitive edges are gone.
+    """
+    for node in list(graph.nodes()):
+        if node in graph:
+            remove_transitive_relations(graph, node)
+    return graph

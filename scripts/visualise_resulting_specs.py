@@ -2,22 +2,32 @@ import argparse
 import os
 import glob
 import re
+import sys
 from enum import Enum
 
 import networkx as nx
 
-from typing import Dict, Optional
+from typing import Dict, List, Optional, Tuple
 
 from spec_repair.model.spectra_specification import SpectraSpecification
 from spec_repair.util.file_util import read_file
 from spec_repair.ltl_types import GR1FormulaType
 from spec_repair.util.graph_util import remove_reflexive_relations, merge_on_bidirectional_edges, \
-    remove_transitive_relations
+    remove_all_transitive_relations, remove_transitive_relations
 
 
-def extract_graph_without_transitivity_relations(graph: nx.DiGraph):
+def extract_graph_without_transitivity_relations(graph: nx.DiGraph, root_node: Optional[str] = '0'):
+    """
+    :param root_node: node to start the transitive reduction from. Defaults to
+        '0' to preserve the legacy numbered-file behaviour; pass None to reduce
+        the whole graph, which is what named/grouped nodes need since there is
+        no node called '0' and the graph may have several components.
+    """
     remove_reflexive_relations(graph)
-    remove_transitive_relations(graph, root_node='0')
+    if root_node is None:
+        remove_all_transitive_relations(graph)
+    else:
+        remove_transitive_relations(graph, root_node=root_node)
     merge_on_bidirectional_edges(graph)
     # Renaming process may add reflexive relations back to graph
     remove_reflexive_relations(graph)
@@ -25,7 +35,8 @@ def extract_graph_without_transitivity_relations(graph: nx.DiGraph):
     return graph
 
 
-def generate_graph(all_specs: Dict[int, SpectraSpecification], graph_type: Optional[GR1FormulaType] = None):
+def generate_graph(all_specs: Dict[int, SpectraSpecification], graph_type: Optional[GR1FormulaType] = None,
+                   root_node: Optional[str] = '0'):
     # Create a directed graph (graph) using networkx
     graph = nx.DiGraph()
 
@@ -37,7 +48,7 @@ def generate_graph(all_specs: Dict[int, SpectraSpecification], graph_type: Optio
             if this_spec.implied_by(other_spec, graph_type):
                 graph.add_edge(str(other_spec_id), str(this_spec_id))
 
-    return extract_graph_without_transitivity_relations(graph)
+    return extract_graph_without_transitivity_relations(graph, root_node=root_node)
 
 
 def generate_tree_from_root(root_spec: SpectraSpecification, all_other_specs: Dict[int, SpectraSpecification], graph_type: Optional[GR1FormulaType] = None):
@@ -134,8 +145,150 @@ def visualise_tree_from_ideal_from_specs_at_path(spec_directory_path: str, outpu
     A.draw(output_file, format='png', prog='dot')
 
 
+"""
+Colour-coding groups of specifications
+--------------------------------------
+
+`--group LABEL=PATH` adds every specification at PATH (a .spectra file, or a
+directory of them) to the graph under LABEL, and gives that group its own
+colour. Cataloguing by folder is what makes this work: each pipeline stage
+already writes its output to its own directory, so the directory *is* the type.
+
+Nodes are named `LABEL` for a single-file group and `LABEL_0`, `LABEL_1`, ... for
+a directory, so where a node came from is readable straight off the graph.
+
+Equivalent specifications get merged into one node by
+merge_on_bidirectional_edges. When the merged node spans more than one group -
+e.g. a trivial solution that turns out equivalent to a merged result, which is
+usually the interesting finding - it is drawn in the MIXED colour with a heavier
+border, and its label lists every group it came from.
+"""
+
+# Light fills chosen to stay readable behind black label text. Known stage names
+# get a stable colour so graphs from different runs look the same; anything else
+# cycles through EXTRA_COLOURS.
+GROUP_COLOURS: Dict[str, str] = {
+    "strong": "#ffd6a5",
+    "ideal": "#caffbf",
+    "trivial": "#ffadad",
+    "merged": "#bdb2ff",
+    "max_merged": "#9bf6ff",
+    "unique_max_merged": "#a0c4ff",
+}
+EXTRA_COLOURS = ["#fdffb6", "#ffc6ff", "#d0d1ff", "#b5e48c", "#f6bd60"]
+MIXED_COLOUR = "#e6e6e6"
+
+
+def parse_group_argument(raw: str) -> Tuple[str, str]:
+    """Parse a `LABEL=PATH` group argument."""
+    if "=" not in raw:
+        raise argparse.ArgumentTypeError(
+            f"--group expects LABEL=PATH, got '{raw}'")
+    label, path = raw.split("=", 1)
+    label, path = label.strip(), path.strip()
+    if not label or not path:
+        raise argparse.ArgumentTypeError(
+            f"--group expects a non-empty LABEL and PATH, got '{raw}'")
+    return label, path
+
+
+def load_group_specs(label: str, path: str) -> Dict[str, SpectraSpecification]:
+    """
+    Load a group's specifications, keyed by node name. Missing paths are skipped
+    with a warning rather than aborting: a pipeline run legitimately has nothing
+    to show for a stage that produced no specs, and losing the whole graph over
+    that is worse than an incomplete one.
+    """
+    if not os.path.exists(path):
+        print(f"WARNING: skipping group '{label}' - no such path: {path}")
+        return {}
+    if os.path.isfile(path):
+        return {label: SpectraSpecification.from_file(path)}
+
+    spec_files = sorted(f for f in os.listdir(path) if f.endswith(".spectra"))
+    if not spec_files:
+        print(f"WARNING: skipping group '{label}' - no .spectra files in {path}")
+        return {}
+    return {
+        f"{label}_{i}": SpectraSpecification.from_file(os.path.join(path, f))
+        for i, f in enumerate(spec_files)
+    }
+
+
+def _labels_of_node(node_name: str, node_to_label: Dict[str, str]) -> List[str]:
+    """Groups a (possibly merged, comma-joined) node draws from, in order."""
+    labels = []
+    for part in node_name.split(","):
+        label = node_to_label.get(part.strip())
+        if label and label not in labels:
+            labels.append(label)
+    return labels
+
+
+def visualise_grouped_implication_graph(
+        groups: List[Tuple[str, str]],
+        output_file: str,
+        graph_type: Optional[GR1FormulaType] = None,
+) -> None:
+    all_specs: Dict[str, SpectraSpecification] = {}
+    node_to_label: Dict[str, str] = {}
+    colour_of: Dict[str, str] = {}
+    extra = iter(EXTRA_COLOURS)
+
+    for label, path in groups:
+        loaded = load_group_specs(label, path)
+        for node_name, spec in loaded.items():
+            if node_name in all_specs:
+                raise ValueError(f"Duplicate node name '{node_name}'; use distinct group labels.")
+            all_specs[node_name] = spec
+            node_to_label[node_name] = label
+        if loaded and label not in colour_of:
+            colour_of[label] = GROUP_COLOURS.get(label) or next(extra, "#ffffff")
+
+    if not all_specs:
+        raise ValueError("No specifications found in any group; nothing to draw.")
+    print(f"Building implication graph over {len(all_specs)} specification(s) "
+          f"in {len(colour_of)} group(s): {', '.join(colour_of)}")
+
+    graph = generate_graph(all_specs, graph_type, root_node=None)
+
+    A = nx.nx_agraph.to_agraph(graph)
+    A.node_attr.update(fontsize=24, style="filled", shape="box")
+
+    for node in graph.nodes():
+        labels = _labels_of_node(str(node), node_to_label)
+        agraph_node = A.get_node(node)
+        if len(labels) > 1:
+            agraph_node.attr["fillcolor"] = MIXED_COLOUR
+            agraph_node.attr["penwidth"] = "3"
+        elif labels:
+            agraph_node.attr["fillcolor"] = colour_of.get(labels[0], "#ffffff")
+
+    # Legend as its own cluster so it lays out beside the graph, not inside it.
+    legend = A.add_subgraph(name="cluster_legend", label="Specification type", fontsize=20)
+    for label, colour in colour_of.items():
+        legend_node = f"legend_{label}"
+        legend.add_node(legend_node, label=label, fillcolor=colour, style="filled", shape="box", fontsize=18)
+    legend.add_node("legend_mixed", label="equivalent across types",
+                    fillcolor=MIXED_COLOUR, style="filled", shape="box", fontsize=18, penwidth="3")
+
+    os.makedirs(os.path.dirname(os.path.abspath(output_file)) or ".", exist_ok=True)
+    A.draw(output_file, format="png", prog="dot")
+    print(f"Written graph to: {output_file}")
+
+
 description = """
-TODO: fill up a description for this specification visualiser
+Draw the implication graph over one or more groups of Spectra specifications,
+colour-coded by group. Give each group as LABEL=PATH, where PATH is a .spectra
+file or a directory of them:
+
+  python scripts/visualise_resulting_specs.py -o graph.png \\
+      --group strong=input-files/case-studies/spectra/lift/strong.spectra \\
+      --group ideal=input-files/case-studies/spectra/lift/ideal.spectra \\
+      --group trivial=tests/test_files/out/trivial_solutions/2026-07-27/lift \\
+      --group unique_max_merged=.../unique_max_merged_specs
+
+The legacy single-directory mode (-s/--spec_dir) still works and is unchanged.
 """
 
 
@@ -157,11 +310,15 @@ class CompareType(Enum):
                 return None
 
 
-if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description=description)
-    parser.add_argument('-s', '--spec_dir', type=str,
-                        required=True,
-                        help='Path to the directory with specifications to be compared. All files should be named [0-9]+.spectra')
+def main(argv=None) -> int:
+    parser = argparse.ArgumentParser(description=description,
+                                     formatter_class=argparse.RawDescriptionHelpFormatter)
+    mode = parser.add_mutually_exclusive_group(required=True)
+    mode.add_argument('-s', '--spec_dir', type=str,
+                      help='Legacy mode: one directory of specifications, all named [0-9]+.spectra')
+    mode.add_argument('-g', '--group', type=parse_group_argument, action='append', dest='groups',
+                      metavar='LABEL=PATH',
+                      help='A colour-coded group of specifications; repeat for each type')
     parser.add_argument('-o', '--output', type=str,
                         required=False,
                         default="visualisations/new_viz.png",
@@ -171,11 +328,18 @@ if __name__ == '__main__':
                         default=CompareType.GR1,
                         choices=list(CompareType),
                         help='Type of comparison to be provided [ASM/GAR/GR(1)]. Leave empty for GR(1)')
-    args = parser.parse_args()
+    args = parser.parse_args(argv)
 
-    current_directory = os.getcwd()
-    spec_directory_path = os.path.join(current_directory, args.spec_dir)
-    output_file_path = os.path.join(current_directory, args.output)
     graph_type: Optional[GR1FormulaType] = args.graph_type.to_GR1ExpType()
-    visualise_implication_graph_from_specs_at_path(spec_directory_path, output_file_path, graph_type)
-    # visualise_tree_from_ideal_from_specs_at_path(spec_directory_path, output_file, graph_type)
+    output_file_path = os.path.abspath(args.output)
+
+    if args.groups:
+        visualise_grouped_implication_graph(args.groups, output_file_path, graph_type)
+    else:
+        spec_directory_path = os.path.abspath(args.spec_dir)
+        visualise_implication_graph_from_specs_at_path(spec_directory_path, output_file_path, graph_type)
+    return 0
+
+
+if __name__ == '__main__':
+    sys.exit(main())
