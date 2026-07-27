@@ -11,7 +11,6 @@ from main.bfs_repair_orchestrator_builder import BFSRepairOrchestratorBuilder
 from spec_repair.components.repair_data import RepairData
 from spec_repair.enums import Learning
 from spec_repair.components.heuristic_managers.choose_first_heuristic_manager import ChooseFirstHeuristicManager
-from spec_repair.components.recorders.unique_spec_recorder import UniqueSpecRecorder
 from spec_repair.model.spectra_specification import SpectraSpecification
 from spec_repair.util.file_util import read_file_lines, write_to_file
 from spec_repair.wrappers.spectra_toolbox import synthesise_controller
@@ -458,10 +457,6 @@ class TestBFSRepairOrchestrator(BaseTestCase):
                    .with_on_record(lambda r, idx, s, d: save_layered_graph(r._om._graph, out_test_dir_name)))
         if is_debug:
             builder.with_debug_dir(out_test_dir_name)
-        else:
-            # Historical quirk preserved: the non-debug path used the recorder's
-            # default semantic dedup even though the search itself is syntactic.
-            builder.with_recorder(UniqueSpecRecorder()).with_intermediate_recorder(UniqueSpecRecorder())
         repairer: BFSRepairOrchestrator = builder.build()
 
         repairer.repair_bfs(spec, RepairData(trace, counter_traces=[], learning_type=Learning.ASSUMPTION_WEAKENING))
