@@ -62,6 +62,11 @@ OnRecord = Callable[[BFSRepairOrchestrator, int, object, object], None]
 class BFSRepairOrchestratorBuilder:
     def __init__(self):
         self._learner_names = (ASSUMPTION_WEAKENING, GUARANTEE_WEAKENING)
+        # Which solver backs the learners. Takes the heuristic manager and
+        # returns an ILearner, so swapping solver is one override rather than a
+        # new preset per (search strategy x solver) combination.
+        self._learner_factory: Callable[[IHeuristicManager], ILearner] = \
+            lambda hm: OptimisingSpecLearner(heuristic_manager=hm)
         self._om: Optional[IOrchestrationManager] = None
         self._mitigation = {
             Learning.ASSUMPTION_WEAKENING: move_one_to_guarantee_weakening,
@@ -126,6 +131,33 @@ class BFSRepairOrchestratorBuilder:
     def with_heuristic_manager(self, hm: IHeuristicManager) -> "BFSRepairOrchestratorBuilder":
         self._hm = hm
         return self
+
+    def with_learner_factory(
+            self, factory: Callable[[IHeuristicManager], ILearner]
+    ) -> "BFSRepairOrchestratorBuilder":
+        """Build learners with `factory(heuristic_manager)` instead of the default."""
+        self._learner_factory = factory
+        return self
+
+    def using_fastlas(self, n_runs: int = 1, **learner_kwargs) -> "BFSRepairOrchestratorBuilder":
+        """
+        Learn with FastLAS rather than ILASP, keeping the rest of the preset.
+
+        Composes with any preset, e.g.
+        `BFSRepairOrchestratorBuilder.syntactic().using_fastlas(n_runs=3)`.
+        Imported lazily so that nothing outside this method depends on FastLAS
+        being installed.
+
+        `n_runs` invokes FastLAS repeatedly per learning step and keeps the
+        distinct solutions, because FastLAS returns one solution per run where
+        ILASP returns all optimal ones. Note FastLAS 2.1.0 is deterministic, so
+        n_runs > 1 currently costs extra invocations without finding extra
+        solutions - see FastLASSpecLearner's module docstring for the
+        measurements.
+        """
+        from spec_repair.components.learners.fastlas_spec_learner import FastLASSpecLearner
+        return self.with_learner_factory(
+            lambda hm: FastLASSpecLearner(heuristic_manager=hm, n_runs=n_runs, **learner_kwargs))
 
     def enabling(self, *flags: str) -> "BFSRepairOrchestratorBuilder":
         """Enable heuristic flags (e.g. "INCLUDE_NEXT", "INCLUDE_PREV")."""
@@ -216,7 +248,7 @@ class BFSRepairOrchestratorBuilder:
         # heuristic manager to its own, so passing `hm` here just keeps the
         # learners consistent before the first repair rather than mattering later.
         learners: Dict[str, ILearner] = {
-            name: OptimisingSpecLearner(heuristic_manager=hm) for name in self._learner_names
+            name: self._learner_factory(hm) for name in self._learner_names
         }
         recorder, intermediate_recorder = self._build_recorders()
 
