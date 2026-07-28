@@ -56,21 +56,48 @@ fi
 
 mkdir -p "$LOCAL_DEST"
 
+# Only `-a` and `-z` can be assumed: macOS ships openrsync, which reports itself
+# as "rsync version 2.6.9 compatible" and rejects rsync 3.x's --info=. Probe for
+# a summary flag rather than picking one, so the script works with either.
+RSYNC_FLAGS=(-az)
+if command -v rsync >/dev/null 2>&1; then
+    if rsync --info=stats1 --list-only . >/dev/null 2>&1; then
+        RSYNC_FLAGS+=(--info=stats1)
+    elif rsync --stats --list-only . >/dev/null 2>&1; then
+        RSYNC_FLAGS+=(--stats)
+    fi
+fi
+
 count=0
+failed=()
 while read -r remote_dir; do
     [[ -z "$remote_dir" ]] && continue
     name="$(basename "$remote_dir")"
     echo "  pulling $name"
+    # A single unreachable/corrupt run should not lose the other case studies
+    # already pulled, so failures are collected and reported at the end.
     if command -v rsync >/dev/null 2>&1; then
-        rsync -az --info=stats1 "$REMOTE_HOST:$remote_dir/" "$LOCAL_DEST/$name/"
+        if ! rsync "${RSYNC_FLAGS[@]}" "$REMOTE_HOST:$remote_dir/" "$LOCAL_DEST/$name/"; then
+            echo "  WARNING: failed to pull $name" >&2
+            failed+=("$name")
+            continue
+        fi
     else
         # scp -r recreates the directory under the destination, so copy into the
         # parent rather than into a path that already ends in $name.
-        scp -qr "$REMOTE_HOST:$remote_dir" "$LOCAL_DEST/"
+        if ! scp -qr "$REMOTE_HOST:$remote_dir" "$LOCAL_DEST/"; then
+            echo "  WARNING: failed to pull $name" >&2
+            failed+=("$name")
+            continue
+        fi
     fi
     count=$((count + 1))
 done <<< "$run_dirs"
 
 echo "Pulled $count case-study run(s) for $DATE into $LOCAL_DEST"
+if (( ${#failed[@]} > 0 )); then
+    echo "Failed to pull ${#failed[@]}: ${failed[*]}" >&2
+    exit 1
+fi
 echo
 echo "Next: python scripts/run_experiment_pipeline.py $DATE"

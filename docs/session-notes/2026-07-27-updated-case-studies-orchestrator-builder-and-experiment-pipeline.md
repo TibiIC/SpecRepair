@@ -287,9 +287,16 @@ traffic_single (3).
    from 2026-07-24 item 2. Still needs one isolated, freshly-cleared,
    single-invocation run each; `out_test_dir_name` is still scoped only
    by case-study name + date, so same-day reruns silently collide.
-5. **`pull_experiment_from_ssh.sh` has never run against the real
-   remote** — no SSH access from here. Steps 2–6 were verified against a
-   simulated pull.
+5. **`pull_experiment_from_ssh.sh` — partially confirmed against the real
+   remote.** A first real run reached `pulling arbiter_2026-07-27`, so
+   the SSH connection, the `*_<date>` glob and the assumed remote layout
+   are all correct. It then died on `rsync --info=stats1`: macOS ships
+   openrsync, which reports itself as "rsync version 2.6.9 compatible"
+   and rejects rsync 3.x's `--info=`. Fixed by probing for a supported
+   summary flag (`--info=stats1`, else `--stats`, else neither) instead
+   of assuming one, and a failed case study is now warned about and
+   skipped rather than aborting the whole pull. Still unconfirmed: that a
+   full multi-case-study transfer completes.
 6. **Degradation tests are slow (>10 min) and unconfirmed end to end** —
    verified pre-existing by timing them on unrefactored code. Worth one
    run on the GPU box to confirm they now emit fix files.
