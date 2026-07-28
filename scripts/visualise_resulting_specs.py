@@ -158,10 +158,11 @@ Nodes are named `LABEL` for a single-file group and `LABEL_0`, `LABEL_1`, ... fo
 a directory, so where a node came from is readable straight off the graph.
 
 Equivalent specifications get merged into one node by
-merge_on_bidirectional_edges. When the merged node spans more than one group -
-e.g. a trivial solution that turns out equivalent to a merged result, which is
-usually the interesting finding - it is drawn in the MIXED colour with a heavier
-border, and its label lists every group it came from.
+merge_on_bidirectional_edges. Such a node is drawn as a rounded "bubble"
+containing one coloured box per specification inside it, each keeping its own
+group colour - so an equivalence spanning several types stays readable as
+exactly that, rather than being flattened into a single colour that belongs to
+none of them.
 """
 
 # Light fills chosen to stay readable behind black label text. Known stage names
@@ -176,7 +177,33 @@ GROUP_COLOURS: Dict[str, str] = {
     "unique_max_merged": "#a0c4ff",
 }
 EXTRA_COLOURS = ["#fdffb6", "#ffc6ff", "#d0d1ff", "#b5e48c", "#f6bd60"]
-MIXED_COLOUR = "#e6e6e6"
+DEFAULT_COLOUR = "#ffffff"
+
+
+def _escape(text: str) -> str:
+    """Escape text for a Graphviz HTML-like label."""
+    return text.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+
+
+def bubble_label(members: List[Tuple[str, str]], caption: Optional[str] = None) -> str:
+    """
+    Build a Graphviz HTML-like label: a rounded "bubble" holding one coloured
+    cell per member, so an equivalence spanning several groups keeps every
+    group's colour instead of being flattened into one.
+
+    `members` is [(display_name, fill_colour), ...]. The result is wrapped in
+    angle brackets, which is how pygraphviz tells an HTML-like label apart from
+    an ordinary quoted string.
+    """
+    cells = "".join(
+        f'<TD BGCOLOR="{colour}">{_escape(name)}</TD>' for name, colour in members
+    )
+    rows = f"<TR>{cells}</TR>"
+    if caption:
+        rows += (f'<TR><TD COLSPAN="{max(1, len(members))}" BORDER="0">'
+                 f'{_escape(caption)}</TD></TR>')
+    return (f'<<TABLE BORDER="2" CELLBORDER="1" CELLSPACING="6" CELLPADDING="6" '
+            f'STYLE="ROUNDED" COLOR="#555555">{rows}</TABLE>>')
 
 
 def parse_group_argument(raw: str) -> Tuple[str, str]:
@@ -215,14 +242,20 @@ def load_group_specs(label: str, path: str) -> Dict[str, SpectraSpecification]:
     }
 
 
-def _labels_of_node(node_name: str, node_to_label: Dict[str, str]) -> List[str]:
-    """Groups a (possibly merged, comma-joined) node draws from, in order."""
-    labels = []
-    for part in node_name.split(","):
-        label = node_to_label.get(part.strip())
-        if label and label not in labels:
-            labels.append(label)
-    return labels
+def _members_of_node(
+        node_name: str,
+        node_to_label: Dict[str, str],
+        colour_of: Dict[str, str],
+        group_order: Dict[str, int],
+) -> List[Tuple[str, str]]:
+    """
+    The specifications a (possibly merged, comma-joined) node holds, as
+    [(node_name, colour), ...] ordered by the order the groups were given on the
+    command line so bubbles read consistently across graphs.
+    """
+    parts = [p.strip() for p in node_name.split(",") if p.strip()]
+    parts.sort(key=lambda p: (group_order.get(node_to_label.get(p, ""), len(group_order)), p))
+    return [(p, colour_of.get(node_to_label.get(p, ""), DEFAULT_COLOUR)) for p in parts]
 
 
 def visualise_grouped_implication_graph(
@@ -233,6 +266,7 @@ def visualise_grouped_implication_graph(
     all_specs: Dict[str, SpectraSpecification] = {}
     node_to_label: Dict[str, str] = {}
     colour_of: Dict[str, str] = {}
+    group_order: Dict[str, int] = {}
     extra = iter(EXTRA_COLOURS)
 
     for label, path in groups:
@@ -243,7 +277,8 @@ def visualise_grouped_implication_graph(
             all_specs[node_name] = spec
             node_to_label[node_name] = label
         if loaded and label not in colour_of:
-            colour_of[label] = GROUP_COLOURS.get(label) or next(extra, "#ffffff")
+            colour_of[label] = GROUP_COLOURS.get(label) or next(extra, DEFAULT_COLOUR)
+            group_order[label] = len(group_order)
 
     if not all_specs:
         raise ValueError("No specifications found in any group; nothing to draw.")
@@ -255,22 +290,35 @@ def visualise_grouped_implication_graph(
     A = nx.nx_agraph.to_agraph(graph)
     A.node_attr.update(fontsize=24, style="filled", shape="box")
 
+    bubbles = 0
     for node in graph.nodes():
-        labels = _labels_of_node(str(node), node_to_label)
+        members = _members_of_node(str(node), node_to_label, colour_of, group_order)
         agraph_node = A.get_node(node)
-        if len(labels) > 1:
-            agraph_node.attr["fillcolor"] = MIXED_COLOUR
-            agraph_node.attr["penwidth"] = "3"
-        elif labels:
-            agraph_node.attr["fillcolor"] = colour_of.get(labels[0], "#ffffff")
+        if len(members) > 1:
+            # Equivalent specifications: one bubble, one coloured box per
+            # specification inside it, each keeping its own group's colour.
+            agraph_node.attr["shape"] = "none"
+            agraph_node.attr["style"] = ""
+            agraph_node.attr["label"] = bubble_label(members)
+            bubbles += 1
+        elif members:
+            agraph_node.attr["fillcolor"] = members[0][1]
 
     # Legend as its own cluster so it lays out beside the graph, not inside it.
     legend = A.add_subgraph(name="cluster_legend", label="Specification type", fontsize=20)
     for label, colour in colour_of.items():
         legend_node = f"legend_{label}"
         legend.add_node(legend_node, label=label, fillcolor=colour, style="filled", shape="box", fontsize=18)
-    legend.add_node("legend_mixed", label="equivalent across types",
-                    fillcolor=MIXED_COLOUR, style="filled", shape="box", fontsize=18, penwidth="3")
+    if bubbles:
+        # Only explain bubbles when the graph actually contains one.
+        sample = list(colour_of.items())[:2]
+        while len(sample) < 2:
+            sample.append(("", DEFAULT_COLOUR))
+        legend.add_node(
+            "legend_bubble",
+            label=bubble_label([(name or " ", colour) for name, colour in sample],
+                               caption="equivalent specifications"),
+            shape="none", style="", fontsize=18)
 
     os.makedirs(os.path.dirname(os.path.abspath(output_file)) or ".", exist_ok=True)
     A.draw(output_file, format="png", prog="dot")

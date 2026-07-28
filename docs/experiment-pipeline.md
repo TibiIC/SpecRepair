@@ -79,10 +79,14 @@ python find_semantically_unique_specifications.py <dir> -o <out_dir>
 
 `--group LABEL=PATH` gives each specification type its own colour; PATH is a
 file or a directory, so each pipeline stage's folder *is* its type. Nodes are
-named `LABEL` (single file) or `LABEL_<i>` (directory). Specifications that turn
-out equivalent are merged into one node — when that node spans more than one
-group it is drawn grey with a heavy border and lists every group it came from,
-which is usually the interesting finding.
+named `LABEL` (single file) or `LABEL_<i>` (directory).
+
+Specifications that turn out equivalent are merged into one node, drawn as a
+rounded **bubble** holding one coloured box per specification inside it, each
+keeping its own group's colour. So a bubble containing an orange `strong` next
+to a blue `unique_max_merged_0` says at a glance that the merged repair is
+equivalent to the original — usually the interesting finding — without
+flattening either into a colour that belongs to neither.
 
 **Edge direction:** `A -> B` means A implies B, i.e. A is the stronger
 specification.

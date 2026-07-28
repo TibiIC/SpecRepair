@@ -215,8 +215,11 @@ anything. Trivial-solution tests are generated from a list covering all
 case study so they feed the graph directly. The graph takes repeatable
 `--group LABEL=PATH` arguments — cataloguing by folder works because each
 stage already writes to its own directory, so the directory *is* the
-type. Specs that turn out equivalent merge into one grey, heavy-bordered
-node listing every group it came from.
+type. Specs that turn out equivalent merge into a single rounded bubble
+holding one coloured box per specification, each keeping its own group's
+colour. (The first version flattened those into one grey node; that lost
+the very information the colour coding exists to convey, and was replaced
+the next day.)
 
 Bugs fixed en route: `remove_transitive_relations` hardcoded
 `root_node='0'` (so any named node set crashed, and the single-root walk
