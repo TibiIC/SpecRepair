@@ -2,8 +2,8 @@ not_holds_at(balancer_bwd,0,trace_name_0).
 not_holds_at(balancer_fwd,0,trace_name_0).
 not_holds_at(balancer_turn_left,0,trace_name_0).
 not_holds_at(balancer_turn_right,0,trace_name_0).
-not_holds_at(distSense_blocked,0,trace_name_0).
-not_holds_at(isReady,0,trace_name_0).
+holds_at(distSense_blocked,0,trace_name_0).
+holds_at(isReady,0,trace_name_0).
 
 not_holds_at(balancer_bwd,1,trace_name_0).
 not_holds_at(balancer_fwd,1,trace_name_0).
@@ -16,5 +16,5 @@ not_holds_at(balancer_bwd,2,trace_name_0).
 not_holds_at(balancer_fwd,2,trace_name_0).
 not_holds_at(balancer_turn_left,2,trace_name_0).
 not_holds_at(balancer_turn_right,2,trace_name_0).
-holds_at(distSense_blocked,2,trace_name_0).
+not_holds_at(distSense_blocked,2,trace_name_0).
 not_holds_at(isReady,2,trace_name_0).

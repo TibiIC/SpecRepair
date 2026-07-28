@@ -4,3 +4,10 @@ not_holds_at(balancer_turn_left,0,trace_name_0).
 not_holds_at(balancer_turn_right,0,trace_name_0).
 holds_at(distSense_blocked,0,trace_name_0).
 holds_at(isReady,0,trace_name_0).
+
+holds_at(balancer_bwd,1,trace_name_0).
+not_holds_at(balancer_fwd,1,trace_name_0).
+holds_at(balancer_turn_left,1,trace_name_0).
+holds_at(balancer_turn_right,1,trace_name_0).
+holds_at(distSense_blocked,1,trace_name_0).
+holds_at(isReady,1,trace_name_0).

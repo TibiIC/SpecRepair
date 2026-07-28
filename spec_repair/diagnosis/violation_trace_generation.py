@@ -25,9 +25,10 @@ the codebase uses: a slot where every atom both holds and does not hold, letting
 formulas about the future be satisfied vacuously instead of making every short
 prefix unsatisfiable.
 """
+import itertools
 import random
 import re
-from typing import Dict, List, NamedTuple, Optional, Sequence, Set
+from typing import Dict, List, NamedTuple, Optional, Sequence, Set, Tuple
 
 from spec_repair.components.spec_generator import SpecGenerator
 from spec_repair.ltl_types import GR1FormulaType
@@ -216,6 +217,30 @@ def find_violable_assumptions(
     return violable
 
 
+def candidate_violation_groups(
+        assumption_names: Sequence[str],
+        max_violated: int,
+        rng: Optional[random.Random] = None,
+) -> List[Tuple[str, ...]]:
+    """
+    The groups of assumptions to try violating, smallest first and shuffled
+    within each size.
+
+    Smallest first because a trace violating a single assumption is the clearest
+    evidence of what went wrong; larger groups are only worth reaching for once
+    the singletons are used up. Shuffled within a size so repeated runs with
+    different seeds explore different assumptions rather than always the first
+    few in file order.
+    """
+    rng = rng or random
+    groups: List[Tuple[str, ...]] = []
+    for size in range(1, max(1, min(max_violated, len(assumption_names))) + 1):
+        same_size = [tuple(sorted(c)) for c in itertools.combinations(assumption_names, size)]
+        rng.shuffle(same_size)
+        groups.extend(same_size)
+    return groups
+
+
 def generate_assumption_violating_traces(
         spec: SpectraSpecification,
         n_traces: int = 1,
@@ -264,34 +289,54 @@ def generate_assumption_violating_traces(
         print(f"Note: {len(skipped)} assumption(s) not violable within "
               f"{min_timepoints}-{max_timepoints} timepoints, skipped: {', '.join(skipped)}")
 
+    # Work through distinct groups of assumptions rather than drawing at random,
+    # so a set of traces covers different violations instead of witnessing the
+    # same one several ways. Groups are only revisited once every one of them
+    # has been tried, and then only to top up the requested count.
+    groups = candidate_violation_groups(assumption_names, max_violated_assumptions, rng)
     results: List[GeneratedTrace] = []
     seen: Set[str] = set()
+    used_groups: Set[Tuple[str, ...]] = set()
     attempts = 0
-    while len(results) < n_traces and attempts < n_traces * max_attempts_per_trace:
-        attempts += 1
-        n_violated = rng.randint(1, min(max_violated_assumptions, len(assumption_names)))
-        to_violate = rng.sample(assumption_names, n_violated)
-        # Only lengths at which every chosen assumption is individually violable
-        # can possibly work; drawing outside that is a guaranteed UNSAT.
-        feasible = sorted(set.intersection(*(set(violable[name]) for name in to_violate)))
-        if not feasible:
-            continue
-        n_timepoints = rng.choice(feasible)
+    budget = n_traces * max_attempts_per_trace
 
-        asp = build_violation_asp(spec, to_violate, n_timepoints, trace_name)
-        asp_file = generate_temp_filename(ext=".lp")
-        write_to_file(asp_file, asp)
-        models = _parse_models(run_clingo_raw(asp_file, n_models=models_per_attempt))
-        if not models:
-            continue
-
-        rng.shuffle(models)
-        for model in models:
-            formatted = _format_trace(model, n_timepoints)
-            fingerprint = "\n".join(_sort_trace(model))
-            if fingerprint in seen:
+    while len(results) < n_traces and attempts < budget:
+        pending = [g for g in groups if g not in used_groups] or groups
+        made_progress = False
+        for group in pending:
+            if len(results) >= n_traces or attempts >= budget:
+                break
+            attempts += 1
+            # Only lengths at which every assumption in the group is individually
+            # violable can possibly work; anything else is a guaranteed UNSAT.
+            feasible = sorted(set.intersection(*(set(violable[name]) for name in group)))
+            if not feasible:
+                used_groups.add(group)
                 continue
-            seen.add(fingerprint)
-            results.append(GeneratedTrace(formatted, sorted(to_violate), n_timepoints))
+            n_timepoints = rng.choice(feasible)
+
+            asp = build_violation_asp(spec, list(group), n_timepoints, trace_name)
+            asp_file = generate_temp_filename(ext=".lp")
+            write_to_file(asp_file, asp)
+            models = _parse_models(run_clingo_raw(asp_file, n_models=models_per_attempt))
+            if not models:
+                # A group can be unsatisfiable as a whole even when each of its
+                # assumptions is violable alone - violating both at once may be
+                # impossible while every guarantee still holds.
+                used_groups.add(group)
+                continue
+
+            rng.shuffle(models)
+            for model in models:
+                fingerprint = "\n".join(_sort_trace(model))
+                if fingerprint in seen:
+                    continue
+                seen.add(fingerprint)
+                used_groups.add(group)
+                results.append(GeneratedTrace(_format_trace(model, n_timepoints),
+                                              sorted(group), n_timepoints))
+                made_progress = True
+                break
+        if not made_progress:
             break
     return results

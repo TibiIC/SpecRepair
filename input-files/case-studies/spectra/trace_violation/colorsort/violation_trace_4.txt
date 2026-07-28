@@ -1,5 +1,5 @@
 not_holds_at(ack_bot_move,0,trace_name_0).
-not_holds_at(ack_ver_hor_move,0,trace_name_0).
+holds_at(ack_ver_hor_move,0,trace_name_0).
 not_holds_at(atEdge_noedge,0,trace_name_0).
 not_holds_at(botMot_left,0,trace_name_0).
 not_holds_at(botMot_right,0,trace_name_0).
@@ -10,15 +10,15 @@ not_holds_at(color_green,0,trace_name_0).
 not_holds_at(color_red,0,trace_name_0).
 not_holds_at(color_yellow,0,trace_name_0).
 not_holds_at(detect_black,0,trace_name_0).
-holds_at(detect_blue,0,trace_name_0).
+not_holds_at(detect_blue,0,trace_name_0).
 not_holds_at(detect_green,0,trace_name_0).
-not_holds_at(detect_red,0,trace_name_0).
-holds_at(detect_yellow,0,trace_name_0).
+holds_at(detect_red,0,trace_name_0).
+not_holds_at(detect_yellow,0,trace_name_0).
 not_holds_at(haltButton_press,0,trace_name_0).
 not_holds_at(horMot_move,0,trace_name_0).
 holds_at(motSpeed_level1,0,trace_name_0).
 not_holds_at(motSpeed_level2,0,trace_name_0).
-not_holds_at(num_of_cubes_zero,0,trace_name_0).
+holds_at(num_of_cubes_zero,0,trace_name_0).
 not_holds_at(reduce_num_of_cubes_reduce,0,trace_name_0).
 holds_at(spec_allsleep,0,trace_name_0).
 not_holds_at(spec_currentColor_black,0,trace_name_0).
