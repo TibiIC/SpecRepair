@@ -15,7 +15,7 @@ class TestNewSpecLearner(BaseTestCase):
         spec_learner = OptimisingSpecLearner(NoFilterHeuristicManager())
 
         spec: SpectraSpecification = SpectraSpecification.from_file(
-            '../input-files/case-studies/spectra/minepump/strong.spectra')
+            '../input-files/case-studies/spectra/strengthened/minepump/strong.spectra')
         trace: list[str] = read_file_lines(
             "./test_files/minepump_strong_auto_violation.txt")
 

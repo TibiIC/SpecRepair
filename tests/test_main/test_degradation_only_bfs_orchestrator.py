@@ -69,7 +69,7 @@ class TestBFSRepairOrchestrator(BaseTestCase):
 
     def test_bfs_degrade_spec_weird_uc(self):
         case_study_name = 'weird_uc'
-        case_study_path = '../input-files/case-studies/spectra/weird_uc'
+        case_study_path = '../input-files/case-studies/spectra/strengthened/weird_uc'
         new_spec_strings = self.run_bfs_degradation(
             case_study_name,
             case_study_path,

@@ -11,7 +11,7 @@ from tests.base_test_case import BaseTestCase
 
 class TestTrace(BaseTestCase):
     def test_from_str(self):
-        case_study_path = '../input-files/case-studies/spectra/minepump'
+        case_study_path = '../input-files/case-studies/spectra/strengthened/minepump'
         expected_sets = [(
             AtomicProposition("highwater", False),
             AtomicProposition("methane", False),

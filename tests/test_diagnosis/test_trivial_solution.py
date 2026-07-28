@@ -10,7 +10,7 @@ from spec_repair.diagnosis.trivial_solution import get_trivial_solution, get_all
 from spec_repair.util.file_util import read_file_lines, write_to_file
 from tests.base_test_case import BaseTestCase
 
-CASE_STUDIES_DIR = '../input-files/case-studies/spectra'
+CASE_STUDIES_DIR = '../input-files/case-studies/spectra/strengthened'
 
 # Output roots. Runs are stamped with the date they were generated, so a rerun
 # never silently overwrites an earlier day's solutions and a graph can be built
@@ -67,7 +67,7 @@ class TestTrivialSolution(BaseTestCase):
 
     @unittest.skip("Cannot find violation trace file anymore, spec may be unrealisable anyway.")
     def test_weird_case_study(self):
-        dir = '../input-files/case-studies/spectra/weird_uc'
+        dir = '../input-files/case-studies/spectra/strengthened/weird_uc'
         trivial_specs = self.get_all_trivial_specs(dir)
         for i, trivial_spec in enumerate(trivial_specs):
             write_to_file(f'test_files/out/trivial_solutions/weird_uc_{i}.spectra', trivial_spec.to_str())

@@ -331,8 +331,8 @@ colour-coded by group. Give each group as LABEL=PATH, where PATH is a .spectra
 file or a directory of them:
 
   python scripts/visualise_resulting_specs.py -o graph.png \\
-      --group strong=input-files/case-studies/spectra/lift/strong.spectra \\
-      --group ideal=input-files/case-studies/spectra/lift/ideal.spectra \\
+      --group strong=input-files/case-studies/spectra/strengthened/lift/strong.spectra \\
+      --group ideal=input-files/case-studies/spectra/strengthened/lift/ideal.spectra \\
       --group trivial=tests/test_files/out/trivial_solutions/2026-07-27/lift \\
       --group unique_max_merged=.../unique_max_merged_specs
 

@@ -47,7 +47,7 @@ class TestMutatedSpecGenerator(BaseTestCase):
         self._generate_and_check("colorsort")
 
     def _generate_and_check(self, case_study_name: str, n_mutations: int = 3, n_traces_per_mutation: int = 1):
-        ideal_file = f"../input-files/case-studies/spectra/{case_study_name}/ideal.spectra"
+        ideal_file = f"../input-files/case-studies/spectra/strengthened/{case_study_name}/ideal.spectra"
         ideal_spec = SpectraSpecification.from_file(ideal_file)
         self.assertTrue(
             SpectraGR1Oracle.is_realisable(ideal_spec),
