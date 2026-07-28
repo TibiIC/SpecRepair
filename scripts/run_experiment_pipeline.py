@@ -35,6 +35,7 @@ Usage:
     python scripts/run_experiment_pipeline.py 2026-07-27 --skip-graph
 """
 import argparse
+import logging
 import os
 import re
 import subprocess
@@ -54,7 +55,11 @@ from spec_repair.util.file_util import write_to_file
 REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 OUT_SSH_ROOT = os.path.join(REPO_ROOT, "tests", "test_files", "out_ssh")
 TRIVIAL_ROOT = os.path.join(REPO_ROOT, "tests", "test_files", "out", "trivial_solutions")
-CASE_STUDIES_DIR = os.path.join(REPO_ROOT, "input-files", "case-studies", "spectra")
+# The pulled runs come from the strengthened (ideal + strong) setup, which is
+# where step 6 finds the strong/ideal specifications it draws alongside the
+# merged results. Built with os.path.join, so it was missed by the path rewrite
+# when the case studies were split by approach.
+CASE_STUDIES_DIR = os.path.join(REPO_ROOT, "input-files", "case-studies", "spectra", "strengthened")
 
 FINAL_SPECS = "final_specs"
 MERGED = "merged_specs"
@@ -120,7 +125,8 @@ def save_specs(specs, out_dir: str, prefix: str = "spec") -> List[str]:
     return paths
 
 
-def step_2_merge(run_dir: str, og_spec: Optional[SpectraSpecification]) -> int:
+def step_2_merge(run_dir: str, og_spec: Optional[SpectraSpecification],
+                 max_merge_formulas: Optional[int]) -> int:
     final_specs_dir = os.path.join(run_dir, FINAL_SPECS)
     if not os.path.isdir(final_specs_dir):
         print(f"  SKIP: no {FINAL_SPECS}/ in {run_dir}")
@@ -132,7 +138,15 @@ def step_2_merge(run_dir: str, og_spec: Optional[SpectraSpecification]) -> int:
         save_specs([s for _, s in files_with_specs], os.path.join(run_dir, MERGED))
         return len(files_with_specs)
 
-    merged = merge_solutions([s for _, s in files_with_specs], og_spec=og_spec)
+    print(f"  step 2: merging {len(files_with_specs)} final specs...", flush=True)
+    # verify_inputs=False: these came out of the BFS repair search, which only
+    # records a spec once its oracle has accepted it, so they are realisable by
+    # construction. Re-checking costs one Spectra synthesis call each - about
+    # 11 minutes for a run like elevator_updated's 966 specs - to re-establish
+    # something already known. The post-merge realisability check still runs.
+    merged = merge_solutions([s for _, s in files_with_specs], og_spec=og_spec,
+                             verify_inputs=False,
+                             max_formulas_for_trivial_fallback=max_merge_formulas)
     save_specs(merged, os.path.join(run_dir, MERGED))
     print(f"  step 2: merged {len(files_with_specs)} final specs -> {len(merged)} merged spec(s)")
     return len(merged)
@@ -185,6 +199,9 @@ def step_6_graph(run_dir: str, case_study: str, date: str, graph_types: Tuple[st
 
 
 def main(argv=None) -> int:
+    # INFO so the library's progress messages during long merges are visible;
+    # without them a large run looks indistinguishable from a hang.
+    logging.basicConfig(level=logging.INFO, format="  %(message)s")
     parser = argparse.ArgumentParser(description=__doc__,
                                      formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("date", help="experiment date, YYYY-MM-DD, as pulled into out_ssh/")
@@ -195,8 +212,14 @@ def main(argv=None) -> int:
     parser.add_argument("--graph-type", nargs="+", default=list(GRAPH_TYPES),
                         choices=list(GRAPH_TYPES), metavar="TYPE",
                         help="which implication graphs to draw (default: all three - asm, gar, gr1)")
+    parser.add_argument("--max-merge-formulas", type=int, default=50,
+                        help="refuse to break down an unrealisable merge with more formulas than "
+                             "this, instead of hanging in Spectra's exhaustive core search "
+                             "(default: 50; 0 disables the limit)")
     parser.add_argument("--skip-graph", action="store_true", help="skip step 6")
     args = parser.parse_args(argv)
+
+    args.max_merge_formulas = args.max_merge_formulas or None
 
     run_dirs = find_run_dirs(args.date, args.case_study)
     print(f"Found {len(run_dirs)} case-study run(s) for {args.date}\n")
@@ -211,7 +234,7 @@ def main(argv=None) -> int:
                 strong_path = os.path.join(CASE_STUDIES_DIR, case_study, "strong.spectra")
                 og_spec = SpectraSpecification.from_file(strong_path) if os.path.exists(strong_path) else None
 
-            if step_2_merge(run_dir, og_spec) == 0:
+            if step_2_merge(run_dir, og_spec, args.max_merge_formulas) == 0:
                 continue
             step_3_maximal(run_dir)
             step_4_unique(run_dir)

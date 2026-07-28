@@ -8,8 +8,8 @@ the trivial guarantee-only solutions instead of returning something unrealisable
 """
 from typing import List
 
-from spec_repair.diagnosis.solution_merging import NotAWeakeningError, UnrealisableInputError, \
-    check_weakens_original, merge_solutions, merge_two_solutions
+from spec_repair.diagnosis.solution_merging import MergeTooLargeError, NotAWeakeningError, \
+    UnrealisableInputError, check_weakens_original, merge_solutions, merge_two_solutions
 from spec_repair.components.oracles.spectra_gr1_oracle import SpectraGR1Oracle
 from spec_repair.interfaces.ispecification import ISpecification
 from spec_repair.ltl_types import GR1FormulaType
@@ -145,3 +145,47 @@ class TestSolutionMerging(BaseTestCase):
 
         with self.assertRaises(UnrealisableInputError):
             merge_solutions([self.repair_a, self.repair_b], oracle=_NeverRealisable())
+
+    # ---------------- guards on large / expensive merges ----------------
+
+    def test_verify_inputs_can_be_skipped(self):
+        """
+        Skipping input verification must not change the result - it only avoids
+        re-establishing that specs from the repair search are realisable.
+        """
+        checked = merge_solutions([self.repair_a, self.repair_b], verify_inputs=True)
+        unchecked = merge_solutions([self.repair_a, self.repair_b], verify_inputs=False)
+        self.assertEqual([s.to_str() for s in checked], [s.to_str() for s in unchecked])
+
+    def test_unrealisable_input_is_not_caught_when_verification_is_off(self):
+        """Documents the trade-off: the check is what raises, so turning it off removes that."""
+        class _NeverRealisable:
+            @staticmethod
+            def is_realisable(_spec):
+                return False
+
+        with self.assertRaises(UnrealisableInputError):
+            merge_solutions([self.repair_a, self.repair_b], oracle=_NeverRealisable(),
+                            verify_inputs=True)
+        # With verification off the unrealisable merge is still detected, and
+        # here it is refused by the size guard rather than silently accepted.
+        with self.assertRaises(MergeTooLargeError):
+            merge_solutions([self.repair_a, self.repair_b], oracle=_NeverRealisable(),
+                            verify_inputs=False, max_formulas_for_trivial_fallback=0)
+
+    def test_large_unrealisable_merge_is_refused_rather_than_attempted(self):
+        class _NeverRealisable:
+            @staticmethod
+            def is_realisable(_spec):
+                return False
+
+        with self.assertRaises(MergeTooLargeError) as ctx:
+            merge_solutions([self.repair_a, self.repair_b], oracle=_NeverRealisable(),
+                            verify_inputs=False, max_formulas_for_trivial_fallback=1)
+        self.assertIn("unrealisable specification", str(ctx.exception))
+
+    def test_no_limit_still_attempts_the_fallback(self):
+        """A realisable merge never reaches the guard, whatever the limit."""
+        merged = merge_solutions([self.repair_a, self.repair_b],
+                                 max_formulas_for_trivial_fallback=1)
+        self.assertGreaterEqual(len(merged), 1)
