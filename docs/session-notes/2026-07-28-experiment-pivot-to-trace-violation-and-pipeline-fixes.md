@@ -158,11 +158,96 @@ Deduplicating inputs before merging was tried and rejected on measurement:
 semantic dedup of 966 specs is itself an O(n²) spot comparison that also exceeds
 10 minutes.
 
+## Part 7: a FastLAS learner (branch `fastlas-learner`)
+
+Groundwork for tackling the case studies ILASP cannot: a learner backed by
+FastLAS instead. Confined to one component, as intended — `FastLASSpecLearner`
+subclasses `OptimisingSpecLearner` and overrides exactly one method,
+`find_adaptations_with_heuristic`, the seam where the task goes to the solver
+and the answer comes back. Orchestrator, oracle, mitigator, discriminator and
+encoder are untouched and unaware which solver is in use. Selected with
+`BFSRepairOrchestratorBuilder.<preset>().using_fastlas(n_runs=N)`, which
+composes with every preset; the builder gained a learner factory so swapping
+solver is one override rather than a preset per (strategy × solver) pair.
+
+### Translating the task
+
+FastLAS 2.1.0 rejects the ILASP dialect the encoder emits. Three rewrites, each
+for something it refuses outright:
+
+| ILASP | FastLAS | Why |
+|---|---|---|
+| `#modeb(2, p(...), (positive)).` | `#modeb(p(...)).` | `syntax error, unexpected T_COMMA` |
+| `#constant(t, v).` | `t(v).` | no `#constant` directive — `Unknown token: '#'`; it reads `const(t)` values from a `t/1` predicate |
+| `#pos({...},{...},{...}).` | `#pos(eg1,{...},{...},{...}).` | examples need an identifier |
+
+Output parsing differs too — ILASP prints `%% Solution N (score M)` blocks,
+FastLAS prints bare rules — but individual rules share a syntax, so
+`Adaptation.from_str` is reused unchanged.
+
+### Two findings, both measured rather than assumed
+
+**FastLAS 2.1.0 is deterministic.** The premise for this work was that FastLAS
+returns *one solution, randomly*, so running it repeatedly would sample
+different ones. It does not: identical output across six consecutive runs, with
+`--threads 4`, and with the mode declarations and constant facts shuffled under
+five different seeds. Excluding a found solution via `#bias` and enumerating via
+`--output-solve-program` were both tried; the former has no effect (see below)
+and the latter only exposes `in_h(N)` indices with no mapping back to rule text.
+
+`n_runs` is implemented as specified — repeated invocation, distinct solutions
+collected and deduplicated — so a build that *does* randomise needs no further
+change. But with 2.1.0 it returns one solution and extra runs only cost time, so
+the default is 1. A test pins the determinism, so if FastLAS ever gains
+randomisation that test fails and says so.
+
+**FastLAS ignores the `#bias` block.** Its `#bias` is a scoring hook, not a
+constraint: adding `:- body(k(_)).` to a task that had chosen `k` left the
+answer unchanged. ILASP uses that block for *hard* constraints on rule shape —
+matching the head's time/trace variables to the body's `timepoint_of_op`,
+forbidding contradictory `holds_at`/`not_holds_at` pairs, and so on. **FastLAS
+is therefore solving a less constrained problem on the same task** and can in
+principle return a rule ILASP's bias would have excluded. Its preference for the
+shortest hypothesis makes that unlikely in practice — the shortest candidates
+are body-free facts that satisfy those constraints vacuously — but it is a real
+difference, not an equivalence, and matters before trusting FastLAS results.
+
+### Other notes
+
+`run_fastlas` captures stderr rather than discarding it. FastLAS reports a
+malformed task on stderr and writes *nothing* to stdout, so ignoring it would
+make a translation bug indistinguishable from "this branch found no
+adaptations" — the search would quietly explore nothing and report no repair.
+
+29 tests: 21 unit in `tests/test_components/test_fastlas_spec_learner.py` with
+the binary mocked, 8 integration in `tests/test_main/test_fastlas_integration.py`
+that invoke it for real against minepump, traffic_single and lift, skipped when
+FastLAS is not installed. Writing them caught three of my own bugs: a greedy
+`\s*$` under `re.MULTILINE` that silently joined consecutive `#constant` lines,
+an inconsistent None-vs-empty contract in the interpreter, and the discarded
+stderr above.
+
 ## Final state
 
-`main` is pushed (`404e88b`), and now includes the previously-unmerged `fast`
+`main` is pushed (`02e65e5`), and now includes the previously-unmerged `fast`
 branch — the `BFSRepairOrchestratorBuilder` and the semantic-mode
 `UniqueSpecRecorder` fix that had been silently discarding degradation results.
+Parts 1-6 are all on `main`:
+
+| Commit | |
+|---|---|
+| `4356374` | pull script: probe for a supported rsync flag, survive one bad transfer |
+| `2abcf2e` | draw all three implication graphs |
+| `f4d5c1a` | coloured bubbles replace the grey equivalence node |
+| `df58ddb` | trace-violation case studies and the ASP generator |
+| `e4761f2` | merge guard, so a large merge reports instead of hanging |
+| `b23c8bb` | five traces per case study, covering distinct assumption groups |
+| `404e88b` | merge of `fast` |
+| `02e65e5` | these notes |
+
+Part 7 is on **`fastlas-learner`** (`bd73a4f`), pushed but not merged — the
+FastLAS learner is groundwork rather than something the current experiments
+depend on, and its two caveats above are worth reviewing before it lands.
 
 Cleanup worth recording: three `out_ssh` case studies carried stale
 `merged_specs`/`max_merged_specs`/`unique_max_merged_specs` from my own
@@ -173,20 +258,30 @@ inputs than the `final_specs` beside it. Removed.
 
 ## Open items for next session
 
-1. **arbiter is unusable in the new setup** — its only assumption is `GF(a)`.
+1. **FastLAS gives one solution, not many** — the `n_runs` mechanism is built
+   and tested, but 2.1.0 is deterministic so it currently yields one branch per
+   learning step where ILASP yields several. A narrower repair search is the
+   trade for FastLAS's speed; whether that is acceptable is a research call.
+   Getting genuine alternatives would need either a FastLAS build with a seed,
+   or reconstructing the rule-index mapping behind `--output-solve-program`.
+2. **FastLAS ignores ILASP's `#bias` constraints**, so it solves a less
+   constrained problem on the same task. Worth confirming on a complex case
+   study that the rules it returns are ones ILASP would also have allowed,
+   before trusting the results.
+3. **arbiter is unusable in the new setup** — its only assumption is `GF(a)`.
    Needs either a non-liveness assumption or a bounded-liveness semantics
    ("no witness within N steps"), which is a different encoding.
-2. **ColorSort remains intractable everywhere** — no BFS repair specs,
+4. **ColorSort remains intractable everywhere** — no BFS repair specs,
    `get_all_trivial_solution` past 8 minutes, and now the merge fallback too.
    All the same all-unrealisable-cores cost centre.
-3. **Merging all repairs may not be the right operation at scale.** 966
+5. **Merging all repairs may not be the right operation at scale.** 966
    elevator_updated repairs merge into a 134-formula unrealisable spec that then
    has to be torn back down. Reducing to maximal/unique *before* merging would
    avoid that, but reorders the methodology, so it is the supervisor's call.
-4. **`tests/test_main/test_solution_merger.py` is still broken** — it reads
+6. **`tests/test_main/test_solution_merger.py` is still broken** — it reads
    `maximal_solutions_from_ssh/arbiter_0.spectra`, but those fixtures moved into
    that directory's `old/` subfolder. Left alone since `old/` and `2026-06-12/`
    hold different specs.
-5. **`scripts/` organisation** — 33 Python files, only 12 with `argparse`.
+7. **`scripts/` organisation** — 33 Python files, only 12 with `argparse`.
    Proposed but not done: move the rest to `scripts/exploratory/` and add
    `console_scripts` entry points.
