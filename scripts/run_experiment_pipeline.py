@@ -10,7 +10,9 @@ folder, produces:
         merged_specs/                 <- step 2: merge of all final_specs
         max_merged_specs/             <- step 3: maximal by guarantee (GAR)
         unique_max_merged_specs/      <- step 4: semantically unique
-        implication_graph.png         <- step 6: colour-coded graph
+        implication_graph_asm.png     <- step 6: assumptions only
+        implication_graph_gar.png     <- step 6: guarantees only
+        implication_graph_gr1.png     <- step 6: whole spec (asm -> gar)
 
 Step 5 (trivial solutions) is local and independent of the remote; generate it
 with tests/test_diagnosis/test_trivial_solution.py, which writes to
@@ -22,9 +24,14 @@ same assumptions - merging conjoins them and every input came from the same
 original - so filtering on assumptions as well cannot remove anything, and
 comparing them costs a spot equivalence check per pair.
 
+All three graphs are drawn every time, because no single comparison tells the
+whole story - see GRAPH_TYPES below for why the gr1 one in particular is easy to
+misread.
+
 Usage:
     python scripts/run_experiment_pipeline.py 2026-07-27
     python scripts/run_experiment_pipeline.py 2026-07-27 --case-study pcar
+    python scripts/run_experiment_pipeline.py 2026-07-27 --graph-type gar
     python scripts/run_experiment_pipeline.py 2026-07-27 --skip-graph
 """
 import argparse
@@ -53,7 +60,25 @@ FINAL_SPECS = "final_specs"
 MERGED = "merged_specs"
 MAX_MERGED = "max_merged_specs"
 UNIQUE_MAX_MERGED = "unique_max_merged_specs"
-GRAPH_NAME = "implication_graph.png"
+
+
+def graph_name(graph_type: str) -> str:
+    return f"implication_graph_{graph_type}.png"
+
+
+# All three comparisons are drawn by default, because no single one tells the
+# whole story and reading the wrong one is actively misleading:
+#
+#   asm  - assumptions only
+#   gar  - guarantees only
+#   gr1  - the whole specification, formatted as (assumptions) -> (guarantees)
+#
+# The gr1 view is the one to be careful with: strengthening the assumptions
+# makes that implication *weaker*, so when a run weakens assumptions and leaves
+# guarantees untouched, gr1 orders the specifications purely by the assumption
+# side and in the opposite direction to intuition. Compare asm and gar
+# side-by-side to see what actually changed.
+GRAPH_TYPES = ("asm", "gar", "gr1")
 
 
 def case_study_name_from_run_dir(run_dir_name: str, date: str) -> str:
@@ -130,7 +155,7 @@ def step_4_unique(run_dir: str) -> int:
     return len(unique)
 
 
-def step_6_graph(run_dir: str, case_study: str, date: str, graph_type: str) -> None:
+def step_6_graph(run_dir: str, case_study: str, date: str, graph_types: Tuple[str, ...]) -> None:
     groups: List[Tuple[str, str]] = []
     case_study_dir = os.path.join(CASE_STUDIES_DIR, case_study)
     for label, path in (("strong", os.path.join(case_study_dir, "strong.spectra")),
@@ -146,12 +171,17 @@ def step_6_graph(run_dir: str, case_study: str, date: str, graph_type: str) -> N
         print("  step 6: nothing to draw")
         return
 
-    output = os.path.join(run_dir, GRAPH_NAME)
-    cmd = [sys.executable, os.path.join(REPO_ROOT, "scripts", "visualise_resulting_specs.py"),
-           "-o", output, "-t", graph_type]
+    group_args = []
     for label, path in groups:
-        cmd += ["--group", f"{label}={path}"]
-    subprocess.run(cmd, check=True, cwd=REPO_ROOT)
+        group_args += ["--group", f"{label}={path}"]
+
+    for graph_type in graph_types:
+        output = os.path.join(run_dir, graph_name(graph_type))
+        cmd = [sys.executable, os.path.join(REPO_ROOT, "scripts", "visualise_resulting_specs.py"),
+               "-o", output, "-t", graph_type] + group_args
+        subprocess.run(cmd, check=True, cwd=REPO_ROOT)
+    print(f"  step 6: drew {len(graph_types)} graph(s): "
+          f"{', '.join(graph_name(t) for t in graph_types)}")
 
 
 def main(argv=None) -> int:
@@ -162,8 +192,9 @@ def main(argv=None) -> int:
                         help="only process this case study (default: all in that date)")
     parser.add_argument("--og-spec-from-case-study", action="store_true",
                         help="pass the case study's strong.spectra to the merge as the original spec")
-    parser.add_argument("--graph-type", default="gr1", choices=["asm", "gar", "gr1"],
-                        help="implication relation used for the graph (default: gr1)")
+    parser.add_argument("--graph-type", nargs="+", default=list(GRAPH_TYPES),
+                        choices=list(GRAPH_TYPES), metavar="TYPE",
+                        help="which implication graphs to draw (default: all three - asm, gar, gr1)")
     parser.add_argument("--skip-graph", action="store_true", help="skip step 6")
     args = parser.parse_args(argv)
 
@@ -185,7 +216,7 @@ def main(argv=None) -> int:
             step_3_maximal(run_dir)
             step_4_unique(run_dir)
             if not args.skip_graph:
-                step_6_graph(run_dir, case_study, args.date, args.graph_type)
+                step_6_graph(run_dir, case_study, args.date, tuple(args.graph_type))
         except Exception as e:  # keep going: one bad case study should not sink the batch
             print(f"  ERROR: {type(e).__name__}: {e}")
             failures.append(case_study)

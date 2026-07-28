@@ -59,7 +59,7 @@ Per case study, inside `out_ssh/<date>/<case_study>_<date>/`:
 | 2 | `merged_specs/` | merges every spec in `final_specs/` (`spec_repair.diagnosis.solution_merging`) |
 | 3 | `max_merged_specs/` | keeps only those maximal by **guarantee** (GAR) |
 | 4 | `unique_max_merged_specs/` | keeps only the semantically unique ones |
-| 6 | `implication_graph.png` | colour-coded graph of strong / ideal / trivial / unique max merged |
+| 6 | `implication_graph_{asm,gar,gr1}.png` | colour-coded graphs of strong / ideal / trivial / unique max merged |
 
 Step 3 filters on GAR alone because every merged specification shares the same
 assumptions — they all derive from one original and merging conjoins — so an
@@ -87,11 +87,34 @@ which is usually the interesting finding.
 **Edge direction:** `A -> B` means A implies B, i.e. A is the stronger
 specification.
 
-**Careful with `--graph-type gr1` (the default):** a whole GR(1) specification
-is formatted as `(assumptions) -> (guarantees)`, so *strengthening the
-assumptions weakens the formula*. `strong.spectra` therefore tends to sit at the
-**bottom** of a GR1 graph despite being the over-strengthened spec. Use
-`--graph-type gar` to compare guarantees alone, or `asm` for assumptions.
+### Three graphs, and which to read
+
+All three are drawn every run, because no single one tells the whole story:
+
+| File | Compares | Read it for |
+|---|---|---|
+| `implication_graph_asm.png` | assumptions only | how far each repair weakened the assumptions |
+| `implication_graph_gar.png` | guarantees only | whether any guarantee degradation happened at all |
+| `implication_graph_gr1.png` | whole spec, as `(asm) -> (gar)` | the combined picture — **easy to misread, see below** |
+
+Restrict with e.g. `--graph-type gar`, or `--graph-type asm gar`.
+
+**The gr1 graph inverts when guarantees are untouched.** A whole GR(1)
+specification is formatted as `(assumptions) -> (guarantees)`, so *strengthening
+the assumptions weakens that implication*. When a repair run weakens assumptions
+and leaves guarantees alone — the common case — gr1 orders the specifications
+purely by the assumption side, and in the opposite direction to intuition:
+`strong.spectra` sinks to the **bottom** and the trivial solutions rise to the
+**top**.
+
+traffic_single on 2026-07-27 shows this clearly. In `asm`, `strong` is at the
+top and `ideal`/`trivial` at the bottom, as expected. In `gar`, `ideal`, `strong`
+and the merged result collapse into a single equivalent node with only `trivial`
+below them — i.e. no guarantee degradation occurred, which is exactly why the
+`gr1` view had nothing but assumptions to order by.
+
+Rule of thumb: **read `asm` and `gar` first**, and treat `gr1` as a summary that
+only means what you expect when both sides actually moved.
 
 ## Known limitations
 
