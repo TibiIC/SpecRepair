@@ -190,3 +190,7 @@ inputs than the `final_specs` beside it. Removed.
 5. **`scripts/` organisation** — 33 Python files, only 12 with `argparse`.
    Proposed but not done: move the rest to `scripts/exploratory/` and add
    `console_scripts` entry points.
+
+## PERSONAL NOTES
+* number 3 above is important to fix. a max limit of merges is not the right way to do it.
+* 3 steps should be enough to violate minepump's second assumption. double-check!
