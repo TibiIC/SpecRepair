@@ -2,33 +2,17 @@ import os
 import pickle
 import unittest
 from datetime import datetime
-from typing import Dict
 
 import networkx as nx
 from pyvis.network import Network
 
 from main.bfs_repair_orchestrator import BFSRepairOrchestrator
-from spec_repair.components.orchestration_managers.orchestration_manager_semantic_equivalence_aw_merge import \
-    OrchestrationManagerSemanticEquivalenceAsmOnly
-from spec_repair.loggers.spec_logger import SpecLogger
-from spec_repair.interfaces.ilearner import ILearner
-from spec_repair.components.learners.optimising_final_spec_learner import OptimisingSpecLearner
-from spec_repair.components.mitigators.learning_type_spec_mitigator import LearningTypeSpecMitigator
-from spec_repair.components.discriminators.spectra_discriminator import SpectraDiscriminator
-from spec_repair.components.oracles.spectra_gr1_oracle import SpectraGR1Oracle
-from spec_repair.components.orchestration_managers.orchestration_manager_semantic_equivalence import \
-    OrchestrationManagerSemanticEquivalence
-from spec_repair.components.orchestration_managers.orchestration_manager_syntactic_equivalence import \
-    OrchestrationManagerSyntacticEquivalence
+from main.bfs_repair_orchestrator_builder import BFSRepairOrchestratorBuilder
 from spec_repair.components.repair_data import RepairData
 from spec_repair.enums import Learning
 from spec_repair.components.heuristic_managers.choose_first_heuristic_manager import ChooseFirstHeuristicManager
-from spec_repair.components.heuristic_managers.no_filter_heuristic_manager import NoFilterHeuristicManager
-from spec_repair.components.recorders.unique_spec_recorder import UniqueSpecRecorder
 from spec_repair.model.spectra_specification import SpectraSpecification
 from spec_repair.util.file_util import read_file_lines, write_to_file
-from spec_repair.components.mitigators.mitigation_strategies import move_one_to_guarantee_weakening, complete_counter_traces, \
-    finish_here_return_nothing
 from spec_repair.wrappers.spectra_toolbox import synthesise_controller
 from tests.base_test_case import BaseTestCase
 
@@ -70,7 +54,7 @@ class TestBFSRepairOrchestrator(BaseTestCase):
 
     def test_bfs_repair_spec_arbiter(self):
         case_study_name = 'arbiter'
-        case_study_path = '../input-files/case-studies/spectra/arbiter'
+        case_study_path = '../input-files/case-studies/spectra/strengthened/arbiter'
         new_spec_strings = self.run_bfs_repair_sem_unique(
             case_study_name,
             case_study_path,
@@ -79,7 +63,7 @@ class TestBFSRepairOrchestrator(BaseTestCase):
 
     def test_bfs_repair_spec_traffic_single(self):
         case_study_name = 'traffic_single'
-        case_study_path = '../input-files/case-studies/spectra/traffic_single'
+        case_study_path = '../input-files/case-studies/spectra/strengthened/traffic_single'
         new_spec_strings = self.run_bfs_repair_sem_unique(
             case_study_name,
             case_study_path,
@@ -88,7 +72,7 @@ class TestBFSRepairOrchestrator(BaseTestCase):
 
     def test_bfs_repair_spec_traffic_updated(self):
         case_study_name = 'traffic_updated'
-        case_study_path = '../input-files/case-studies/spectra/traffic_updated'
+        case_study_path = '../input-files/case-studies/spectra/strengthened/traffic_updated'
         new_spec_strings = self.run_bfs_repair_sem_unique(
             case_study_name,
             case_study_path,
@@ -97,7 +81,7 @@ class TestBFSRepairOrchestrator(BaseTestCase):
 
     def test_bfs_repair_spec_lift(self):
         case_study_name = 'lift'
-        case_study_path = '../input-files/case-studies/spectra/lift'
+        case_study_path = '../input-files/case-studies/spectra/strengthened/lift'
         new_spec_strings = self.run_bfs_repair_sem_unique(
             case_study_name,
             case_study_path,
@@ -123,7 +107,7 @@ class TestBFSRepairOrchestrator(BaseTestCase):
 
     def test_bfs_repair_spec_minepump(self):
         case_study_name = 'minepump'
-        case_study_path = '../input-files/case-studies/spectra/minepump'
+        case_study_path = '../input-files/case-studies/spectra/strengthened/minepump'
         new_spec_strings = self.run_bfs_repair_sem_unique(case_study_name, case_study_path, is_debug=True)
 
         expected_specs_files: list[str] = os.listdir('./test_files/minepump_weakenings')
@@ -139,7 +123,7 @@ class TestBFSRepairOrchestrator(BaseTestCase):
 
     def test_bfs_repair_spec_submarine(self):
         case_study_name = 'submarine'
-        case_study_path = '../input-files/case-studies/spectra/submarine'
+        case_study_path = '../input-files/case-studies/spectra/strengthened/submarine'
         new_spec_strings = self.run_bfs_repair_sem_unique(
             case_study_name,
             case_study_path,
@@ -148,7 +132,7 @@ class TestBFSRepairOrchestrator(BaseTestCase):
 
     def test_bfs_repair_spec_arbiter_syn(self):
         case_study_name = 'arbiter'
-        case_study_path = '../input-files/case-studies/spectra/arbiter'
+        case_study_path = '../input-files/case-studies/spectra/strengthened/arbiter'
         new_spec_strings = self.run_bfs_repair_syn_unique(
             case_study_name,
             case_study_path,
@@ -157,7 +141,7 @@ class TestBFSRepairOrchestrator(BaseTestCase):
 
     def test_bfs_repair_spec_traffic_single_syn(self):
         case_study_name = 'traffic_single'
-        case_study_path = '../input-files/case-studies/spectra/traffic_single'
+        case_study_path = '../input-files/case-studies/spectra/strengthened/traffic_single'
         new_spec_strings = self.run_bfs_repair_syn_unique(
             case_study_name,
             case_study_path,
@@ -166,7 +150,7 @@ class TestBFSRepairOrchestrator(BaseTestCase):
 
     def test_bfs_repair_spec_traffic_updated_syn(self):
         case_study_name = 'traffic_updated'
-        case_study_path = '../input-files/case-studies/spectra/traffic_updated'
+        case_study_path = '../input-files/case-studies/spectra/strengthened/traffic_updated'
         new_spec_strings = self.run_bfs_repair_syn_unique(
             case_study_name,
             case_study_path,
@@ -175,7 +159,7 @@ class TestBFSRepairOrchestrator(BaseTestCase):
 
     def test_bfs_repair_spec_lift_syn(self):
         case_study_name = 'lift'
-        case_study_path = '../input-files/case-studies/spectra/lift'
+        case_study_path = '../input-files/case-studies/spectra/strengthened/lift'
         new_spec_strings = self.run_bfs_repair_syn_unique(
             case_study_name,
             case_study_path,
@@ -184,7 +168,120 @@ class TestBFSRepairOrchestrator(BaseTestCase):
 
     def test_bfs_repair_spec_minepump_syn(self):
         case_study_name = 'minepump'
-        case_study_path = '../input-files/case-studies/spectra/minepump'
+        case_study_path = '../input-files/case-studies/spectra/strengthened/minepump'
+        new_spec_strings = self.run_bfs_repair_syn_unique(
+            case_study_name,
+            case_study_path,
+            is_debug=True
+        )
+
+    def test_bfs_repair_spec_colorsort_syn(self):
+        case_study_name = 'colorsort'
+        case_study_path = '../input-files/case-studies/spectra/strengthened/colorsort'
+        new_spec_strings = self.run_bfs_repair_syn_unique(
+            case_study_name,
+            case_study_path,
+            is_debug=True
+        )
+
+    def test_bfs_repair_spec_gyro_syn(self):
+        case_study_name = 'gyro'
+        case_study_path = '../input-files/case-studies/spectra/strengthened/gyro'
+        new_spec_strings = self.run_bfs_repair_syn_unique(
+            case_study_name,
+            case_study_path,
+            is_debug=True
+        )
+
+    def test_bfs_repair_spec_elevator_syn(self):
+        case_study_name = 'elevator'
+        case_study_path = '../input-files/case-studies/spectra/strengthened/elevator'
+        new_spec_strings = self.run_bfs_repair_syn_unique(
+            case_study_name,
+            case_study_path,
+            is_debug=True
+        )
+
+    def test_bfs_repair_spec_humanoid_syn(self):
+        case_study_name = 'humanoid'
+        case_study_path = '../input-files/case-studies/spectra/strengthened/humanoid'
+        new_spec_strings = self.run_bfs_repair_syn_unique(
+            case_study_name,
+            case_study_path,
+            is_debug=True
+        )
+
+    def test_bfs_repair_spec_pcar_syn(self):
+        case_study_name = 'pcar'
+        case_study_path = '../input-files/case-studies/spectra/strengthened/pcar'
+        new_spec_strings = self.run_bfs_repair_syn_unique(
+            case_study_name,
+            case_study_path,
+            is_debug=True
+        )
+
+    # The *_updated case studies below share each original's ideal.spectra but
+    # pair it with a strong.spectra that strengthens at least one assumption
+    # AND at least one guarantee. The original fixtures all happen to be
+    # assumption-only, so these exercise the guarantee-weakening half of the
+    # repair search against a violation that genuinely requires it.
+    def test_bfs_repair_spec_elevator_updated_syn(self):
+        case_study_name = 'elevator_updated'
+        case_study_path = '../input-files/case-studies/spectra/strengthened/elevator_updated'
+        new_spec_strings = self.run_bfs_repair_syn_unique(
+            case_study_name,
+            case_study_path,
+            is_debug=True
+        )
+
+    def test_bfs_repair_spec_gyro_updated_syn(self):
+        case_study_name = 'gyro_updated'
+        case_study_path = '../input-files/case-studies/spectra/strengthened/gyro_updated'
+        new_spec_strings = self.run_bfs_repair_syn_unique(
+            case_study_name,
+            case_study_path,
+            is_debug=True
+        )
+
+    def test_bfs_repair_spec_humanoid_updated_syn(self):
+        case_study_name = 'humanoid_updated'
+        case_study_path = '../input-files/case-studies/spectra/strengthened/humanoid_updated'
+        new_spec_strings = self.run_bfs_repair_syn_unique(
+            case_study_name,
+            case_study_path,
+            is_debug=True
+        )
+
+    def test_bfs_repair_spec_pcar_updated_syn(self):
+        case_study_name = 'pcar_updated'
+        case_study_path = '../input-files/case-studies/spectra/strengthened/pcar_updated'
+        new_spec_strings = self.run_bfs_repair_syn_unique(
+            case_study_name,
+            case_study_path,
+            is_debug=True
+        )
+
+    def test_bfs_repair_spec_lift_updated_syn(self):
+        case_study_name = 'lift_updated'
+        case_study_path = '../input-files/case-studies/spectra/strengthened/lift_updated'
+        new_spec_strings = self.run_bfs_repair_syn_unique(
+            case_study_name,
+            case_study_path,
+            is_debug=True
+        )
+
+    def test_bfs_repair_spec_traffic_updated_updated_syn(self):
+        case_study_name = 'traffic_updated_updated'
+        case_study_path = '../input-files/case-studies/spectra/strengthened/traffic_updated_updated'
+        new_spec_strings = self.run_bfs_repair_syn_unique(
+            case_study_name,
+            case_study_path,
+            is_debug=True
+        )
+
+    def test_bfs_repair_spec_colorsort_updated_syn(self):
+        case_study_name = 'colorsort_updated'
+        case_study_path = '../input-files/case-studies/spectra/strengthened/colorsort_updated'
         new_spec_strings = self.run_bfs_repair_syn_unique(
             case_study_name,
             case_study_path,
@@ -193,7 +290,7 @@ class TestBFSRepairOrchestrator(BaseTestCase):
 
     def test_bfs_repair_spec_arbiter_asm_only(self):
         case_study_name = 'arbiter'
-        case_study_path = '../input-files/case-studies/spectra/arbiter'
+        case_study_path = '../input-files/case-studies/spectra/strengthened/arbiter'
         intermediate_spec_strings, new_spec_strings = self.run_bfs_asm_only_repair_sem_unique(
             case_study_name,
             case_study_path,
@@ -204,7 +301,7 @@ class TestBFSRepairOrchestrator(BaseTestCase):
 
     def test_bfs_repair_spec_traffic_single_asm_only(self):
         case_study_name = 'traffic_single'
-        case_study_path = '../input-files/case-studies/spectra/traffic_single'
+        case_study_path = '../input-files/case-studies/spectra/strengthened/traffic_single'
         intermediate_spec_strings, new_spec_strings = self.run_bfs_asm_only_repair_sem_unique(
             case_study_name,
             case_study_path,
@@ -215,7 +312,7 @@ class TestBFSRepairOrchestrator(BaseTestCase):
 
     def test_bfs_repair_spec_traffic_updated_asm_only(self):
         case_study_name = 'traffic_updated'
-        case_study_path = '../input-files/case-studies/spectra/traffic_updated'
+        case_study_path = '../input-files/case-studies/spectra/strengthened/traffic_updated'
         intermediate_spec_strings, new_spec_strings = self.run_bfs_asm_only_repair_sem_unique(
             case_study_name,
             case_study_path,
@@ -226,7 +323,7 @@ class TestBFSRepairOrchestrator(BaseTestCase):
 
     def test_bfs_repair_spec_lift_asm_only(self):
         case_study_name = 'lift'
-        case_study_path = '../input-files/case-studies/spectra/lift'
+        case_study_path = '../input-files/case-studies/spectra/strengthened/lift'
         intermediate_spec_strings, new_spec_strings = self.run_bfs_asm_only_repair_sem_unique(
             case_study_name,
             case_study_path,
@@ -237,7 +334,7 @@ class TestBFSRepairOrchestrator(BaseTestCase):
 
     def test_bfs_repair_spec_minepump_asm_only(self):
         case_study_name = 'minepump'
-        case_study_path = '../input-files/case-studies/spectra/minepump'
+        case_study_path = '../input-files/case-studies/spectra/strengthened/minepump'
         intermediate_spec_strings, new_spec_strings = self.run_bfs_asm_only_repair_sem_unique(
             case_study_name,
             case_study_path,
@@ -249,7 +346,7 @@ class TestBFSRepairOrchestrator(BaseTestCase):
     @unittest.skip("skip test")
     def test_single_repair_spec_minepump(self):
         case_study_name = 'minepump'
-        case_study_path = '../input-files/case-studies/spectra/minepump'
+        case_study_path = '../input-files/case-studies/spectra/strengthened/minepump'
         out_test_dir_name = "./test_files/out/minepump_single"
         new_spec_strings = self.run_single_repair(case_study_name, case_study_path, out_test_dir_name)
         print(new_spec_strings)
@@ -257,7 +354,7 @@ class TestBFSRepairOrchestrator(BaseTestCase):
     @unittest.skip("skip test")
     def test_single_repair_spec_minepump_liveness(self):
         case_study_name = 'minepump_liveness'
-        case_study_path = '../input-files/case-studies/spectra/minepump_liveness'
+        case_study_path = '../input-files/case-studies/spectra/strengthened/minepump_liveness'
         out_test_dir_name = "./test_files/out/minepump_liveness_single"
         new_spec_strings = self.run_single_repair(case_study_name, case_study_path, out_test_dir_name)
         print(new_spec_strings)
@@ -274,50 +371,17 @@ class TestBFSRepairOrchestrator(BaseTestCase):
             os.remove(transitions_file_path)
         spec: SpectraSpecification = SpectraSpecification.from_file(f"{case_study_path}/strong.spectra")
         trace: list[str] = read_file_lines(f"{case_study_path}/violation_trace.txt")
-        hm = NoFilterHeuristicManager()
-        hm.set_enabled("INCLUDE_NEXT")
-        hm.set_enabled("INCLUDE_PREV")
-        learners: Dict[str, ILearner] = {
-            "assumption_weakening": OptimisingSpecLearner(heuristic_manager=hm),
-        }
+        builder = (BFSRepairOrchestratorBuilder.assumption_only()
+                   .enabling("INCLUDE_NEXT", "INCLUDE_PREV")
+                   .with_log_file(log_file)
+                   .with_on_record(lambda r, idx, s, d: save_layered_graph(r._om._graph, out_test_dir_name)))
         if is_debug:
-            intermediate_spec_dir_name = f"{out_test_dir_name}/intermediate_specs"
-            final_spec_dir_name = f"{out_test_dir_name}/final_specs"
-            intermediate_recorder = UniqueSpecRecorder(debug_folder=intermediate_spec_dir_name)
-            final_recorder = UniqueSpecRecorder(debug_folder=final_spec_dir_name)
-            if not os.path.exists(intermediate_spec_dir_name):
-                os.makedirs(intermediate_spec_dir_name, exist_ok=True)
-            if not os.path.exists(final_spec_dir_name):
-                os.makedirs(final_spec_dir_name, exist_ok=True)
-        else:
-            intermediate_recorder = UniqueSpecRecorder()
-            final_recorder = UniqueSpecRecorder()
-
-        # will be set after repairer is constructed
-        repairer_ref = []
-
-        def on_new_spec_found(idx, spec, data):
-            if repairer_ref:
-                save_layered_graph(repairer_ref[0]._om._graph, out_test_dir_name)
-
-        repairer: BFSRepairOrchestrator = BFSRepairOrchestrator(
-            learners,
-            SpectraGR1Oracle(),
-            SpectraDiscriminator(),
-            LearningTypeSpecMitigator({
-                Learning.ASSUMPTION_WEAKENING: finish_here_return_nothing
-            }),
-            om=OrchestrationManagerSemanticEquivalenceAsmOnly(),
-            hm=hm,
-            recorder=final_recorder,
-            intermediate_recorder=intermediate_recorder,
-            logger=SpecLogger(filename=log_file, on_record=on_new_spec_found)
-        )
-        repairer_ref.append(repairer)
+            builder.with_debug_dir(out_test_dir_name)
+        repairer: BFSRepairOrchestrator = builder.build()
 
         repairer.repair_bfs(spec, RepairData(trace, counter_traces=[], learning_type=Learning.ASSUMPTION_WEAKENING))
-        intermediate_spec_strings: list[str] = intermediate_recorder.get_specs()
-        new_spec_strings: list[str] = final_recorder.get_specs()
+        intermediate_spec_strings: list[str] = repairer.intermediate_recorder.get_specs()
+        new_spec_strings: list[str] = repairer.recorder.get_specs()
         save_layered_graph(repairer._om._graph, out_test_dir_name)
         return intermediate_spec_strings, new_spec_strings
 
@@ -332,51 +396,16 @@ class TestBFSRepairOrchestrator(BaseTestCase):
             os.remove(transitions_file_path)
         spec: SpectraSpecification = SpectraSpecification.from_file(f"{case_study_path}/strong.spectra")
         trace: list[str] = read_file_lines(f"{case_study_path}/violation_trace.txt")
-        hm = NoFilterHeuristicManager()
-        hm.set_enabled("INCLUDE_NEXT")
-        hm.set_enabled("INCLUDE_PREV")
-        learners: Dict[str, ILearner] = {
-            "assumption_weakening": OptimisingSpecLearner(heuristic_manager=hm),
-            "guarantee_weakening": OptimisingSpecLearner(heuristic_manager=hm)
-        }
+        builder = (BFSRepairOrchestratorBuilder.semantic()
+                   .enabling("INCLUDE_NEXT", "INCLUDE_PREV")
+                   .with_log_file(log_file)
+                   .with_on_record(lambda r, idx, s, d: save_layered_graph(r._om._graph, out_test_dir_name)))
         if is_debug:
-            intermediate_spec_dir_name = f"{out_test_dir_name}/intermediate_specs"
-            final_spec_dir_name = f"{out_test_dir_name}/final_specs"
-            intermediate_recorder = UniqueSpecRecorder(debug_folder=intermediate_spec_dir_name)
-            final_recorder = UniqueSpecRecorder(debug_folder=final_spec_dir_name)
-            if not os.path.exists(intermediate_spec_dir_name):
-                os.makedirs(intermediate_spec_dir_name, exist_ok=True)
-            if not os.path.exists(final_spec_dir_name):
-                os.makedirs(final_spec_dir_name, exist_ok=True)
-        else:
-            intermediate_recorder = UniqueSpecRecorder()
-            final_recorder = UniqueSpecRecorder()
-
-        # will be set after repairer is constructed
-        repairer_ref = []
-
-        def on_new_spec_found(idx, spec, data):
-            if repairer_ref:
-                save_layered_graph(repairer_ref[0]._om._graph, out_test_dir_name)
-
-        repairer: BFSRepairOrchestrator = BFSRepairOrchestrator(
-            learners,
-            SpectraGR1Oracle(),
-            SpectraDiscriminator(),
-            LearningTypeSpecMitigator({
-                Learning.ASSUMPTION_WEAKENING: move_one_to_guarantee_weakening,
-                Learning.GUARANTEE_WEAKENING: complete_counter_traces
-            }),
-            om=OrchestrationManagerSemanticEquivalence(),
-            hm=hm,
-            recorder=final_recorder,
-            intermediate_recorder=intermediate_recorder,
-            logger=SpecLogger(filename=log_file, on_record=on_new_spec_found)
-        )
-        repairer_ref.append(repairer)
+            builder.with_debug_dir(out_test_dir_name)
+        repairer: BFSRepairOrchestrator = builder.build()
 
         repairer.repair_bfs(spec, RepairData(trace, counter_traces=[], learning_type=Learning.ASSUMPTION_WEAKENING))
-        new_spec_strings: list[str] = final_recorder.get_specs()
+        new_spec_strings: list[str] = repairer.recorder.get_specs()
         save_layered_graph(repairer._om._graph, out_test_dir_name)
         return new_spec_strings
 
@@ -389,35 +418,19 @@ class TestBFSRepairOrchestrator(BaseTestCase):
             os.remove(transitions_file_path)
         spec: SpectraSpecification = SpectraSpecification.from_file(f"{case_study_path}/strong.spectra")
         trace: list[str] = read_file_lines(f"{case_study_path}/violation_trace.txt")
-        hm = ChooseFirstHeuristicManager()
-        # hm.set_enabled("INCLUDE_NEXT")
-        learners: Dict[str, ILearner] = {
-            "assumption_weakening": OptimisingSpecLearner(
-                heuristic_manager=hm
-            ),
-            "guarantee_weakening": OptimisingSpecLearner(
-                heuristic_manager=hm
-            )
-        }
+        # Note: this previously passed hm/recorder/logger positionally into the
+        # om/hm/recorder slots, so the heuristic manager was silently installed
+        # as the orchestration manager. The builder makes those slots explicit.
+        builder = (BFSRepairOrchestratorBuilder.semantic()
+                   .with_heuristic_manager(ChooseFirstHeuristicManager())
+                   .with_log_file(log_file))
         if is_debug:
-            recorder = UniqueSpecRecorder(debug_folder=out_test_dir_name)
-        else:
-            recorder = UniqueSpecRecorder()
-        repairer: BFSRepairOrchestrator = BFSRepairOrchestrator(
-            learners,
-            SpectraGR1Oracle(),
-            SpectraDiscriminator(),
-            LearningTypeSpecMitigator({
-                Learning.ASSUMPTION_WEAKENING: move_one_to_guarantee_weakening,
-                Learning.GUARANTEE_WEAKENING: complete_counter_traces
-            }),
-            hm,
-            recorder,
-            SpecLogger(filename=log_file)
-        )
+            builder.with_flat_debug_dir(out_test_dir_name)
+        repairer: BFSRepairOrchestrator = builder.build()
         # Getting all possible repairs
-        repairer.repair_bfs(spec, (trace, [], Learning.ASSUMPTION_WEAKENING, [], 0, 0))
-        new_spec_strings: list[str] = recorder.get_specs()
+        repairer.repair_bfs(spec, RepairData(trace, counter_traces=[],
+                                             learning_type=Learning.ASSUMPTION_WEAKENING))
+        new_spec_strings: list[str] = repairer.recorder.get_specs()
         for i, new_spec in enumerate(new_spec_strings):
             write_to_file(f"{out_test_dir_name}/{case_study_name}_fix_{i}.spectra", new_spec)
         assert len(new_spec_strings) == 1, "Expected exactly one new specification after single repair."
@@ -438,50 +451,15 @@ class TestBFSRepairOrchestrator(BaseTestCase):
             os.remove(transitions_file_path)
         spec: SpectraSpecification = SpectraSpecification.from_file(f"{case_study_path}/strong.spectra")
         trace: list[str] = read_file_lines(f"{case_study_path}/violation_trace.txt")
-        hm = NoFilterHeuristicManager()
-        hm.set_enabled("INCLUDE_NEXT")
-        hm.set_enabled("INCLUDE_PREV")
-        learners: Dict[str, ILearner] = {
-            "assumption_weakening": OptimisingSpecLearner(heuristic_manager=hm),
-            "guarantee_weakening": OptimisingSpecLearner(heuristic_manager=hm)
-        }
+        builder = (BFSRepairOrchestratorBuilder.syntactic()
+                   .enabling("INCLUDE_NEXT", "INCLUDE_PREV")
+                   .with_log_file(log_file)
+                   .with_on_record(lambda r, idx, s, d: save_layered_graph(r._om._graph, out_test_dir_name)))
         if is_debug:
-            intermediate_spec_dir_name = f"{out_test_dir_name}/intermediate_specs"
-            final_spec_dir_name = f"{out_test_dir_name}/final_specs"
-            intermediate_recorder = UniqueSpecRecorder(sem_equivalence=False, debug_folder=intermediate_spec_dir_name)
-            final_recorder = UniqueSpecRecorder(sem_equivalence=False, debug_folder=final_spec_dir_name)
-            if not os.path.exists(intermediate_spec_dir_name):
-                os.makedirs(intermediate_spec_dir_name, exist_ok=True)
-            if not os.path.exists(final_spec_dir_name):
-                os.makedirs(final_spec_dir_name, exist_ok=True)
-        else:
-            intermediate_recorder = UniqueSpecRecorder()
-            final_recorder = UniqueSpecRecorder()
-
-        # will be set after repairer is constructed
-        repairer_ref = []
-
-        def on_new_spec_found(idx, spec, data):
-            if repairer_ref:
-                save_layered_graph(repairer_ref[0]._om._graph, out_test_dir_name)
-
-        repairer: BFSRepairOrchestrator = BFSRepairOrchestrator(
-            learners,
-            SpectraGR1Oracle(),
-            SpectraDiscriminator(),
-            LearningTypeSpecMitigator({
-                Learning.ASSUMPTION_WEAKENING: move_one_to_guarantee_weakening,
-                Learning.GUARANTEE_WEAKENING: complete_counter_traces
-            }),
-            om=OrchestrationManagerSyntacticEquivalence(),
-            hm=hm,
-            recorder=final_recorder,
-            intermediate_recorder=intermediate_recorder,
-            logger=SpecLogger(filename=log_file, on_record=on_new_spec_found)
-        )
-        repairer_ref.append(repairer)
+            builder.with_debug_dir(out_test_dir_name)
+        repairer: BFSRepairOrchestrator = builder.build()
 
         repairer.repair_bfs(spec, RepairData(trace, counter_traces=[], learning_type=Learning.ASSUMPTION_WEAKENING))
-        new_spec_strings: list[str] = final_recorder.get_specs()
+        new_spec_strings: list[str] = repairer.recorder.get_specs()
         save_layered_graph(repairer._om._graph, out_test_dir_name)
         return new_spec_strings

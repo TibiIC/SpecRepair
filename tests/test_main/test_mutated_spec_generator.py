@@ -37,8 +37,17 @@ class TestMutatedSpecGenerator(BaseTestCase):
     def test_generate_stronger_specs_gyro(self):
         self._generate_and_check("gyro")
 
+    def test_generate_stronger_specs_humanoid(self):
+        self._generate_and_check("humanoid")
+
+    def test_generate_stronger_specs_pcar(self):
+        self._generate_and_check("pcar")
+
+    def test_generate_stronger_specs_colorsort(self):
+        self._generate_and_check("colorsort")
+
     def _generate_and_check(self, case_study_name: str, n_mutations: int = 3, n_traces_per_mutation: int = 1):
-        ideal_file = f"../input-files/case-studies/spectra/{case_study_name}/ideal.spectra"
+        ideal_file = f"../input-files/case-studies/spectra/strengthened/{case_study_name}/ideal.spectra"
         ideal_spec = SpectraSpecification.from_file(ideal_file)
         self.assertTrue(
             SpectraGR1Oracle.is_realisable(ideal_spec),

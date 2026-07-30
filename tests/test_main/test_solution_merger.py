@@ -20,7 +20,7 @@ def _create_minepump_test(i, j):
         input_specs_path = 'test_files/maximal_solutions_from_ssh'
         spec_1 = SpectraSpecification.from_file(f"{input_specs_path}/minepump_{i}.spectra")
         spec_2 = SpectraSpecification.from_file(f"{input_specs_path}/minepump_{j}.spectra")
-        case_study_path = '../input-files/case-studies/spectra/minepump'
+        case_study_path = '../input-files/case-studies/spectra/strengthened/minepump'
         new_specs = self.run_merge_two(
             case_study_name,
             case_study_path,
@@ -54,7 +54,7 @@ class TestRepairBro(BaseTestCase):
         input_specs_path = 'test_files/maximal_solutions_from_ssh'
         spec_1 = SpectraSpecification.from_file(f"{input_specs_path}/arbiter_0.spectra")
         spec_2 = SpectraSpecification.from_file(f"{input_specs_path}/arbiter_1.spectra")
-        case_study_path = '../input-files/case-studies/spectra/arbiter'
+        case_study_path = '../input-files/case-studies/spectra/strengthened/arbiter'
         new_specs = self.run_merge_two(
             case_study_name,
             case_study_path,
@@ -72,7 +72,7 @@ class TestRepairBro(BaseTestCase):
         input_specs_path = 'test_files/maximal_solutions_from_ssh'
         spec_1 = SpectraSpecification.from_file(f"{input_specs_path}/arbiter_1.spectra")
         spec_2 = SpectraSpecification.from_file(f"{input_specs_path}/arbiter_2.spectra")
-        case_study_path = '../input-files/case-studies/spectra/arbiter'
+        case_study_path = '../input-files/case-studies/spectra/strengthened/arbiter'
 
         new_specs = self.run_merge_two(
             case_study_name,
@@ -91,7 +91,7 @@ class TestRepairBro(BaseTestCase):
         input_specs_path = 'test_files/maximal_solutions_from_ssh'
         spec_1 = SpectraSpecification.from_file(f"{input_specs_path}/arbiter_1.spectra")
         spec_2 = SpectraSpecification.from_file(f"{input_specs_path}/arbiter_3.spectra")
-        case_study_path = '../input-files/case-studies/spectra/arbiter'
+        case_study_path = '../input-files/case-studies/spectra/strengthened/arbiter'
         new_specs = self.run_merge_two(
             case_study_name,
             case_study_path,
@@ -109,7 +109,7 @@ class TestRepairBro(BaseTestCase):
         input_specs_path = 'test_files/maximal_solutions_from_ssh'
         spec_1 = SpectraSpecification.from_file(f"{input_specs_path}/lift_0.spectra")
         spec_2 = SpectraSpecification.from_file(f"{input_specs_path}/lift_1.spectra")
-        case_study_path = '../input-files/case-studies/spectra/lift'
+        case_study_path = '../input-files/case-studies/spectra/strengthened/lift'
         new_specs = self.run_merge_two(
             case_study_name,
             case_study_path,
@@ -173,7 +173,7 @@ class TestRepairBro(BaseTestCase):
         self.run_merge_all_spectra_case_study_ssh_date('traffic_updated', date_str=DATE)
 
     def run_merge_all_spectra_case_study_ssh_date(self, case_study_name: str, date_str: str):
-        case_study_path = f'../input-files/case-studies/spectra/{case_study_name}'
+        case_study_path = f'../input-files/case-studies/spectra/strengthened/{case_study_name}'
         input_specs_path = f'test_files/maximal_solutions_from_ssh/{date_str}/{case_study_name}'
 
         all_spec_files: List[str] = sorted(glob.glob(f"{input_specs_path}/*.spectra"))
@@ -223,7 +223,7 @@ class TestRepairBro(BaseTestCase):
 
 
     def run_merge_all_spectra_case_study(self, case_study_name: str):
-        case_study_path = f'../input-files/case-studies/spectra/{case_study_name}'
+        case_study_path = f'../input-files/case-studies/spectra/strengthened/{case_study_name}'
         input_specs_path = 'test_files/maximal_solutions_from_ssh'
 
         all_spec_files: List[str] = sorted(glob.glob(f"{input_specs_path}/{case_study_name}_*.spectra"))
@@ -299,7 +299,7 @@ class TestRepairBro(BaseTestCase):
         return unique_specs
 
     def run_merge_all_spectra_case_study_from_today(self, case_study_name: str):
-        case_study_path = f'../input-files/case-studies/spectra/{case_study_name}'
+        case_study_path = f'../input-files/case-studies/spectra/strengthened/{case_study_name}'
         input_specs_path = f'test_files/out/repair/{case_study_name}_{self.date_str}'
 
         all_spec_files: List[str] = sorted(glob.glob(f"{input_specs_path}/{case_study_name}_fix_*.spectra"))

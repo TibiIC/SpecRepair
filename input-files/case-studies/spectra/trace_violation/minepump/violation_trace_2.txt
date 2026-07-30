@@ -1,0 +1,3 @@
+holds_at(highwater,0,trace_name_0).
+not_holds_at(methane,0,trace_name_0).
+not_holds_at(pump,0,trace_name_0).

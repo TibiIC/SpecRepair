@@ -2,53 +2,29 @@ import argparse
 from typing import Optional
 
 from main.bfs_repair_orchestrator import BFSRepairOrchestrator
-from spec_repair.loggers.spec_logger import SpecLogger
-from spec_repair.interfaces.ilearner import ILearner
-from spec_repair.components.learners.optimising_final_spec_learner import OptimisingSpecLearner
-from spec_repair.components.oracles.spectra_gr1_oracle import SpectraGR1Oracle
-from spec_repair.components.mitigators.learning_type_spec_mitigator import LearningTypeSpecMitigator
-from spec_repair.components.discriminators.spectra_discriminator import SpectraDiscriminator
+from main.bfs_repair_orchestrator_builder import BFSRepairOrchestratorBuilder
+from spec_repair.components.repair_data import RepairData
 from spec_repair.enums import Learning
 from spec_repair.components.heuristic_managers.choose_first_heuristic_manager import ChooseFirstHeuristicManager
-from spec_repair.components.recorders.unique_spec_recorder import UniqueSpecRecorder
 from spec_repair.model.spectra_specification import SpectraSpecification
 from spec_repair.util.file_util import write_to_file, read_file_lines
-
-from typing import Dict
-
-from spec_repair.components.mitigators.mitigation_strategies import move_one_to_guarantee_weakening, complete_counter_traces
 
 
 def run_single_repair(spec_path: str, trace_path: str, out_spec_path, out_test_dir_name: Optional[str] = None):
     spec: SpectraSpecification = SpectraSpecification.from_file(spec_path)
     trace: list[str] = read_file_lines(trace_path)
-    learners: Dict[str, ILearner] = {
-        "assumption_weakening": OptimisingSpecLearner(
-            heuristic_manager=ChooseFirstHeuristicManager()
-        ),
-        "guarantee_weakening": OptimisingSpecLearner(
-            heuristic_manager=ChooseFirstHeuristicManager()
-        )
-    }
+    # Previously constructed an undefined `NewSpecOracle()` and passed
+    # hm/recorder/logger positionally into the om/hm/recorder slots; the builder
+    # supplies the Spectra oracle by default and names every slot.
+    builder = (BFSRepairOrchestratorBuilder.semantic()
+               .with_heuristic_manager(ChooseFirstHeuristicManager()))
     if out_test_dir_name:
-        recorder = UniqueSpecRecorder(debug_folder=out_test_dir_name)
-    else:
-        recorder = UniqueSpecRecorder()
-    repairer: BFSRepairOrchestrator = BFSRepairOrchestrator(
-        learners,
-        NewSpecOracle(),
-        SpectraDiscriminator(),
-        LearningTypeSpecMitigator({
-            Learning.ASSUMPTION_WEAKENING: move_one_to_guarantee_weakening,
-            Learning.GUARANTEE_WEAKENING: complete_counter_traces
-        }),
-        ChooseFirstHeuristicManager(),
-        recorder,
-        SpecLogger()
-    )
+        builder.with_flat_debug_dir(out_test_dir_name)
+    repairer: BFSRepairOrchestrator = builder.build()
     # Getting all possible repairs
-    repairer.repair_bfs(spec, (trace, [], Learning.ASSUMPTION_WEAKENING, [], 0, 0))
-    new_spec_strings: list[str] = [spec.to_str() for spec in recorder.get_all_values()]
+    repairer.repair_bfs(spec, RepairData(trace, counter_traces=[],
+                                         learning_type=Learning.ASSUMPTION_WEAKENING))
+    new_spec_strings: list[str] = [spec.to_str() for spec in repairer.recorder.get_all_values()]
     assert len(new_spec_strings) == 1, "Expected exactly one new specification after single repair."
     write_to_file(out_spec_path, new_spec_strings[0])
     return new_spec_strings

@@ -1,0 +1,17 @@
+not_holds_at(elevMot_bwd,0,trace_name_0).
+not_holds_at(elevMot_fwd,0,trace_name_0).
+not_holds_at(floor_lower,0,trace_name_0).
+not_holds_at(floor_middle,0,trace_name_0).
+not_holds_at(floor_upper,0,trace_name_0).
+
+not_holds_at(elevMot_bwd,1,trace_name_0).
+not_holds_at(elevMot_fwd,1,trace_name_0).
+holds_at(floor_lower,1,trace_name_0).
+not_holds_at(floor_middle,1,trace_name_0).
+holds_at(floor_upper,1,trace_name_0).
+
+not_holds_at(elevMot_bwd,2,trace_name_0).
+not_holds_at(elevMot_fwd,2,trace_name_0).
+not_holds_at(floor_lower,2,trace_name_0).
+not_holds_at(floor_middle,2,trace_name_0).
+holds_at(floor_upper,2,trace_name_0).

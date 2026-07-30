@@ -1,0 +1,11 @@
+holds_at(headMotor_bwd,0,trace_name_0).
+not_holds_at(headMotor_fwd,0,trace_name_0).
+holds_at(inputMoveMode_fwd,0,trace_name_0).
+holds_at(inputMoveMode_turn,0,trace_name_0).
+not_holds_at(leftMotor_bwd,0,trace_name_0).
+holds_at(leftMotor_fwd,0,trace_name_0).
+holds_at(obstacle_clear,0,trace_name_0).
+not_holds_at(outputMoveMode_fwd,0,trace_name_0).
+holds_at(outputMoveMode_turn,0,trace_name_0).
+not_holds_at(rightMotor_bwd,0,trace_name_0).
+holds_at(rightMotor_fwd,0,trace_name_0).

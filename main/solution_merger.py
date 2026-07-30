@@ -10,7 +10,7 @@ from spec_repair.helpers.formatters.spot_specification_formatter import SpotSpec
 from spec_repair.model.gr1_formula import GR1Formula
 from spec_repair.model.spectra_specification import SpectraSpecification
 from spec_repair.ltl_types import GR1FormulaType, GR1TemporalType
-from spec_repair.diagnosis.trivial_solution import get_all_trivial_solutions_guarantee_only
+from spec_repair.diagnosis.solution_merging import merge_solutions
 from spec_repair.util.spot_ltl_conjoining_util import conjoin_and_simplify
 
 
@@ -26,23 +26,21 @@ class RepairBro:
         assert oracle.is_realisable(self._original_spec)
 
     def merge_two_solutions(self, spec1: ISpecification, spec2: ISpecification) -> List[ISpecification]:
-        if not self._oracle.is_realisable(spec1) or not self._oracle.is_realisable(spec2):
-            print("WARNING: At least one of the two solutions is unrealizable.")
-            assert self._oracle.is_realisable(spec1) and self._oracle.is_realisable(spec2)
-        assert self._original_spec.implies(spec1, GR1FormulaType.ASM) and self._original_spec.implies(spec2, GR1FormulaType.ASM)
-        assert self._original_spec.implies(spec1, GR1FormulaType.GAR) and self._original_spec.implies(spec2, GR1FormulaType.GAR)
+        """
+        Merge two repaired solutions against this RepairBro's original spec.
 
-
-        merged_spec = spec1.merge(spec2)
-        if self._oracle.is_realisable(merged_spec):
-            return [merged_spec]
-        else:
-            new_merged_specs = get_all_trivial_solutions_guarantee_only(merged_spec)
-            for new_merged_spec in new_merged_specs:
-                if not self._oracle.is_realisable(new_merged_spec):
-                    print("WARNING: Merged solution is unrealizable.")
-                    print(merged_spec)
-            return new_merged_specs
+        Delegates to spec_repair.diagnosis.solution_merging, the single
+        implementation shared with scripts/merge_specs.py. `strict=True`
+        preserves this class's original behaviour of treating "every solution is
+        a weakening of the original" as an invariant to assert, rather than the
+        warning the directory-merging path has always used.
+        """
+        return merge_solutions(
+            [spec1, spec2],
+            og_spec=self._original_spec,
+            oracle=self._oracle,
+            strict=True,
+        )
 
     def _merge_two_assumption_sets(self, asm_only_spec_1: SpectraSpecification, asm_only_spec_2: SpectraSpecification):
         asm_only_spec = self._original_spec.extract_sub_specification(lambda x: (x['type'] == GR1FormulaType.ASM))

@@ -31,7 +31,7 @@ class OrchestrationManagerSemanticEquivalence(AOrchestrationManagerWithStackAndG
     ):
         if data.learning_type == Learning.ASSUMPTION_WEAKENING:
             visited_node: Tuple[ISpecification, Any] = (spec, (sorted(data.counter_traces), data.learning_type))
-        elif prev:
+        elif data.counter_traces:
             visited_node: Tuple[ISpecification, Any] = (spec, (data.counter_traces[-1], data.learning_type))
         else:
             assert data.counter_traces == [] and data.learning_type == Learning.GUARANTEE_WEAKENING

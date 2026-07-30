@@ -24,6 +24,17 @@ def run_all_unrealisable_cores(spectra_str: str) -> List[Set[str]]:
     temp_spectra_file = generate_temp_filename(ext=".spectra")
     write_to_file(temp_spectra_file, spectra_str)
     pRespondsToS_substitution(temp_spectra_file)
+    # A realizable specification has no unrealisable core by definition, so the
+    # exhaustive exploreAllCores search below can only ever return []. Paying a
+    # single realizability check first to skip it is a large win: on ColorSort's
+    # 77-formula spec exploreAllCores ran >16 minutes without returning, while
+    # the realizability check answers in ~1.4s. Every other case study's spec is
+    # small enough that exploreAllCores finishes in <1s either way, so this only
+    # ever adds ~0.05s there. `realizable` returns None when the file isn't in a
+    # form the CLI can check - deliberately fall through to the full search in
+    # that case rather than assume anything.
+    if realizable(temp_spectra_file, suppress=True):
+        return []
     output = run_all_unrealisable_cores_raw(temp_spectra_file)
     core_nums_list: List[Set[int]] = _extract_cores(output)
     core_names_list = []
@@ -174,6 +185,28 @@ def synthesise_extract_counter_strategies(file):
         return None
     file = pRespondsToS_substitution(file)
     args = ["-i", file, "--counter-strategy", "--jtlv"]
+    output = run_spectra_cli(args)
+    return output
+
+
+def synthesise_check_realisability_only(file):
+    """
+    Same as synthesise_extract_counter_strategies, minus --counter-strategy:
+    for callers that only need the yes/no realizability verdict (its
+    "Result: Specification is (un)?realizable" line) and never touch the
+    strategy. --counter-strategy makes the BDD-based synthesis compute and
+    materialize a full counter-strategy even when nothing downstream reads
+    it, which can be dramatically more expensive - confirmed on a spec with
+    a large boolean-expanded state space where --counter-strategy ran the
+    JVM's BDD engine past 12.8M nodes and out of heap memory, while this
+    (otherwise identical) call completed in seconds.
+    """
+    if violations_in_initial_conditions(file):
+        print("Spectra file in wrong format for CLI realizability check: (initial conditions)")
+        print(file)
+        return None
+    file = pRespondsToS_substitution(file)
+    args = ["-i", file, "--jtlv"]
     output = run_spectra_cli(args)
     return output
 

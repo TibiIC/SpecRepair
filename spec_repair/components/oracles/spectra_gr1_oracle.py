@@ -10,7 +10,8 @@ from spec_repair.model.counter_trace import cts_from_cs, CounterTrace
 from spec_repair.helpers.parsers.spectra_cs_parser import SpectraCSParser
 from spec_repair.model.spectra_specification import SpectraSpecification
 from spec_repair.util.file_util import generate_temp_filename, write_to_file
-from spec_repair.wrappers.spectra_toolbox import synthesise_extract_counter_strategies, run_all_unrealisable_cores
+from spec_repair.wrappers.spectra_toolbox import synthesise_extract_counter_strategies, \
+    synthesise_check_realisability_only, run_all_unrealisable_cores
 from spec_repair.wrappers.asp_wrappers import get_violations
 
 
@@ -64,8 +65,18 @@ class SpectraGR1Oracle(IOracle):
         """
         Uses Spectra under the hood to check whether specifcation is realisable.
         If it is, nothing is returned. Otherwise, it returns a CounterStrategy.
+
+        Deliberately uses the lightweight synthesis path (no
+        --counter-strategy) rather than _synthesise/_synthesise_and_check's
+        one: this method only ever reads the realizable/unrealizable verdict
+        out of the CLI output, never the counter-strategy itself, and
+        --counter-strategy extraction can be dramatically more expensive for
+        large state spaces (confirmed: ran the JVM's BDD engine out of heap
+        memory on a spec where the lightweight check completes in seconds).
+        _synthesise_and_check (used by is_valid_or_counter_arguments, which
+        genuinely needs a CounterStrategy object) is untouched.
         """
-        output = SpectraGR1Oracle._synthesise(spec)
+        output = SpectraGR1Oracle._synthesise_realisability_only(spec)
         if re.search("Result: Specification is unrealizable", output):
             return False
         elif re.search("Result: Specification is realizable", output):
@@ -92,3 +103,10 @@ class SpectraGR1Oracle(IOracle):
         spectra_file: str = generate_temp_filename(ext=".spectra")
         write_to_file(spectra_file, spec_str)
         return synthesise_extract_counter_strategies(spectra_file)
+
+    @staticmethod
+    def _synthesise_realisability_only(spec: SpectraSpecification):
+        spec_str = spec.to_str(is_to_compile=True)
+        spectra_file: str = generate_temp_filename(ext=".spectra")
+        write_to_file(spectra_file, spec_str)
+        return synthesise_check_realisability_only(spectra_file)

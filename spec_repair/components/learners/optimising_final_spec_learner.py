@@ -1,4 +1,5 @@
 import re
+import subprocess
 from copy import copy, deepcopy
 from typing import Set, List, Tuple, Optional
 
@@ -59,6 +60,13 @@ class OptimisingSpecLearner(ILearner):
                 return []
         except DeadlockRequiredException as e:
             print(f"Weakening failed: DeadlockRequiredException thrown and {e}")
+            return []
+        except subprocess.TimeoutExpired as e:
+            # run_ILASP's hypothesis search can time out on a large enough
+            # spec (e.g. ColorSort) without being genuinely stuck - treat it
+            # like the other "this branch didn't pan out" cases above rather
+            # than crashing the whole BFS run.
+            print(f"Weakening failed: ILASP timed out and {e}")
             return []
 
     def find_possible_adaptations(self, spec: SpectraSpecification, trace, cts, learning_type) -> List[

@@ -336,7 +336,7 @@ def satisfies_ltl_formula(this_formula: LTLFormula, trace: List[Set[str]], t: in
             return satisfies_ltl_formula(formula, trace, t + 1)
         case Prev(formula=formula):
             if t - 1 >= 0:
-                satisfies_ltl_formula(formula, trace, t - 1)
+                return satisfies_ltl_formula(formula, trace, t - 1)
             return False
         case Eventually(formula=formula):
             return any(satisfies_ltl_formula(formula, trace, j) for j in range(t, len(trace)))

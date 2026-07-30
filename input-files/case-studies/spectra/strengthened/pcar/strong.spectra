@@ -1,0 +1,39 @@
+module PCar
+
+env boolean obstacle_blocked;
+env boolean obstacle_clear;
+env boolean sideSense_clear;
+env boolean sideSense_p_o;
+sys boolean steer_left;
+sys boolean steer_right;
+sys boolean throttle_bwd;
+sys boolean throttle_fwd;
+
+
+guarantee -- unnamed_guarantee_1
+	G((obstacle_blocked=true->!(throttle_fwd=true)));
+
+guarantee -- unnamed_guarantee_2
+	G(((obstacle_clear=true&sideSense_clear=true)->(steer_right=false&steer_left=false)));
+
+guarantee -- unnamed_guarantee_3
+	GF((throttle_fwd=true&(steer_right=false&steer_left=false)));
+
+assumption -- unnamed_assumption_1
+	G((throttle_bwd=true->next(obstacle_clear=true)));
+
+assumption -- unnamed_assumption_2
+	G((((throttle_fwd=true&(steer_right=false&steer_left=false))&(sideSense_clear=false&sideSense_p_o=false))->F(sideSense_clear=true)));
+
+assumption -- obstacle_mutual_exclusion
+	G((!(obstacle_clear=true)|!(obstacle_blocked=true)));
+
+assumption -- sideSense_mutual_exclusion
+	G(!(sideSense_clear=true));
+
+guarantee -- throttle_mutual_exclusion
+	G((!(throttle_fwd=true)|!(throttle_bwd=true)));
+
+guarantee -- steer_mutual_exclusion
+	G((!(steer_right=true)|!(steer_left=true)));
+

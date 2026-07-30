@@ -15,6 +15,57 @@ def strip_vars(spec, sub=["env", "sys"]):
     return re.findall(r"[" + '|'.join(sub) + r"]\s*boolean\s*(.*)\s*;", '\n'.join(spec))
 
 
+def make_names_asp_safe(spec: list[str]) -> list[str]:
+    """
+    ASP/Clingo requires atom (constant) names to start with a lowercase letter
+    and contain only word characters - an uppercase-leading identifier is
+    silently parsed as a variable instead (e.g. specs carried over from the
+    SYNTECH benchmark corpus, like HeadMotor_bwd), while a name containing
+    spaces or other punctuation (e.g. a `guarantee -- no pause is eternal`
+    label, as used throughout the ColorSort case study) is a hard clingo
+    syntax error. Either one silently breaks grounding for the whole
+    generated program. Renames every such variable and rule name to a safe
+    form, consistently, before any other parsing happens.
+    """
+    variable_names = [v.strip() for v in strip_vars(spec)]
+    rule_names = [
+        re.search(r'--\s*(.+)', line).group(1).strip()
+        for line in spec if line.find("--") >= 0
+    ]
+    asp_safe_identifier = re.compile(r'[a-z][a-zA-Z0-9_]*')
+    names_needing_renaming = [
+        n for n in dict.fromkeys(variable_names + rule_names)
+        if n and not asp_safe_identifier.fullmatch(n)
+    ]
+
+    taken_names = set(variable_names) | set(rule_names)
+    rename_map = {}
+    for name in names_needing_renaming:
+        safe_name = re.sub(r'[^a-zA-Z0-9_]+', '_', name)
+        safe_name = safe_name[0].lower() + safe_name[1:]
+        if not safe_name[0].isalpha():
+            safe_name = "n_" + safe_name
+        suffix = 2
+        while safe_name in taken_names and safe_name != name:
+            safe_name = f"{safe_name}_v{suffix}"
+            suffix += 1
+        rename_map[name] = safe_name
+        taken_names.add(safe_name)
+
+    for name, safe_name in rename_map.items():
+        # \b only makes sense where the name's own edge is a word character -
+        # a name ending in punctuation (e.g. a `[...]`-suffixed ColorSort
+        # guarantee label) can never satisfy a trailing \b, since that needs a
+        # word character on the other side, which a label followed by a
+        # newline/EOL never has - silently turning the whole substitution
+        # into a no-op instead of raising.
+        prefix = r"\b" if re.match(r"\w", name) else ""
+        suffix = r"\b" if re.search(r"\w$", name) else ""
+        pattern = prefix + re.escape(name) + suffix
+        spec = [re.sub(pattern, safe_name, line) for line in spec]
+    return spec
+
+
 def extract_string_within(pattern, line, strip_whitespace=False):
     line = re.compile(pattern).search(line).group(1)
     if strip_whitespace:
@@ -23,6 +74,7 @@ def extract_string_within(pattern, line, strip_whitespace=False):
 
 
 def format_spec(spec):
+    spec = make_names_asp_safe(spec)
     variables = strip_vars(spec)
     spec = word_sub(spec, "spec", "module")
     spec = word_sub(spec, "alwEv", "GF ( ")
@@ -51,8 +103,6 @@ def format_spec(spec):
     # This simplifies multiple brackets to single brackets
     # spec = [re.sub(r"\(\s*\((.*)\)\s*\)", r"(\1)", x) for x in spec]
     spec = [remove_trivial_outer_brackets(x) for x in spec]
-    # This changes names that start with capital letters to lowercase so that ilasp/clingo knows they are not variables.
-    spec = [re.sub('--[A-Z]', lambda m: m.group(0).lower(), x) for x in spec]
     return spec
 
 

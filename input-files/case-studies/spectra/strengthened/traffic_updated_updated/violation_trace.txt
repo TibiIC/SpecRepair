@@ -1,0 +1,9 @@
+holds_at(greenB,0,trace_name_0).
+
+not_holds_at(carA,0,trace_name_0).
+
+not_holds_at(carB,0,trace_name_0).
+
+not_holds_at(emergency,0,trace_name_0).
+
+not_holds_at(greenA,0,trace_name_0).

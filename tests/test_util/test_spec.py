@@ -18,11 +18,11 @@ def is_ascending(timepoint_poss: list[int]) -> bool:
 
 class TestSpec(BaseTestCase):
     minepump_spec_file = '../input-files/examples/Minepump/minepump_strong.spectra'
-    traffic_spec_file = '../input-files/case-studies/spectra/traffic_single/strong.spectra'
+    traffic_spec_file = '../input-files/case-studies/spectra/strengthened/traffic_single/strong.spectra'
     traffic_updated_spec_file = 'test_files/traffic/traffic_updated_strong.spectra'
 
     def test_all_unrealisable_cores_raw_ideal(self):
-        ideal_spec_file_path = "../input-files/case-studies/spectra/minepump/ideal.spectra"
+        ideal_spec_file_path = "../input-files/case-studies/spectra/strengthened/minepump/ideal.spectra"
         try:
             raw_cores = run_all_unrealisable_cores_raw(ideal_spec_file_path)
             self.assertIsNotNone(raw_cores, "Raw cores output should not be None")
@@ -55,7 +55,7 @@ class TestSpec(BaseTestCase):
             self.fail(f"Command line execution failed with error: {str(e)}")
 
     def test_all_unrealisable_cores_ideal(self):
-        ideal_spec_file_path = "../input-files/case-studies/spectra/minepump/ideal.spectra"
+        ideal_spec_file_path = "../input-files/case-studies/spectra/strengthened/minepump/ideal.spectra"
         spec = SpectraSpecification.from_file(ideal_spec_file_path)
         cores = run_all_unrealisable_cores(spec.to_str(is_to_compile=True))
         self.assertEqual([], cores)

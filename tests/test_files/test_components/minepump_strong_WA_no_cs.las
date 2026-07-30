@@ -95,6 +95,17 @@ timepoint_of_op(prev,T1,T2,S) :-
     timepoint(T2,S),
     prev(T2,T1,S).
 
+% True at T1 iff it has a real predecessor - the start-of-trace counterpart
+% to the next_timepoint_exists idea used by the weak-timepoint extension
+% below, but for Prev instead of Next/Eventually. Used to give !Prev(x) its
+% vacuously-true value at the very first timepoint (see asp_exception_
+% formatter.py's not_prev handling and the truth table in
+% docs/session-notes/2026-07-23-next-antecedent-prev-consequent-asp-gaps.md).
+prev_timepoint_exists(T1,S):-
+    trace(S),
+    prev(T2,T1,S),
+    timepoint(T2,S).
+
 timepoint_of_op(eventually,T1,T1,S) :-
     trace(S),
     timepoint(T1,S).
@@ -231,6 +242,7 @@ root_antecedent_holds(OP,assumption1_1,0,T1,S):-
 	trace(S),
 	timepoint(T1,S),
 	timepoint(T2,S),
+	not weak_timepoint(T2,S),
 	temporal_operator(OP),
 	timepoint_of_op(OP,T1,T2,S),
 	holds_at(pump,T2,S).
@@ -239,6 +251,7 @@ root_antecedent_holds(OP,assumption1_1,1,T1,S):-
 	trace(S),
 	timepoint(T1,S),
 	timepoint(T2,S),
+	not weak_timepoint(T2,S),
 	temporal_operator(OP),
 	timepoint_of_op(OP,T1,T2,S),
 	holds_at(pump,T2,S).

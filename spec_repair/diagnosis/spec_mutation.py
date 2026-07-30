@@ -26,7 +26,7 @@ specification's semantics while violating the mutated specification's
 
 Three strengthening patterns are applied, chosen to match patterns
 observed in this repo's own case-study fixtures
-(input-files/case-studies/spectra/*/ideal.spectra vs strong.spectra):
+(input-files/case-studies/spectra/strengthened/*/ideal.spectra vs strong.spectra):
 - drop one disjunct from a formula's consequent (or the eventually-wrapped
   consequent of a response pattern) - narrows what satisfies the formula
 - drop one conjunct from a formula's antecedent - broadens when the

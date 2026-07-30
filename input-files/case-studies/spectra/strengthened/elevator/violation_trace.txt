@@ -1,0 +1,9 @@
+holds_at(floor_middle,0,trace_name_0).
+
+not_holds_at(elevMot_bwd,0,trace_name_0).
+
+not_holds_at(elevMot_fwd,0,trace_name_0).
+
+not_holds_at(floor_lower,0,trace_name_0).
+
+not_holds_at(floor_upper,0,trace_name_0).
