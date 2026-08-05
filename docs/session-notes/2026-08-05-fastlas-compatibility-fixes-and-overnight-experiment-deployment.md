@@ -226,7 +226,73 @@ learners, and `repair_syn` vs `repair_trace_syn` separates the setups.
    FastLAS now returns *varied* rules, so each sampled run can open a distinct
    BFS branch, and every new node pays for a Spectra/JVM realisability check.
 
-## 7. What to check next
+## 7. Postscript: FastLAS is not slow - measured
+
+Added ~01:00 after the sweeps had been running about an hour. The premise that
+"FastLAS learning is not as fast as we want" **does not hold**. The four sweeps
+are a natural A/B - same workload, same concurrency cap, started within 30
+seconds of each other - and FastLAS is ahead in both setups:
+
+| Setup | FastLAS `n_runs=3` | ILASP | Total runs |
+| --- | --- | --- | --- |
+| trace-violation | **29 finished** (19 OK, 10 failed) | 20 finished (9 OK, 11 failed) | 50 |
+| strengthened | **7 finished** (4 OK, 3 failed) | 5 finished (3 OK, 2 failed) | 17 |
+
+Roughly 1.4x more runs completed. Failure counts are comparable between the two
+learners, and the dominant reason (`Error: expected ...`) appears on both sides,
+so it is pre-existing test-assertion behaviour rather than anything FastLAS
+introduced.
+
+**Where the 37-minute observation came from.** It was
+`test_bfs_repair_spec_minepump_syn`, which is a massive outlier in the suite:
+
+    minepump   243 final specs
+    humanoid    20
+    pcar        16
+    lift_upd    12
+    elevator     9
+    ...everything else 1-9
+
+minepump produces **12-40x more final specifications than any other case
+study**, under *either* learner - the 243 above is ILASP's. So the smoke test
+picked the single widest search in the suite and ran it at `n_runs=5`, the
+maximum branching setting. That is the worst case at the worst setting, not a
+FastLAS problem.
+
+Supporting evidence that the solver is not the bottleneck: FastLAS runs faster
+on the GPU box than locally (0.63s vs 1.23s for five invocations of the same
+task), and the machines show only 3-6 CPU-runnable processes against load
+averages near 40 - the rest are in NFS I/O wait, since all four machines share
+`/vol/bitbucket`.
+
+One scoring asymmetry is worth knowing, though it did not cause the slowdown:
+`FastLASInterpreter` reports every solution at `FASTLAS_SCORE = 0`, so
+`filter_useful_adaptations` - which keeps the minimum-scoring adaptations -
+retains **all** of them. ILASP's differing scores let it discard non-minimal
+ones. With `n_runs=3` that is at most 3 per direction against ILASP's up to 10,
+so FastLAS still branches less, but the two are not filtering on the same basis.
+
+### A run that was silently doing nothing
+
+While measuring, gpu14's `minepump` was found **not running at all** - 0 specs,
+0 workers. My earlier restart of that one window (after the contamination in
+caveat 2) had left the pane with `CONDA_PREFIX=logic` but base anaconda's `bin`
+first on `PATH`, so it ran python 3.11 without `pyvis` and died instantly on
+import.
+
+Two traps behind it, both worth remembering:
+
+* `~/phd_work.sh` sources `~/.bashrc`, which re-runs conda's init and resets to
+  base. `conda activate` must come **after** it, which is what the runner does.
+* Re-running `conda activate logic` in a pane that already has it "active" is a
+  no-op for `PATH`, so a half-activated pane cannot be repaired by activating
+  again. The fix is a fresh window.
+
+Resolved by killing the window and recreating it with the runner's own setup
+line; verified `which python` now gives `envs/logic/bin/python` and the worker
+is running.
+
+## 8. What to check next
 
 * Whether the `MAX_WINDOWS` slot cap actually works on NFS - if not, add a
   cap that does, and note that the syn runner has no cap at all (17 at once).
