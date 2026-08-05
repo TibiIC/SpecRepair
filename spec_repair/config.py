@@ -1,13 +1,95 @@
-import os.path
+"""
+Configuration, resolved so that the same committed file works on every machine.
 
-PATH_TO_CLI = os.path.expanduser("~/Tools/spectra-cli/tau.smlab.syntech.Spectra.cli/lib/spectra-cli.jar")
-PATH_TO_CORES = os.path.expanduser("~/Tools/spectra_unrealizable_cores.jar")
-PATH_TO_ALL_CORES = os.path.expanduser("~/Tools/spectra_all_unrealisable_cores.jar")
-PATH_TO_TOOLBOX = os.path.expanduser("~/Tools/spectra_toolbox.jar")
-PATH_TO_JVM = "/opt/homebrew/Cellar/openjdk/25/libexec/openjdk.jdk/Contents/Home/lib/server/libjvm.dylib"
-PATH_TO_ILASP = os.path.expanduser('~/Tools/bin/ILASP')
-PATH_TO_FASTLAS = os.path.expanduser('~/Tools/bin/FastLAS')
-PATH_TO_SHIELD = os.path.expanduser("~/Documents/PhD/SpecRepair/easy-downloads/spectra-executor.jar")
+Nothing here should ever need editing to move between a laptop and the GPU box.
+The three things that genuinely differ per machine are read from the
+environment, each with a default that covers the common case:
+
+    SPEC_REPAIR_TOOLS   where the Spectra jars and the ILASP/FastLAS binaries
+                        live. Default ~/Tools.
+    SPEC_REPAIR_JVM     libjvm.{dylib,so}. Default: Homebrew's newest openjdk
+                        on macOS, else $JAVA_HOME - see _default_jvm_path for
+                        why $JAVA_HOME is not tried first.
+    SPEC_REPAIR_LOGS    the violation-listening log folder. Rarely used.
+
+`PROJECT_PATH` is *derived* from this file's own location rather than
+configured, so it is always right and can never drift.
+
+On a machine whose layout differs from the defaults, set the variables in your
+shell profile - e.g. on the GPU box:
+
+    export SPEC_REPAIR_TOOLS=/vol/bitbucket/tg4018/Tools
+
+That way `git pull` and `git push` work from anywhere without a
+stash/pop dance around locally-edited paths.
+"""
+import glob
+import os.path
+import re
+import sys
+
+# Where the jars and solver binaries live. One root covers all of them.
+TOOLS_DIR: str = os.path.expanduser(os.environ.get("SPEC_REPAIR_TOOLS", "~/Tools"))
+
+# The repository root: this file is <root>/spec_repair/config.py. Derived rather
+# than configured, so it is correct on every checkout including worktrees.
+PROJECT_PATH: str = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+
+def _default_jvm_path() -> str:
+    """
+    libjvm for a JVM new enough to load the Spectra jars.
+
+    `$SPEC_REPAIR_JVM` wins outright. Failing that, candidates are tried in
+    order and the first that exists is used.
+
+    **`$JAVA_HOME` is deliberately the last resort, not the first.** It is
+    whatever the current shell happens to select, which is often too old: inside
+    the `arm_env` conda environment it points at the environment's own JDK, and
+    loading the Spectra jars against it fails with
+    `java.lang.UnsupportedClassVersionError`. Homebrew's openjdk is checked
+    first on macOS, newest version first, because that is the install these jars
+    actually need. On Linux there is no Homebrew, so `$JAVA_HOME` applies - and
+    on the GPU box sdkman sets it to a suitable JDK.
+
+    Returning "" rather than guessing lets the JVM loader fail with its own
+    message instead of pointing at a path that was never going to exist.
+    """
+    explicit = os.environ.get("SPEC_REPAIR_JVM")
+    if explicit:
+        return explicit
+
+    candidates = []
+    if sys.platform == "darwin":
+        # Newest first: "25" must beat "17", so sort numerically where possible.
+        cellar = sorted(
+            glob.glob("/opt/homebrew/Cellar/openjdk/*/libexec/openjdk.jdk"
+                      "/Contents/Home/lib/server/libjvm.dylib"),
+            key=lambda p: [int(n) if n.isdigit() else n
+                           for n in re.split(r"[.\-]", p.split("/openjdk/")[1].split("/")[0])],
+            reverse=True)
+        candidates.extend(cellar)
+
+    java_home = os.environ.get("JAVA_HOME")
+    if java_home:
+        suffix = "libjvm.dylib" if sys.platform == "darwin" else "libjvm.so"
+        candidates.append(os.path.join(java_home, "lib", "server", suffix))
+
+    for candidate in candidates:
+        if os.path.isfile(candidate):
+            return candidate
+    return ""
+
+
+PATH_TO_CLI = f"{TOOLS_DIR}/spectra-cli/tau.smlab.syntech.Spectra.cli/lib/spectra-cli.jar"
+PATH_TO_CORES = f"{TOOLS_DIR}/spectra_unrealizable_cores.jar"
+PATH_TO_ALL_CORES = f"{TOOLS_DIR}/spectra_all_unrealisable_cores.jar"
+PATH_TO_TOOLBOX = f"{TOOLS_DIR}/spectra_toolbox.jar"
+PATH_TO_ILASP = f"{TOOLS_DIR}/bin/ILASP"
+PATH_TO_FASTLAS = f"{TOOLS_DIR}/bin/FastLAS"
+PATH_TO_JVM = _default_jvm_path()
+PATH_TO_SHIELD = os.path.join(PROJECT_PATH, "easy-downloads", "spectra-executor.jar")
+
 PRINT_CS = False
 FASTLAS = False  # TODO: modify into enum (inductive ASP tool)
 RESTORE_FIRST_HYPOTHESIS = True
@@ -22,12 +104,11 @@ SETUP_DICT = {'wsl': False,
               'java': 'java',
               }
 
-
-PROJECT_PATH: str = os.path.expanduser("~/Documents/PhD/SpecRepair")
 GENERATE_MULTIPLE_TRACES = False
 
 # Violation Listening Configurations
-LOG_FOLDER = '/Users/tg4018/eclipse-workspace/PhD/Lift'
+LOG_FOLDER = os.path.expanduser(
+    os.environ.get("SPEC_REPAIR_LOGS", "~/eclipse-workspace/PhD/Lift"))
 
 # TODO: add these in a config class
 MAX_ASP_HYPOTHESES = 10

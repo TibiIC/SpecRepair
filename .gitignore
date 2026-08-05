@@ -64,3 +64,14 @@ hs_err_pid*.log
 /files/SYNTECH15/
 /files/SYNTECH17/
 /files/SYNTECH19/
+
+# Statistics tables, regenerable via scripts/generate_statistics*.sh and
+# generate_csv_weakness.sh. They accumulate per run and per date, so leaving
+# them untracked keeps `git status` on the experiment box readable.
+/all_statistics.csv
+/all_statistics.tex
+/all_statistics_trivial.csv
+/all_statistics_trivial.tex
+/all_statistics_*.csv
+/all_statistics_*.tex
+/all_statistics/
