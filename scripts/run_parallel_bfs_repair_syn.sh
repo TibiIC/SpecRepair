@@ -10,6 +10,13 @@
 #   ./run_parallel_bfs_repair_syn.sh            # all (default)
 #   ./run_parallel_bfs_repair_syn.sh original   # the assumption-only fixtures
 #   ./run_parallel_bfs_repair_syn.sh updated    # the *_updated fixtures
+#
+# Select the solver with LEARNER (default: ilasp):
+#   LEARNER=fastlas ./run_parallel_bfs_repair_syn.sh
+#   LEARNER=fastlas FASTLAS_RUNS=5 ./run_parallel_bfs_repair_syn.sh   # sample 5 solutions per step
+# A FastLAS run writes to <case_study>_fastlas_<date> and so lands beside an
+# ILASP run of the same date rather than overwriting it. ILASP runs keep the
+# unsuffixed name every existing path was written against.
 # Each *_updated case study shares its original's ideal.spectra but pairs it
 # with a strong.spectra that strengthens at least one assumption AND at least
 # one guarantee, so those runs exercise guarantee weakening too.
@@ -49,10 +56,26 @@ esac
 # Name of the tmux session - group-scoped, so an "updated" run can be started
 # alongside an already-running "original" one without the has-session check
 # below rejecting it.
-SESSION="parallel_tests_${1:-all}"
+LEARNER="${LEARNER:-ilasp}"
+case "$LEARNER" in
+    ilasp|fastlas) ;;
+    *) echo "Unknown LEARNER '$LEARNER'. Use one of: ilasp, fastlas." >&2; exit 1 ;;
+esac
+
+# FastLAS returns one solution per run and picks non-deterministically among
+# equally-optimal candidates, so FASTLAS_RUNS is how many times it is invoked
+# per learning step - i.e. how many of ILASP's alternatives the run samples.
+# Ignored when LEARNER=ilasp.
+FASTLAS_RUNS="${FASTLAS_RUNS:-1}"
+if ! [[ "$FASTLAS_RUNS" =~ ^[1-9][0-9]*$ ]]; then
+    echo "FASTLAS_RUNS='$FASTLAS_RUNS' must be a positive integer." >&2; exit 1
+fi
+# Session and log directory are learner-scoped, so a FastLAS sweep can run
+# alongside an ILASP one without the has-session check below rejecting it.
+SESSION="parallel_tests_${1:-all}_${LEARNER}"
 CONDA_ENV="logic"
 WORKDIR="/vol/bitbucket/tg4018/PhD/SpecRepair"  # Optional working directory
-LOGDIR="$WORKDIR/logs/parallel_tests/${1:-all}_$(date +%Y-%m-%d_%H%M%S)"
+LOGDIR="$WORKDIR/logs/parallel_tests/${1:-all}_${LEARNER}_$(date +%Y-%m-%d_%H%M%S)"
 
 if tmux has-session -t "$SESSION" 2>/dev/null; then
     echo "tmux session '$SESSION' already exists - attach to it, or rename/kill it before re-running this script." >&2
@@ -62,7 +85,7 @@ fi
 mkdir -p "$LOGDIR"
 
 # Define the setup commands
-SETUP_CMDS="source ~/.sdkman/bin/sdkman-init.sh && source ~/phd_work.sh && conda activate $CONDA_ENV && export LD_LIBRARY_PATH=\$CONDA_PREFIX/lib:\$LD_LIBRARY_PATH && cd $WORKDIR"
+SETUP_CMDS="source ~/.sdkman/bin/sdkman-init.sh && source ~/phd_work.sh && conda activate $CONDA_ENV && export LD_LIBRARY_PATH=\$CONDA_PREFIX/lib:\$LD_LIBRARY_PATH && export SPEC_REPAIR_LEARNER=$LEARNER && export SPEC_REPAIR_FASTLAS_RUNS=$FASTLAS_RUNS && cd $WORKDIR"
 
 # Create a new tmux session in detached mode, with the first test as window 0
 first_test="${tests[0]}"
@@ -77,7 +100,7 @@ for test_name in "${tests[@]:1}"; do
         "$SETUP_CMDS && python -m unittest tests.test_main.test_bfs_repair_orchestrator.TestBFSRepairOrchestrator.${test_name} 2>&1 | tee $LOGDIR/${test_name}.log && read" C-m
 done
 
-echo "Started ${#tests[@]} tests in tmux session '$SESSION'. Logs under $LOGDIR"
+echo "Started ${#tests[@]} tests with the $LEARNER learner in tmux session '$SESSION'. Logs under $LOGDIR"
 echo "Attach with: tmux attach -t $SESSION"
 
 # Attach to the session

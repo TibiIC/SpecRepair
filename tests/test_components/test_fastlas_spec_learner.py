@@ -12,21 +12,36 @@ from unittest.mock import patch
 from spec_repair.components.heuristic_managers.no_filter_heuristic_manager import NoFilterHeuristicManager
 from spec_repair.components.learners.fastlas_spec_learner import (
     FastLASSpecLearner,
+    FastLASTypeError,
     translate_ilasp_task_to_fastlas,
 )
 from spec_repair.components.learners.optimising_final_spec_learner import OptimisingSpecLearner
 from spec_repair.exceptions import NoViolationException
 from spec_repair.helpers.parsers.fastlas_interpreter import FastLASInterpreter
+from spec_repair.model.adaptation_learned import Adaptation
 
 RUN_FASTLAS = "spec_repair.components.learners.fastlas_spec_learner.run_fastlas"
 
 
 class TestTaskTranslation(unittest.TestCase):
-    def test_modeb_loses_recall_and_positive_annotation(self):
+    def test_modeb_loses_the_annotation_but_keeps_the_recall(self):
+        """
+        FastLAS accepts ILASP's recall bound and rejects only the annotation.
+        Verified against the FastLAS repo, which ships the same tasks in both
+        dialects under FastLAS2/data/agent/{ilasp,fastnonopl}_tasks/ - the
+        recall survives translation there untouched.
+        """
         las = "#modeb(2,holds_at(const(usable_atom), var(time), var(trace)), (positive)).\n"
-        self.assertEqual(
-            "#modeb(holds_at(const(usable_atom), var(time), var(trace))).\n",
+        self.assertIn(
+            "#modeb(2,holds_at(const(usable_atom), var(time), var(trace))).",
             translate_ilasp_task_to_fastlas(las))
+
+    def test_negative_annotation_becomes_an_explicit_not(self):
+        las = "#modeb(2,holds_at(const(usable_atom), var(time), var(trace)), (negative)).\n"
+        self.assertIn(
+            "#modeb(2,not holds_at(const(usable_atom), var(time), var(trace))).",
+            translate_ilasp_task_to_fastlas(las))
+
 
     def test_constant_becomes_a_background_fact(self):
         """FastLAS has no #constant; it reads const(t) values from a t/1 predicate."""
@@ -48,10 +63,77 @@ class TestTaskTranslation(unittest.TestCase):
         for i in (1, 2, 3):
             self.assertIn(f"#pos(eg{i},", translated)
 
-    def test_translation_leaves_modeh_and_bias_alone(self):
-        las = ('#modeh(ev_temp_op(const(expression_v))).\n'
-               '#bias(":- constraint.").\n')
+    def test_translation_leaves_modeh_alone(self):
+        las = '#modeh(ev_temp_op(const(expression_v))).\n'
         self.assertEqual(las, translate_ilasp_task_to_fastlas(las))
+
+    def test_var_types_gain_the_predicate_fastlas_grounds_them_from(self):
+        """
+        Without a time/1 predicate FastLAS builds an empty hypothesis space and
+        reports SPACE SIZE 0 / UNSATISFIABLE with no error - indistinguishable
+        from "this branch found no repair". That is why antecedent and
+        consequent weakening were unsolvable while invariant-to-response
+        weakening (no var() in its #modeh) worked.
+        """
+        las = "#modeb(2,holds_at(const(usable_atom), var(time), var(trace)), (positive)).\n"
+        self.assertIn("time(T) :- timepoint(T,_).", translate_ilasp_task_to_fastlas(las))
+
+    def test_trace_type_is_not_redefined(self):
+        """Each example's context already asserts trace(name)."""
+        las = "#modeh(exc(const(e), var(trace))).\n"
+        self.assertNotIn("trace(T) :-", translate_ilasp_task_to_fastlas(las))
+
+    def test_unknown_var_type_raises_rather_than_emptying_the_space(self):
+        with self.assertRaises(FastLASTypeError) as ctx:
+            translate_ilasp_task_to_fastlas("#modeb(p(var(mystery))).\n")
+        self.assertIn("mystery", str(ctx.exception))
+
+    def test_type_predicates_only_come_from_mode_declarations(self):
+        """A var(time) inside background knowledge must not trigger emission."""
+        self.assertNotIn("time(T) :-", translate_ilasp_task_to_fastlas("foo(var(time)).\n"))
+
+
+class TestBiasTranslation(unittest.TestCase):
+    """
+    ILASP's bias meta-language is head/1 + body/1; FastLAS's is in_head/1 +
+    in_body/1. Untranslated, FastLAS treats body/1 as undefined, so the whole
+    block is silently inert and it returns rules the bias exists to forbid.
+    """
+
+    def _bias(self, body: str) -> str:
+        return translate_ilasp_task_to_fastlas(f'#bias("\n{body}\n").\n')
+
+    def test_body_becomes_in_body(self):
+        out = self._bias(":- body(holds_at(_, _, _)).")
+        self.assertIn(":- in_body(holds_at(_, _, _)).", out)
+
+    def test_head_becomes_in_head(self):
+        out = self._bias(":- head(antecedent_exception(_,_,_,_)), body(holds_at(_,_,_)).")
+        self.assertIn(":- in_head(antecedent_exception(_,_,_,_)), in_body(holds_at(_,_,_)).", out)
+
+    def test_negated_body_is_translated_too(self):
+        """`:- not body(X)` is the dangerous form - it fires always, so an
+        untranslated task goes instantly UNSATISFIABLE."""
+        out = self._bias(":- body(holds_at(_,V1,V2)), not body(timepoint_of_op(_,_,V1,V2)).")
+        self.assertIn("not in_body(timepoint_of_op(_,_,V1,V2))", out)
+        self.assertNotIn("not body(", out)
+
+    def test_already_translated_predicates_are_not_double_prefixed(self):
+        self.assertNotIn("in_in_body", self._bias(":- in_body(holds_at(_,_,_))."))
+
+    def test_constraint_flag_is_dropped(self):
+        """ILASP's `constraint` means "the learned rule has an empty head".
+        FastLAS only learns #modeh-headed rules, so the atom is undefined."""
+        self.assertNotIn("constraint", self._bias(":- constraint.\n:- body(holds_at(_,_,_))."))
+
+    def test_double_equals_becomes_single(self):
+        """FastLAS's parser rejects `==` with "unexpected T_EQUAL"."""
+        out = self._bias(":- body(timepoint_of_op(next,V1,V2,_)), V1 == V2.")
+        self.assertIn("V1 = V2", out)
+        self.assertNotIn("==", out)
+
+    def test_a_bias_of_only_dropped_lines_leaves_no_empty_block(self):
+        self.assertNotIn("#bias", self._bias(":- constraint."))
 
 
 class TestOutputInterpretation(unittest.TestCase):
@@ -80,6 +162,29 @@ class TestOutputInterpretation(unittest.TestCase):
         rules = FastLASInterpreter.extract_learned_rules(
             "% a comment\nSolving...\nev_temp_op(x).\nDone in 3s\n")
         self.assertEqual(["ev_temp_op(x)."], rules)
+
+    def test_fastlas_type_guards_parse_to_the_same_adaptation_as_ilasp(self):
+        """
+        FastLAS realises `var(T)` by injecting `T(V)` into the learned rule, so
+        its answers carry `time(V0), trace(V1)` guards that ILASP's do not. They
+        are inert for Adaptation.from_str, which reads only timepoint_of_op and
+        holds_at/not_holds_at - so the two solvers' rules compare equal and
+        nothing downstream needs to strip them.
+        """
+        pairs = [
+            ("antecedent_exception(a2_1,0,V0,V1) :- timepoint_of_op(prev,V0,V2,V1), "
+             "not_holds_at(highwater,V2,V1), time(V0), trace(V1), time(V2).",
+             "antecedent_exception(a2_1,0,V1,V2) :- timepoint_of_op(prev,V1,V3,V2); "
+             "not_holds_at(highwater,V3,V2)."),
+            ("consequent_exception(a2_1,V0,V1) :- timepoint_of_op(current,V0,V0,V1), "
+             "holds_at(highwater,V0,V1), time(V0), trace(V1).",
+             "consequent_exception(a2_1,V1,V2) :- timepoint_of_op(current,V1,V1,V2); "
+             "holds_at(highwater,V1,V2)."),
+        ]
+        for fastlas_rule, ilasp_rule in pairs:
+            with self.subTest(rule=fastlas_rule.split(" :-")[0]):
+                self.assertEqual(Adaptation.from_str(ilasp_rule),
+                                 Adaptation.from_str(fastlas_rule))
 
     def test_empty_hypothesis_raises_rather_than_returning_nothing(self):
         with self.assertRaises(NoViolationException):
@@ -152,7 +257,7 @@ class TestFastLASSpecLearner(unittest.TestCase):
                 learner.find_adaptations_with_heuristic(
                     None, [], [], None, [], NoFilterHeuristicManager())
         task = run.call_args[0][0]
-        self.assertIn("#modeb(holds_at(const(usable_atom), var(time), var(trace))).", task)
+        self.assertIn("#modeb(2,holds_at(const(usable_atom), var(time), var(trace))).", task)
         self.assertIn("usable_atom(highwater).", task)
         self.assertNotIn("#constant", task)
         self.assertNotIn("(positive)", task)

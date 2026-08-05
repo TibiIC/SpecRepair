@@ -55,6 +55,62 @@ from spec_repair.loggers.spec_logger import SpecLogger
 ASSUMPTION_WEAKENING = "assumption_weakening"
 GUARANTEE_WEAKENING = "guarantee_weakening"
 
+# Solver names accepted by `using_learner`, and by the SPEC_REPAIR_LEARNER
+# environment variable the experiment runners pass through. ILASP is the default
+# because every published result so far used it; FastLAS is opt-in.
+ILASP_LEARNER = "ilasp"
+FASTLAS_LEARNER = "fastlas"
+LEARNER_NAMES = (ILASP_LEARNER, FASTLAS_LEARNER)
+DEFAULT_LEARNER = ILASP_LEARNER
+
+# The runners set this to choose a solver without editing any test.
+LEARNER_ENV_VAR = "SPEC_REPAIR_LEARNER"
+
+# How many times FastLAS is invoked per learning step. FastLAS returns one
+# solution per run and picks non-deterministically among equally-optimal
+# candidates, so this is how an experiment samples the ties that ILASP would
+# have enumerated. Exposed as an environment variable so a sweep can vary it
+# without editing a test.
+FASTLAS_RUNS_ENV_VAR = "SPEC_REPAIR_FASTLAS_RUNS"
+DEFAULT_FASTLAS_RUNS = 1
+
+
+def learner_from_env() -> str:
+    """
+    The solver named by $SPEC_REPAIR_LEARNER, defaulting to ILASP.
+
+    Validated here rather than where it is used, so a typo fails immediately
+    with the valid names instead of silently running the default solver and
+    producing results labelled as the other one.
+    """
+    name = os.environ.get(LEARNER_ENV_VAR, "").strip().lower() or DEFAULT_LEARNER
+    if name not in LEARNER_NAMES:
+        raise ValueError(
+            f"{LEARNER_ENV_VAR}='{name}' is not a known learner. "
+            f"Use one of: {', '.join(LEARNER_NAMES)}.")
+    return name
+
+
+def fastlas_runs_from_env() -> int:
+    """
+    `$SPEC_REPAIR_FASTLAS_RUNS`, defaulting to 1.
+
+    Validated here for the same reason as the learner name: a typo should fail
+    immediately rather than silently run a 1-sample sweep and produce results
+    labelled as an n-sample one.
+    """
+    raw = os.environ.get(FASTLAS_RUNS_ENV_VAR, "").strip()
+    if not raw:
+        return DEFAULT_FASTLAS_RUNS
+    try:
+        runs = int(raw)
+    except ValueError:
+        raise ValueError(
+            f"{FASTLAS_RUNS_ENV_VAR}='{raw}' is not an integer.") from None
+    if runs < 1:
+        raise ValueError(f"{FASTLAS_RUNS_ENV_VAR}='{raw}' must be at least 1.")
+    return runs
+
 # Callback signature: (repairer, idx, spec, data) -> None
 OnRecord = Callable[[BFSRepairOrchestrator, int, object, object], None]
 
@@ -150,14 +206,37 @@ class BFSRepairOrchestratorBuilder:
 
         `n_runs` invokes FastLAS repeatedly per learning step and keeps the
         distinct solutions, because FastLAS returns one solution per run where
-        ILASP returns all optimal ones. Note FastLAS 2.1.0 is deterministic, so
-        n_runs > 1 currently costs extra invocations without finding extra
-        solutions - see FastLASSpecLearner's module docstring for the
-        measurements.
+        ILASP returns all optimal ones - and picks non-deterministically among
+        equally-optimal candidates, so repeated runs genuinely sample different
+        branches. Raising it trades invocations for search breadth.
         """
         from spec_repair.components.learners.fastlas_spec_learner import FastLASSpecLearner
         return self.with_learner_factory(
             lambda hm: FastLASSpecLearner(heuristic_manager=hm, n_runs=n_runs, **learner_kwargs))
+
+    def using_learner(self, name: Optional[str], **learner_kwargs) -> "BFSRepairOrchestratorBuilder":
+        """
+        Select the solver by name: `"ilasp"` (the default) or `"fastlas"`.
+
+        The name-keyed form of `using_fastlas`, so a run can be pointed at a
+        solver from a command line or an environment variable without the caller
+        having to branch. `None` or an empty string leaves the preset's default
+        in place, which is what an unset environment variable should mean.
+
+        For FastLAS, `n_runs` defaults to `$SPEC_REPAIR_FASTLAS_RUNS` so a sweep
+        can set the sampling depth from the environment; an explicit keyword
+        still wins.
+        """
+        if not name:
+            return self
+        key = name.strip().lower()
+        if key == ILASP_LEARNER:
+            return self
+        if key == FASTLAS_LEARNER:
+            learner_kwargs.setdefault("n_runs", fastlas_runs_from_env())
+            return self.using_fastlas(**learner_kwargs)
+        raise ValueError(
+            f"Unknown learner '{name}'. Use one of: {', '.join(sorted(LEARNER_NAMES))}.")
 
     def enabling(self, *flags: str) -> "BFSRepairOrchestratorBuilder":
         """Enable heuristic flags (e.g. "INCLUDE_NEXT", "INCLUDE_PREV")."""
