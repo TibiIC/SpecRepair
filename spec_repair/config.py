@@ -69,6 +69,15 @@ def _default_jvm_path() -> str:
                            for n in re.split(r"[.\-]", p.split("/openjdk/")[1].split("/")[0])],
             reverse=True)
         candidates.extend(cellar)
+    else:
+        # sdkman's selected JDK, which is what the GPU box has. Preferred over
+        # $JAVA_HOME for the same reason Homebrew is on macOS: $JAVA_HOME is
+        # only right if the shell happened to source sdkman first. Under conda
+        # alone it points at the environment's own Java 21, and the Spectra
+        # jars need 23+ - `UnsupportedClassVersionError: class file version
+        # 67.0, this version ... recognizes up to 65.0`.
+        candidates.append(os.path.expanduser(
+            "~/.sdkman/candidates/java/current/lib/server/libjvm.so"))
 
     java_home = os.environ.get("JAVA_HOME")
     if java_home:
