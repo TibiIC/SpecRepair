@@ -1,7 +1,9 @@
 #!/bin/bash
 
 # Get current date in _YYYY-MM-DD format
-date=$(date +_%Y-%m-%d)
+# Which run to target. Defaults to today; set EXPERIMENT_DATE to point at
+# an earlier one, e.g. EXPERIMENT_DATE=_2025-11-19 ./scripts/generate_plots.sh
+date="${EXPERIMENT_DATE:-$(date +_%Y-%m-%d)}"
 
 # Define array of tuples (folder path and file1 path)
 declare -a experiments=(
@@ -19,7 +21,7 @@ for pair in "${experiments[@]}"; do
     file2=$(echo $pair | cut -d' ' -f3)
 
     # Run the script with the folder and file1 as arguments
-    python scripts/generate_plot_weakness_scatter_2D.py "$folder$date" -v --ideal-spec "$file1" --original-spec "$file2" -o "$folder$date/scatter_plot_2D.png" > "$folder$date/output_scatter_plot_2D.txt" 2>&1 &
+    python -u scripts/generate_plot_weakness_scatter_2D.py "$folder$date" -v --ideal-spec "$file1" --original-spec "$file2" -o "$folder$date/scatter_plot_2D.png" > "$folder$date/output_scatter_plot_2D.txt" 2>&1 &
 done
 
 # Wait for all background processes to complete
