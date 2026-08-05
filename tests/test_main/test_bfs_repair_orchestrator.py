@@ -7,7 +7,11 @@ import networkx as nx
 from pyvis.network import Network
 
 from main.bfs_repair_orchestrator import BFSRepairOrchestrator
-from main.bfs_repair_orchestrator_builder import BFSRepairOrchestratorBuilder
+from main.bfs_repair_orchestrator_builder import (
+    BFSRepairOrchestratorBuilder,
+    DEFAULT_LEARNER,
+    learner_from_env,
+)
 from spec_repair.components.repair_data import RepairData
 from spec_repair.enums import Learning
 from spec_repair.components.heuristic_managers.choose_first_heuristic_manager import ChooseFirstHeuristicManager
@@ -46,11 +50,27 @@ def save_layered_graph(G: nx.DiGraph, filepath: str):
     net.write_html(f"{filepath}/graph.html")
 
 
+def learner_suffix(learner: str) -> str:
+    """
+    `_fastlas` for a non-default solver, empty for ILASP.
+
+    Empty for the default deliberately: every existing output path, pulled
+    directory and downstream expectation was written against the unsuffixed
+    name, and an ILASP run should keep producing exactly those. A FastLAS run
+    lands beside it rather than overwriting it, so the two are comparable.
+    """
+    return "" if learner == DEFAULT_LEARNER else f"_{learner}"
+
+
 class TestBFSRepairOrchestrator(BaseTestCase):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
         cls.date_str = datetime.now().strftime("%Y-%m-%d")
+        # Read once per class: a mid-run change would make half the results
+        # ILASP's and half FastLAS's under one directory name.
+        cls.learner = learner_from_env()
+        cls.learner_suffix = learner_suffix(cls.learner)
 
     def test_bfs_repair_spec_arbiter(self):
         case_study_name = 'arbiter'
@@ -362,7 +382,7 @@ class TestBFSRepairOrchestrator(BaseTestCase):
     def run_bfs_asm_only_repair_sem_unique(self, case_study_name, case_study_path, out_test_dir_name=None,
                                            is_debug=False):
         if not out_test_dir_name:
-            out_test_dir_name = f"./test_files/out/repair_asm_only/{case_study_name}_{self.date_str}"
+            out_test_dir_name = f"./test_files/out/repair_asm_only/{case_study_name}{self.learner_suffix}_{self.date_str}"
         log_file = f"{out_test_dir_name}/log.txt"
         transitions_file_path = f"{out_test_dir_name}/transitions.csv"
         if not os.path.exists(out_test_dir_name):
@@ -373,6 +393,7 @@ class TestBFSRepairOrchestrator(BaseTestCase):
         trace: list[str] = read_file_lines(f"{case_study_path}/violation_trace.txt")
         builder = (BFSRepairOrchestratorBuilder.assumption_only()
                    .enabling("INCLUDE_NEXT", "INCLUDE_PREV")
+                   .using_learner(self.learner)
                    .with_log_file(log_file)
                    .with_on_record(lambda r, idx, s, d: save_layered_graph(r._om._graph, out_test_dir_name)))
         if is_debug:
@@ -387,7 +408,7 @@ class TestBFSRepairOrchestrator(BaseTestCase):
 
     def run_bfs_repair_sem_unique(self, case_study_name, case_study_path, out_test_dir_name=None, is_debug=False):
         if not out_test_dir_name:
-            out_test_dir_name = f"./test_files/out/repair/{case_study_name}_{self.date_str}"
+            out_test_dir_name = f"./test_files/out/repair/{case_study_name}{self.learner_suffix}_{self.date_str}"
         log_file = f"{out_test_dir_name}/log.txt"
         transitions_file_path = f"{out_test_dir_name}/transitions.csv"
         if not os.path.exists(out_test_dir_name):
@@ -398,6 +419,7 @@ class TestBFSRepairOrchestrator(BaseTestCase):
         trace: list[str] = read_file_lines(f"{case_study_path}/violation_trace.txt")
         builder = (BFSRepairOrchestratorBuilder.semantic()
                    .enabling("INCLUDE_NEXT", "INCLUDE_PREV")
+                   .using_learner(self.learner)
                    .with_log_file(log_file)
                    .with_on_record(lambda r, idx, s, d: save_layered_graph(r._om._graph, out_test_dir_name)))
         if is_debug:
@@ -423,6 +445,7 @@ class TestBFSRepairOrchestrator(BaseTestCase):
         # as the orchestration manager. The builder makes those slots explicit.
         builder = (BFSRepairOrchestratorBuilder.semantic()
                    .with_heuristic_manager(ChooseFirstHeuristicManager())
+                   .using_learner(self.learner)
                    .with_log_file(log_file))
         if is_debug:
             builder.with_flat_debug_dir(out_test_dir_name)
@@ -442,7 +465,7 @@ class TestBFSRepairOrchestrator(BaseTestCase):
 
     def run_bfs_repair_syn_unique(self, case_study_name, case_study_path, out_test_dir_name=None, is_debug=False):
         if not out_test_dir_name:
-            out_test_dir_name = f"./test_files/out/repair_syn/{case_study_name}_{self.date_str}"
+            out_test_dir_name = f"./test_files/out/repair_syn/{case_study_name}{self.learner_suffix}_{self.date_str}"
         log_file = f"{out_test_dir_name}/log.txt"
         transitions_file_path = f"{out_test_dir_name}/transitions.csv"
         if not os.path.exists(out_test_dir_name):
@@ -453,6 +476,7 @@ class TestBFSRepairOrchestrator(BaseTestCase):
         trace: list[str] = read_file_lines(f"{case_study_path}/violation_trace.txt")
         builder = (BFSRepairOrchestratorBuilder.syntactic()
                    .enabling("INCLUDE_NEXT", "INCLUDE_PREV")
+                   .using_learner(self.learner)
                    .with_log_file(log_file)
                    .with_on_record(lambda r, idx, s, d: save_layered_graph(r._om._graph, out_test_dir_name)))
         if is_debug:
