@@ -178,9 +178,9 @@ at `f88a475`. Launched 2026-08-05 22:52.
 
 | Machine | Learner | Setup | Runs | Command |
 |---|---|---|---|---|
-| gpu11 | FastLAS `n_runs=3` | trace-violation (new) | 50 | `LEARNER=fastlas FASTLAS_RUNS=3 MAX_WINDOWS=8 ./scripts/run_parallel_bfs_repair_trace.sh` |
+| gpu11 | FastLAS `n_runs=3` -> **5**, see §8 | trace-violation (new) | 50 | `LEARNER=fastlas FASTLAS_RUNS=3 MAX_WINDOWS=8 ./scripts/run_parallel_bfs_repair_trace.sh` |
 | gpu13 | ILASP | trace-violation (new) | 50 | `LEARNER=ilasp MAX_WINDOWS=8 ./scripts/run_parallel_bfs_repair_trace.sh` |
-| gpu14 | FastLAS `n_runs=3` | strengthened (old) | 17 | `LEARNER=fastlas FASTLAS_RUNS=3 ./scripts/run_parallel_bfs_repair_syn.sh all` |
+| gpu14 | FastLAS `n_runs=3` -> **5**, see §8 | strengthened (old) | 17 | `LEARNER=fastlas FASTLAS_RUNS=3 ./scripts/run_parallel_bfs_repair_syn.sh all` |
 | gpu15 | ILASP | strengthened (old) | 17 | `LEARNER=ilasp ./scripts/run_parallel_bfs_repair_syn.sh all` |
 
 | Machine | tmux session | Logs | Output |
@@ -292,7 +292,36 @@ Resolved by killing the window and recreating it with the runner's own setup
 line; verified `which python` now gives `envs/logic/bin/python` and the worker
 is running.
 
-## 8. What to check next
+## 8. Restarted at `n_runs=5` (00:00, 2026-08-06)
+
+Once FastLAS was shown to be the faster learner, both FastLAS sweeps were
+restarted at `FASTLAS_RUNS=5`. The ILASP sweeps on gpu13/gpu15 were left
+running untouched.
+
+    gpu11   LEARNER=fastlas FASTLAS_RUNS=5 MAX_WINDOWS=8 ./scripts/run_parallel_bfs_repair_trace.sh
+    gpu14   LEARNER=fastlas FASTLAS_RUNS=5 ./scripts/run_parallel_bfs_repair_syn.sh all
+
+**Deliberately delayed until just after midnight.** `date_str` is
+`datetime.now()` in `setUpClass`, computed once per *test process*, and each
+window is its own process. Launching at 23:52 would have put the first ~8
+windows in `2026-08-05` and everything queued behind them in `2026-08-06` -
+one sweep split across two directories. Waiting eight minutes gives a clean
+single date, and means nothing had to be deleted:
+
+    *_fastlas_2026-08-05   n_runs=3   (19 OK / 10 failed trace, 4 OK / 3 failed syn)
+    *_fastlas_2026-08-06   n_runs=5   (this run)
+
+Both are kept, so the two settings can be compared directly.
+
+Verified after relaunch: sessions created 00:00:06 and 00:00:08, workers
+carrying `SPEC_REPAIR_LEARNER=fastlas` and `SPEC_REPAIR_FASTLAS_RUNS=5`.
+
+**Caveat - the ILASP sweeps do span midnight.** They were not restarted, since
+that would have discarded real progress for a cosmetic gain. Their runs that
+started before 00:00 are under `*_2026-08-05` and the rest under
+`*_2026-08-06`; collecting ILASP results needs **both** date directories.
+
+## 9. What to check next
 
 * Whether the `MAX_WINDOWS` slot cap actually works on NFS - if not, add a
   cap that does, and note that the syn runner has no cap at all (17 at once).
