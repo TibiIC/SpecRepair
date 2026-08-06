@@ -19,30 +19,18 @@ if TYPE_CHECKING:
 
 
 
-# One toggle per (formula type x temporal type) pair, deciding whether a formula
-# may be weakened by the learner. Read by encode_ILASP to select what goes into
-# the learning task; encode_ASP is unaffected, so a formula excluded from
-# learning is still checked for violations and realisability.
+# Initial formulas are never weakened by the learner.
 #
-# Defaults live in IHeuristicManager.__init__: invariant and justice on, initial
-# off for both assumptions and guarantees.
-LEARNABLE_FLAG = {
-    (GR1FormulaType.ASM, GR1TemporalType.INITIAL): "LEARN_ASSUMPTION_INITIAL",
-    (GR1FormulaType.ASM, GR1TemporalType.INVARIANT): "LEARN_ASSUMPTION_INVARIANT",
-    (GR1FormulaType.ASM, GR1TemporalType.JUSTICE): "LEARN_ASSUMPTION_JUSTICE",
-    (GR1FormulaType.GAR, GR1TemporalType.INITIAL): "LEARN_GUARANTEE_INITIAL",
-    (GR1FormulaType.GAR, GR1TemporalType.INVARIANT): "LEARN_GUARANTEE_INVARIANT",
-    (GR1FormulaType.GAR, GR1TemporalType.JUSTICE): "LEARN_GUARANTEE_JUSTICE",
-}
-
-
-def learnable_temporal_types(formula_type: GR1FormulaType, hm) -> List[GR1TemporalType]:
-    """
-    The temporal kinds of `formula_type` the learner is currently allowed to
-    weaken. An empty list means nothing of that type may be weakened at all.
-    """
-    return [when for (ftype, when), flag in LEARNABLE_FLAG.items()
-            if ftype == formula_type and hm.is_enabled(flag)]
+# Weakening an initial assumption or guarantee changes which states the system
+# may start in - that changes the realisability question rather than answering
+# it - and an exception attached to an initial assumption drags system variables
+# into it, which Spectra's CLI rejects outright (the source of 15 TypeError
+# failures in the 2026-08-05 sweeps).
+#
+# This excludes them from the *learning task* only. encode_ASP keeps them, where
+# they are still needed to decide what the trace violates and whether a repair
+# is correct.
+NON_LEARNABLE_WHEN = GR1TemporalType.INITIAL
 
 
 class NewSpecEncoder:
@@ -84,22 +72,15 @@ class NewSpecEncoder:
         trace_asp = trace_list_to_asp_form(trace)
         trace_ilasp = trace_list_to_ilasp_form(trace_asp, learning=Learning.ASSUMPTION_WEAKENING)
         ct_list_ilasp: str = ''.join([cs_trace.get_ilasp_form(learning=learning_type) for cs_trace in ct_list])
-        # Only formulas whose (type, when) pair is enabled are written into the
-        # learning task at all - see LEARNABLE_FLAG. Excluding one here is
-        # stronger than forbidding it in the #bias: no
-        # `#constant(expression_v, ...)` is emitted for it, so no solver can
-        # attach an exception to it, and that holds for FastLAS too, which
-        # ignores hard #bias constraints unless they are translated.
-        #
-        # Initial formulas are off by default. They remain in encode_ASP, where
-        # they are still needed to decide what the trace violates and whether a
-        # repair is correct - excluded from *learning*, not from the
-        # specification.
+        # Initial formulas never enter the learning task - see
+        # NON_LEARNABLE_WHEN. Excluding them here is stronger than forbidding
+        # them in the #bias: no `#constant(expression_v, ...)` is emitted, so no
+        # solver can attach an exception to them, and that holds for FastLAS
+        # too, which ignores hard #bias constraints unless they are translated.
         formula_type = learning_type.formula_type()
-        learnable_when = learnable_temporal_types(formula_type, self._hm)
         sub_spec = spec.extract_sub_specification(
             lambda x: (x['type'] == formula_type)
-                      & (x['when'].isin(learnable_when))
+                      & (x['when'] != NON_LEARNABLE_WHEN)
         )
         if learning_type == Learning.ASSUMPTION_WEAKENING:
             exp_names_to_learn = get_violated_expression_names_of_type(violations, learning_type.exp_type_str())
@@ -148,19 +129,15 @@ class NewSpecEncoder:
         else:
             formula_names = get_violated_expression_names_of_type(violations, learning_type.exp_type_str())
 
-        # Same gate as encode_ILASP's sub-specification: a formula whose
-        # (type, when) pair is disabled gets no expression_v constant, so no
-        # exception can name it. Applied here too because these three branches
-        # pick names by a different route - the unrealisable core, or which
-        # expressions the trace violated - and an initial formula can appear in
-        # either without ever passing through the sub-specification filter.
-        learnable_when = learnable_temporal_types(learning_type.formula_type(), self._hm)
-        learnable_names = set(spec.filter(
-            lambda x: (x['type'] == learning_type.formula_type())
-                      & (x['when'].isin(learnable_when))
-        )["name"])
+        # Same gate as encode_ILASP's sub-specification. Applied here too
+        # because these three branches pick names by a different route - the
+        # unrealisable core, or which expressions the trace violated - and an
+        # initial formula can appear in either without ever passing through the
+        # sub-specification filter.
+        initial_names = set(spec.filter(
+            lambda x: x['when'] == NON_LEARNABLE_WHEN)["name"])
         for name in formula_names:
-            if name not in learnable_names:
+            if name in initial_names:
                 continue
             output += f"#constant(expression_v, {name}).\n"
 
