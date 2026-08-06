@@ -52,8 +52,29 @@ class OptimisingSpecLearner(ILearner):
             print(f"Weakening failed: NoWeakeningException thrown and {e}")
             return []
         except NoViolationException as e:
-            if not data.trace and not data.counter_traces and data.learning_type == Learning.GUARANTEE_WEAKENING:
-                print(f"No violation trace given, no counter-traces and spec is unrealisable, so will move straight to extracting counter strategies.")
+            if not data.counter_traces and data.learning_type == Learning.GUARANTEE_WEAKENING:
+                # Guarantee weakening learns from counter-strategies, and there
+                # are none yet - so hand the specification back for the oracle
+                # to extract them from, rather than giving up.
+                #
+                # This used to also require `not data.trace`, which excluded the
+                # whole trace-violation setup: there a trace is always present,
+                # so the branch fell through to returning [], the mitigator's
+                # complete_counter_traces had nothing to complete and returned
+                # its input unchanged, and the orchestration manager dropped the
+                # already-visited task without ever reaching a leaf. Measured on
+                # the 2026-08-06 sweep: 34 such events under ILASP, failing
+                # amba, colorsort, genbuf and gyro outright once
+                # MitigationMadeNoProgressException made them visible.
+                #
+                # Whether a violation trace exists says nothing about whether
+                # counter-strategies are needed. Both outcomes now reach a leaf:
+                # an unrealisable specification yields counter-strategies and
+                # the search continues, a realisable one yields none and is
+                # recorded as a solution - which it is, having nothing left to
+                # repair.
+                print("No counter-traces for guarantee weakening, so moving "
+                      "straight to extracting counter strategies.")
                 return [(spec, data)]
             else:
                 print(f"Weakening failed: NoViolationException thrown and {e}")
