@@ -71,11 +71,6 @@ class TestSpectraSpecOracle(BaseTestCase):
         cs: Optional[CounterStrategy] = spec_oracle._synthesise_and_check(weakened_spec)
         self.assertIsNone(cs)
 
-
-if __name__ == "__main__":
-    unittest.main()
-
-
 class TestUnverifiableSpecifications(BaseTestCase):
     """
     A specification Spectra's CLI refuses to check at all.
@@ -128,3 +123,37 @@ guarantee -- initial_guarantee
         """The guard must only fire when Spectra actually declined."""
         ok = SpectraSpecification.from_file('./test_files/minepump_aw_methane.spectra')
         self.assertIsNotNone(SpectraGR1Oracle()._synthesise_and_check(ok))
+    def test_heap_exhaustion_is_reported_as_unverifiable(self):
+        """
+        Spectra's BDD engine can exhaust the JVM heap on a large state space -
+        colorsort does it even with the default 15.7 GB max heap on a 62 GB
+        machine, so it is not a -Xmx misconfiguration. The OutOfMemoryError used
+        to propagate out of jpype and kill the whole case study; it is now the
+        same "could not check this" the orchestrator already skips.
+        """
+        import jpype
+        from spec_repair.components.oracles.spectra_gr1_oracle import _synthesise_or_reject
+        oom = jpype.JClass("java.lang.OutOfMemoryError")
+
+        def raises_oom():
+            raise oom("Java heap space")
+
+        with self.assertRaises(SpecificationNotVerifiableException) as ctx:
+            _synthesise_or_reject(raises_oom, self.spec)
+        self.assertIn("ran out of heap", str(ctx.exception))
+
+    def test_an_unrelated_java_error_is_not_swallowed(self):
+        """Only heap exhaustion maps to unverifiable; anything else must surface."""
+        import jpype
+        from spec_repair.components.oracles.spectra_gr1_oracle import _synthesise_or_reject
+        iae = jpype.JClass("java.lang.IllegalArgumentException")
+
+        def raises_other():
+            raise iae("something else")
+
+        with self.assertRaises(jpype.JException):
+            _synthesise_or_reject(raises_other, self.spec)
+
+
+if __name__ == "__main__":
+    unittest.main()

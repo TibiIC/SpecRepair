@@ -2,6 +2,8 @@ import re
 from copy import deepcopy
 from typing import Optional, List, Tuple
 
+import jpype
+
 from spec_repair.exceptions import SpecificationNotVerifiableException
 from spec_repair.interfaces.ioracle import IOracle
 from spec_repair.components.new_spec_encoder import NewSpecEncoder
@@ -32,6 +34,34 @@ def filter_counter_traces(cts: List[CounterTrace], spec: SpectraSpecification) -
             if not violated_guarantees - unrealisable_cores:
                 filtered_cts.append(ct)
     return filtered_cts
+
+def _synthesise_or_reject(synthesise, spec: SpectraSpecification) -> Optional[str]:
+    """
+    Run a synthesis call, turning a JVM heap exhaustion into the same named
+    exception `_reject_unverifiable` raises.
+
+    Spectra's BDD engine can exhaust the heap on a large enough state space -
+    measured on colorsort, which does it even with the JVM's default 15.7 GB
+    max heap on a 62 GB machine, so this is not a `-Xmx` misconfiguration. The
+    error surfaced as `java.lang.OutOfMemoryError` propagating out of jpype and
+    killing the entire case study.
+
+    Treating it as "not verifiable" is the honest reading: Spectra never
+    reached a verdict, exactly as when `violations_in_initial_conditions`
+    rejects a file up front, and the caller already knows to end that branch
+    and continue. It is emphatically *not* "unrealisable" - that would record a
+    verdict the tool never gave.
+    """
+    try:
+        return synthesise()
+    except jpype.JException as e:
+        if "OutOfMemoryError" not in str(type(e).__name__) and "OutOfMemoryError" not in str(e):
+            raise
+        raise SpecificationNotVerifiableException(
+            "Spectra ran out of heap checking this specification: its BDD engine "
+            "exhausted the JVM heap before reaching a verdict.\n"
+            f"{spec.to_str()}") from e
+
 
 def _reject_unverifiable(output: Optional[str], spec: SpectraSpecification) -> None:
     """
@@ -101,7 +131,8 @@ class SpectraGR1Oracle(IOracle):
         _synthesise_and_check (used by is_valid_or_counter_arguments, which
         genuinely needs a CounterStrategy object) is untouched.
         """
-        output = SpectraGR1Oracle._synthesise_realisability_only(spec)
+        output = _synthesise_or_reject(
+            lambda: SpectraGR1Oracle._synthesise_realisability_only(spec), spec)
         _reject_unverifiable(output, spec)
         if re.search("Result: Specification is unrealizable", output):
             return False
@@ -115,7 +146,7 @@ class SpectraGR1Oracle(IOracle):
         Uses Spectra under the hood to check whether specifcation is realisable.
         If it is, nothing is returned. Otherwise, it returns a CounterStrategy.
         """
-        output = self._synthesise(spec)
+        output = _synthesise_or_reject(lambda: self._synthesise(spec), spec)
         _reject_unverifiable(output, spec)
         if re.search("Result: Specification is unrealizable", output):
             return SpectraCSParser.from_str(output)
