@@ -21,12 +21,14 @@
 # with a strong.spectra that strengthens at least one assumption AND at least
 # one guarantee, so those runs exercise guarantee weakening too.
 original_tests=(
+    "test_bfs_repair_spec_amba_syn"
     "test_bfs_repair_spec_arbiter_syn"
     "test_bfs_repair_spec_traffic_single_syn"
     "test_bfs_repair_spec_traffic_updated_syn"
     "test_bfs_repair_spec_lift_syn"
     "test_bfs_repair_spec_minepump_syn"
     "test_bfs_repair_spec_colorsort_syn"
+    "test_bfs_repair_spec_genbuf_syn"
     "test_bfs_repair_spec_gyro_syn"
     "test_bfs_repair_spec_elevator_syn"
     "test_bfs_repair_spec_humanoid_syn"

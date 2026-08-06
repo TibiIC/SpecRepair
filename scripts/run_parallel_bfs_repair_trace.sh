@@ -51,8 +51,10 @@ fi
 # vacuously satisfied on a finite prefix, so it has no violating trace to repair
 # against at any length. See docs/session-notes/2026-07-28.
 all_case_studies=(
+    "amba"
     "colorsort"
     "elevator"
+    "genbuf"
     "gyro"
     "humanoid"
     "lift"

@@ -45,8 +45,8 @@ holds_at(stateG7_1,1,trace_name_0).
 not_holds_at(stoB_REQ0,1,trace_name_0).
 not_holds_at(stoB_REQ1,1,trace_name_0).
 not_holds_at(stoB_REQ2,1,trace_name_0).
-not_holds_at(stoB_REQ3,1,trace_name_0).
-not_holds_at(stoB_REQ4,1,trace_name_0).
+holds_at(stoB_REQ3,1,trace_name_0).
+holds_at(stoB_REQ4,1,trace_name_0).
 
 not_holds_at(btoR_REQ0,2,trace_name_0).
 not_holds_at(btoR_REQ1,2,trace_name_0).
@@ -61,8 +61,8 @@ not_holds_at(eNQ,2,trace_name_0).
 not_holds_at(fULL,2,trace_name_0).
 not_holds_at(rtoB_ACK0,2,trace_name_0).
 not_holds_at(rtoB_ACK1,2,trace_name_0).
-holds_at(sLC0,2,trace_name_0).
-not_holds_at(sLC1,2,trace_name_0).
+not_holds_at(sLC0,2,trace_name_0).
+holds_at(sLC1,2,trace_name_0).
 holds_at(sLC2,2,trace_name_0).
 not_holds_at(stateG12,2,trace_name_0).
 holds_at(stateG7_0,2,trace_name_0).
@@ -70,5 +70,5 @@ holds_at(stateG7_1,2,trace_name_0).
 not_holds_at(stoB_REQ0,2,trace_name_0).
 not_holds_at(stoB_REQ1,2,trace_name_0).
 not_holds_at(stoB_REQ2,2,trace_name_0).
-not_holds_at(stoB_REQ3,2,trace_name_0).
+holds_at(stoB_REQ3,2,trace_name_0).
 not_holds_at(stoB_REQ4,2,trace_name_0).

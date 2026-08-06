@@ -1,0 +1,227 @@
+module amba_ahb_realizable_amba_ahb_3
+
+sys boolean btq_state_1_s0;
+sys boolean btq_state_1_s1;
+sys boolean btq_state_2_s0;
+sys boolean btq_state_2_s1;
+sys boolean btq_state_3_s0;
+sys boolean btq_state_3_s1;
+sys boolean btq_state_4_s0;
+sys boolean btq_state_4_s1;
+sys boolean btq_state_5_s0;
+sys boolean btq_state_5_s1;
+sys boolean btq_state_6_s0;
+sys boolean btq_state_6_s1;
+sys boolean decide;
+env boolean hburst_burst4;
+env boolean hburst_single;
+env boolean hbusreq_0;
+env boolean hbusreq_1;
+env boolean hbusreq_2;
+sys boolean hgrant_0;
+sys boolean hgrant_1;
+sys boolean hgrant_2;
+env boolean hlock_0;
+env boolean hlock_1;
+env boolean hlock_2;
+sys boolean hmaster_val0;
+sys boolean hmaster_val1;
+sys boolean hmastlock;
+env boolean hready;
+sys boolean hready_counter_val0;
+sys boolean hready_counter_val1;
+sys boolean hready_counter_val2;
+sys boolean hready_counter_val3;
+sys boolean locked;
+sys boolean start;
+
+
+assumption -- a10_0
+	G((((hmastlock=true&(hburst_single=false&hburst_burst4=false))&hmaster_val0=true)->F(next(hbusreq_0=false))));
+
+assumption -- a10_1
+	G((((hburst_single=false&hburst_burst4=false)&hmaster_val1=true)->F(next(hbusreq_1=false))));
+
+assumption -- a10_2
+	G(((hmastlock=true&(hburst_single=false&hburst_burst4=false))->F(next(hbusreq_2=false))));
+
+assumption -- a20
+	GF(hready=true);
+
+assumption -- a30
+	G((((((((((!(hlock_0=true)&!(hlock_1=true))&!(hlock_2=true))|((!(hlock_0=true)&!(hlock_1=true))&hbusreq_2=true))|((!(hlock_0=true)&hbusreq_1=true)&!(hlock_2=true)))|((!(hlock_0=true)&hbusreq_1=true)&hbusreq_2=true))|((hbusreq_0=true&!(hlock_1=true))&!(hlock_2=true)))|((hbusreq_0=true&!(hlock_1=true))&hbusreq_2=true))|((hbusreq_0=true&hbusreq_1=true)&!(hlock_2=true)))|((hbusreq_0=true&hbusreq_1=true)&hbusreq_2=true)));
+
+guarantee -- g10
+	G((hready=false->next(start=false)));
+
+guarantee -- g20_0_monitor_init
+	btq_state_1_s0=true;
+
+guarantee -- g20_0_monitor_safety
+	G((((((((((((((((((((btq_state_1_s0=true&!(hmastlock=true))&!(hbusreq_0=false))&next(btq_state_1_s0=true))|(((btq_state_1_s0=true&!(hburst_single=false))&!(hbusreq_0=false))&next(btq_state_1_s0=true)))|(((btq_state_1_s0=true&!(hburst_burst4=false))&!(hbusreq_0=false))&next(btq_state_1_s0=true)))|(((btq_state_1_s0=true&!(hmaster_val0=true))&!(hbusreq_0=false))&next(btq_state_1_s0=true)))|(((btq_state_1_s0=true&!(start=true))&!(hbusreq_0=false))&next(btq_state_1_s0=true)))|((((((btq_state_1_s0=true&hmastlock=true)&hburst_single=false)&hburst_burst4=false)&hmaster_val0=true)&start=true)&next((start=true&btq_state_1_s0=true))))|((btq_state_1_s0=true&hbusreq_0=false)&next((!(start=true)&btq_state_1_s0=true))))|(((btq_state_1_s0=true&!(hmastlock=true))&hbusreq_0=false)&next((start=true&btq_state_1_s0=true))))|(((btq_state_1_s0=true&!(hburst_single=false))&hbusreq_0=false)&next((start=true&btq_state_1_s0=true))))|(((btq_state_1_s0=true&!(hburst_burst4=false))&hbusreq_0=false)&next((start=true&btq_state_1_s0=true))))|(((btq_state_1_s0=true&!(hmaster_val0=true))&hbusreq_0=false)&next((start=true&btq_state_1_s0=true))))|(((btq_state_1_s0=true&!(start=true))&hbusreq_0=false)&next((start=true&btq_state_1_s0=true))))|(((((((btq_state_1_s0=true&hmastlock=true)&hburst_single=false)&hburst_burst4=false)&hmaster_val0=true)&start=true)&!(hbusreq_0=false))&next((!(start=true)&btq_state_1_s1=true))))|((btq_state_1_s1=true&hbusreq_0=false)&next((!(start=true)&btq_state_1_s0=true))))|((btq_state_1_s1=true&!(hbusreq_0=false))&next((!(start=true)&btq_state_1_s1=true))))|(btq_state_1_s1=true&next((start=true&(btq_state_1_s0=false&btq_state_1_s1=false)))))|((btq_state_1_s0=false&btq_state_1_s1=false)&next((btq_state_1_s0=false&btq_state_1_s1=false)))));
+
+guarantee -- g20_0_monitor_justice
+	GF((btq_state_1_s0=true|btq_state_1_s1=true));
+
+guarantee -- g20_1_monitor_init
+	btq_state_2_s0=true;
+
+guarantee -- g20_1_monitor_safety
+	G((((((((((((((((((((btq_state_2_s0=true&!(hmastlock=true))&!(hbusreq_1=false))&next(btq_state_2_s0=true))|(((btq_state_2_s0=true&!(hburst_single=false))&!(hbusreq_1=false))&next(btq_state_2_s0=true)))|(((btq_state_2_s0=true&!(hburst_burst4=false))&!(hbusreq_1=false))&next(btq_state_2_s0=true)))|(((btq_state_2_s0=true&!(hmaster_val1=true))&!(hbusreq_1=false))&next(btq_state_2_s0=true)))|(((btq_state_2_s0=true&!(start=true))&!(hbusreq_1=false))&next(btq_state_2_s0=true)))|((((((btq_state_2_s0=true&hmastlock=true)&hburst_single=false)&hburst_burst4=false)&hmaster_val1=true)&start=true)&next((start=true&btq_state_2_s0=true))))|((btq_state_2_s0=true&hbusreq_1=false)&next((!(start=true)&btq_state_2_s0=true))))|(((btq_state_2_s0=true&!(hmastlock=true))&hbusreq_1=false)&next((start=true&btq_state_2_s0=true))))|(((btq_state_2_s0=true&!(hburst_single=false))&hbusreq_1=false)&next((start=true&btq_state_2_s0=true))))|(((btq_state_2_s0=true&!(hburst_burst4=false))&hbusreq_1=false)&next((start=true&btq_state_2_s0=true))))|(((btq_state_2_s0=true&!(hmaster_val1=true))&hbusreq_1=false)&next((start=true&btq_state_2_s0=true))))|(((btq_state_2_s0=true&!(start=true))&hbusreq_1=false)&next((start=true&btq_state_2_s0=true))))|(((((((btq_state_2_s0=true&hmastlock=true)&hburst_single=false)&hburst_burst4=false)&hmaster_val1=true)&start=true)&!(hbusreq_1=false))&next((!(start=true)&btq_state_2_s1=true))))|((btq_state_2_s1=true&hbusreq_1=false)&next((!(start=true)&btq_state_2_s0=true))))|((btq_state_2_s1=true&!(hbusreq_1=false))&next((!(start=true)&btq_state_2_s1=true))))|(btq_state_2_s1=true&next((start=true&(btq_state_2_s0=false&btq_state_2_s1=false)))))|((btq_state_2_s0=false&btq_state_2_s1=false)&next((btq_state_2_s0=false&btq_state_2_s1=false)))));
+
+guarantee -- g20_1_monitor_justice
+	GF((btq_state_2_s0=true|btq_state_2_s1=true));
+
+guarantee -- g20_2_monitor_init
+	btq_state_3_s0=true;
+
+guarantee -- g20_2_monitor_safety
+	G((((((((((((((((((((((btq_state_3_s0=true&!(hmastlock=true))&!(hbusreq_2=false))&next(btq_state_3_s0=true))|(((btq_state_3_s0=true&!(hburst_single=false))&!(hbusreq_2=false))&next(btq_state_3_s0=true)))|(((btq_state_3_s0=true&!(hburst_burst4=false))&!(hbusreq_2=false))&next(btq_state_3_s0=true)))|(((btq_state_3_s0=true&!(hmaster_val0=false))&!(hbusreq_2=false))&next(btq_state_3_s0=true)))|(((btq_state_3_s0=true&!(hmaster_val1=false))&!(hbusreq_2=false))&next(btq_state_3_s0=true)))|(((btq_state_3_s0=true&!(start=true))&!(hbusreq_2=false))&next(btq_state_3_s0=true)))|(((((((btq_state_3_s0=true&hmastlock=true)&hburst_single=false)&hburst_burst4=false)&hmaster_val0=false)&hmaster_val1=false)&start=true)&next((start=true&btq_state_3_s0=true))))|((btq_state_3_s0=true&hbusreq_2=false)&next((!(start=true)&btq_state_3_s0=true))))|(((btq_state_3_s0=true&!(hmastlock=true))&hbusreq_2=false)&next((start=true&btq_state_3_s0=true))))|(((btq_state_3_s0=true&!(hburst_single=false))&hbusreq_2=false)&next((start=true&btq_state_3_s0=true))))|(((btq_state_3_s0=true&!(hburst_burst4=false))&hbusreq_2=false)&next((start=true&btq_state_3_s0=true))))|(((btq_state_3_s0=true&!(hmaster_val0=false))&hbusreq_2=false)&next((start=true&btq_state_3_s0=true))))|(((btq_state_3_s0=true&!(hmaster_val1=false))&hbusreq_2=false)&next((start=true&btq_state_3_s0=true))))|(((btq_state_3_s0=true&!(start=true))&hbusreq_2=false)&next((start=true&btq_state_3_s0=true))))|((((((((btq_state_3_s0=true&hmastlock=true)&hburst_single=false)&hburst_burst4=false)&hmaster_val0=false)&hmaster_val1=false)&start=true)&!(hbusreq_2=false))&next((!(start=true)&btq_state_3_s1=true))))|((btq_state_3_s1=true&hbusreq_2=false)&next((!(start=true)&btq_state_3_s0=true))))|((btq_state_3_s1=true&!(hbusreq_2=false))&next((!(start=true)&btq_state_3_s1=true))))|(btq_state_3_s1=true&next((start=true&(btq_state_3_s0=false&btq_state_3_s1=false)))))|((btq_state_3_s0=false&btq_state_3_s1=false)&next((btq_state_3_s0=false&btq_state_3_s1=false)))));
+
+guarantee -- g20_2_monitor_justice
+	GF((btq_state_3_s0=true|btq_state_3_s1=true));
+
+guarantee -- g30_monitor_init
+	btq_state_4_s0=true;
+
+guarantee -- g30_monitor_safety
+	G((((((((((((((((((((((((((((((btq_state_4_s0=true&!(hmastlock=true))&next((!(hready_counter_val0=false)&btq_state_4_s0=true)))|((btq_state_4_s0=true&!(hmastlock=true))&next((!(hready_counter_val1=false)&btq_state_4_s0=true))))|((btq_state_4_s0=true&!(hmastlock=true))&next((!(hready_counter_val2=false)&btq_state_4_s0=true))))|((btq_state_4_s0=true&!(hmastlock=true))&next((!(hready_counter_val3=false)&btq_state_4_s0=true))))|((btq_state_4_s0=true&!(hburst_burst4=true))&next((!(hready_counter_val0=false)&btq_state_4_s0=true))))|((btq_state_4_s0=true&!(hburst_burst4=true))&next((!(hready_counter_val1=false)&btq_state_4_s0=true))))|((btq_state_4_s0=true&!(hburst_burst4=true))&next((!(hready_counter_val2=false)&btq_state_4_s0=true))))|((btq_state_4_s0=true&!(hburst_burst4=true))&next((!(hready_counter_val3=false)&btq_state_4_s0=true))))|((btq_state_4_s0=true&!(start=true))&next((!(hready_counter_val0=false)&btq_state_4_s0=true))))|((btq_state_4_s0=true&!(start=true))&next((!(hready_counter_val1=false)&btq_state_4_s0=true))))|((btq_state_4_s0=true&!(start=true))&next((!(hready_counter_val2=false)&btq_state_4_s0=true))))|((btq_state_4_s0=true&!(start=true))&next((!(hready_counter_val3=false)&btq_state_4_s0=true))))|((((btq_state_4_s0=true&hmastlock=true)&hburst_burst4=true)&start=true)&next((start=true&btq_state_4_s0=true))))|(btq_state_4_s0=true&next(((!(start=true)&(((hready_counter_val0=false&hready_counter_val1=false)&hready_counter_val2=false)&hready_counter_val3=false))&btq_state_4_s0=true))))|((btq_state_4_s0=true&!(hmastlock=true))&next(((start=true&(((hready_counter_val0=false&hready_counter_val1=false)&hready_counter_val2=false)&hready_counter_val3=false))&btq_state_4_s0=true))))|((btq_state_4_s0=true&!(hburst_burst4=true))&next(((start=true&(((hready_counter_val0=false&hready_counter_val1=false)&hready_counter_val2=false)&hready_counter_val3=false))&btq_state_4_s0=true))))|((btq_state_4_s0=true&!(start=true))&next(((start=true&(((hready_counter_val0=false&hready_counter_val1=false)&hready_counter_val2=false)&hready_counter_val3=false))&btq_state_4_s0=true))))|((((btq_state_4_s0=true&hmastlock=true)&hburst_burst4=true)&start=true)&next(((!(start=true)&!(hready_counter_val0=false))&btq_state_4_s1=true))))|((((btq_state_4_s0=true&hmastlock=true)&hburst_burst4=true)&start=true)&next(((!(start=true)&!(hready_counter_val1=false))&btq_state_4_s1=true))))|((((btq_state_4_s0=true&hmastlock=true)&hburst_burst4=true)&start=true)&next(((!(start=true)&!(hready_counter_val2=false))&btq_state_4_s1=true))))|((((btq_state_4_s0=true&hmastlock=true)&hburst_burst4=true)&start=true)&next(((!(start=true)&!(hready_counter_val3=false))&btq_state_4_s1=true))))|(btq_state_4_s1=true&next(((!(start=true)&(((hready_counter_val0=false&hready_counter_val1=false)&hready_counter_val2=false)&hready_counter_val3=false))&btq_state_4_s0=true))))|(btq_state_4_s1=true&next(((!(start=true)&!(hready_counter_val0=false))&btq_state_4_s1=true))))|(btq_state_4_s1=true&next(((!(start=true)&!(hready_counter_val1=false))&btq_state_4_s1=true))))|(btq_state_4_s1=true&next(((!(start=true)&!(hready_counter_val2=false))&btq_state_4_s1=true))))|(btq_state_4_s1=true&next(((!(start=true)&!(hready_counter_val3=false))&btq_state_4_s1=true))))|(btq_state_4_s1=true&next((start=true&(btq_state_4_s0=false&btq_state_4_s1=false)))))|((btq_state_4_s0=false&btq_state_4_s1=false)&next((btq_state_4_s0=false&btq_state_4_s1=false)))));
+
+guarantee -- g30_monitor_justice
+	GF((btq_state_4_s0=true|btq_state_4_s1=true));
+
+guarantee -- g40
+	G((((((((((((((((((((((((((((((((((((((!(hready=true)&!(hready=true))&!(hready=true))|(((!(hready=true)&!(hready=true))&hgrant_2=true)&next((hmaster_val0=false&hmaster_val1=false))))|(((!(hready=true)&!(hready=true))&!(hgrant_2=true))&next(!(hmaster_val0=false))))|(((!(hready=true)&!(hready=true))&!(hgrant_2=true))&next(!(hmaster_val1=false))))|(((!(hready=true)&hgrant_1=true)&!(hready=true))&next(hmaster_val1=true)))|(((!(hready=true)&hgrant_1=true)&hgrant_2=true)&next((hmaster_val1=true&(hmaster_val0=false&hmaster_val1=false)))))|(((!(hready=true)&hgrant_1=true)&!(hgrant_2=true))&next((hmaster_val1=true&!(hmaster_val0=false)))))|(((!(hready=true)&hgrant_1=true)&!(hgrant_2=true))&next((hmaster_val1=true&!(hmaster_val1=false)))))|(((!(hready=true)&!(hgrant_1=true))&!(hready=true))&next(!(hmaster_val1=true))))|(((!(hready=true)&!(hgrant_1=true))&hgrant_2=true)&next((!(hmaster_val1=true)&(hmaster_val0=false&hmaster_val1=false)))))|(((!(hready=true)&!(hgrant_1=true))&!(hgrant_2=true))&next((!(hmaster_val1=true)&!(hmaster_val0=false)))))|(((!(hready=true)&!(hgrant_1=true))&!(hgrant_2=true))&next((!(hmaster_val1=true)&!(hmaster_val1=false)))))|(((hgrant_0=true&!(hready=true))&!(hready=true))&next(hmaster_val0=true)))|(((hgrant_0=true&!(hready=true))&hgrant_2=true)&next((hmaster_val0=true&(hmaster_val0=false&hmaster_val1=false)))))|(((hgrant_0=true&!(hready=true))&!(hgrant_2=true))&next((hmaster_val0=true&!(hmaster_val0=false)))))|(((hgrant_0=true&!(hready=true))&!(hgrant_2=true))&next((hmaster_val0=true&!(hmaster_val1=false)))))|(((hgrant_0=true&hgrant_1=true)&!(hready=true))&next((hmaster_val0=true&hmaster_val1=true))))|(((hgrant_0=true&hgrant_1=true)&hgrant_2=true)&next(((hmaster_val0=true&hmaster_val1=true)&(hmaster_val0=false&hmaster_val1=false)))))|(((hgrant_0=true&hgrant_1=true)&!(hgrant_2=true))&next(((hmaster_val0=true&hmaster_val1=true)&!(hmaster_val0=false)))))|(((hgrant_0=true&hgrant_1=true)&!(hgrant_2=true))&next(((hmaster_val0=true&hmaster_val1=true)&!(hmaster_val1=false)))))|(((hgrant_0=true&!(hgrant_1=true))&!(hready=true))&next((hmaster_val0=true&!(hmaster_val1=true)))))|(((hgrant_0=true&!(hgrant_1=true))&hgrant_2=true)&next(((hmaster_val0=true&!(hmaster_val1=true))&(hmaster_val0=false&hmaster_val1=false)))))|(((hgrant_0=true&!(hgrant_1=true))&!(hgrant_2=true))&next(((hmaster_val0=true&!(hmaster_val1=true))&!(hmaster_val0=false)))))|(((hgrant_0=true&!(hgrant_1=true))&!(hgrant_2=true))&next(((hmaster_val0=true&!(hmaster_val1=true))&!(hmaster_val1=false)))))|(((!(hgrant_0=true)&!(hready=true))&!(hready=true))&next(!(hmaster_val0=true))))|(((!(hgrant_0=true)&!(hready=true))&hgrant_2=true)&next((!(hmaster_val0=true)&(hmaster_val0=false&hmaster_val1=false)))))|(((!(hgrant_0=true)&!(hready=true))&!(hgrant_2=true))&next((!(hmaster_val0=true)&!(hmaster_val0=false)))))|(((!(hgrant_0=true)&!(hready=true))&!(hgrant_2=true))&next((!(hmaster_val0=true)&!(hmaster_val1=false)))))|(((!(hgrant_0=true)&hgrant_1=true)&!(hready=true))&next((!(hmaster_val0=true)&hmaster_val1=true))))|(((!(hgrant_0=true)&hgrant_1=true)&hgrant_2=true)&next(((!(hmaster_val0=true)&hmaster_val1=true)&(hmaster_val0=false&hmaster_val1=false)))))|(((!(hgrant_0=true)&hgrant_1=true)&!(hgrant_2=true))&next(((!(hmaster_val0=true)&hmaster_val1=true)&!(hmaster_val0=false)))))|(((!(hgrant_0=true)&hgrant_1=true)&!(hgrant_2=true))&next(((!(hmaster_val0=true)&hmaster_val1=true)&!(hmaster_val1=false)))))|(((!(hgrant_0=true)&!(hgrant_1=true))&!(hready=true))&next((!(hmaster_val0=true)&!(hmaster_val1=true)))))|(((!(hgrant_0=true)&!(hgrant_1=true))&hgrant_2=true)&next(((!(hmaster_val0=true)&!(hmaster_val1=true))&(hmaster_val0=false&hmaster_val1=false)))))|(((!(hgrant_0=true)&!(hgrant_1=true))&!(hgrant_2=true))&next(((!(hmaster_val0=true)&!(hmaster_val1=true))&!(hmaster_val0=false)))))|(((!(hgrant_0=true)&!(hgrant_1=true))&!(hgrant_2=true))&next(((!(hmaster_val0=true)&!(hmaster_val1=true))&!(hmaster_val1=false))))));
+
+guarantee -- g50
+	G((hready=true->((locked=true&next(hmastlock=true))|(!(locked=true)&next(!(hmastlock=true))))));
+
+guarantee -- g60
+	G((((((((((((((((((((((((((((((((((((((((((((((((((((((next(((!(start=false)&!(start=false))&!(start=false)))|((hmaster_val0=false&hmaster_val1=false)&next(((!(start=false)&!(start=false))&(hmaster_val0=false&hmaster_val1=false)))))|(!(hmaster_val0=false)&next(((!(start=false)&!(start=false))&!(hmaster_val0=false)))))|(!(hmaster_val0=false)&next(((!(start=false)&!(start=false))&!(hmaster_val1=false)))))|(!(hmaster_val1=false)&next(((!(start=false)&!(start=false))&!(hmaster_val0=false)))))|(!(hmaster_val1=false)&next(((!(start=false)&!(start=false))&!(hmaster_val1=false)))))|(hmaster_val1=true&next(((!(start=false)&hmaster_val1=true)&!(start=false)))))|(((hmaster_val1=true&hmaster_val0=false)&hmaster_val1=false)&next(((!(start=false)&hmaster_val1=true)&(hmaster_val0=false&hmaster_val1=false)))))|((hmaster_val1=true&!(hmaster_val0=false))&next(((!(start=false)&hmaster_val1=true)&!(hmaster_val0=false)))))|((hmaster_val1=true&!(hmaster_val0=false))&next(((!(start=false)&hmaster_val1=true)&!(hmaster_val1=false)))))|((hmaster_val1=true&!(hmaster_val1=false))&next(((!(start=false)&hmaster_val1=true)&!(hmaster_val0=false)))))|((hmaster_val1=true&!(hmaster_val1=false))&next(((!(start=false)&hmaster_val1=true)&!(hmaster_val1=false)))))|(!(hmaster_val1=true)&next(((!(start=false)&!(hmaster_val1=true))&!(start=false)))))|(((!(hmaster_val1=true)&hmaster_val0=false)&hmaster_val1=false)&next(((!(start=false)&!(hmaster_val1=true))&(hmaster_val0=false&hmaster_val1=false)))))|((!(hmaster_val1=true)&!(hmaster_val0=false))&next(((!(start=false)&!(hmaster_val1=true))&!(hmaster_val0=false)))))|((!(hmaster_val1=true)&!(hmaster_val0=false))&next(((!(start=false)&!(hmaster_val1=true))&!(hmaster_val1=false)))))|((!(hmaster_val1=true)&!(hmaster_val1=false))&next(((!(start=false)&!(hmaster_val1=true))&!(hmaster_val0=false)))))|((!(hmaster_val1=true)&!(hmaster_val1=false))&next(((!(start=false)&!(hmaster_val1=true))&!(hmaster_val1=false)))))|(hmaster_val0=true&next(((hmaster_val0=true&!(start=false))&!(start=false)))))|(((hmaster_val0=true&hmaster_val0=false)&hmaster_val1=false)&next(((hmaster_val0=true&!(start=false))&(hmaster_val0=false&hmaster_val1=false)))))|((hmaster_val0=true&!(hmaster_val0=false))&next(((hmaster_val0=true&!(start=false))&!(hmaster_val0=false)))))|((hmaster_val0=true&!(hmaster_val0=false))&next(((hmaster_val0=true&!(start=false))&!(hmaster_val1=false)))))|((hmaster_val0=true&!(hmaster_val1=false))&next(((hmaster_val0=true&!(start=false))&!(hmaster_val0=false)))))|((hmaster_val0=true&!(hmaster_val1=false))&next(((hmaster_val0=true&!(start=false))&!(hmaster_val1=false)))))|((hmaster_val0=true&hmaster_val1=true)&next(((hmaster_val0=true&hmaster_val1=true)&!(start=false)))))|((((hmaster_val0=true&hmaster_val1=true)&hmaster_val0=false)&hmaster_val1=false)&next(((hmaster_val0=true&hmaster_val1=true)&(hmaster_val0=false&hmaster_val1=false)))))|(((hmaster_val0=true&hmaster_val1=true)&!(hmaster_val0=false))&next(((hmaster_val0=true&hmaster_val1=true)&!(hmaster_val0=false)))))|(((hmaster_val0=true&hmaster_val1=true)&!(hmaster_val0=false))&next(((hmaster_val0=true&hmaster_val1=true)&!(hmaster_val1=false)))))|(((hmaster_val0=true&hmaster_val1=true)&!(hmaster_val1=false))&next(((hmaster_val0=true&hmaster_val1=true)&!(hmaster_val0=false)))))|(((hmaster_val0=true&hmaster_val1=true)&!(hmaster_val1=false))&next(((hmaster_val0=true&hmaster_val1=true)&!(hmaster_val1=false)))))|((hmaster_val0=true&!(hmaster_val1=true))&next(((hmaster_val0=true&!(hmaster_val1=true))&!(start=false)))))|((((hmaster_val0=true&!(hmaster_val1=true))&hmaster_val0=false)&hmaster_val1=false)&next(((hmaster_val0=true&!(hmaster_val1=true))&(hmaster_val0=false&hmaster_val1=false)))))|(((hmaster_val0=true&!(hmaster_val1=true))&!(hmaster_val0=false))&next(((hmaster_val0=true&!(hmaster_val1=true))&!(hmaster_val0=false)))))|(((hmaster_val0=true&!(hmaster_val1=true))&!(hmaster_val0=false))&next(((hmaster_val0=true&!(hmaster_val1=true))&!(hmaster_val1=false)))))|(((hmaster_val0=true&!(hmaster_val1=true))&!(hmaster_val1=false))&next(((hmaster_val0=true&!(hmaster_val1=true))&!(hmaster_val0=false)))))|(((hmaster_val0=true&!(hmaster_val1=true))&!(hmaster_val1=false))&next(((hmaster_val0=true&!(hmaster_val1=true))&!(hmaster_val1=false)))))|(!(hmaster_val0=true)&next(((!(hmaster_val0=true)&!(start=false))&!(start=false)))))|(((!(hmaster_val0=true)&hmaster_val0=false)&hmaster_val1=false)&next(((!(hmaster_val0=true)&!(start=false))&(hmaster_val0=false&hmaster_val1=false)))))|((!(hmaster_val0=true)&!(hmaster_val0=false))&next(((!(hmaster_val0=true)&!(start=false))&!(hmaster_val0=false)))))|((!(hmaster_val0=true)&!(hmaster_val0=false))&next(((!(hmaster_val0=true)&!(start=false))&!(hmaster_val1=false)))))|((!(hmaster_val0=true)&!(hmaster_val1=false))&next(((!(hmaster_val0=true)&!(start=false))&!(hmaster_val0=false)))))|((!(hmaster_val0=true)&!(hmaster_val1=false))&next(((!(hmaster_val0=true)&!(start=false))&!(hmaster_val1=false)))))|((!(hmaster_val0=true)&hmaster_val1=true)&next(((!(hmaster_val0=true)&hmaster_val1=true)&!(start=false)))))|((((!(hmaster_val0=true)&hmaster_val1=true)&hmaster_val0=false)&hmaster_val1=false)&next(((!(hmaster_val0=true)&hmaster_val1=true)&(hmaster_val0=false&hmaster_val1=false)))))|(((!(hmaster_val0=true)&hmaster_val1=true)&!(hmaster_val0=false))&next(((!(hmaster_val0=true)&hmaster_val1=true)&!(hmaster_val0=false)))))|(((!(hmaster_val0=true)&hmaster_val1=true)&!(hmaster_val0=false))&next(((!(hmaster_val0=true)&hmaster_val1=true)&!(hmaster_val1=false)))))|(((!(hmaster_val0=true)&hmaster_val1=true)&!(hmaster_val1=false))&next(((!(hmaster_val0=true)&hmaster_val1=true)&!(hmaster_val0=false)))))|(((!(hmaster_val0=true)&hmaster_val1=true)&!(hmaster_val1=false))&next(((!(hmaster_val0=true)&hmaster_val1=true)&!(hmaster_val1=false)))))|((!(hmaster_val0=true)&!(hmaster_val1=true))&next(((!(hmaster_val0=true)&!(hmaster_val1=true))&!(start=false)))))|((((!(hmaster_val0=true)&!(hmaster_val1=true))&hmaster_val0=false)&hmaster_val1=false)&next(((!(hmaster_val0=true)&!(hmaster_val1=true))&(hmaster_val0=false&hmaster_val1=false)))))|(((!(hmaster_val0=true)&!(hmaster_val1=true))&!(hmaster_val0=false))&next(((!(hmaster_val0=true)&!(hmaster_val1=true))&!(hmaster_val0=false)))))|(((!(hmaster_val0=true)&!(hmaster_val1=true))&!(hmaster_val0=false))&next(((!(hmaster_val0=true)&!(hmaster_val1=true))&!(hmaster_val1=false)))))|(((!(hmaster_val0=true)&!(hmaster_val1=true))&!(hmaster_val1=false))&next(((!(hmaster_val0=true)&!(hmaster_val1=true))&!(hmaster_val0=false)))))|(((!(hmaster_val0=true)&!(hmaster_val1=true))&!(hmaster_val1=false))&next(((!(hmaster_val0=true)&!(hmaster_val1=true))&!(hmaster_val1=false))))));
+
+guarantee -- g64
+	G((next(start=false)->((hmastlock=true&next(hmastlock=true))|(!(hmastlock=true)&next(!(hmastlock=true))))));
+
+guarantee -- g70
+	G((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((!(decide=true)&!(decide=true))&!(decide=true))|((!(decide=true)&!(decide=true))&next(!(hgrant_2=true))))|(((!(decide=true)&!(decide=true))&hlock_2=true)&next(locked=true)))|(((!(decide=true)&!(decide=true))&!(hlock_2=true))&next(!(locked=true))))|((!(decide=true)&!(decide=true))&next(!(hgrant_1=true))))|(!(decide=true)&next((!(hgrant_1=true)&!(hgrant_2=true)))))|((!(decide=true)&hlock_2=true)&next((!(hgrant_1=true)&locked=true))))|((!(decide=true)&!(hlock_2=true))&next((!(hgrant_1=true)&!(locked=true)))))|(((!(decide=true)&hlock_1=true)&!(decide=true))&next(locked=true)))|((!(decide=true)&hlock_1=true)&next((locked=true&!(hgrant_2=true)))))|(((!(decide=true)&hlock_1=true)&hlock_2=true)&next((locked=true&locked=true))))|(((!(decide=true)&hlock_1=true)&!(hlock_2=true))&next((locked=true&!(locked=true)))))|(((!(decide=true)&!(hlock_1=true))&!(decide=true))&next(!(locked=true))))|((!(decide=true)&!(hlock_1=true))&next((!(locked=true)&!(hgrant_2=true)))))|(((!(decide=true)&!(hlock_1=true))&hlock_2=true)&next((!(locked=true)&locked=true))))|(((!(decide=true)&!(hlock_1=true))&!(hlock_2=true))&next((!(locked=true)&!(locked=true)))))|((!(decide=true)&!(decide=true))&next(!(hgrant_0=true))))|(!(decide=true)&next((!(hgrant_0=true)&!(hgrant_2=true)))))|((!(decide=true)&hlock_2=true)&next((!(hgrant_0=true)&locked=true))))|((!(decide=true)&!(hlock_2=true))&next((!(hgrant_0=true)&!(locked=true)))))|(!(decide=true)&next((!(hgrant_0=true)&!(hgrant_1=true)))))|next(((!(hgrant_0=true)&!(hgrant_1=true))&!(hgrant_2=true))))|(hlock_2=true&next(((!(hgrant_0=true)&!(hgrant_1=true))&locked=true))))|(!(hlock_2=true)&next(((!(hgrant_0=true)&!(hgrant_1=true))&!(locked=true)))))|((hlock_1=true&!(decide=true))&next((!(hgrant_0=true)&locked=true))))|(hlock_1=true&next(((!(hgrant_0=true)&locked=true)&!(hgrant_2=true)))))|((hlock_1=true&hlock_2=true)&next(((!(hgrant_0=true)&locked=true)&locked=true))))|((hlock_1=true&!(hlock_2=true))&next(((!(hgrant_0=true)&locked=true)&!(locked=true)))))|((!(hlock_1=true)&!(decide=true))&next((!(hgrant_0=true)&!(locked=true)))))|(!(hlock_1=true)&next(((!(hgrant_0=true)&!(locked=true))&!(hgrant_2=true)))))|((!(hlock_1=true)&hlock_2=true)&next(((!(hgrant_0=true)&!(locked=true))&locked=true))))|((!(hlock_1=true)&!(hlock_2=true))&next(((!(hgrant_0=true)&!(locked=true))&!(locked=true)))))|(((hlock_0=true&!(decide=true))&!(decide=true))&next(locked=true)))|((hlock_0=true&!(decide=true))&next((locked=true&!(hgrant_2=true)))))|(((hlock_0=true&!(decide=true))&hlock_2=true)&next((locked=true&locked=true))))|(((hlock_0=true&!(decide=true))&!(hlock_2=true))&next((locked=true&!(locked=true)))))|((hlock_0=true&!(decide=true))&next((locked=true&!(hgrant_1=true)))))|(hlock_0=true&next(((locked=true&!(hgrant_1=true))&!(hgrant_2=true)))))|((hlock_0=true&hlock_2=true)&next(((locked=true&!(hgrant_1=true))&locked=true))))|((hlock_0=true&!(hlock_2=true))&next(((locked=true&!(hgrant_1=true))&!(locked=true)))))|(((hlock_0=true&hlock_1=true)&!(decide=true))&next((locked=true&locked=true))))|((hlock_0=true&hlock_1=true)&next(((locked=true&locked=true)&!(hgrant_2=true)))))|(((hlock_0=true&hlock_1=true)&hlock_2=true)&next(((locked=true&locked=true)&locked=true))))|(((hlock_0=true&hlock_1=true)&!(hlock_2=true))&next(((locked=true&locked=true)&!(locked=true)))))|(((hlock_0=true&!(hlock_1=true))&!(decide=true))&next((locked=true&!(locked=true)))))|((hlock_0=true&!(hlock_1=true))&next(((locked=true&!(locked=true))&!(hgrant_2=true)))))|(((hlock_0=true&!(hlock_1=true))&hlock_2=true)&next(((locked=true&!(locked=true))&locked=true))))|(((hlock_0=true&!(hlock_1=true))&!(hlock_2=true))&next(((locked=true&!(locked=true))&!(locked=true)))))|(((!(hlock_0=true)&!(decide=true))&!(decide=true))&next(!(locked=true))))|((!(hlock_0=true)&!(decide=true))&next((!(locked=true)&!(hgrant_2=true)))))|(((!(hlock_0=true)&!(decide=true))&hlock_2=true)&next((!(locked=true)&locked=true))))|(((!(hlock_0=true)&!(decide=true))&!(hlock_2=true))&next((!(locked=true)&!(locked=true)))))|((!(hlock_0=true)&!(decide=true))&next((!(locked=true)&!(hgrant_1=true)))))|(!(hlock_0=true)&next(((!(locked=true)&!(hgrant_1=true))&!(hgrant_2=true)))))|((!(hlock_0=true)&hlock_2=true)&next(((!(locked=true)&!(hgrant_1=true))&locked=true))))|((!(hlock_0=true)&!(hlock_2=true))&next(((!(locked=true)&!(hgrant_1=true))&!(locked=true)))))|(((!(hlock_0=true)&hlock_1=true)&!(decide=true))&next((!(locked=true)&locked=true))))|((!(hlock_0=true)&hlock_1=true)&next(((!(locked=true)&locked=true)&!(hgrant_2=true)))))|(((!(hlock_0=true)&hlock_1=true)&hlock_2=true)&next(((!(locked=true)&locked=true)&locked=true))))|(((!(hlock_0=true)&hlock_1=true)&!(hlock_2=true))&next(((!(locked=true)&locked=true)&!(locked=true)))))|(((!(hlock_0=true)&!(hlock_1=true))&!(decide=true))&next((!(locked=true)&!(locked=true)))))|((!(hlock_0=true)&!(hlock_1=true))&next(((!(locked=true)&!(locked=true))&!(hgrant_2=true)))))|(((!(hlock_0=true)&!(hlock_1=true))&hlock_2=true)&next(((!(locked=true)&!(locked=true))&locked=true))))|(((!(hlock_0=true)&!(hlock_1=true))&!(hlock_2=true))&next(((!(locked=true)&!(locked=true))&!(locked=true))))));
+
+guarantee -- g80
+	G(((((((((((((((((((((((((((((!(decide=false)&!(decide=false))&!(decide=false))|(((!(decide=false)&!(decide=false))&hgrant_2=true)&next(hgrant_2=true)))|(((!(decide=false)&!(decide=false))&!(hgrant_2=true))&next(!(hgrant_2=true))))|(((!(decide=false)&hgrant_1=true)&!(decide=false))&next(hgrant_1=true)))|(((!(decide=false)&hgrant_1=true)&hgrant_2=true)&next((hgrant_1=true&hgrant_2=true))))|(((!(decide=false)&hgrant_1=true)&!(hgrant_2=true))&next((hgrant_1=true&!(hgrant_2=true)))))|(((!(decide=false)&!(hgrant_1=true))&!(decide=false))&next(!(hgrant_1=true))))|(((!(decide=false)&!(hgrant_1=true))&hgrant_2=true)&next((!(hgrant_1=true)&hgrant_2=true))))|(((!(decide=false)&!(hgrant_1=true))&!(hgrant_2=true))&next((!(hgrant_1=true)&!(hgrant_2=true)))))|(((hgrant_0=true&!(decide=false))&!(decide=false))&next(hgrant_0=true)))|(((hgrant_0=true&!(decide=false))&hgrant_2=true)&next((hgrant_0=true&hgrant_2=true))))|(((hgrant_0=true&!(decide=false))&!(hgrant_2=true))&next((hgrant_0=true&!(hgrant_2=true)))))|(((hgrant_0=true&hgrant_1=true)&!(decide=false))&next((hgrant_0=true&hgrant_1=true))))|(((hgrant_0=true&hgrant_1=true)&hgrant_2=true)&next(((hgrant_0=true&hgrant_1=true)&hgrant_2=true))))|(((hgrant_0=true&hgrant_1=true)&!(hgrant_2=true))&next(((hgrant_0=true&hgrant_1=true)&!(hgrant_2=true)))))|(((hgrant_0=true&!(hgrant_1=true))&!(decide=false))&next((hgrant_0=true&!(hgrant_1=true)))))|(((hgrant_0=true&!(hgrant_1=true))&hgrant_2=true)&next(((hgrant_0=true&!(hgrant_1=true))&hgrant_2=true))))|(((hgrant_0=true&!(hgrant_1=true))&!(hgrant_2=true))&next(((hgrant_0=true&!(hgrant_1=true))&!(hgrant_2=true)))))|(((!(hgrant_0=true)&!(decide=false))&!(decide=false))&next(!(hgrant_0=true))))|(((!(hgrant_0=true)&!(decide=false))&hgrant_2=true)&next((!(hgrant_0=true)&hgrant_2=true))))|(((!(hgrant_0=true)&!(decide=false))&!(hgrant_2=true))&next((!(hgrant_0=true)&!(hgrant_2=true)))))|(((!(hgrant_0=true)&hgrant_1=true)&!(decide=false))&next((!(hgrant_0=true)&hgrant_1=true))))|(((!(hgrant_0=true)&hgrant_1=true)&hgrant_2=true)&next(((!(hgrant_0=true)&hgrant_1=true)&hgrant_2=true))))|(((!(hgrant_0=true)&hgrant_1=true)&!(hgrant_2=true))&next(((!(hgrant_0=true)&hgrant_1=true)&!(hgrant_2=true)))))|(((!(hgrant_0=true)&!(hgrant_1=true))&!(decide=false))&next((!(hgrant_0=true)&!(hgrant_1=true)))))|(((!(hgrant_0=true)&!(hgrant_1=true))&hgrant_2=true)&next(((!(hgrant_0=true)&!(hgrant_1=true))&hgrant_2=true))))|(((!(hgrant_0=true)&!(hgrant_1=true))&!(hgrant_2=true))&next(((!(hgrant_0=true)&!(hgrant_1=true))&!(hgrant_2=true))))));
+
+guarantee -- g84
+	G((decide=false->((locked=true&next(locked=true))|(!(locked=true)&next(!(locked=true))))));
+
+guarantee -- g90_0
+	G((hbusreq_0=true->F((hbusreq_0=false|hmaster_val0=true))));
+
+guarantee -- g90_1
+	G((hbusreq_1=true->F((hbusreq_1=false|hmaster_val1=true))));
+
+guarantee -- g90_2_monitor_init
+	btq_state_5_s0=true;
+
+guarantee -- g90_2_monitor_safety
+	G((((((((((((btq_state_5_s0=true&!(hgrant_1=false))&!(hbusreq_1=true))&next(btq_state_5_s0=true))|(((btq_state_5_s0=true&hgrant_1=false)&hgrant_1=true)&next(btq_state_5_s0=true)))|(((btq_state_5_s0=true&!(hgrant_1=true))&hbusreq_1=true)&next(btq_state_5_s0=true)))|((((btq_state_5_s0=true&!(hgrant_1=false))&hgrant_1=true)&hbusreq_1=true)&next(btq_state_5_s0=true)))|((((btq_state_5_s0=true&hgrant_1=false)&!(hgrant_1=true))&!(hbusreq_1=true))&next(btq_state_5_s1=true)))|(((btq_state_5_s1=true&!(hgrant_1=true))&hbusreq_1=true)&next(btq_state_5_s0=true)))|(((btq_state_5_s1=true&!(hgrant_1=true))&!(hbusreq_1=true))&next(btq_state_5_s1=true)))|((btq_state_5_s1=true&hgrant_1=true)&next((btq_state_5_s0=false&btq_state_5_s1=false))))|((btq_state_5_s0=false&btq_state_5_s1=false)&next((btq_state_5_s0=false&btq_state_5_s1=false)))));
+
+guarantee -- g90_2_monitor_justice
+	GF((btq_state_5_s0=true|btq_state_5_s1=true));
+
+guarantee -- g90_2
+	G((hbusreq_2=true->F((hbusreq_2=false|(hmaster_val0=false&hmaster_val1=false)))));
+
+guarantee -- g100_2_monitor_init
+	btq_state_6_s0=true;
+
+guarantee -- g100_2_monitor_safety
+	G((((((((((((btq_state_6_s0=true&!(hgrant_2=false))&!(hbusreq_2=true))&next(btq_state_6_s0=true))|(((btq_state_6_s0=true&hgrant_2=false)&hgrant_2=true)&next(btq_state_6_s0=true)))|(((btq_state_6_s0=true&!(hgrant_2=true))&hbusreq_2=true)&next(btq_state_6_s0=true)))|((((btq_state_6_s0=true&!(hgrant_2=false))&hgrant_2=true)&hbusreq_2=true)&next(btq_state_6_s0=true)))|((((btq_state_6_s0=true&hgrant_2=false)&!(hgrant_2=true))&!(hbusreq_2=true))&next(btq_state_6_s1=true)))|(((btq_state_6_s1=true&!(hgrant_2=true))&hbusreq_2=true)&next(btq_state_6_s0=true)))|(((btq_state_6_s1=true&!(hgrant_2=true))&!(hbusreq_2=true))&next(btq_state_6_s1=true)))|((btq_state_6_s1=true&hgrant_2=true)&next((btq_state_6_s0=false&btq_state_6_s1=false))))|((btq_state_6_s0=false&btq_state_6_s1=false)&next((btq_state_6_s0=false&btq_state_6_s1=false)))));
+
+guarantee -- g100_2_monitor_justice
+	GF((btq_state_6_s0=true|btq_state_6_s1=true));
+
+guarantee -- g110
+	(hgrant_1=false&hgrant_2=false);
+
+assumption -- a40
+	(((hbusreq_0=false&hlock_0=false)&(hbusreq_1=false&hlock_1=false))&(hbusreq_2=false&hlock_2=false));
+
+guarantee -- gar_anon_1
+	hready_counter_val0=true;
+
+guarantee -- gar_anon_2
+	G(((((hmastlock=true&hburst_burst4=true)&start=true)&hready=false)->next(hready_counter_val0=true)));
+
+guarantee -- gar_anon_3
+	G(((((hmastlock=true&hburst_burst4=true)&start=true)&hready=true)->next(hready_counter_val1=true)));
+
+guarantee -- gar_anon_4
+	G(((((((((((((((!(hmastlock=true)&hready=true)&hready_counter_val0=true)|((!(hmastlock=true)&hready=true)&hready_counter_val1=true))|((!(hmastlock=true)&hready=true)&hready_counter_val2=true))|((!(hmastlock=true)&hready=true)&hready_counter_val3=true))|((!(hburst_burst4=true)&hready=true)&hready_counter_val0=true))|((!(hburst_burst4=true)&hready=true)&hready_counter_val1=true))|((!(hburst_burst4=true)&hready=true)&hready_counter_val2=true))|((!(hburst_burst4=true)&hready=true)&hready_counter_val3=true))|((!(start=true)&hready=true)&hready_counter_val0=true))|((!(start=true)&hready=true)&hready_counter_val1=true))|((!(start=true)&hready=true)&hready_counter_val2=true))|((!(start=true)&hready=true)&hready_counter_val3=true))->((((hready_counter_val0=true&next(hready_counter_val1=true))|(hready_counter_val1=true&next(hready_counter_val2=true)))|(hready_counter_val2=true&next(hready_counter_val3=true)))|(hready_counter_val3=true&next((((hready_counter_val0=false&hready_counter_val1=false)&hready_counter_val2=false)&hready_counter_val3=false))))));
+
+guarantee -- gar_anon_5
+	G(((((((((!(hmastlock=true)&hready=true)&hready_counter_val0=false)&hready_counter_val1=false)&hready_counter_val2=false)&hready_counter_val3=false)|(((((!(hburst_burst4=true)&hready=true)&hready_counter_val0=false)&hready_counter_val1=false)&hready_counter_val2=false)&hready_counter_val3=false))|(((((!(start=true)&hready=true)&hready_counter_val0=false)&hready_counter_val1=false)&hready_counter_val2=false)&hready_counter_val3=false))->next((((hready_counter_val0=false&hready_counter_val1=false)&hready_counter_val2=false)&hready_counter_val3=false))));
+
+guarantee -- gar_anon_6
+	G(((((!(hmastlock=true)&hready=false)|(!(hburst_burst4=true)&hready=false))|(!(start=true)&hready=false))->(((((hready_counter_val0=true&next(hready_counter_val0=true))|(hready_counter_val1=true&next(hready_counter_val1=true)))|(hready_counter_val2=true&next(hready_counter_val2=true)))|(hready_counter_val3=true&next(hready_counter_val3=true)))|((((hready_counter_val0=false&hready_counter_val1=false)&hready_counter_val2=false)&hready_counter_val3=false)&next((((hready_counter_val0=false&hready_counter_val1=false)&hready_counter_val2=false)&hready_counter_val3=false))))));
+
+guarantee -- gar_anon_7
+	decide=true;
+
+guarantee -- gar_anon_8
+	start=true;
+
+guarantee -- gar_anon_9
+	locked=false;
+
+guarantee -- gar_anon_10
+	hmaster_val0=true;
+
+guarantee -- gar_anon_11
+	hmastlock=false;
+
+guarantee -- gar_anon_12
+	hgrant_0=true;
+
+assumption -- asm_anon_1
+	hready=false;
+
+assumption -- hburst_mutual_exclusion
+	G((!(hburst_single=true)|!(hburst_burst4=true)));
+
+guarantee -- hmaster_mutual_exclusion
+	G((!(hmaster_val0=true)|!(hmaster_val1=true)));
+
+guarantee -- hready_counter_mutual_exclusion_1
+	G((!(hready_counter_val0=true)|!(hready_counter_val1=true)));
+
+guarantee -- hready_counter_mutual_exclusion_2
+	G((!(hready_counter_val0=true)|!(hready_counter_val2=true)));
+
+guarantee -- hready_counter_mutual_exclusion_3
+	G((!(hready_counter_val0=true)|!(hready_counter_val3=true)));
+
+guarantee -- hready_counter_mutual_exclusion_4
+	G((!(hready_counter_val1=true)|!(hready_counter_val2=true)));
+
+guarantee -- hready_counter_mutual_exclusion_5
+	G((!(hready_counter_val1=true)|!(hready_counter_val3=true)));
+
+guarantee -- hready_counter_mutual_exclusion_6
+	G((!(hready_counter_val2=true)|!(hready_counter_val3=true)));
+
+guarantee -- btq_state_1_mutual_exclusion
+	G((!(btq_state_1_s0=true)|!(btq_state_1_s1=true)));
+
+guarantee -- btq_state_2_mutual_exclusion
+	G((!(btq_state_2_s0=true)|!(btq_state_2_s1=true)));
+
+guarantee -- btq_state_3_mutual_exclusion
+	G((!(btq_state_3_s0=true)|!(btq_state_3_s1=true)));
+
+guarantee -- btq_state_4_mutual_exclusion
+	G((!(btq_state_4_s0=true)|!(btq_state_4_s1=true)));
+
+guarantee -- btq_state_5_mutual_exclusion
+	G((!(btq_state_5_s0=true)|!(btq_state_5_s1=true)));
+
+guarantee -- btq_state_6_mutual_exclusion
+	G((!(btq_state_6_s0=true)|!(btq_state_6_s1=true)));
+

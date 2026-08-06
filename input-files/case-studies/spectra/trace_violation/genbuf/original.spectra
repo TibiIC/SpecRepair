@@ -96,7 +96,7 @@ assumption -- unnamed_assumption_23
 	G(((btoR_REQ1=true&rtoB_ACK1=true)->next(rtoB_ACK1=true)));
 
 assumption -- unnamed_assumption_24
-	G((dEQ=false->next(eMPTY=false)));
+	G(((eNQ=true&dEQ=false)->next(eMPTY=false)));
 
 assumption -- unnamed_assumption_25
 	G(((dEQ=true&eNQ=false)->next(fULL=false)));
@@ -159,7 +159,7 @@ guarantee -- unnamed_guarantee_16
 	G(((stoB_REQ0=false&next(stoB_REQ0=true))->next(btoS_ACK0=false)));
 
 guarantee -- unnamed_guarantee_17
-	G((btoS_ACK0=false->next(btoS_ACK0=false)));
+	G(((btoS_ACK0=false&stoB_REQ0=false)->next(btoS_ACK0=false)));
 
 guarantee -- unnamed_guarantee_18
 	G(((btoS_ACK0=true&stoB_REQ0=true)->next(btoS_ACK0=true)));
@@ -348,7 +348,7 @@ guarantee -- unnamed_guarantee_79
 	GF(((stoB_REQ3=true&btoS_ACK3=true)|(!(stoB_REQ3=true)&!(btoS_ACK3=true))));
 
 guarantee -- unnamed_guarantee_80
-	GF((!(stoB_REQ4=true)&!(btoS_ACK4=true)));
+	GF(((stoB_REQ4=true&btoS_ACK4=true)|(!(stoB_REQ4=true)&!(btoS_ACK4=true))));
 
 guarantee -- unnamed_guarantee_81
 	GF(stateG12=false);

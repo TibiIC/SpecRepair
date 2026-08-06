@@ -215,6 +215,34 @@ class TestBFSRepairOrchestrator(BaseTestCase):
             is_debug=True
         )
 
+    def test_bfs_repair_spec_amba_syn(self):
+        """
+        AMBA AHB. Its source uses arrays, Int ranges, predicates, forall,
+        quantified templates and Dwyer patterns; amba_desugar lowers those into
+        the boolean+enum subset enum_desugar takes. 63 formulas, 34 atoms.
+        """
+        case_study_name = 'amba'
+        case_study_path = '../input-files/case-studies/spectra/strengthened/amba'
+        new_spec_strings = self.run_bfs_repair_syn_unique(
+            case_study_name,
+            case_study_path,
+            is_debug=True
+        )
+
+    def test_bfs_repair_spec_genbuf_syn(self):
+        """
+        Generalised buffer. Its formulas are unnamed in the source, which the
+        parser silently ignored - the previous strong.spectra here loaded as an
+        empty specification. Regenerated through enum_desugar: 109 formulas.
+        """
+        case_study_name = 'genbuf'
+        case_study_path = '../input-files/case-studies/spectra/strengthened/genbuf'
+        new_spec_strings = self.run_bfs_repair_syn_unique(
+            case_study_name,
+            case_study_path,
+            is_debug=True
+        )
+
     def test_bfs_repair_spec_colorsort_syn(self):
         case_study_name = 'colorsort'
         case_study_path = '../input-files/case-studies/spectra/strengthened/colorsort'

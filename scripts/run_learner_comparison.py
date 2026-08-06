@@ -40,11 +40,11 @@ TRACE_TEST = ("tests.test_main.test_bfs_repair_trace_violation"
 # assumption is GF(a), which a finite prefix always satisfies, so it has no
 # violating trace and no run to make.
 STRENGTHENED_CASE_STUDIES = [
-    "arbiter", "colorsort", "elevator", "gyro", "humanoid",
+    "amba", "arbiter", "colorsort", "elevator", "genbuf", "gyro", "humanoid",
     "lift", "minepump", "pcar", "traffic_single", "traffic_updated",
 ]
 TRACE_CASE_STUDIES = [
-    "colorsort", "elevator", "gyro", "humanoid", "lift",
+    "amba", "colorsort", "elevator", "genbuf", "gyro", "humanoid", "lift",
     "minepump", "minepump_liveness", "pcar", "traffic_single", "traffic_updated",
 ]
 
