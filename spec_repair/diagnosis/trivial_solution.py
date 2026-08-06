@@ -1,5 +1,5 @@
 from copy import deepcopy
-from typing import Any
+from typing import Any, Optional
 
 from spec_repair.components.new_spec_encoder import get_violated_expression_names_of_type
 from spec_repair.components.learners.optimising_final_spec_learner import OptimisingSpecLearner
@@ -86,29 +86,63 @@ def get_all_trivial_solution(spec: SpectraSpecification, violation_trace: list[s
     return get_all_trivial_solutions_guarantee_only(new_spec)
 
 
-def get_all_trivial_solutions_guarantee_only(new_spec: SpectraSpecification) -> list[Any]:
-    # Step 2: Find unrealizable cores
-    unrealisable_cores = run_all_unrealisable_cores(new_spec.to_str(is_to_compile=True))
-    if not (unrealisable_cores):
-        print("No unrealizable cores found, new spec actually realizable.")
+def get_all_trivial_solutions_guarantee_only(
+        new_spec: SpectraSpecification,
+        cores: Optional[list[set]] = None,
+        _seen: Optional[dict] = None,
+) -> list[Any]:
+    """
+    Every trivialisation of `new_spec` that removes only guarantees.
+
+    Syntech's `exploreAllCores` does not return every unrealisable core, and the
+    ones it returns are not necessarily minimal, so removing a hitting set of
+    them does not reliably yield a realisable specification. Hence the recheck:
+    each candidate is verified, and any still-unrealisable one is trivialised
+    again. That is inherent to the incomplete core enumeration, not something
+    this function can assume away.
+
+    What it *can* avoid is doing the same expensive work twice:
+
+    * **The cores are passed into the recursion.** The recheck computed a
+      candidate's cores and then called back in, which recomputed exactly those
+      cores as its first act. Every unrealisable intermediate therefore cost two
+      full core searches instead of one.
+    * **No `list.remove` on specifications.** `SpectraSpecification.__eq__` is
+      *semantic* equivalence via spot, so removing one candidate from the list
+      ran an LTL equivalence check against each of the others. The list is now
+      built by appending what survives.
+    * **Results are memoised by specification text** across the recursion, since
+      sibling branches routinely reach the same trivialisation by removing the
+      same guarantees in a different order.
+
+    Only the number of searches changes, not which solutions come back. It
+    matters on the specifications where a single core search is measured in
+    minutes rather than milliseconds - colorsort being the one that made this
+    visible, at >150s where every other case study finishes under a second.
+    """
+    _seen = {} if _seen is None else _seen
+    key = new_spec.to_str(is_to_compile=True)
+    if key in _seen:
+        return _seen[key]
+
+    if cores is None:
+        cores = run_all_unrealisable_cores(key)
+    if not cores:
+        _seen[key] = [new_spec]
         return [new_spec]
 
-    # Step 3: Remove minimal set of guarantees
-    trivial_specs = []
-    guarantees_to_remove_list = all_minimal_hitting_sets(unrealisable_cores)
-    for i, guarantees_to_remove in enumerate(guarantees_to_remove_list):
-        trivial_spec = deepcopy(new_spec)
+    trivial_specs: list[Any] = []
+    for guarantees_to_remove in all_minimal_hitting_sets(cores):
+        candidate = deepcopy(new_spec)
         for guarantee_to_remove in guarantees_to_remove:
-            trivial_spec.remove_formula(guarantee_to_remove)
-        trivial_specs.append(trivial_spec)
+            candidate.remove_formula(guarantee_to_remove)
 
-    # BUG: unrealisable cores are not necessarily minimal or accurate, uncertain why.
-    # Doing another round of checking and trivialisation to ensure all are realizable.
-    trivial_specs_copy = deepcopy(trivial_specs)
-    for trivial_spec in trivial_specs_copy:
-        unrealisable_cores = run_all_unrealisable_cores(trivial_spec.to_str(is_to_compile=True))
-        if unrealisable_cores:
-            trivial_specs.remove(trivial_spec)
-            trivial_specs.extend(get_all_trivial_solutions_guarantee_only(trivial_spec))
+        remaining = run_all_unrealisable_cores(candidate.to_str(is_to_compile=True))
+        if remaining:
+            trivial_specs.extend(
+                get_all_trivial_solutions_guarantee_only(candidate, remaining, _seen))
+        else:
+            trivial_specs.append(candidate)
 
+    _seen[key] = trivial_specs
     return trivial_specs

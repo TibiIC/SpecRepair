@@ -442,6 +442,7 @@ class TestCaseStudy1(BaseTestCase):
         builder = (BFSRepairOrchestratorBuilder.assumption_only()
                    .enabling("INCLUDE_NEXT", "INCLUDE_PREV")
                    .using_learner(self.learner)
+                   .with_run_label(f"case_study_1 / {case_study_name}")
                    .with_log_file(log_file)
                    .with_on_record(lambda r, idx, s, d: save_layered_graph(r._om._graph, out_test_dir_name)))
         if is_debug:
@@ -468,6 +469,7 @@ class TestCaseStudy1(BaseTestCase):
         builder = (BFSRepairOrchestratorBuilder.semantic()
                    .enabling("INCLUDE_NEXT", "INCLUDE_PREV")
                    .using_learner(self.learner)
+                   .with_run_label(f"case_study_1 / {case_study_name}")
                    .with_log_file(log_file)
                    .with_on_record(lambda r, idx, s, d: save_layered_graph(r._om._graph, out_test_dir_name)))
         if is_debug:
@@ -494,6 +496,7 @@ class TestCaseStudy1(BaseTestCase):
         builder = (BFSRepairOrchestratorBuilder.semantic()
                    .with_heuristic_manager(ChooseFirstHeuristicManager())
                    .using_learner(self.learner)
+                   .with_run_label(f"case_study_1 / {case_study_name}")
                    .with_log_file(log_file))
         if is_debug:
             builder.with_flat_debug_dir(out_test_dir_name)
@@ -525,6 +528,7 @@ class TestCaseStudy1(BaseTestCase):
         builder = (BFSRepairOrchestratorBuilder.syntactic()
                    .enabling("INCLUDE_NEXT", "INCLUDE_PREV")
                    .using_learner(self.learner)
+                   .with_run_label(f"case_study_1 / {case_study_name}")
                    .with_log_file(log_file)
                    .with_on_record(lambda r, idx, s, d: save_layered_graph(r._om._graph, out_test_dir_name)))
         if is_debug:

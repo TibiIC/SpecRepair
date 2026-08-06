@@ -93,23 +93,42 @@ assert_no_previous_sweep "$SESSION"
 
 mkdir -p "$LOGDIR"
 
+# Cap concurrency. This sweep had none: all 19 tests started at once, 19
+# simultaneous JVMs, which is the condition behind the OutOfMemoryError failures
+# seen on the strengthened runs. Set MAX_WINDOWS=0 for the old uncapped
+# behaviour. The semaphore itself is shared with run_case_study_2.sh so the two
+# cannot drift apart.
+MAX_WINDOWS="${MAX_WINDOWS:-8}"
+if ! [[ "$MAX_WINDOWS" =~ ^[0-9]+$ ]]; then
+    echo "MAX_WINDOWS='$MAX_WINDOWS' must be a non-negative integer." >&2; exit 1
+fi
+source "$(dirname "${BASH_SOURCE[0]}")/lib/slots.sh"
+slots_init "$LOGDIR" "$MAX_WINDOWS"
+
 # Define the setup commands
 SETUP_CMDS="source ~/.sdkman/bin/sdkman-init.sh && source ~/phd_work.sh && conda activate $CONDA_ENV && export LD_LIBRARY_PATH=\$CONDA_PREFIX/lib:\$LD_LIBRARY_PATH && export SPEC_REPAIR_LEARNER=$LEARNER && export SPEC_REPAIR_FASTLAS_RUNS=$FASTLAS_RUNS && cd $WORKDIR"
 
 # Create a new tmux session in detached mode, with the first test as window 0
+run_command_for() {
+    local test_name="$1"
+    local test_cmd="python -m unittest tests.test_main.test_case_study_1.TestCaseStudy1.${test_name} 2>&1 | tee $LOGDIR/${test_name}.log"
+    echo "$SETUP_CMDS && $(slots_wrap "$LOGDIR" "$MAX_WINDOWS" "$test_cmd"); read"
+}
+
 first_test="${tests[0]}"
 tmux new-session -d -s "$SESSION" -n "$first_test"
-tmux send-keys -t "$SESSION:$first_test" \
-    "$SETUP_CMDS && python -m unittest tests.test_main.test_case_study_1.TestCaseStudy1.${first_test} 2>&1 | tee $LOGDIR/${first_test}.log && read" C-m
+tmux send-keys -t "$SESSION:$first_test" "$(run_command_for "$first_test")" C-m
 
 # Remaining tests, each in its own named window
 for test_name in "${tests[@]:1}"; do
     tmux new-window -t "$SESSION" -n "$test_name"
-    tmux send-keys -t "$SESSION:$test_name" \
-        "$SETUP_CMDS && python -m unittest tests.test_main.test_case_study_1.TestCaseStudy1.${test_name} 2>&1 | tee $LOGDIR/${test_name}.log && read" C-m
+    tmux send-keys -t "$SESSION:$test_name" "$(run_command_for "$test_name")" C-m
 done
 
 echo "Started ${#tests[@]} tests with the $LEARNER learner in tmux session '$SESSION'. Logs under $LOGDIR"
+if [[ "$MAX_WINDOWS" -gt 0 ]]; then
+    echo "Concurrency capped at $MAX_WINDOWS; the rest wait for a free slot."
+fi
 echo "Attach with: tmux attach -t $SESSION"
 
 # Attach to the session

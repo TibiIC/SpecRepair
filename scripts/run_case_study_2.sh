@@ -120,27 +120,8 @@ if [[ ${#jobs[@]} -eq 0 ]]; then
     exit 1
 fi
 
-# One semaphore file per concurrent slot. Each window waits for a free slot
-# before starting its test, so all 50 windows can be created up front while only
-# MAX_WINDOWS tests run at a time. Without this, 50 simultaneous JVMs is enough
-# to exhaust memory on the box.
-#
-# Free and taken slots live in SEPARATE directories. They used to share one,
-# with a taken slot renamed in place to slot_<n>.taken.<pid> - but the waiting
-# glob is slot_*, which matches slot_0.taken.123 just as happily as slot_0. So a
-# waiting window would "claim" an already-claimed slot, renaming it
-# slot_0.taken.123.taken.456, and the cap collapsed: measured on the 2026-08-06
-# 16:30 sweep, 0 free slots and 39 concurrent runs against a cap of 8. The
-# release mv then failed ("cannot stat ...taken.X.taken.Y") because another
-# window had renamed the file again, so slots were never returned either.
-SLOTDIR="$LOGDIR/.slots"
-BUSYDIR="$LOGDIR/.slots_busy"
-if [[ "$MAX_WINDOWS" -gt 0 ]]; then
-    mkdir -p "$SLOTDIR" "$BUSYDIR"
-    for ((i = 0; i < MAX_WINDOWS; i++)); do
-        touch "$SLOTDIR/slot_$i"
-    done
-fi
+source "$(dirname "${BASH_SOURCE[0]}")/lib/slots.sh"
+slots_init "$LOGDIR" "$MAX_WINDOWS"
 
 run_command_for() {
     local job="$1"
@@ -149,16 +130,7 @@ run_command_for() {
     local test_name="test_case_study_2_${case_study}_${trace}_syn"
     local test_cmd="python -m unittest ${TEST_MODULE}.${test_name} 2>&1 | tee $LOGDIR/${job}.log"
 
-    if [[ "$MAX_WINDOWS" -gt 0 ]]; then
-        # Claim a slot by moving it out of SLOTDIR into BUSYDIR - mv is atomic
-        # within a filesystem, so two windows cannot claim the same one, and a
-        # claimed slot is no longer visible to the waiting glob. Release it on
-        # the way out, whether the test passed, failed or died: a slot leaked
-        # here is one less run for the whole rest of the sweep.
-        echo "$SETUP_CMDS && while true; do for s in $SLOTDIR/slot_*; do [ -e \"\$s\" ] && mv \"\$s\" \"$BUSYDIR/\$(basename \"\$s\").\$\$\" 2>/dev/null && { export MY_SLOT=\"\$s\"; break 2; }; done; sleep 5; done; trap 'mv \"$BUSYDIR/\$(basename \"\$MY_SLOT\").\$\$\" \"\$MY_SLOT\" 2>/dev/null' EXIT INT TERM; $test_cmd; trap - EXIT INT TERM; mv \"$BUSYDIR/\$(basename \"\$MY_SLOT\").\$\$\" \"\$MY_SLOT\"; read"
-    else
-        echo "$SETUP_CMDS && $test_cmd && read"
-    fi
+    echo "$SETUP_CMDS && $(slots_wrap "$LOGDIR" "$MAX_WINDOWS" "$test_cmd"); read"
 }
 
 first_job="${jobs[0]}"

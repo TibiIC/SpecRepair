@@ -103,6 +103,7 @@ class TestCaseStudy2(BaseTestCase):
         builder = (BFSRepairOrchestratorBuilder.syntactic()
                    .enabling("INCLUDE_NEXT", "INCLUDE_PREV")
                    .using_learner(self.learner)
+                   .with_run_label(f"case_study_2 / {case_study_name} / trace {trace_id}")
                    .with_log_file(log_file)
                    .with_on_record(lambda r, idx, s, d: save_layered_graph(r._om._graph, out_test_dir_name)))
         if is_debug:
