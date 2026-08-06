@@ -2,6 +2,7 @@ import re
 from copy import deepcopy
 from typing import Optional, List, Tuple
 
+from spec_repair.exceptions import SpecificationNotVerifiableException
 from spec_repair.interfaces.ioracle import IOracle
 from spec_repair.components.new_spec_encoder import NewSpecEncoder
 from spec_repair.components.repair_data import RepairData
@@ -31,6 +32,30 @@ def filter_counter_traces(cts: List[CounterTrace], spec: SpectraSpecification) -
             if not violated_guarantees - unrealisable_cores:
                 filtered_cts.append(ct)
     return filtered_cts
+
+def _reject_unverifiable(output: Optional[str], spec: SpectraSpecification) -> None:
+    """
+    Turn "Spectra could not check this" into a named exception.
+
+    The synthesis wrappers return None - not output - when
+    `violations_in_initial_conditions` rejects the file up front: an initial
+    condition referring to a primed variable, or an initial assumption referring
+    to a system variable. Every caller here then ran `re.search` over that None
+    and died with `TypeError: expected string or bytes-like object`, several
+    frames from the cause and saying nothing about it.
+
+    Raising instead of returning a verdict is deliberate. There is no honest
+    answer to give: "realisable" would record a malformed specification as a
+    repair, and "unrealisable" would claim a verdict Spectra never reached. The
+    caller decides what to do with a candidate it cannot check.
+    """
+    if output is None:
+        raise SpecificationNotVerifiableException(
+            "Spectra could not check this specification: it breaks a structural rule of the "
+            "CLI (an initial condition referring to a primed variable, or an initial "
+            "assumption referring to a system variable).\n"
+            f"{spec.to_str()}")
+
 
 def get_unrealisable_core_expression_names(spec: SpectraSpecification) -> List[str]:
     unrealisable_cores = run_all_unrealisable_cores(spec.to_str(is_to_compile=True))
@@ -77,6 +102,7 @@ class SpectraGR1Oracle(IOracle):
         genuinely needs a CounterStrategy object) is untouched.
         """
         output = SpectraGR1Oracle._synthesise_realisability_only(spec)
+        _reject_unverifiable(output, spec)
         if re.search("Result: Specification is unrealizable", output):
             return False
         elif re.search("Result: Specification is realizable", output):
@@ -90,6 +116,7 @@ class SpectraGR1Oracle(IOracle):
         If it is, nothing is returned. Otherwise, it returns a CounterStrategy.
         """
         output = self._synthesise(spec)
+        _reject_unverifiable(output, spec)
         if re.search("Result: Specification is unrealizable", output):
             return SpectraCSParser.from_str(output)
         elif re.search("Result: Specification is realizable", output):

@@ -1,5 +1,6 @@
 from typing import Dict, List, Tuple
 
+from spec_repair.exceptions import SpecificationNotVerifiableException
 from spec_repair.interfaces.idiscriminator import IDiscriminator
 from spec_repair.interfaces.ilearner import ILearner
 from spec_repair.interfaces.imitigator import IMitigator
@@ -81,8 +82,20 @@ class BFSRepairOrchestrator:
                     self._om.enqueue_new_tasks(alt_spec, alt_data, prev=(spec, data))
             else:
                 for learned_spec, data in learned_tasks:
-                    counter_examples_with_data: List[Tuple[CounterTrace, RepairData]] = self._oracle.is_valid_or_counter_arguments(
-                        learned_spec, data)
+                    try:
+                        counter_examples_with_data: List[Tuple[CounterTrace, RepairData]] = self._oracle.is_valid_or_counter_arguments(
+                            learned_spec, data)
+                    except SpecificationNotVerifiableException as e:
+                        # Spectra cannot check this candidate at all - it breaks
+                        # a structural rule of the CLI (see the exception). It is
+                        # malformed rather than merely wrong, so the branch ends
+                        # here: recording it would put a specification Spectra
+                        # never verified into the results. Other branches are
+                        # unaffected, which is the point - one bad candidate used
+                        # to end the whole run with a TypeError.
+                        self._logger.record(-1, learned_spec, data, "Unverifiable")
+                        print(f"Skipping unverifiable candidate specification: {e}")
+                        continue
                     if not counter_examples_with_data:
                         learned_id = self._recorder.add(learned_spec)
                         self._om.connect_leaf_node(learned_spec, learned_id, prev=(spec, data))
