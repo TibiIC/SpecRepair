@@ -373,8 +373,9 @@ that matters is the one that never changes: **200033 nodes on every line.** The
 table is not growing.
 
 We run Spectra with `--jtlv`, which selects the pure-Java BDD package instead of
-the default CUDD. That is not arbitrary - **CUDD cannot load in this
-deployment**, verified on macOS *and* on gpu13, both failing identically:
+the default CUDD. That is not arbitrary - CUDD failed to load, verified on macOS *and* on gpu13,
+both failing identically (**superseded by §16**: on Linux this was only a
+missing library path):
 
     java.lang.NullPointerException: Cannot load from int array because "attrSizes" is null
 
@@ -497,13 +498,126 @@ The deferred heuristic-manager refactor of §4 is therefore **done** for the
 configuration half. What remains in `IHeuristicManager` is now only genuine
 selection: which counter-traces, which alternative tasks, which adaptations.
 
-## 16. Open
+## 16. CUDD works on Linux after all - it just needed unpacking
 
-* **Third experiment type** - supervisors want one. `unrealisable.spectra`
-  exists for minepump and minepump_liveness (strengthened guarantees plus a
-  removed assumption), a natural seed exercising guarantee weakening as the
-  primary path rather than as a fallback.
+§14 concluded CUDD "cannot load in this deployment", verified by the same
+`NullPointerException: Cannot load from int array because "attrSizes" is null`
+on macOS and on gpu13. That was two different causes wearing one error message.
+
+**The native library ships inside the Spectra jars.** `spectra-cli.jar`
+contains `libcudd.so` and `cudd.dll` - and no `.dylib`. So:
+
+* **macOS genuinely cannot run CUDD.** There is nothing to load. JTLV is the
+  only option, permanently.
+* **Linux only needed the `.so` on `java.library.path`.** Extracting it needs
+  no root, so it works on a shared box.
+
+Measured on gpu13 with the extracted library:
+
+| Case study | JTLV | CUDD | Verdict |
+| --- | --- | --- | --- |
+| minepump | 1.17s | **0.19s** | identical |
+| genbuf | 0.4s | **0.2s** | identical |
+
+`ensure_cudd_native()` unpacks the library at JVM startup and adds
+`-Djava.library.path`; `SPEC_REPAIR_BDD=cudd` then selects it.
+
+**macOS is untouched on every path**: the extractor returns early without
+writing anything or adding a JVM argument, and an explicit
+`SPEC_REPAIR_BDD=cudd` there is refused with a one-line notice rather than
+swapping a working run for the NPE. Verified on the Mac - 828 passed, only the
+five pre-existing failures.
+
+Opt-in, for the same reason as reordering (§14): a different BDD package can
+return a different counter-strategy among the many valid ones, and the search
+branches on the one it is given.
+
+**Not yet measured: whether CUDD fixes amba and colorsort.** The benchmark used
+the raw CLI, which rejects those two before synthesising because it skips the
+`pRespondsToS` substitution the real path performs, so both reported "(no
+verdict)" in 0.3s rather than a real timing. That measurement is the one worth
+taking next, since it is the whole reason for wanting CUDD.
+
+## 17. Trivial-solution generation
+
+Syntech's `exploreAllCores` does not return every unrealisable core, and the
+ones it returns are not necessarily minimal, so a hitting set of them does not
+reliably give a realisable specification. The recheck that compensates for that
+is inherent and stays. What it did *twice* does not:
+
+* **The recursion recomputed the cores it was just given.** The recheck computed
+  a candidate's cores, then called back in, which recomputed exactly those cores
+  as its first act. Every unrealisable intermediate cost two full core searches.
+* **Candidates were dropped with `list.remove`**, and
+  `SpectraSpecification.__eq__` is *semantic* equivalence via spot - so removing
+  one ran an LTL equivalence check against every other candidate in the list.
+* **No memoisation**, though sibling branches routinely reach the same
+  trivialisation by removing the same guarantees in a different order.
+
+Same solutions, fewer searches - identical counts on minepump, gyro, lift,
+arbiter and elevator, and the existing tests pass.
+
+**Where the time actually goes.** Measured per case study: every one finishes in
+under a second except **colorsort, which exceeds 150s**. So the file that hung
+the whole test suite (§10) hangs on `exploreAllCores` on one specification.
+Halving the searches helps proportionally but does not make it fast. The
+remaining levers are asking for *one* core rather than all where the caller only
+needs a hitting set, and CUDD (§16).
+
+## 18. The third experiment type - design, not yet built
+
+**Not implemented.** Recorded here so it can be picked up directly.
+
+The point is a violation trace that exhibits *real controller behaviour*, rather
+than one manufactured by ASP. ASP leaves the system's moves unconstrained by
+anything but the specification, so a trace can contain system behaviour no
+synthesised controller would ever produce.
+
+The procedure:
+
+1. Synthesise a controller from the specification
+   (`synthesise_controller` already exists and writes one out).
+2. Run it for **N** timesteps against an environment that **complies with the
+   assumptions** - at each step, choose an environment input satisfying the
+   assumptions given the state so far, and let the controller respond.
+3. From step **N+1**, let the environment act **at random**, ignoring the
+   assumptions, until it violates one.
+4. The resulting prefix is the violation trace, and the system half of it is
+   genuine controller output throughout.
+
+Open decisions for whoever implements it: N and the number of traces per case
+study (5 would mirror case_study_2); whether the random phase is seeded (it
+should be, for reproducibility); and how to sample an assumption-compliant input
+cheaply - the controller's own BDD gives the legal environment moves, which is
+the natural source and avoids a solver call per step.
+
+It lands as `case_study_3` under the naming convention of §11, with the same
+`original.spectra` + `violation_trace_<n>.txt` shape as case_study_2 so the
+existing runner, pipeline and precondition assertions apply unchanged.
+
+## 19. Housekeeping
+
+* **`run_case_study_1.sh` had no concurrency cap at all** - 19 tests, 19
+  simultaneous JVMs, which is the condition behind its OutOfMemoryError
+  failures. Now `MAX_WINDOWS=8` by default, 0 for the old behaviour.
+* **The semaphore is now shared** (`scripts/lib/slots.sh`) by both runners, so
+  they cannot drift apart - the §12 bug existed in one runner only because the
+  other had no cap to get wrong.
+* **Run labels** now read `case_study_2 / pcar / trace 2` rather than
+  `pcar_trace2_fastlas_2026-08-06`, which said neither which setup it came from
+  nor, legibly, which trace.
+* **`NewSpecEncoder._hm` renamed to `_config`**, and `builder.enabling(...)`
+  folded into the same `LearningConfig` that `with_learner_config` sets, so
+  learning policy has one entry point rather than two.
+
+## 20. Open
+
+* **Third experiment type** - designed in §18, not built.
 * ~~Heuristic-manager refactor~~ - done, see §15.2.
 * **submarine** - realisability check throws; deliberately excluded from the
   precondition audit.
-* **`test_trivial_solution.py` JVM hang** (§10).
+* **`test_trivial_solution.py`** - no longer hangs the suite for the other case
+  studies (33 pass in 10s), but colorsort alone still exceeds 150s in
+  `exploreAllCores` (§17).
+* **Does CUDD fix amba and colorsort?** Unmeasured (§16), and the reason CUDD
+  was worth pursuing.
