@@ -27,16 +27,16 @@ INPUT_SPECS=(
 )
 
 INPUT_IDEAL=(
-    "input-files/case-studies/spectra/strengthened/traffic-updated/ideal.spectra"
-    "input-files/case-studies/spectra/strengthened/traffic-updated/ideal.spectra"
-    "input-files/case-studies/spectra/strengthened/minepump/ideal.spectra"
-    "input-files/case-studies/spectra/strengthened/minepump/ideal.spectra"
-    "input-files/case-studies/spectra/strengthened/arbiter/ideal.spectra"
-    "input-files/case-studies/spectra/strengthened/arbiter/ideal.spectra"
-    "input-files/case-studies/spectra/strengthened/lift/ideal.spectra"
-    "input-files/case-studies/spectra/strengthened/lift/ideal.spectra"
-    "input-files/case-studies/spectra/strengthened/traffic-single/ideal.spectra"
-    "input-files/case-studies/spectra/strengthened/traffic-single/ideal.spectra"
+    "input-files/case-studies/spectra/case_study_1/traffic-updated/ideal.spectra"
+    "input-files/case-studies/spectra/case_study_1/traffic-updated/ideal.spectra"
+    "input-files/case-studies/spectra/case_study_1/minepump/ideal.spectra"
+    "input-files/case-studies/spectra/case_study_1/minepump/ideal.spectra"
+    "input-files/case-studies/spectra/case_study_1/arbiter/ideal.spectra"
+    "input-files/case-studies/spectra/case_study_1/arbiter/ideal.spectra"
+    "input-files/case-studies/spectra/case_study_1/lift/ideal.spectra"
+    "input-files/case-studies/spectra/case_study_1/lift/ideal.spectra"
+    "input-files/case-studies/spectra/case_study_1/traffic-single/ideal.spectra"
+    "input-files/case-studies/spectra/case_study_1/traffic-single/ideal.spectra"
 )
 
 OUTPUT_FILES=(

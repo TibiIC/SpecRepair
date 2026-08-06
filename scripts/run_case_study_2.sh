@@ -3,7 +3,7 @@
 # Runs the trace-violation case studies in parallel, one tmux window each, for
 # unattended background runs on the GPU box.
 #
-# The counterpart to run_parallel_bfs_repair_syn.sh, which does the same for the
+# The counterpart to run_case_study_1.sh, which does the same for the
 # strengthened (ideal + strong) case studies. Two differences follow from the
 # pivot:
 #
@@ -12,12 +12,12 @@
 #     assumptions, so it contributes five independent runs rather than one.
 #
 # Usage:
-#   ./run_parallel_bfs_repair_trace.sh                  # every case study, every trace
-#   ./run_parallel_bfs_repair_trace.sh minepump         # one case study, all its traces
-#   ./run_parallel_bfs_repair_trace.sh minepump 0       # one case study, one trace
-#   TRACES="0 1" ./run_parallel_bfs_repair_trace.sh     # every case study, traces 0 and 1
-#   LEARNER=fastlas ./run_parallel_bfs_repair_trace.sh  # learn with FastLAS, not ILASP
-#   LEARNER=fastlas FASTLAS_RUNS=10 ./run_parallel_bfs_repair_trace.sh  # up to 10 solutions per step
+#   ./run_case_study_2.sh                  # every case study, every trace
+#   ./run_case_study_2.sh minepump         # one case study, all its traces
+#   ./run_case_study_2.sh minepump 0       # one case study, one trace
+#   TRACES="0 1" ./run_case_study_2.sh     # every case study, traces 0 and 1
+#   LEARNER=fastlas ./run_case_study_2.sh  # learn with FastLAS, not ILASP
+#   LEARNER=fastlas FASTLAS_RUNS=10 ./run_case_study_2.sh  # up to 10 solutions per step
 #
 # A FastLAS run writes to <case_study>_trace<ID>_fastlas_<date>, so it lands
 # beside an ILASP run of the same date rather than overwriting it.
@@ -30,7 +30,7 @@ set -u
 WORKDIR="${WORKDIR:-/vol/bitbucket/tg4018/PhD/SpecRepair}"
 CONDA_ENV="${CONDA_ENV:-logic}"
 MAX_WINDOWS="${MAX_WINDOWS:-10}"
-TEST_MODULE="tests.test_main.test_bfs_repair_trace_violation.TestBFSRepairTraceViolation"
+TEST_MODULE="tests.test_main.test_case_study_2.TestCaseStudy2"
 
 LEARNER="${LEARNER:-ilasp}"
 case "$LEARNER" in
@@ -88,8 +88,8 @@ fi
 
 # Session name is scoped to the selection, so a single-case-study rerun can be
 # started alongside a full run already in progress.
-SESSION="trace_tests_${case_study_arg}${trace_arg:+_$trace_arg}_${LEARNER}"
-LOGDIR="$WORKDIR/logs/trace_tests/${case_study_arg}${trace_arg:+_$trace_arg}_${LEARNER}_$(date +%Y-%m-%d_%H%M%S)"
+SESSION="case_study_2_${case_study_arg}${trace_arg:+_$trace_arg}_${LEARNER}"
+LOGDIR="$WORKDIR/logs/case_study_2/${case_study_arg}${trace_arg:+_$trace_arg}_${LEARNER}_$(date +%Y-%m-%d_%H%M%S)"
 
 if tmux has-session -t "$SESSION" 2>/dev/null; then
     echo "tmux session '$SESSION' already exists - attach to it, or rename/kill it before re-running." >&2
@@ -118,9 +118,19 @@ fi
 # before starting its test, so all 50 windows can be created up front while only
 # MAX_WINDOWS tests run at a time. Without this, 50 simultaneous JVMs is enough
 # to exhaust memory on the box.
+#
+# Free and taken slots live in SEPARATE directories. They used to share one,
+# with a taken slot renamed in place to slot_<n>.taken.<pid> - but the waiting
+# glob is slot_*, which matches slot_0.taken.123 just as happily as slot_0. So a
+# waiting window would "claim" an already-claimed slot, renaming it
+# slot_0.taken.123.taken.456, and the cap collapsed: measured on the 2026-08-06
+# 16:30 sweep, 0 free slots and 39 concurrent runs against a cap of 8. The
+# release mv then failed ("cannot stat ...taken.X.taken.Y") because another
+# window had renamed the file again, so slots were never returned either.
 SLOTDIR="$LOGDIR/.slots"
+BUSYDIR="$LOGDIR/.slots_busy"
 if [[ "$MAX_WINDOWS" -gt 0 ]]; then
-    mkdir -p "$SLOTDIR"
+    mkdir -p "$SLOTDIR" "$BUSYDIR"
     for ((i = 0; i < MAX_WINDOWS; i++)); do
         touch "$SLOTDIR/slot_$i"
     done
@@ -130,13 +140,16 @@ run_command_for() {
     local job="$1"
     local case_study="${job%_*}"
     local trace="${job##*_}"
-    local test_name="test_bfs_repair_trace_violation_${case_study}_${trace}_syn"
+    local test_name="test_case_study_2_${case_study}_${trace}_syn"
     local test_cmd="python -m unittest ${TEST_MODULE}.${test_name} 2>&1 | tee $LOGDIR/${job}.log"
 
     if [[ "$MAX_WINDOWS" -gt 0 ]]; then
-        # Claim a slot by moving a file - mv is atomic within a filesystem, so
-        # two windows cannot claim the same one. Release it on the way out.
-        echo "$SETUP_CMDS && while true; do for s in $SLOTDIR/slot_*; do [ -e \"\$s\" ] && mv \"\$s\" \"\$s.taken.\$\$\" 2>/dev/null && { export MY_SLOT=\"\$s\"; break 2; }; done; sleep 5; done; $test_cmd; mv \"\$MY_SLOT.taken.\$\$\" \"\$MY_SLOT\"; read"
+        # Claim a slot by moving it out of SLOTDIR into BUSYDIR - mv is atomic
+        # within a filesystem, so two windows cannot claim the same one, and a
+        # claimed slot is no longer visible to the waiting glob. Release it on
+        # the way out, whether the test passed, failed or died: a slot leaked
+        # here is one less run for the whole rest of the sweep.
+        echo "$SETUP_CMDS && while true; do for s in $SLOTDIR/slot_*; do [ -e \"\$s\" ] && mv \"\$s\" \"$BUSYDIR/\$(basename \"\$s\").\$\$\" 2>/dev/null && { export MY_SLOT=\"\$s\"; break 2; }; done; sleep 5; done; trap 'mv \"$BUSYDIR/\$(basename \"\$MY_SLOT\").\$\$\" \"\$MY_SLOT\" 2>/dev/null' EXIT INT TERM; $test_cmd; trap - EXIT INT TERM; mv \"$BUSYDIR/\$(basename \"\$MY_SLOT\").\$\$\" \"\$MY_SLOT\"; read"
     else
         echo "$SETUP_CMDS && $test_cmd && read"
     fi

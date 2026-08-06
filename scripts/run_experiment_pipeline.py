@@ -40,7 +40,7 @@ Usage:
 
     # the trace-violation case studies, whose runs are named
     # <case_study>_trace<ID>_<date> and reference original.spectra
-    python scripts/run_experiment_pipeline.py 2026-07-30 --setup trace_violation
+    python scripts/run_experiment_pipeline.py 2026-07-30 --setup case_study_2
 """
 import argparse
 import logging
@@ -68,23 +68,23 @@ SPECTRA_CASE_STUDIES = os.path.join(REPO_ROOT, "input-files", "case-studies", "s
 # The two experimental setups differ in what step 6 draws alongside the merged
 # results - which is the only place the pipeline needs to know them apart:
 #
-#   strengthened    - repairs weaken a manufactured `strong.spectra` back down,
+#   case_study_1    - repairs weaken a manufactured `strong.spectra` back down,
 #                     so both it and the `ideal.spectra` it was strengthened
 #                     from are meaningful reference points on the graph.
-#   trace_violation - there is no manufactured spec and no known-good answer;
+#   case_study_2    - there is no manufactured spec and no known-good answer;
 #                     the one reference point is `original.spectra`, the thing
 #                     that was repaired.
 #
 # Everything before step 6 - merging, maximal, unique - is identical, so it is a
 # flag rather than a second script.
 SETUPS = {
-    "strengthened": {
-        "dir": os.path.join(SPECTRA_CASE_STUDIES, "strengthened"),
+    "case_study_1": {
+        "dir": os.path.join(SPECTRA_CASE_STUDIES, "case_study_1"),
         "reference_specs": ("strong.spectra", "ideal.spectra"),
         "og_spec": "strong.spectra",
     },
-    "trace_violation": {
-        "dir": os.path.join(SPECTRA_CASE_STUDIES, "trace_violation"),
+    "case_study_2": {
+        "dir": os.path.join(SPECTRA_CASE_STUDIES, "case_study_2"),
         "reference_specs": ("original.spectra",),
         "og_spec": "original.spectra",
     },
@@ -146,7 +146,7 @@ def find_run_dirs(date: str, only: Optional[str] = None,
 
     `runs_root` overrides the default `out_ssh/<date>/`, for runs that were
     produced locally rather than pulled - those land in
-    `tests/test_files/out/repair_syn/` and `.../repair_trace_syn/`, with no date
+    `tests/test_files/out/case_study_1/` and `.../case_study_2/`, with no date
     subdirectory, since the tests write them directly.
     """
     date_root = runs_root or os.path.join(OUT_SSH_ROOT, date)
@@ -269,14 +269,14 @@ def main(argv=None) -> int:
     parser.add_argument("date", help="experiment date, YYYY-MM-DD, as pulled into out_ssh/")
     parser.add_argument("--case-study", default=None,
                         help="only process this case study (default: all in that date)")
-    parser.add_argument("--setup", choices=sorted(SETUPS), default="strengthened",
+    parser.add_argument("--setup", choices=sorted(SETUPS), default="case_study_1",
                         help="which experimental setup the pulled runs came from. Selects the "
                              "case-study folder and the reference specifications drawn on the "
-                             "graph: strong+ideal for strengthened, original for trace_violation "
-                             "(default: strengthened)")
+                             "graph: strong+ideal for case_study_1, original for case_study_2 "
+                             "(default: case_study_1)")
     parser.add_argument("--og-spec-from-case-study", action="store_true",
                         help="pass the case study's reference specification (strong.spectra, or "
-                             "original.spectra under --setup trace_violation) to the merge as the "
+                             "original.spectra under --setup case_study_2) to the merge as the "
                              "original spec")
     parser.add_argument("--graph-type", nargs="+", default=list(GRAPH_TYPES),
                         choices=list(GRAPH_TYPES), metavar="TYPE",
@@ -286,7 +286,7 @@ def main(argv=None) -> int:
     parser.add_argument("--runs-root", default=None,
                         help="directory holding the <name>_<date> run directories, instead of "
                              "out_ssh/<date>/. Use for locally produced runs, which land in "
-                             "tests/test_files/out/repair_syn or .../repair_trace_syn")
+                             "tests/test_files/out/case_study_1 or .../case_study_2")
     parser.add_argument("--skip-graph", action="store_true", help="skip step 6")
     args = parser.parse_args(argv)
     setup = SETUPS[args.setup]

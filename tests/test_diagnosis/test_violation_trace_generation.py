@@ -24,7 +24,7 @@ from spec_repair.model.spectra_specification import SpectraSpecification
 from spec_repair.wrappers.asp_wrappers import get_violations
 from tests.base_test_case import BaseTestCase
 
-CASE_STUDIES = '../input-files/case-studies/spectra/trace_violation'
+CASE_STUDIES = '../input-files/case-studies/spectra/case_study_2'
 
 # `G(!a -> (!a | !b))` is `true`: whenever the antecedent holds, `!a` makes the
 # consequent hold too. `real_assumption` is the control - an ordinary violable

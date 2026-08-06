@@ -22,19 +22,19 @@ class TestUtil(TestCase):
         )
 
     def test_synthesise_controller_minepump(self):
-        spec_path = f'{PROJECT_PATH}/input-files/case-studies/spectra/strengthened/minepump/ideal.spectra'
+        spec_path = f'{PROJECT_PATH}/input-files/case-studies/spectra/case_study_1/minepump/ideal.spectra'
         path_to_controller = f'{PROJECT_PATH}/tests/test_files/out/controllers/minepump_test'
         result = synthesise_controller(spec_path, path_to_controller)
         self.assertTrue(result)
 
     def test_synthesise_controller_arbiter(self):
-        spec_path = f'{PROJECT_PATH}/input-files/case-studies/spectra/strengthened/arbiter/ideal.spectra'
+        spec_path = f'{PROJECT_PATH}/input-files/case-studies/spectra/case_study_1/arbiter/ideal.spectra'
         path_to_controller = f'{PROJECT_PATH}/tests/test_files/out/controllers/arbiter_test'
         result = synthesise_controller(spec_path, path_to_controller)
         self.assertTrue(result)
 
     def test_synthesise_controller_invalid_minepump(self):
-        spec_path = f'{PROJECT_PATH}/input-files/case-studies/spectra/strengthened/minepump/unrealisable.spectra'
+        spec_path = f'{PROJECT_PATH}/input-files/case-studies/spectra/case_study_1/minepump/unrealisable.spectra'
         path_to_controller = f'{PROJECT_PATH}/tests/test_files/out/controllers/minepump_test'
         result = synthesise_controller(spec_path, path_to_controller)
         self.assertFalse(result)

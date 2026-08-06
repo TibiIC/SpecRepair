@@ -52,7 +52,7 @@ if __name__ == '__main__':
     # date = datetime.now().strftime('%Y-%m-%d')
     date = '2026-06-03'
     experiment = 'minepump'
-    pickle_file = f'../tests/test_files/out_ssh/repair_syn/{experiment}_{date}/graph.pkl'
+    pickle_file = f'../tests/test_files/out_ssh/case_study_1/{experiment}_{date}/graph.pkl'
     output_file = f'visualization_syn_ssh_{experiment}_{date}.html'
     # Use it:
     load_and_visualize_smart(

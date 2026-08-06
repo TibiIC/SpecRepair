@@ -284,7 +284,53 @@ Two things worth carrying forward:
   deselected nothing; the file was `tests/test_debug/test_asp.py`. A deselect
   that does not resolve is a no-op, not an error.
 
-## 11. Open
+## 11. One naming convention: `case_study_1` and `case_study_2`
+
+The same setup had **three different names depending on the layer** - the
+original setup was `strengthened` in the input tree, `parallel_tests` in the
+tmux session and log directory, and `repair_syn` in the output directory. The
+new setup was `trace_violation`, `trace_tests` and `repair_trace_syn`. Nothing
+connected them, so reading a log path told you nothing about which experiment
+produced it.
+
+Settled on **`case_study_1`** (was strengthened / parallel_tests / repair_syn)
+and **`case_study_2`** (was trace_violation / trace_tests / repair_trace_syn),
+applied at every layer:
+
+| Layer | `case_study_1` (was) | `case_study_2` (was) |
+| --- | --- | --- |
+| Input tree | `spectra/strengthened/` | `spectra/trace_violation/` |
+| Output dir | `out/repair_syn/` | `out/repair_trace_syn/` |
+| Log dir | `logs/parallel_tests/` | `logs/trace_tests/` |
+| tmux session | `parallel_tests_*` | `trace_tests_*` |
+| Runner script | `run_parallel_bfs_repair_syn.sh` | `run_parallel_bfs_repair_trace.sh` |
+| Test module | `test_bfs_repair_orchestrator.py` | `test_bfs_repair_trace_violation.py` |
+| Test class | `TestBFSRepairOrchestrator` | `TestBFSRepairTraceViolation` |
+| Test methods | `test_bfs_repair_spec_<cs>_syn` | `test_bfs_repair_trace_violation_<cs>_<n>_syn` |
+| `--setup` value | `strengthened` | `trace_violation` |
+
+All now `case_study_1` / `case_study_2` — including
+`scripts/run_case_study_1.sh`, `tests/test_main/test_case_study_1.py`,
+`TestCaseStudy1`, and `test_case_study_1_<cs>_syn`.
+
+The English word "strengthened" is **kept where it is a description rather than
+a name** - a guarantee genuinely is strengthened, and `strong.spectra` is still
+the artificially strengthened specification inside `case_study_1`.
+
+**Not deployed to the shared checkout yet.** The four sweeps launched at 16:30
+run 8 concurrently out of 60, so the other 52 windows invoke Python from the
+working tree *later*. Applying the rename to
+`/vol/bitbucket/tg4018/PhD/SpecRepair` while they are queued would break every
+run that has not started. The rename is committed and pushed, and lands on the
+GPU boxes only once the sweeps finish. Their output therefore still uses the
+old `out/repair_syn` and `out/repair_trace_syn` directory names:
+
+    gpu11  logs/trace_tests/all_fastlas_2026-08-06_163019/     -> out/repair_trace_syn/
+    gpu13  logs/trace_tests/all_ilasp_2026-08-06_163028/       -> out/repair_trace_syn/
+    gpu14  logs/parallel_tests/all_fastlas_2026-08-06_163038/  -> out/repair_syn/
+    gpu15  logs/parallel_tests/all_ilasp_2026-08-06_163047/    -> out/repair_syn/
+
+## 12. Open
 
 * **Third experiment type** - supervisors want one. `unrealisable.spectra`
   exists for minepump and minepump_liveness (strengthened guarantees plus a

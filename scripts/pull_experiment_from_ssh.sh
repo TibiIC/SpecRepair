@@ -2,11 +2,11 @@
 #
 # Step 1 of the experiment pipeline.
 #
-# Pulls everything run_parallel_bfs_repair_syn.sh produced on the remote for one
+# Pulls everything run_case_study_1.sh produced on the remote for one
 # date, into tests/test_files/out_ssh/<date>/.
 #
 # The remote writes each case study to
-#   <REMOTE_BASE>/repair_syn/<case_study>_<date>/
+#   <REMOTE_BASE>/case_study_1/<case_study>_<date>/
 # so pulling "all case studies for a date" is a glob on the folder suffix. The
 # local layout mirrors that folder name exactly, so provenance stays obvious and
 # the later pipeline steps can just look for *_<date> directories:
@@ -33,7 +33,7 @@ if ! [[ "$DATE" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}$ ]]; then
 fi
 
 REMOTE_BASE="${REMOTE_BASE:-/vol/bitbucket/tg4018/PhD/SpecRepair/tests/test_files/out}"
-REMOTE_SUBDIR="${REMOTE_SUBDIR:-repair_syn}"
+REMOTE_SUBDIR="${REMOTE_SUBDIR:-case_study_1}"
 
 # Resolve relative to this script, so the pull works from any cwd.
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"

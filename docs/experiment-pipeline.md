@@ -12,11 +12,11 @@ are gitignored.
 ## Step 0 — produce the run on the remote
 
 ```bash
-./scripts/run_parallel_bfs_repair_syn.sh            # all 17 syn tests
-./scripts/run_parallel_bfs_repair_syn.sh updated    # only the *_updated ones
+./scripts/run_case_study_1.sh            # all 17 syn tests
+./scripts/run_case_study_1.sh updated    # only the *_updated ones
 ```
 
-Writes `tests/test_files/out/repair_syn/<case_study>_<date>/` per case study.
+Writes `tests/test_files/out/case_study_1/<case_study>_<date>/` per case study.
 
 ## Step 1 — pull a date's run
 
@@ -52,7 +52,7 @@ python scripts/run_experiment_pipeline.py 2026-07-27 --case-study pcar
 python scripts/run_experiment_pipeline.py 2026-07-27 --graph-type gar
 
 # the trace-violation case studies
-python scripts/run_experiment_pipeline.py 2026-07-30 --setup trace_violation
+python scripts/run_experiment_pipeline.py 2026-07-30 --setup case_study_2
 ./scripts/run_trace_experiment_pipeline.sh 2026-07-30   # same thing, batch driver
 ```
 
@@ -66,7 +66,7 @@ Per case study, inside `out_ssh/<date>/<case_study>_<date>/`:
 | 6 | `implication_graph_{asm,gar,gr1}.png` | colour-coded graphs of the reference specs / trivial / unique max merged |
 
 `--setup` selects which reference specifications step 6 draws: `strong` and
-`ideal` for the strengthened case studies, `original` for the trace-violation
+`ideal` for the case_study_1 case studies, `original` for the case_study_2
 ones, which have no manufactured spec and no known-good answer. Steps 2-4 are
 identical either way. Trace-violation runs are named
 `<case_study>_trace<ID>_<date>`, since each case study is repaired once per
@@ -117,8 +117,8 @@ python find_semantically_unique_specifications.py <dir> -o <out_dir>
 Both tmux runners take `LEARNER` (default `ilasp`):
 
 ```bash
-LEARNER=fastlas ./scripts/run_parallel_bfs_repair_syn.sh
-LEARNER=fastlas ./scripts/run_parallel_bfs_repair_trace.sh
+LEARNER=fastlas ./scripts/run_case_study_1.sh
+LEARNER=fastlas ./scripts/run_case_study_2.sh
 ```
 
 The runner exports `SPEC_REPAIR_LEARNER`, which the test classes read once in
@@ -139,7 +139,7 @@ To run the case studies locally instead of on the box, and record timings:
 
 ```bash
 python scripts/run_learner_comparison.py --learner fastlas ilasp \
-    --setup strengthened trace_violation --timeout 300 -o results.json
+    --setup case_study_1 case_study_2 --timeout 300 -o results.json
 ```
 
 One subprocess per case study, so a run that does not terminate is killed
@@ -148,8 +148,8 @@ case study) pairs do not finish. Post-process those local runs with
 `--runs-root`:
 
 ```bash
-python scripts/run_experiment_pipeline.py <date> --setup trace_violation \
-    --runs-root tests/test_files/out/repair_trace_syn
+python scripts/run_experiment_pipeline.py <date> --setup case_study_2 \
+    --runs-root tests/test_files/out/case_study_2
 ```
 
 ## Reading the graph

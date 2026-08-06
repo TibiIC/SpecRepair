@@ -16,7 +16,7 @@ class TestNewSpecEncoder(BaseTestCase):
     minepump_ilasp_file = 'test_files/test_components/minepump_strong_WA_no_cs.las'
     minepump_mode_bias_aw_file = 'test_files/mode_bias/minepump_1_aw_step.txt'
     minepump_mode_bias_gw_file = 'test_files/mode_bias/minepump_1_gw_step.txt'
-    traffic_updated_spec_file = '../input-files/case-studies/spectra/strengthened/traffic_updated/strong.spectra'
+    traffic_updated_spec_file = '../input-files/case-studies/spectra/case_study_1/traffic_updated/strong.spectra'
     traffic_updated_mode_bias_aw_file = 'test_files/mode_bias/traffic_updated_aw.txt'
     traffic_updated_mode_bias_aw_file_no_ev = 'test_files/mode_bias/traffic_updated_aw_no_ev.txt'
     maxDiff = None

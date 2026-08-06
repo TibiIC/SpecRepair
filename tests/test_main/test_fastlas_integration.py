@@ -42,7 +42,7 @@ from spec_repair.util.file_util import read_file_lines
 from spec_repair.wrappers.asp_wrappers import get_violations, run_ILASP
 from tests.base_test_case import BaseTestCase
 
-CASE_STUDIES = '../input-files/case-studies/spectra/strengthened'
+CASE_STUDIES = '../input-files/case-studies/spectra/case_study_1'
 FASTLAS_AVAILABLE = shutil.which(SETUP_DICT.get('FastLAS', 'FastLAS')) is not None \
                     or os.path.isfile(SETUP_DICT.get('FastLAS', ''))
 

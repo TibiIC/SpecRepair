@@ -50,7 +50,7 @@ class TestSpectraSpecification(BaseTestCase):
             self.assertIn(formula.to_str(self.formatter), expected_formulas)
 
     def test_add_formula_to_specification(self):
-        spec_file = "../input-files/case-studies/spectra/strengthened/arbiter/strong.spectra"
+        spec_file = "../input-files/case-studies/spectra/case_study_1/arbiter/strong.spectra"
         spec: SpectraSpecification = SpectraSpecification.from_file(spec_file)
         new_formula: GR1Formula = GR1Formula.from_str("GF(a);", self.parser)
         new_formula_name: str = "a_always_eventually"
@@ -66,7 +66,7 @@ class TestSpectraSpecification(BaseTestCase):
         self.assertEqual(actual_formula_row['type'].iloc[0], GR1FormulaType.ASM)
 
     def test_remove_formula_from_specification(self):
-        spec_file = "../input-files/case-studies/spectra/strengthened/arbiter/strong.spectra"
+        spec_file = "../input-files/case-studies/spectra/case_study_1/arbiter/strong.spectra"
         spec: SpectraSpecification = SpectraSpecification.from_file(spec_file)
         formula_name: str = "a_always"
         spec.remove_formula(name=formula_name)
@@ -74,7 +74,7 @@ class TestSpectraSpecification(BaseTestCase):
         self.assertFalse((spec._formulas_df['name'] == formula_name).any())
 
     def test_rename_formula_in_specification(self):
-        spec_file = "../input-files/case-studies/spectra/strengthened/arbiter/strong.spectra"
+        spec_file = "../input-files/case-studies/spectra/case_study_1/arbiter/strong.spectra"
         spec: SpectraSpecification = SpectraSpecification.from_file(spec_file)
         formula_name: str = "a_always"
         new_formula_name: str = "a_always_sucks"
@@ -84,7 +84,7 @@ class TestSpectraSpecification(BaseTestCase):
         self.assertTrue((spec._formulas_df['name'] == new_formula_name).any())
 
     def test_cannot_add_formula_existing_name_to_specification(self):
-        spec_file = "../input-files/case-studies/spectra/strengthened/arbiter/strong.spectra"
+        spec_file = "../input-files/case-studies/spectra/case_study_1/arbiter/strong.spectra"
         spec: SpectraSpecification = SpectraSpecification.from_file(spec_file)
         new_formula: GR1Formula = GR1Formula.from_str("G(a);", self.parser)
         new_formula_name: str = "a_always"
@@ -488,7 +488,7 @@ root_consequent_holds(OP,guarantee4,0,1,T1,S):-
 
     def test_arbiter_compare(self):
         spec_ideal: SpectraSpecification = SpectraSpecification.from_file(
-            "../input-files/case-studies/spectra/strengthened/arbiter/ideal.spectra")
+            "../input-files/case-studies/spectra/case_study_1/arbiter/ideal.spectra")
         spec_trivial: SpectraSpecification = SpectraSpecification.from_file(
             "./test_files/out/trivial_solutions/arbiter.spectra")
         self.assertTrue(spec_ideal.implies(spec_trivial, GR1FormulaType.GAR))
@@ -496,26 +496,26 @@ root_consequent_holds(OP,guarantee4,0,1,T1,S):-
 
     def test_minepump_compare(self):
         spec_ideal: SpectraSpecification = SpectraSpecification.from_file(
-            "../input-files/case-studies/spectra/strengthened/minepump/ideal.spectra")
+            "../input-files/case-studies/spectra/case_study_1/minepump/ideal.spectra")
         spec_strong: SpectraSpecification = SpectraSpecification.from_file(
-            "../input-files/case-studies/spectra/strengthened/minepump/strong.spectra")
+            "../input-files/case-studies/spectra/case_study_1/minepump/strong.spectra")
         self.assertTrue(spec_ideal.implied_by(spec_strong, GR1FormulaType.GAR))
         self.assertTrue(spec_ideal.implied_by(spec_strong, GR1FormulaType.ASM))
 
     def test_minepump_is_trivial(self):
         spec_ideal: SpectraSpecification = SpectraSpecification.from_file(
-            "../input-files/case-studies/spectra/strengthened/minepump/ideal.spectra")
+            "../input-files/case-studies/spectra/case_study_1/minepump/ideal.spectra")
         self.assertFalse(spec_ideal.is_trivial_true(GR1FormulaType.ASM))
         self.assertFalse(spec_ideal.is_trivial_false(GR1FormulaType.ASM))
 
         spec_strong: SpectraSpecification = SpectraSpecification.from_file(
-            "../input-files/case-studies/spectra/strengthened/minepump/strong.spectra")
+            "../input-files/case-studies/spectra/case_study_1/minepump/strong.spectra")
         self.assertFalse(spec_strong.is_trivial_true(GR1FormulaType.ASM))
         self.assertFalse(spec_strong.is_trivial_false(GR1FormulaType.ASM))
 
     def test_minepump_strongest_equivalent_to_best_repair(self):
         spec_strong: SpectraSpecification = SpectraSpecification.from_file(
-            "../input-files/case-studies/spectra/strengthened/minepump/strong.spectra")
+            "../input-files/case-studies/spectra/case_study_1/minepump/strong.spectra")
         spec_best: SpectraSpecification = SpectraSpecification.from_file(
             "./test_files/expected/minepump_best_repair/merged_14.spectra")
 
@@ -524,9 +524,9 @@ root_consequent_holds(OP,guarantee4,0,1,T1,S):-
 
     def test_extract_gr1_expressions_of_type_spot(self):
         spec_ideal: SpectraSpecification = SpectraSpecification.from_file(
-            "../input-files/case-studies/spectra/strengthened/minepump/ideal.spectra")
+            "../input-files/case-studies/spectra/case_study_1/minepump/ideal.spectra")
         spec_strong: SpectraSpecification = SpectraSpecification.from_file(
-            "../input-files/case-studies/spectra/strengthened/minepump/strong.spectra")
+            "../input-files/case-studies/spectra/case_study_1/minepump/strong.spectra")
 
         formatter = SpotSpecificationFormatter(GR1FormulaType.ASM)
         spec_ideal_spot: str = spec_ideal.to_formatted_string(formatter)
@@ -542,9 +542,9 @@ root_consequent_holds(OP,guarantee4,0,1,T1,S):-
 
     def test_extract_gr1_expressions_of_type_spot_no_initial(self):
         spec_ideal: SpectraSpecification = SpectraSpecification.from_file(
-            "../input-files/case-studies/spectra/strengthened/minepump/ideal.spectra")
+            "../input-files/case-studies/spectra/case_study_1/minepump/ideal.spectra")
         spec_strong: SpectraSpecification = SpectraSpecification.from_file(
-            "../input-files/case-studies/spectra/strengthened/minepump/strong.spectra")
+            "../input-files/case-studies/spectra/case_study_1/minepump/strong.spectra")
 
         formatter = SpotSpecificationFormatter(GR1FormulaType.ASM, not_initial=True)
         spec_ideal_spot: str = spec_ideal.to_formatted_string(formatter)
@@ -560,9 +560,9 @@ root_consequent_holds(OP,guarantee4,0,1,T1,S):-
 
     def test_weakness_measurement(self):
         spec_ideal: SpectraSpecification = SpectraSpecification.from_file(
-            "../input-files/case-studies/spectra/strengthened/minepump/ideal.spectra")
+            "../input-files/case-studies/spectra/case_study_1/minepump/ideal.spectra")
         spec_strong: SpectraSpecification = SpectraSpecification.from_file(
-            "../input-files/case-studies/spectra/strengthened/minepump/strong.spectra")
+            "../input-files/case-studies/spectra/case_study_1/minepump/strong.spectra")
 
         spec_ideal_weakness: Weakness = spec_ideal.get_weakness(None)
         print(spec_ideal_weakness)

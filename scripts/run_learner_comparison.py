@@ -9,11 +9,11 @@ useful result is *which* ones, measured, rather than a hung terminal.
 
     # FastLAS over the trace-violation case studies, 15 minutes each
     python scripts/run_learner_comparison.py --learner fastlas \\
-        --setup trace_violation --timeout 900
+        --setup case_study_2 --timeout 900
 
     # both learners over both setups, writing a JSON summary
     python scripts/run_learner_comparison.py --learner fastlas ilasp \\
-        --setup strengthened trace_violation -o results.json
+        --setup case_study_1 case_study_2 -o results.json
 
 Results are appended to the JSON file as each run finishes, so a sweep that is
 interrupted still leaves everything completed up to that point.
@@ -30,27 +30,27 @@ from typing import Dict, List, Optional
 REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 TESTS_OUT = os.path.join(REPO_ROOT, "tests", "test_files", "out")
 
-ORCHESTRATOR_TEST = ("tests.test_main.test_bfs_repair_orchestrator"
-                     ".TestBFSRepairOrchestrator.test_bfs_repair_spec_{case_study}_syn")
-TRACE_TEST = ("tests.test_main.test_bfs_repair_trace_violation"
-              ".TestBFSRepairTraceViolation"
-              ".test_bfs_repair_trace_violation_{case_study}_{trace}_syn")
+CASE_STUDY_1_TEST = ("tests.test_main.test_case_study_1"
+                     ".TestCaseStudy1.test_case_study_1_{case_study}_syn")
+CASE_STUDY_2_TEST = ("tests.test_main.test_case_study_2"
+              ".TestCaseStudy2"
+              ".test_case_study_2_{case_study}_{trace}_syn")
 
 # arbiter appears under strengthened only: in the trace-violation setup its sole
 # assumption is GF(a), which a finite prefix always satisfies, so it has no
 # violating trace and no run to make.
-STRENGTHENED_CASE_STUDIES = [
+CASE_STUDY_1_LIST = [
     "amba", "arbiter", "colorsort", "elevator", "genbuf", "gyro", "humanoid",
     "lift", "minepump", "pcar", "traffic_single", "traffic_updated",
 ]
-TRACE_CASE_STUDIES = [
+CASE_STUDY_2_LIST = [
     "amba", "colorsort", "elevator", "genbuf", "gyro", "humanoid", "lift",
     "minepump", "minepump_liveness", "pcar", "traffic_single", "traffic_updated",
 ]
 
 SETUPS = {
-    "strengthened": (STRENGTHENED_CASE_STUDIES, "repair_syn"),
-    "trace_violation": (TRACE_CASE_STUDIES, "repair_trace_syn"),
+    "case_study_1": (CASE_STUDY_1_LIST, "case_study_1"),
+    "case_study_2": (CASE_STUDY_2_LIST, "case_study_2"),
 }
 
 
@@ -58,7 +58,7 @@ def out_dir_for(setup: str, case_study: str, learner: str, trace: int, date: str
     """Mirror of the naming the test helpers use, for reading results back."""
     _, subdir = SETUPS[setup]
     suffix = "" if learner == "ilasp" else f"_{learner}"
-    name = case_study if setup == "strengthened" else f"{case_study}_trace{trace}"
+    name = case_study if setup == "case_study_1" else f"{case_study}_trace{trace}"
     return os.path.join(TESTS_OUT, subdir, f"{name}{suffix}_{date}")
 
 
@@ -73,11 +73,11 @@ def count_specs(run_dir: str) -> Dict[str, int]:
 
 def run_one(setup: str, case_study: str, learner: str, trace: int,
             timeout: int, date: str, fastlas_runs: int = 1) -> dict:
-    test = (ORCHESTRATOR_TEST if setup == "strengthened" else TRACE_TEST).format(
+    test = (CASE_STUDY_1_TEST if setup == "case_study_1" else CASE_STUDY_2_TEST).format(
         case_study=case_study, trace=trace)
     env = dict(os.environ, SPEC_REPAIR_LEARNER=learner,
                SPEC_REPAIR_FASTLAS_RUNS=str(fastlas_runs))
-    label = f"{setup}/{case_study}" + ("" if setup == "strengthened" else f" trace{trace}")
+    label = f"{setup}/{case_study}" + ("" if setup == "case_study_1" else f" trace{trace}")
     print(f"  {label} [{learner}] ...", end="", flush=True)
 
     start = time.time()
@@ -96,7 +96,7 @@ def run_one(setup: str, case_study: str, learner: str, trace: int,
     run_dir = out_dir_for(setup, case_study, learner, trace, date)
     result = {
         "setup": setup, "case_study": case_study, "learner": learner,
-        "trace": trace if setup == "trace_violation" else None,
+        "trace": trace if setup == "case_study_2" else None,
         "status": status, "seconds": round(elapsed, 1),
         "run_dir": os.path.relpath(run_dir, REPO_ROOT),
         **count_specs(run_dir),

@@ -42,7 +42,7 @@ class TestRepairPreconditions(BaseTestCase):
         core is empty, the learning task is UNSAT, and the branch died without
         reaching a leaf.
         """
-        d = f'{CASE_STUDIES}/strengthened/humanoid_updated'
+        d = f'{CASE_STUDIES}/case_study_1/humanoid_updated'
         with self.assertRaises(InvalidCaseStudyException) as ctx:
             _run(f'{d}/strong.spectra', f'{d}/violation_trace.txt')
         self.assertIn("no assumption at all", str(ctx.exception))
@@ -52,14 +52,14 @@ class TestRepairPreconditions(BaseTestCase):
         gyro's trace 0 violates only `initially_not_ready`. Weakening an initial
         assumption pulls system variables into it, which Spectra's CLI forbids.
         """
-        d = f'{CASE_STUDIES}/trace_violation/gyro'
+        d = f'{CASE_STUDIES}/case_study_2/gyro'
         with self.assertRaises(InvalidCaseStudyException) as ctx:
             _run(f'{d}/original.spectra', f'{d}/violation_trace_0.txt')
         self.assertIn("initial assumption", str(ctx.exception))
 
     def test_a_valid_case_study_is_not_rejected(self):
         """elevator violates a non-initial assumption from a realisable spec."""
-        d = f'{CASE_STUDIES}/trace_violation/elevator'
+        d = f'{CASE_STUDIES}/case_study_2/elevator'
         _run(f'{d}/original.spectra', f'{d}/violation_trace_0.txt')
 
 

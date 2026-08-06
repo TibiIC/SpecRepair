@@ -9,14 +9,14 @@
 # the strong.spectra/ideal.spectra pair that setup does not have.
 #
 # Usage:
-#   ./run_trace_experiment_pipeline.sh 2026-07-30
-#   ./run_trace_experiment_pipeline.sh 2026-07-30 minepump_trace0   # one run
-#   SKIP_GRAPH=1 ./run_trace_experiment_pipeline.sh 2026-07-30
+#   ./run_case_study_2_pipeline.sh 2026-07-30
+#   ./run_case_study_2_pipeline.sh 2026-07-30 minepump_trace0   # one run
+#   SKIP_GRAPH=1 ./run_case_study_2_pipeline.sh 2026-07-30
 #
 # Step 1, pulling the runs from the remote, is pull_experiment_from_ssh.sh with
-# REMOTE_SUBDIR=repair_trace_syn:
+# REMOTE_SUBDIR=case_study_2:
 #
-#   REMOTE_SUBDIR=repair_trace_syn ./scripts/pull_experiment_from_ssh.sh 2026-07-30
+#   REMOTE_SUBDIR=case_study_2 ./scripts/pull_experiment_from_ssh.sh 2026-07-30
 
 set -euo pipefail
 

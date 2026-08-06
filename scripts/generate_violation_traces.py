@@ -7,11 +7,11 @@ while every other assumption and every guarantee still holds.
 
     # one case study
     python scripts/generate_violation_traces.py \
-        input-files/case-studies/spectra/trace_violation/minepump
+        input-files/case-studies/spectra/case_study_2/minepump
 
     # every case study in the new-approach folder
     python scripts/generate_violation_traces.py \
-        input-files/case-studies/spectra/trace_violation --all
+        input-files/case-studies/spectra/case_study_2 --all
 
     # report which assumptions are violable, without writing anything
     python scripts/generate_violation_traces.py <dir> --report-only

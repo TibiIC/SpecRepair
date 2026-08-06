@@ -1,8 +1,8 @@
 """
 BFS repair over the trace-violation case studies.
 
-The counterpart to `test_bfs_repair_orchestrator.py`'s `*_syn` tests, for the
-setup in `input-files/case-studies/spectra/trace_violation/`. Two differences,
+The counterpart to `test_case_study_1.py`'s `*_syn` tests, for the
+setup in `input-files/case-studies/spectra/case_study_2/`. Two differences,
 both from the pivot away from artificial strengthening:
 
 * the specification to repair is `original.spectra`, not `strong.spectra` - it
@@ -15,13 +15,13 @@ both from the pivot away from artificial strengthening:
 
 One test method per (case study, trace), generated at import so each gets its
 own name and can be selected individually - which is what
-`run_parallel_bfs_repair_trace.sh` needs to give each its own tmux window:
+`run_case_study_2.sh` needs to give each its own tmux window:
 
-    test_bfs_repair_trace_violation_minepump_0_syn
-    test_bfs_repair_trace_violation_minepump_1_syn
+    test_case_study_2_minepump_0_syn
+    test_case_study_2_minepump_1_syn
     ...
 
-Output goes to `test_files/out/repair_trace_syn/<case_study>_trace<ID>_<date>/`,
+Output goes to `test_files/out/case_study_2/<case_study>_trace<ID>_<date>/`,
 which is the layout `pull_experiment_from_ssh.sh` expects under a different
 REMOTE_SUBDIR.
 """
@@ -37,11 +37,11 @@ from spec_repair.enums import Learning
 from spec_repair.model.spectra_specification import SpectraSpecification
 from spec_repair.util.file_util import read_file_lines
 from tests.base_test_case import BaseTestCase
-from tests.test_main.test_bfs_repair_orchestrator import learner_suffix, save_layered_graph
+from tests.test_main.test_case_study_1 import learner_suffix, save_layered_graph
 
 CASE_STUDIES_DIR = os.path.join(
     os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))),
-    "input-files", "case-studies", "spectra", "trace_violation")
+    "input-files", "case-studies", "spectra", "case_study_2")
 
 ORIGINAL_SPEC = "original.spectra"
 TRACE_RE = re.compile(r"^violation_trace_(\d+)\.txt$")
@@ -69,7 +69,7 @@ def discover_case_studies() -> List[tuple]:
     return found
 
 
-class TestBFSRepairTraceViolation(BaseTestCase):
+class TestCaseStudy2(BaseTestCase):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
@@ -77,18 +77,18 @@ class TestBFSRepairTraceViolation(BaseTestCase):
         cls.learner = learner_from_env()
         cls.learner_suffix = learner_suffix(cls.learner)
 
-    def run_bfs_repair_trace_syn(self, case_study_name: str, trace_id: int,
+    def run_case_study_2_repair(self, case_study_name: str, trace_id: int,
                                  out_test_dir_name: str = None, is_debug: bool = True) -> List[str]:
         """
         Repair `original.spectra` against one of its violating traces.
 
-        Mirrors `run_bfs_repair_syn_unique`, with `original.spectra` in the role
+        Mirrors `run_case_study_1_repair`, with `original.spectra` in the role
         `strong.spectra` used to play and a numbered trace instead of the single
         `violation_trace.txt`.
         """
         case_study_path = os.path.join(CASE_STUDIES_DIR, case_study_name)
         if not out_test_dir_name:
-            out_test_dir_name = (f"./test_files/out/repair_trace_syn/"
+            out_test_dir_name = (f"./test_files/out/case_study_2/"
                                  f"{case_study_name}_trace{trace_id}"
                                  f"{self.learner_suffix}_{self.date_str}")
         log_file = f"{out_test_dir_name}/log.txt"
@@ -118,17 +118,17 @@ class TestBFSRepairTraceViolation(BaseTestCase):
 
 def _make_test(case_study_name: str, trace_id: int):
     def test(self):
-        new_spec_strings = self.run_bfs_repair_trace_syn(case_study_name, trace_id, is_debug=True)
+        new_spec_strings = self.run_case_study_2_repair(case_study_name, trace_id, is_debug=True)
         print(f"{case_study_name} trace {trace_id}: {len(new_spec_strings)} repaired spec(s)")
         # No expected-output comparison: unlike the strengthened setup, nothing
         # here manufactured the specification, so there is no known answer to
         # check against. Repair producing at least one weakening is the claim.
         self.assertGreater(len(new_spec_strings), 0,
                            f"{case_study_name} trace {trace_id} produced no repaired specification")
-    test.__name__ = f"test_bfs_repair_trace_violation_{case_study_name}_{trace_id}_syn"
+    test.__name__ = f"test_case_study_2_{case_study_name}_{trace_id}_syn"
     return test
 
 
 for _case_study, _trace_id in discover_case_studies():
     _method = _make_test(_case_study, _trace_id)
-    setattr(TestBFSRepairTraceViolation, _method.__name__, _method)
+    setattr(TestCaseStudy2, _method.__name__, _method)

@@ -3,7 +3,7 @@
 Two experimental setups, kept in separate folders because they construct the
 repair scenario in fundamentally different ways.
 
-## `strengthened/` — the original setup
+## `case_study_1/` — the original setup
 
 Each case study holds:
 
@@ -22,7 +22,7 @@ The `*_updated` variants are the same setup with a `strong.spectra` that
 strengthens at least one assumption **and** at least one guarantee, since every
 other `strong.spectra` happens to be assumption-only.
 
-## `trace_violation/` — the current setup
+## `case_study_2/` — the current setup
 
 Each case study holds:
 
@@ -61,15 +61,15 @@ looking up `original.spectra` for the graph.
 ```bash
 # report which assumptions can be violated, and at what trace lengths
 python scripts/generate_violation_traces.py \
-    input-files/case-studies/spectra/trace_violation --all --report-only
+    input-files/case-studies/spectra/case_study_2 --all --report-only
 
 # generate two traces per case study, reproducibly
 python scripts/generate_violation_traces.py \
-    input-files/case-studies/spectra/trace_violation --all -n 2 --seed 0 --clean
+    input-files/case-studies/spectra/case_study_2 --all -n 2 --seed 0 --clean
 
 # only target invariant (G) assumptions, skipping `ini` and `GF` ones
 python scripts/generate_violation_traces.py \
-    input-files/case-studies/spectra/trace_violation/minepump \
+    input-files/case-studies/spectra/case_study_2/minepump \
     --invariant-only -n 5 --max-timepoints 5 --seed 0 --clean
 ```
 
@@ -95,7 +95,7 @@ causes, all real rather than tool limitations:
    `G(!highwater -> (!highwater | !methane))`, equivalent to `true`, so no trace
    of any length violated it. It has since been strengthened to
    `G(!highwater | !methane)` — making `original.spectra` identical to the old
-   `strengthened/minepump/strong.spectra`, which is how this case study is
+   `case_study_1/minepump/strong.spectra`, which is how this case study is
    studied — and is now violable from 2 timepoints. The pattern is still worth
    watching for elsewhere.
 2. **Not enough timepoints.** A trace is a finite prefix ending in a *weak

@@ -24,7 +24,7 @@ ct_name = "counter_strat_0_0"
 class TestOrchestrationManagerSyntacticEquivalence(BaseTestCase):
     def test_initialise_learning_tasks(self):
         om = OrchestrationManagerSyntacticEquivalence()
-        case_study_path = '../input-files/case-studies/spectra/strengthened/minepump'
+        case_study_path = '../input-files/case-studies/spectra/case_study_1/minepump'
         spec: SpectraSpecification = SpectraSpecification.from_file(f"{case_study_path}/strong.spectra")
         trace: list[str] = read_file_lines(f"{case_study_path}/violation_trace.txt")
         data: RepairData = RepairData(trace, [], Learning.ASSUMPTION_WEAKENING, [], 0, 0)
@@ -41,7 +41,7 @@ class TestOrchestrationManagerSyntacticEquivalence(BaseTestCase):
 
     def test_enqueue_new_tasks_same(self):
         om = OrchestrationManagerSyntacticEquivalence()
-        case_study_path = '../input-files/case-studies/spectra/strengthened/minepump'
+        case_study_path = '../input-files/case-studies/spectra/case_study_1/minepump'
         spec: SpectraSpecification = SpectraSpecification.from_file(f"{case_study_path}/strong.spectra")
         trace: list[str] = read_file_lines(f"{case_study_path}/violation_trace.txt")
         data: RepairData = RepairData(trace, [], Learning.ASSUMPTION_WEAKENING, [], 0, 0)
@@ -64,7 +64,7 @@ class TestOrchestrationManagerSyntacticEquivalence(BaseTestCase):
 
     def test_enqueue_new_tasks_semantically_equivalent(self):
         om = OrchestrationManagerSyntacticEquivalence()
-        case_study_path = '../input-files/case-studies/spectra/strengthened/minepump'
+        case_study_path = '../input-files/case-studies/spectra/case_study_1/minepump'
         spec: SpectraSpecification = SpectraSpecification.from_file(f"{case_study_path}/strong.spectra")
         spec_1: SpectraSpecification = SpectraSpecification.from_file("./test_files/minepump_aw_highwater.spectra")
         spec_2: SpectraSpecification = SpectraSpecification.from_file("./test_files/minepump_aw_methane.spectra")
@@ -97,7 +97,7 @@ class TestOrchestrationManagerSyntacticEquivalence(BaseTestCase):
 
     def test_enqueue_new_tasks_different(self):
         om = OrchestrationManagerSyntacticEquivalence()
-        case_study_path = '../input-files/case-studies/spectra/strengthened/minepump'
+        case_study_path = '../input-files/case-studies/spectra/case_study_1/minepump'
         spec_1: SpectraSpecification = SpectraSpecification.from_file(f"{case_study_path}/strong.spectra")
         trace: list[str] = read_file_lines(f"{case_study_path}/violation_trace.txt")
         data_1: RepairData = RepairData(trace, [], Learning.ASSUMPTION_WEAKENING, [], 0, 0)
@@ -119,7 +119,7 @@ class TestOrchestrationManagerSyntacticEquivalence(BaseTestCase):
 
     def test_has_next(self):
         om = OrchestrationManagerSyntacticEquivalence()
-        case_study_path = '../input-files/case-studies/spectra/strengthened/minepump'
+        case_study_path = '../input-files/case-studies/spectra/case_study_1/minepump'
         spec_1: SpectraSpecification = SpectraSpecification.from_file(f"{case_study_path}/strong.spectra")
         trace: list[str] = read_file_lines(f"{case_study_path}/violation_trace.txt")
         data_1: RepairData = RepairData(trace, [], Learning.ASSUMPTION_WEAKENING, [], 0, 0)
@@ -138,7 +138,7 @@ class TestOrchestrationManagerSyntacticEquivalence(BaseTestCase):
 
     def test_get_next(self):
         om = OrchestrationManagerSyntacticEquivalence()
-        case_study_path = '../input-files/case-studies/spectra/strengthened/minepump'
+        case_study_path = '../input-files/case-studies/spectra/case_study_1/minepump'
         spec_1: SpectraSpecification = SpectraSpecification.from_file(f"{case_study_path}/strong.spectra")
         trace: list[str] = read_file_lines(f"{case_study_path}/violation_trace.txt")
         data_1: RepairData = RepairData(trace, [], Learning.ASSUMPTION_WEAKENING, [], 0, 0)
@@ -174,7 +174,7 @@ class TestGraphEdgeAnnotationDegradesGracefully(BaseTestCase):
     """
 
     def setUp(self):
-        case_study_path = '../input-files/case-studies/spectra/strengthened/minepump'
+        case_study_path = '../input-files/case-studies/spectra/case_study_1/minepump'
         self.spec = SpectraSpecification.from_file(f"{case_study_path}/strong.spectra")
         self.trace = read_file_lines(f"{case_study_path}/violation_trace.txt")
 

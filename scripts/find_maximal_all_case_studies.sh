@@ -21,11 +21,11 @@ INPUT_FILES=(
     # "tests/test_files/out/repair/minepump_${DATE}"
     # "tests/test_files/out/repair/arbiter_${DATE}"
     # "tests/test_files/out/repair/lift_${DATE}"
-    # "tests/test_files/out_ssh/repair_syn/arbiter_${DATE}/final"
-    # "tests/test_files/out_ssh/repair_syn/minepump_${DATE}/final"
-    "tests/test_files/out_ssh/repair_syn/lift_${DATE}/distinct"
-    "tests/test_files/out_ssh/repair_syn/traffic_single_${DATE}/distinct"
-    "tests/test_files/out_ssh/repair_syn/traffic_updated_${DATE}/distinct"
+    # "tests/test_files/out_ssh/case_study_1/arbiter_${DATE}/final"
+    # "tests/test_files/out_ssh/case_study_1/minepump_${DATE}/final"
+    "tests/test_files/out_ssh/case_study_1/lift_${DATE}/distinct"
+    "tests/test_files/out_ssh/case_study_1/traffic_single_${DATE}/distinct"
+    "tests/test_files/out_ssh/case_study_1/traffic_updated_${DATE}/distinct"
 )
 
 OUTPUT_FILES=(

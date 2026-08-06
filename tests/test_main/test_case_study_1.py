@@ -82,7 +82,7 @@ def learner_suffix(learner: str) -> str:
     return "" if learner == DEFAULT_LEARNER else f"_{learner}"
 
 
-class TestBFSRepairOrchestrator(BaseTestCase):
+class TestCaseStudy1(BaseTestCase):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
@@ -92,36 +92,36 @@ class TestBFSRepairOrchestrator(BaseTestCase):
         cls.learner = learner_from_env()
         cls.learner_suffix = learner_suffix(cls.learner)
 
-    def test_bfs_repair_spec_arbiter(self):
+    def test_case_study_1_arbiter(self):
         case_study_name = 'arbiter'
-        case_study_path = '../input-files/case-studies/spectra/strengthened/arbiter'
+        case_study_path = '../input-files/case-studies/spectra/case_study_1/arbiter'
         new_spec_strings = self.run_bfs_repair_sem_unique(
             case_study_name,
             case_study_path,
             is_debug=True
         )
 
-    def test_bfs_repair_spec_traffic_single(self):
+    def test_case_study_1_traffic_single(self):
         case_study_name = 'traffic_single'
-        case_study_path = '../input-files/case-studies/spectra/strengthened/traffic_single'
+        case_study_path = '../input-files/case-studies/spectra/case_study_1/traffic_single'
         new_spec_strings = self.run_bfs_repair_sem_unique(
             case_study_name,
             case_study_path,
             is_debug=True
         )
 
-    def test_bfs_repair_spec_traffic_updated(self):
+    def test_case_study_1_traffic_updated(self):
         case_study_name = 'traffic_updated'
-        case_study_path = '../input-files/case-studies/spectra/strengthened/traffic_updated'
+        case_study_path = '../input-files/case-studies/spectra/case_study_1/traffic_updated'
         new_spec_strings = self.run_bfs_repair_sem_unique(
             case_study_name,
             case_study_path,
             is_debug=True
         )
 
-    def test_bfs_repair_spec_lift(self):
+    def test_case_study_1_lift(self):
         case_study_name = 'lift'
-        case_study_path = '../input-files/case-studies/spectra/strengthened/lift'
+        case_study_path = '../input-files/case-studies/spectra/case_study_1/lift'
         new_spec_strings = self.run_bfs_repair_sem_unique(
             case_study_name,
             case_study_path,
@@ -145,9 +145,9 @@ class TestBFSRepairOrchestrator(BaseTestCase):
             print(i)
             self.assertIn(expected_specs.to_str(), new_spec_strings)
 
-    def test_bfs_repair_spec_minepump(self):
+    def test_case_study_1_minepump(self):
         case_study_name = 'minepump'
-        case_study_path = '../input-files/case-studies/spectra/strengthened/minepump'
+        case_study_path = '../input-files/case-studies/spectra/case_study_1/minepump'
         new_spec_strings = self.run_bfs_repair_sem_unique(case_study_name, case_study_path, is_debug=True)
 
         expected_specs_files: list[str] = os.listdir('./test_files/minepump_weakenings')
@@ -161,128 +161,128 @@ class TestBFSRepairOrchestrator(BaseTestCase):
             print(i)
             self.assertIn(expected_spec.to_str(), new_spec_strings)
 
-    def test_bfs_repair_spec_submarine(self):
+    def test_case_study_1_submarine(self):
         case_study_name = 'submarine'
-        case_study_path = '../input-files/case-studies/spectra/strengthened/submarine'
+        case_study_path = '../input-files/case-studies/spectra/case_study_1/submarine'
         new_spec_strings = self.run_bfs_repair_sem_unique(
             case_study_name,
             case_study_path,
             is_debug=True
         )
 
-    def test_bfs_repair_spec_arbiter_syn(self):
+    def test_case_study_1_arbiter_syn(self):
         case_study_name = 'arbiter'
-        case_study_path = '../input-files/case-studies/spectra/strengthened/arbiter'
-        new_spec_strings = self.run_bfs_repair_syn_unique(
+        case_study_path = '../input-files/case-studies/spectra/case_study_1/arbiter'
+        new_spec_strings = self.run_case_study_1_repair(
             case_study_name,
             case_study_path,
             is_debug=True
         )
 
-    def test_bfs_repair_spec_traffic_single_syn(self):
+    def test_case_study_1_traffic_single_syn(self):
         case_study_name = 'traffic_single'
-        case_study_path = '../input-files/case-studies/spectra/strengthened/traffic_single'
-        new_spec_strings = self.run_bfs_repair_syn_unique(
+        case_study_path = '../input-files/case-studies/spectra/case_study_1/traffic_single'
+        new_spec_strings = self.run_case_study_1_repair(
             case_study_name,
             case_study_path,
             is_debug=True
         )
 
-    def test_bfs_repair_spec_traffic_updated_syn(self):
+    def test_case_study_1_traffic_updated_syn(self):
         case_study_name = 'traffic_updated'
-        case_study_path = '../input-files/case-studies/spectra/strengthened/traffic_updated'
-        new_spec_strings = self.run_bfs_repair_syn_unique(
+        case_study_path = '../input-files/case-studies/spectra/case_study_1/traffic_updated'
+        new_spec_strings = self.run_case_study_1_repair(
             case_study_name,
             case_study_path,
             is_debug=True
         )
 
-    def test_bfs_repair_spec_lift_syn(self):
+    def test_case_study_1_lift_syn(self):
         case_study_name = 'lift'
-        case_study_path = '../input-files/case-studies/spectra/strengthened/lift'
-        new_spec_strings = self.run_bfs_repair_syn_unique(
+        case_study_path = '../input-files/case-studies/spectra/case_study_1/lift'
+        new_spec_strings = self.run_case_study_1_repair(
             case_study_name,
             case_study_path,
             is_debug=True
         )
 
-    def test_bfs_repair_spec_minepump_syn(self):
+    def test_case_study_1_minepump_syn(self):
         case_study_name = 'minepump'
-        case_study_path = '../input-files/case-studies/spectra/strengthened/minepump'
-        new_spec_strings = self.run_bfs_repair_syn_unique(
+        case_study_path = '../input-files/case-studies/spectra/case_study_1/minepump'
+        new_spec_strings = self.run_case_study_1_repair(
             case_study_name,
             case_study_path,
             is_debug=True
         )
 
-    def test_bfs_repair_spec_amba_syn(self):
+    def test_case_study_1_amba_syn(self):
         """
         AMBA AHB. Its source uses arrays, Int ranges, predicates, forall,
         quantified templates and Dwyer patterns; amba_desugar lowers those into
         the boolean+enum subset enum_desugar takes. 63 formulas, 34 atoms.
         """
         case_study_name = 'amba'
-        case_study_path = '../input-files/case-studies/spectra/strengthened/amba'
-        new_spec_strings = self.run_bfs_repair_syn_unique(
+        case_study_path = '../input-files/case-studies/spectra/case_study_1/amba'
+        new_spec_strings = self.run_case_study_1_repair(
             case_study_name,
             case_study_path,
             is_debug=True
         )
 
-    def test_bfs_repair_spec_genbuf_syn(self):
+    def test_case_study_1_genbuf_syn(self):
         """
         Generalised buffer. Its formulas are unnamed in the source, which the
         parser silently ignored - the previous strong.spectra here loaded as an
         empty specification. Regenerated through enum_desugar: 109 formulas.
         """
         case_study_name = 'genbuf'
-        case_study_path = '../input-files/case-studies/spectra/strengthened/genbuf'
-        new_spec_strings = self.run_bfs_repair_syn_unique(
+        case_study_path = '../input-files/case-studies/spectra/case_study_1/genbuf'
+        new_spec_strings = self.run_case_study_1_repair(
             case_study_name,
             case_study_path,
             is_debug=True
         )
 
-    def test_bfs_repair_spec_colorsort_syn(self):
+    def test_case_study_1_colorsort_syn(self):
         case_study_name = 'colorsort'
-        case_study_path = '../input-files/case-studies/spectra/strengthened/colorsort'
-        new_spec_strings = self.run_bfs_repair_syn_unique(
+        case_study_path = '../input-files/case-studies/spectra/case_study_1/colorsort'
+        new_spec_strings = self.run_case_study_1_repair(
             case_study_name,
             case_study_path,
             is_debug=True
         )
 
-    def test_bfs_repair_spec_gyro_syn(self):
+    def test_case_study_1_gyro_syn(self):
         case_study_name = 'gyro'
-        case_study_path = '../input-files/case-studies/spectra/strengthened/gyro'
-        new_spec_strings = self.run_bfs_repair_syn_unique(
+        case_study_path = '../input-files/case-studies/spectra/case_study_1/gyro'
+        new_spec_strings = self.run_case_study_1_repair(
             case_study_name,
             case_study_path,
             is_debug=True
         )
 
-    def test_bfs_repair_spec_elevator_syn(self):
+    def test_case_study_1_elevator_syn(self):
         case_study_name = 'elevator'
-        case_study_path = '../input-files/case-studies/spectra/strengthened/elevator'
-        new_spec_strings = self.run_bfs_repair_syn_unique(
+        case_study_path = '../input-files/case-studies/spectra/case_study_1/elevator'
+        new_spec_strings = self.run_case_study_1_repair(
             case_study_name,
             case_study_path,
             is_debug=True
         )
 
-    def test_bfs_repair_spec_humanoid_syn(self):
+    def test_case_study_1_humanoid_syn(self):
         case_study_name = 'humanoid'
-        case_study_path = '../input-files/case-studies/spectra/strengthened/humanoid'
-        new_spec_strings = self.run_bfs_repair_syn_unique(
+        case_study_path = '../input-files/case-studies/spectra/case_study_1/humanoid'
+        new_spec_strings = self.run_case_study_1_repair(
             case_study_name,
             case_study_path,
             is_debug=True
         )
 
-    def test_bfs_repair_spec_pcar_syn(self):
+    def test_case_study_1_pcar_syn(self):
         case_study_name = 'pcar'
-        case_study_path = '../input-files/case-studies/spectra/strengthened/pcar'
-        new_spec_strings = self.run_bfs_repair_syn_unique(
+        case_study_path = '../input-files/case-studies/spectra/case_study_1/pcar'
+        new_spec_strings = self.run_case_study_1_repair(
             case_study_name,
             case_study_path,
             is_debug=True
@@ -293,72 +293,72 @@ class TestBFSRepairOrchestrator(BaseTestCase):
     # AND at least one guarantee. The original fixtures all happen to be
     # assumption-only, so these exercise the guarantee-weakening half of the
     # repair search against a violation that genuinely requires it.
-    def test_bfs_repair_spec_elevator_updated_syn(self):
+    def test_case_study_1_elevator_updated_syn(self):
         case_study_name = 'elevator_updated'
-        case_study_path = '../input-files/case-studies/spectra/strengthened/elevator_updated'
-        new_spec_strings = self.run_bfs_repair_syn_unique(
+        case_study_path = '../input-files/case-studies/spectra/case_study_1/elevator_updated'
+        new_spec_strings = self.run_case_study_1_repair(
             case_study_name,
             case_study_path,
             is_debug=True
         )
 
-    def test_bfs_repair_spec_gyro_updated_syn(self):
+    def test_case_study_1_gyro_updated_syn(self):
         case_study_name = 'gyro_updated'
-        case_study_path = '../input-files/case-studies/spectra/strengthened/gyro_updated'
-        new_spec_strings = self.run_bfs_repair_syn_unique(
+        case_study_path = '../input-files/case-studies/spectra/case_study_1/gyro_updated'
+        new_spec_strings = self.run_case_study_1_repair(
             case_study_name,
             case_study_path,
             is_debug=True
         )
 
-    def test_bfs_repair_spec_humanoid_updated_syn(self):
+    def test_case_study_1_humanoid_updated_syn(self):
         case_study_name = 'humanoid_updated'
-        case_study_path = '../input-files/case-studies/spectra/strengthened/humanoid_updated'
-        new_spec_strings = self.run_bfs_repair_syn_unique(
+        case_study_path = '../input-files/case-studies/spectra/case_study_1/humanoid_updated'
+        new_spec_strings = self.run_case_study_1_repair(
             case_study_name,
             case_study_path,
             is_debug=True
         )
 
-    def test_bfs_repair_spec_pcar_updated_syn(self):
+    def test_case_study_1_pcar_updated_syn(self):
         case_study_name = 'pcar_updated'
-        case_study_path = '../input-files/case-studies/spectra/strengthened/pcar_updated'
-        new_spec_strings = self.run_bfs_repair_syn_unique(
+        case_study_path = '../input-files/case-studies/spectra/case_study_1/pcar_updated'
+        new_spec_strings = self.run_case_study_1_repair(
             case_study_name,
             case_study_path,
             is_debug=True
         )
 
-    def test_bfs_repair_spec_lift_updated_syn(self):
+    def test_case_study_1_lift_updated_syn(self):
         case_study_name = 'lift_updated'
-        case_study_path = '../input-files/case-studies/spectra/strengthened/lift_updated'
-        new_spec_strings = self.run_bfs_repair_syn_unique(
+        case_study_path = '../input-files/case-studies/spectra/case_study_1/lift_updated'
+        new_spec_strings = self.run_case_study_1_repair(
             case_study_name,
             case_study_path,
             is_debug=True
         )
 
-    def test_bfs_repair_spec_traffic_updated_updated_syn(self):
+    def test_case_study_1_traffic_updated_updated_syn(self):
         case_study_name = 'traffic_updated_updated'
-        case_study_path = '../input-files/case-studies/spectra/strengthened/traffic_updated_updated'
-        new_spec_strings = self.run_bfs_repair_syn_unique(
+        case_study_path = '../input-files/case-studies/spectra/case_study_1/traffic_updated_updated'
+        new_spec_strings = self.run_case_study_1_repair(
             case_study_name,
             case_study_path,
             is_debug=True
         )
 
-    def test_bfs_repair_spec_colorsort_updated_syn(self):
+    def test_case_study_1_colorsort_updated_syn(self):
         case_study_name = 'colorsort_updated'
-        case_study_path = '../input-files/case-studies/spectra/strengthened/colorsort_updated'
-        new_spec_strings = self.run_bfs_repair_syn_unique(
+        case_study_path = '../input-files/case-studies/spectra/case_study_1/colorsort_updated'
+        new_spec_strings = self.run_case_study_1_repair(
             case_study_name,
             case_study_path,
             is_debug=True
         )
 
-    def test_bfs_repair_spec_arbiter_asm_only(self):
+    def test_case_study_1_arbiter_asm_only(self):
         case_study_name = 'arbiter'
-        case_study_path = '../input-files/case-studies/spectra/strengthened/arbiter'
+        case_study_path = '../input-files/case-studies/spectra/case_study_1/arbiter'
         intermediate_spec_strings, new_spec_strings = self.run_bfs_asm_only_repair_sem_unique(
             case_study_name,
             case_study_path,
@@ -367,9 +367,9 @@ class TestBFSRepairOrchestrator(BaseTestCase):
         print(len(intermediate_spec_strings))
         print(len(new_spec_strings))
 
-    def test_bfs_repair_spec_traffic_single_asm_only(self):
+    def test_case_study_1_traffic_single_asm_only(self):
         case_study_name = 'traffic_single'
-        case_study_path = '../input-files/case-studies/spectra/strengthened/traffic_single'
+        case_study_path = '../input-files/case-studies/spectra/case_study_1/traffic_single'
         intermediate_spec_strings, new_spec_strings = self.run_bfs_asm_only_repair_sem_unique(
             case_study_name,
             case_study_path,
@@ -378,9 +378,9 @@ class TestBFSRepairOrchestrator(BaseTestCase):
         print(len(intermediate_spec_strings))
         print(len(new_spec_strings))
 
-    def test_bfs_repair_spec_traffic_updated_asm_only(self):
+    def test_case_study_1_traffic_updated_asm_only(self):
         case_study_name = 'traffic_updated'
-        case_study_path = '../input-files/case-studies/spectra/strengthened/traffic_updated'
+        case_study_path = '../input-files/case-studies/spectra/case_study_1/traffic_updated'
         intermediate_spec_strings, new_spec_strings = self.run_bfs_asm_only_repair_sem_unique(
             case_study_name,
             case_study_path,
@@ -389,9 +389,9 @@ class TestBFSRepairOrchestrator(BaseTestCase):
         print(len(intermediate_spec_strings))
         print(len(new_spec_strings))
 
-    def test_bfs_repair_spec_lift_asm_only(self):
+    def test_case_study_1_lift_asm_only(self):
         case_study_name = 'lift'
-        case_study_path = '../input-files/case-studies/spectra/strengthened/lift'
+        case_study_path = '../input-files/case-studies/spectra/case_study_1/lift'
         intermediate_spec_strings, new_spec_strings = self.run_bfs_asm_only_repair_sem_unique(
             case_study_name,
             case_study_path,
@@ -400,9 +400,9 @@ class TestBFSRepairOrchestrator(BaseTestCase):
         print(len(intermediate_spec_strings))
         print(len(new_spec_strings))
 
-    def test_bfs_repair_spec_minepump_asm_only(self):
+    def test_case_study_1_minepump_asm_only(self):
         case_study_name = 'minepump'
-        case_study_path = '../input-files/case-studies/spectra/strengthened/minepump'
+        case_study_path = '../input-files/case-studies/spectra/case_study_1/minepump'
         intermediate_spec_strings, new_spec_strings = self.run_bfs_asm_only_repair_sem_unique(
             case_study_name,
             case_study_path,
@@ -414,7 +414,7 @@ class TestBFSRepairOrchestrator(BaseTestCase):
     @unittest.skip("skip test")
     def test_single_repair_spec_minepump(self):
         case_study_name = 'minepump'
-        case_study_path = '../input-files/case-studies/spectra/strengthened/minepump'
+        case_study_path = '../input-files/case-studies/spectra/case_study_1/minepump'
         out_test_dir_name = "./test_files/out/minepump_single"
         new_spec_strings = self.run_single_repair(case_study_name, case_study_path, out_test_dir_name)
         print(new_spec_strings)
@@ -422,7 +422,7 @@ class TestBFSRepairOrchestrator(BaseTestCase):
     @unittest.skip("skip test")
     def test_single_repair_spec_minepump_liveness(self):
         case_study_name = 'minepump_liveness'
-        case_study_path = '../input-files/case-studies/spectra/strengthened/minepump_liveness'
+        case_study_path = '../input-files/case-studies/spectra/case_study_1/minepump_liveness'
         out_test_dir_name = "./test_files/out/minepump_liveness_single"
         new_spec_strings = self.run_single_repair(case_study_name, case_study_path, out_test_dir_name)
         print(new_spec_strings)
@@ -511,9 +511,9 @@ class TestBFSRepairOrchestrator(BaseTestCase):
         )
         return new_spec_strings
 
-    def run_bfs_repair_syn_unique(self, case_study_name, case_study_path, out_test_dir_name=None, is_debug=False):
+    def run_case_study_1_repair(self, case_study_name, case_study_path, out_test_dir_name=None, is_debug=False):
         if not out_test_dir_name:
-            out_test_dir_name = f"./test_files/out/repair_syn/{case_study_name}{self.learner_suffix}_{self.date_str}"
+            out_test_dir_name = f"./test_files/out/case_study_1/{case_study_name}{self.learner_suffix}_{self.date_str}"
         log_file = f"{out_test_dir_name}/log.txt"
         transitions_file_path = f"{out_test_dir_name}/transitions.csv"
         if not os.path.exists(out_test_dir_name):

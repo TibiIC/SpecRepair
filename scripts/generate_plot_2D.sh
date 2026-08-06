@@ -7,11 +7,11 @@ date="${EXPERIMENT_DATE:-$(date +_%Y-%m-%d)}"
 
 # Define array of tuples (folder path and file1 path)
 declare -a experiments=(
-    "tests/test_files/out/arbiter input-files/case-studies/spectra/strengthened/arbiter/ideal.spectra input-files/case-studies/spectra/strengthened/arbiter/strong.spectra"
-    "tests/test_files/out/lift input-files/case-studies/spectra/strengthened/lift/ideal.spectra input-files/case-studies/spectra/strengthened/lift/strong.spectra"
-    "tests/test_files/out/minepump input-files/case-studies/spectra/strengthened/minepump/ideal.spectra input-files/case-studies/spectra/strengthened/minepump/strong.spectra"
-    "tests/test_files/out/traffic_single input-files/case-studies/spectra/strengthened/traffic-single/ideal.spectra input-files/case-studies/spectra/strengthened/traffic-single/strong.spectra"
-    "tests/test_files/out/traffic_updated input-files/case-studies/spectra/strengthened/traffic-updated/ideal.spectra input-files/case-studies/spectra/strengthened/traffic-updated/strong.spectra"
+    "tests/test_files/out/arbiter input-files/case-studies/spectra/case_study_1/arbiter/ideal.spectra input-files/case-studies/spectra/case_study_1/arbiter/strong.spectra"
+    "tests/test_files/out/lift input-files/case-studies/spectra/case_study_1/lift/ideal.spectra input-files/case-studies/spectra/case_study_1/lift/strong.spectra"
+    "tests/test_files/out/minepump input-files/case-studies/spectra/case_study_1/minepump/ideal.spectra input-files/case-studies/spectra/case_study_1/minepump/strong.spectra"
+    "tests/test_files/out/traffic_single input-files/case-studies/spectra/case_study_1/traffic-single/ideal.spectra input-files/case-studies/spectra/case_study_1/traffic-single/strong.spectra"
+    "tests/test_files/out/traffic_updated input-files/case-studies/spectra/case_study_1/traffic-updated/ideal.spectra input-files/case-studies/spectra/case_study_1/traffic-updated/strong.spectra"
 )
 
 for pair in "${experiments[@]}"; do
