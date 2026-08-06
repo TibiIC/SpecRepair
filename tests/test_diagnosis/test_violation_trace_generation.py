@@ -13,6 +13,7 @@ import re
 from spec_repair.components.new_spec_encoder import NewSpecEncoder
 from spec_repair.diagnosis.violation_trace_generation import (
     GeneratedTrace,
+    INVARIANT_WHEN,
     build_violation_asp,
     find_violable_assumptions,
     generate_assumption_violating_traces,
@@ -24,6 +25,28 @@ from spec_repair.wrappers.asp_wrappers import get_violations
 from tests.base_test_case import BaseTestCase
 
 CASE_STUDIES = '../input-files/case-studies/spectra/trace_violation'
+
+# `G(!a -> (!a | !b))` is `true`: whenever the antecedent holds, `!a` makes the
+# consequent hold too. `real_assumption` is the control - an ordinary violable
+# invariant in the same specification.
+TAUTOLOGICAL_ASSUMPTION_SPEC = '''module Tautology
+
+env boolean a;
+env boolean b;
+sys boolean c;
+
+assumption -- initial_assumption
+\t!a & !b;
+
+guarantee -- initial_guarantee
+\t!c;
+
+assumption -- tautological_assumption
+\tG(!a->!a|!b);
+
+assumption -- real_assumption
+\tG(!a|!b);
+'''
 
 
 def violations_of(spec: SpectraSpecification, trace: GeneratedTrace):
@@ -99,11 +122,64 @@ class TestViolationTraceGeneration(BaseTestCase):
 
     def test_tautological_assumption_is_reported_unviolable(self):
         """
-        minepump's assumption2_1 is `G(!highwater -> (!highwater | !methane))`,
-        a tautology, so no trace of any length can violate it.
+        A tautological assumption cannot be violated at any length.
+
+        This used to use minepump's assumption2_1, which was
+        `G(!highwater -> (!highwater | !methane))` - equivalent to `true`. It was
+        strengthened to `G(!highwater | !methane)` on 2026-07-30 to make
+        original.spectra match the old strong.spectra, so it is violable now and
+        no longer demonstrates this. The tautology is written out here instead,
+        where nothing else can move it.
+        """
+        spec = SpectraSpecification.from_str(TAUTOLOGICAL_ASSUMPTION_SPEC)
+        violable = find_violable_assumptions(spec, 1, 3)
+        self.assertEqual([], violable["tautological_assumption"],
+                         "an assumption equivalent to `true` must be unviolable")
+        # The non-tautological one in the same spec is the control: if it were
+        # also empty, the test would pass for the wrong reason.
+        self.assertNotEqual([], violable["real_assumption"])
+
+    # ---------------- restricting which assumptions are targeted ----------------
+
+    def test_only_assumptions_restricts_what_is_reported(self):
+        violable = find_violable_assumptions(self.minepump, 1, 5,
+                                             only_assumptions=["assumption2_1"])
+        self.assertEqual(["assumption2_1"], list(violable))
+
+    def test_only_assumptions_rejects_an_unknown_name(self):
+        with self.assertRaises(ValueError):
+            find_violable_assumptions(self.minepump, 1, 3, only_assumptions=["no_such_assumption"])
+
+    def test_invariant_filter_excludes_the_initial_assumption(self):
+        """
+        `--invariant-only` is this filter. minepump's initial_assumption is
+        `ini`; both numbered ones are `G`.
+        """
+        invariant = get_formula_names(self.minepump, GR1FormulaType.ASM, when=INVARIANT_WHEN)
+        self.assertEqual(["assumption1_1", "assumption2_1"], invariant)
+        self.assertIn("initial_assumption",
+                      get_formula_names(self.minepump, GR1FormulaType.ASM))
+
+    def test_generated_traces_respect_only_assumptions(self):
+        """Restricting the targets narrows the violation, not the constraints."""
+        traces = generate_assumption_violating_traces(
+            self.minepump, n_traces=3, min_timepoints=1, max_timepoints=5,
+            rng=random.Random(0), only_assumptions=["assumption2_1"])
+        self.assertGreater(len(traces), 0)
+        for trace in traces:
+            self.assertEqual(["assumption2_1"], trace.violated_assumptions)
+            # Everything outside the targeted set must still hold - checked
+            # against the pipeline's own violation detection, not the generator.
+            self.assertEqual(["assumption2_1"], violations_of(self.minepump, trace))
+
+    def test_minepump_second_assumption_is_violable_within_three_timepoints(self):
+        """
+        Pins the 2026-07-30 strengthening. `G(!highwater | !methane)` needs 2
+        timepoints, not 1, because initial_assumption forces `!highwater &
+        !methane` at t0 - so the conflict cannot appear until t1.
         """
         violable = find_violable_assumptions(self.minepump, 1, 3)
-        self.assertEqual([], violable["assumption2_1"])
+        self.assertEqual([2, 3], violable["assumption2_1"])
 
     def test_next_violation_needs_room_before_the_end(self):
         """

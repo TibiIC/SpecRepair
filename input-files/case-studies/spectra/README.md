@@ -9,7 +9,7 @@ Each case study holds:
 
 | File | Role |
 |---|---|
-| `ideal.spectra` | a correct specification |
+| `original.spectra` | a correct specification |
 | `strong.spectra` | that specification, **artificially strengthened** |
 | `violation_trace.txt` | a trace satisfying `ideal` but violating `strong` |
 
@@ -28,16 +28,33 @@ Each case study holds:
 
 | File | Role |
 |---|---|
-| `original.spectra` | the specification under test — content-identical to the old `ideal.spectra` |
+| `original.spectra` | the specification under test — content-identical to the old `original.spectra` |
 | `violation_trace_<ID>.txt` | a short execution violating one or more of its **assumptions** |
 
-There is no `ideal.spectra` and no artificial strengthening step. `original.spectra`
+There is no `original.spectra` and no artificial strengthening step. `original.spectra`
 now plays the role `strong.spectra` used to: it is the thing to be repaired.
 Repair has to weaken a real specification to accommodate a real trace, which
 removes the synthetic strengthening the previous setup depended on.
 
 `*_updated` case studies have no counterpart here — they existed only to add
 guarantee strengthening to the mutation step, which no longer happens.
+
+### Running and post-processing
+
+```bash
+# repair every case study against every one of its traces, on the GPU box
+./scripts/run_parallel_bfs_repair_trace.sh
+
+# pull the results back
+REMOTE_SUBDIR=repair_trace_syn ./scripts/pull_experiment_from_ssh.sh 2026-07-30
+
+# steps 2-6: merge, maximal, semantically unique, graphs
+./scripts/run_trace_experiment_pipeline.sh 2026-07-30
+```
+
+Each case study is repaired once per trace, so a run directory is named
+`<case_study>_trace<ID>_<date>`. The pipeline strips the `_trace<ID>` when
+looking up `original.spectra` for the graph.
 
 ### Generating traces
 
@@ -49,7 +66,19 @@ python scripts/generate_violation_traces.py \
 # generate two traces per case study, reproducibly
 python scripts/generate_violation_traces.py \
     input-files/case-studies/spectra/trace_violation --all -n 2 --seed 0 --clean
+
+# only target invariant (G) assumptions, skipping `ini` and `GF` ones
+python scripts/generate_violation_traces.py \
+    input-files/case-studies/spectra/trace_violation/minepump \
+    --invariant-only -n 5 --max-timepoints 5 --seed 0 --clean
 ```
+
+`--invariant-only` restricts which assumptions a trace may violate to the `G`
+ones. An `ini` violation only says the run started in a state the specification
+excludes, which exercises no temporal behaviour and is rarely the scenario
+wanted; `GF` cannot be violated on a finite prefix at all. Use
+`--only-assumptions NAME ...` to pick specific ones. Neither relaxes anything:
+every formula outside the targeted set must still hold.
 
 Traces are found with ASP (`spec_repair.diagnosis.violation_trace_generation`),
 reusing the same encoding the repair pipeline uses: the specification's formulas
@@ -62,9 +91,13 @@ assumption and every guarantee still holds.
 `--report-only` will show assumptions as *not violable in range*. Three distinct
 causes, all real rather than tool limitations:
 
-1. **Tautologies.** minepump's `assumption2_1` is
-   `G(!highwater -> (!highwater | !methane))`, equivalent to `true`. No trace of
-   any length violates it.
+1. **Tautologies.** minepump's `assumption2_1` *was*
+   `G(!highwater -> (!highwater | !methane))`, equivalent to `true`, so no trace
+   of any length violated it. It has since been strengthened to
+   `G(!highwater | !methane)` — making `original.spectra` identical to the old
+   `strengthened/minepump/strong.spectra`, which is how this case study is
+   studied — and is now violable from 2 timepoints. The pattern is still worth
+   watching for elsewhere.
 2. **Not enough timepoints.** A trace is a finite prefix ending in a *weak
    timepoint*, where every atom both holds and does not, so a `next` evaluated
    at the last real timepoint is satisfied vacuously. A violation involving

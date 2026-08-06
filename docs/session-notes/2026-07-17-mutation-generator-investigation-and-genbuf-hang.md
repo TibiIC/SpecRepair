@@ -14,7 +14,7 @@ mutation generator's output looked so sparse for some case studies.
 ## Why minepump/arbiter/traffic_single generate so few mutations
 
 Walked the actual generation logic (`_try_strengthen` in `spec_mutation.py`)
-against each case study's `ideal.spectra` to find out whether this was a bug
+against each case study's `original.spectra` to find out whether this was a bug
 or expected:
 
 - **arbiter has a hard ceiling of 1.** Its only assumption, `a_often: GF(a)`,
@@ -56,7 +56,7 @@ process itself sitting at 0% CPU for 30+ minutes — looked like a deadlock.
 `ltlfilt -c -f <genbuf ideal spec> --equivalent-to <genbuf strong spec>`,
 burning 100% CPU. `tests/test_wrappers/test_spec.py::TestSpec::test_genbuf_compare`
 shells out to spot's `ltlfilt` to check LTL equivalence between genbuf's
-`ideal.spectra` and `strong.spectra` — a 5-slot buffer arbiter spec with
+`original.spectra` and `strong.spectra` — a 5-slot buffer arbiter spec with
 30+ conjuncts over many boolean variables. This is genuine, expensive
 automaton-based equivalence checking, not a bug — this is exactly the
 no-timeout risk flagged as left-open in the 2026-07-16 session notes

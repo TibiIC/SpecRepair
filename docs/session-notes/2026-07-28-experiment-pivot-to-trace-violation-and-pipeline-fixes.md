@@ -55,7 +55,7 @@ arguments and now land inside markup.
 ## Part 4: the experiment pivot
 
 The old setup manufactured what it repaired: strengthen a known-good
-`ideal.spectra` into a `strong.spectra`, find a trace satisfying ideal but
+`original.spectra` into a `strong.spectra`, find a trace satisfying ideal but
 violating strong, repair back down. The new one takes the specification as it is
 and finds short environment behaviours it does not admit, so repair has to weaken
 a real specification to accommodate a real trace.
@@ -64,10 +64,10 @@ a real specification to accommodate a real trace.
 
 | Folder | Files | Repair target |
 |---|---|---|
-| `strengthened/` | `ideal.spectra`, `strong.spectra`, `violation_trace.txt` | `strong.spectra` |
+| `strengthened/` | `original.spectra`, `strong.spectra`, `violation_trace.txt` | `strong.spectra` |
 | `trace_violation/` | `original.spectra`, `violation_trace_<ID>.txt` | `original.spectra` |
 
-`original.spectra` is content-identical to the former `ideal.spectra`. The
+`original.spectra` is content-identical to the former `original.spectra`. The
 `*_updated` case studies get no counterpart: they existed only to make the
 mutation step strengthen guarantees as well as assumptions, and there is no
 mutation step any more. They stay in `strengthened/` rather than being deleted,

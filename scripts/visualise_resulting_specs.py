@@ -171,6 +171,9 @@ none of them.
 GROUP_COLOURS: Dict[str, str] = {
     "strong": "#ffd6a5",
     "ideal": "#caffbf",
+    # The trace_violation setup's reference specification, playing the role
+    # strong.spectra plays in the strengthened one - hence the same colour.
+    "original": "#ffd6a5",
     "trivial": "#ffadad",
     "merged": "#bdb2ff",
     "max_merged": "#9bf6ff",
@@ -183,6 +186,66 @@ DEFAULT_COLOUR = "#ffffff"
 def _escape(text: str) -> str:
     """Escape text for a Graphviz HTML-like label."""
     return text.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+
+
+"""
+The legend
+----------
+
+`--legend` chooses how the group colours are explained:
+
+  compact (default) - a small swatch table pinned to the bottom-right corner,
+                      drawn as the *graph's* label rather than as a node
+  full              - the old legend cluster, laid out as part of the graph
+  none              - no legend at all
+
+The cluster version was laid out by `dot` alongside the graph, so it competed
+with the real nodes for space: its boxes use the same 18-24pt fonts, and the
+bubble example is a whole nested table, which on a small graph came out as wide
+as everything it was explaining. The compact version is a graph label with
+`labelloc=b`/`labeljust=r`, so it is placed after layout, in the corner, and
+takes only the strip of canvas it actually occupies. At 8pt with 6px swatches it
+is roughly a tenth of the area the cluster used.
+"""
+
+LEGEND_STYLES = ("compact", "full", "none")
+
+# Point size for the compact legend. The graph's own nodes are 24pt; keeping the
+# legend this much smaller is the entire point of it.
+LEGEND_FONT_SIZE = 8
+LEGEND_SWATCH_PX = 6
+
+
+def compact_legend_label(colour_of: Dict[str, str], has_bubbles: bool) -> str:
+    """
+    A small swatch-per-group table, for use as the graph's own label.
+
+    One row per group: a filled square and the group name. Equivalence bubbles
+    get a single line of text rather than a nested table example - the shape is
+    self-evident once named, and reproducing it here is what made the old legend
+    take so much room.
+    """
+    rows = [
+        f'<TR><TD COLSPAN="2" BORDER="0" ALIGN="LEFT">'
+        f'<FONT POINT-SIZE="{LEGEND_FONT_SIZE}"><B>Specification type</B></FONT></TD></TR>'
+    ]
+    for label, colour in colour_of.items():
+        rows.append(
+            f'<TR>'
+            f'<TD BGCOLOR="{colour}" WIDTH="{LEGEND_SWATCH_PX}" HEIGHT="{LEGEND_SWATCH_PX}" '
+            f'FIXEDSIZE="TRUE"></TD>'
+            f'<TD BORDER="0" ALIGN="LEFT">'
+            f'<FONT POINT-SIZE="{LEGEND_FONT_SIZE}">{_escape(label)}</FONT></TD>'
+            f'</TR>'
+        )
+    if has_bubbles:
+        rows.append(
+            f'<TR><TD COLSPAN="2" BORDER="0" ALIGN="LEFT">'
+            f'<FONT POINT-SIZE="{LEGEND_FONT_SIZE}">'
+            f'rounded box = equivalent specifications</FONT></TD></TR>'
+        )
+    return (f'<<TABLE BORDER="1" CELLBORDER="0" CELLSPACING="1" CELLPADDING="1" '
+            f'COLOR="#888888">{"".join(rows)}</TABLE>>')
 
 
 def bubble_label(members: List[Tuple[str, str]], caption: Optional[str] = None) -> str:
@@ -262,6 +325,7 @@ def visualise_grouped_implication_graph(
         groups: List[Tuple[str, str]],
         output_file: str,
         graph_type: Optional[GR1FormulaType] = None,
+        legend: str = "compact",
 ) -> None:
     all_specs: Dict[str, SpectraSpecification] = {}
     node_to_label: Dict[str, str] = {}
@@ -304,21 +368,30 @@ def visualise_grouped_implication_graph(
         elif members:
             agraph_node.attr["fillcolor"] = members[0][1]
 
-    # Legend as its own cluster so it lays out beside the graph, not inside it.
-    legend = A.add_subgraph(name="cluster_legend", label="Specification type", fontsize=20)
-    for label, colour in colour_of.items():
-        legend_node = f"legend_{label}"
-        legend.add_node(legend_node, label=label, fillcolor=colour, style="filled", shape="box", fontsize=18)
-    if bubbles:
-        # Only explain bubbles when the graph actually contains one.
-        sample = list(colour_of.items())[:2]
-        while len(sample) < 2:
-            sample.append(("", DEFAULT_COLOUR))
-        legend.add_node(
-            "legend_bubble",
-            label=bubble_label([(name or " ", colour) for name, colour in sample],
-                               caption="equivalent specifications"),
-            shape="none", style="", fontsize=18)
+    if legend == "compact":
+        # Drawn as the graph's own label, so `dot` places it after layout in the
+        # bottom-right corner instead of reserving space for it among the nodes.
+        A.graph_attr["label"] = compact_legend_label(colour_of, bool(bubbles))
+        A.graph_attr["labelloc"] = "b"
+        A.graph_attr["labeljust"] = "r"
+        A.graph_attr["fontsize"] = str(LEGEND_FONT_SIZE)
+    elif legend == "full":
+        # Legend as its own cluster so it lays out beside the graph, not inside it.
+        legend_cluster = A.add_subgraph(name="cluster_legend", label="Specification type", fontsize=20)
+        for label, colour in colour_of.items():
+            legend_node = f"legend_{label}"
+            legend_cluster.add_node(legend_node, label=label, fillcolor=colour,
+                                    style="filled", shape="box", fontsize=18)
+        if bubbles:
+            # Only explain bubbles when the graph actually contains one.
+            sample = list(colour_of.items())[:2]
+            while len(sample) < 2:
+                sample.append(("", DEFAULT_COLOUR))
+            legend_cluster.add_node(
+                "legend_bubble",
+                label=bubble_label([(name or " ", colour) for name, colour in sample],
+                                   caption="equivalent specifications"),
+                shape="none", style="", fontsize=18)
 
     os.makedirs(os.path.dirname(os.path.abspath(output_file)) or ".", exist_ok=True)
     A.draw(output_file, format="png", prog="dot")
@@ -376,13 +449,17 @@ def main(argv=None) -> int:
                         default=CompareType.GR1,
                         choices=list(CompareType),
                         help='Type of comparison to be provided [ASM/GAR/GR(1)]. Leave empty for GR(1)')
+    parser.add_argument('--legend', choices=list(LEGEND_STYLES), default="compact",
+                        help='Legend style for grouped mode: compact (small, bottom-right corner; '
+                             'default), full (the larger legend cluster), or none')
     args = parser.parse_args(argv)
 
     graph_type: Optional[GR1FormulaType] = args.graph_type.to_GR1ExpType()
     output_file_path = os.path.abspath(args.output)
 
     if args.groups:
-        visualise_grouped_implication_graph(args.groups, output_file_path, graph_type)
+        visualise_grouped_implication_graph(args.groups, output_file_path, graph_type,
+                                            legend=args.legend)
     else:
         spec_directory_path = os.path.abspath(args.spec_dir)
         visualise_implication_graph_from_specs_at_path(spec_directory_path, output_file_path, graph_type)

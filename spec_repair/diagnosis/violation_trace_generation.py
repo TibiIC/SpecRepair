@@ -31,7 +31,7 @@ import re
 from typing import Dict, List, NamedTuple, Optional, Sequence, Set, Tuple
 
 from spec_repair.components.spec_generator import SpecGenerator
-from spec_repair.ltl_types import GR1FormulaType
+from spec_repair.ltl_types import GR1FormulaType, GR1TemporalType
 from spec_repair.model.spectra_specification import SpectraSpecification
 from spec_repair.util.asp_trace_util import create_atom_signature_asp, run_clingo_raw
 from spec_repair.util.file_util import generate_temp_filename, write_to_file
@@ -55,10 +55,21 @@ class GeneratedTrace(NamedTuple):
     n_timepoints: int
 
 
-def get_formula_names(spec: SpectraSpecification, formula_type: Optional[GR1FormulaType] = None) -> List[str]:
+# The `when` column of a specification's formula table holds GR1TemporalType:
+# INITIAL (`ini`) for an initial condition, INVARIANT (`G`), JUSTICE (`GF`) for
+# liveness. Only invariant assumptions are worth targeting in the general case -
+# an `ini` violation says nothing more than "the run started somewhere the
+# specification excludes", and `GF` cannot be violated on a finite prefix at all.
+INVARIANT_WHEN = GR1TemporalType.INVARIANT
+
+
+def get_formula_names(spec: SpectraSpecification, formula_type: Optional[GR1FormulaType] = None,
+                      when: Optional[GR1TemporalType] = None) -> List[str]:
     df = spec._formulas_df
     if formula_type is not None:
         df = df[df["type"] == formula_type]
+    if when is not None:
+        df = df[df["when"] == when]
     return [str(name) for name in df["name"]]
 
 
@@ -184,11 +195,16 @@ def find_violable_assumptions(
         min_timepoints: int = 1,
         max_timepoints: int = 3,
         trace_name: str = DEFAULT_TRACE_NAME,
+        only_assumptions: Optional[Sequence[str]] = None,
 ) -> Dict[str, List[int]]:
     """
     For each assumption, the trace lengths at which it can be violated on its own
     while every other formula still holds. An assumption mapping to `[]` cannot
     be violated at any length in the range.
+
+    `only_assumptions` restricts which assumptions are considered - each one is
+    still violated *while every other formula holds*, so restricting the set
+    narrows what gets reported, never what a reported trace is allowed to break.
 
     Worth checking before generating, because "unviolable" has two very
     different causes and both are invisible from a failed draw:
@@ -205,8 +221,17 @@ def find_violable_assumptions(
       `G((PREV(pump) & pump) -> next(!highwater))` needs 4: `!pump` at t0 forced
       by `initial_guarantee`, then pump at t1 and t2, then highwater at t3.
     """
+    names = get_formula_names(spec, GR1FormulaType.ASM)
+    if only_assumptions is not None:
+        wanted = set(only_assumptions)
+        unknown = wanted - set(names)
+        if unknown:
+            raise ValueError(f"No such assumption(s) in {spec._module_name}: "
+                             f"{', '.join(sorted(unknown))}")
+        names = [name for name in names if name in wanted]
+
     violable: Dict[str, List[int]] = {}
-    for name in get_formula_names(spec, GR1FormulaType.ASM):
+    for name in names:
         lengths = []
         for n in range(min_timepoints, max_timepoints + 1):
             asp_file = generate_temp_filename(ext=".lp")
@@ -251,6 +276,7 @@ def generate_assumption_violating_traces(
         trace_name: str = DEFAULT_TRACE_NAME,
         models_per_attempt: int = 20,
         max_attempts_per_trace: int = 25,
+        only_assumptions: Optional[Sequence[str]] = None,
 ) -> List[GeneratedTrace]:
     """
     Find up to `n_traces` distinct traces, each violating a randomly chosen,
@@ -262,6 +288,12 @@ def generate_assumption_violating_traces(
     within one timepoint (anything under `next`), and some pairs cannot be
     violated together while every guarantee still holds. Unsatisfiable draws are
     simply retried rather than reported as failures.
+
+    `only_assumptions` restricts which assumptions may be targeted, for when some
+    of them are not interesting to violate - typically the `ini` ones, where the
+    resulting trace just starts in a state the specification excludes rather than
+    exercising any temporal behaviour. Everything not in the set still has to
+    hold, so this narrows the choice of violation, not the constraints on it.
 
     :returns: the traces found; fewer than `n_traces` if the attempt budget runs
         out, which for a small specification usually means few distinct traces
@@ -277,11 +309,12 @@ def generate_assumption_violating_traces(
     # Draw only from assumptions that can actually be violated in this range,
     # otherwise most attempts are spent on draws that are unsatisfiable for
     # reasons no amount of retrying will change - see find_violable_assumptions.
-    violable = find_violable_assumptions(spec, min_timepoints, max_timepoints, trace_name)
+    violable = find_violable_assumptions(spec, min_timepoints, max_timepoints, trace_name,
+                                         only_assumptions=only_assumptions)
     assumption_names = [name for name, lengths in violable.items() if lengths]
     if not assumption_names:
         raise ValueError(
-            f"None of {spec._module_name}'s {len(all_assumptions)} assumption(s) can be violated "
+            f"None of {spec._module_name}'s {len(violable)} targeted assumption(s) can be violated "
             f"within {min_timepoints}-{max_timepoints} timepoints. Either they are tautologies, "
             f"or violating them needs a longer trace - try raising max_timepoints.")
     skipped = [name for name, lengths in violable.items() if not lengths]

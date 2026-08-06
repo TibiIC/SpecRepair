@@ -16,7 +16,7 @@ studies currently work, how the five newer case studies' `strong.spectra`
 were chosen, and whether the mutation code can strengthen assumptions
 *and* guarantees together.
 
-**How `strong.spectra` was chosen.** A raw `diff` against `ideal.spectra`
+**How `strong.spectra` was chosen.** A raw `diff` against `original.spectra`
 is useless here: `strong.spectra` is a fully normalised re-serialisation
 of the whole file, with atoms reordered, so nearly every line differs
 cosmetically. Parsing both with the same parser and re-serialising with
@@ -48,7 +48,7 @@ generator.
 
 Added `<name>_updated` for every case study whose `strong.spectra` was
 assumption-only: elevator, gyro, humanoid, pcar, lift, traffic_updated,
-colorsort. Each reuses its original's `ideal.spectra` and pairs it with a
+colorsort. Each reuses its original's `original.spectra` and pairs it with a
 `strong.spectra` strengthening **at least one assumption and at least one
 guarantee**, plus a matching `violation_trace.txt`. Selection from seeded
 `generate_realizable_mutations` output prefers the most balanced mutation

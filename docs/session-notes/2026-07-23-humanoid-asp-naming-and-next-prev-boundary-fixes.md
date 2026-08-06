@@ -12,7 +12,7 @@ no commits.
 
 You wanted the GPU-box tmux experiment script (from an earlier session,
 never checked into the repo) reviewed and extended: pick one of the
-case studies that had an `ideal.spectra` but no strengthened variant yet,
+case studies that had an `original.spectra` but no strengthened variant yet,
 add it as a new BFS-repair test, and rewrite the script to run it
 alongside the existing arbiter/traffic_single/traffic_updated/lift/minepump
 ones.

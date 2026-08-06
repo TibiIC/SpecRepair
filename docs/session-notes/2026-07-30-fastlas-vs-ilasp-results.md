@@ -73,7 +73,7 @@ finding *one of the right ones* and stopping.
 
 ## Result 3: against the known-good specification
 
-The `strengthened` setup is the one with an answer key — `ideal.spectra` is the
+The `strengthened` setup is the one with an answer key — `original.spectra` is the
 specification `strong.spectra` was manufactured from. Comparing FastLAS's single
 repair to it:
 

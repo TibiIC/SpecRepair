@@ -3,13 +3,15 @@ Tests for merging semantically distinct specifications.
 
 The interesting case is two repairs that are *not* equivalent: the merge has to
 keep both sets of behaviour rather than collapse to either input, and when
-conjoining their guarantees over-constrains the system it has to fall back to
-the trivial guarantee-only solutions instead of returning something unrealisable.
+conjoining their guarantees over-constrains the system it has to split the set
+and merge each half separately, instead of returning something unrealisable.
 """
 from typing import List
+from unittest import mock
 
-from spec_repair.diagnosis.solution_merging import MergeTooLargeError, NotAWeakeningError, \
-    UnrealisableInputError, check_weakens_original, merge_solutions, merge_two_solutions
+from spec_repair.diagnosis.solution_merging import NotAWeakeningError, \
+    UnrealisableInputError, check_weakens_original, merge_solutions, merge_two_solutions, \
+    warn_if_merge_undid_the_weakening
 from spec_repair.components.oracles.spectra_gr1_oracle import SpectraGR1Oracle
 from spec_repair.interfaces.ispecification import ISpecification
 from spec_repair.ltl_types import GR1FormulaType
@@ -146,7 +148,7 @@ class TestSolutionMerging(BaseTestCase):
         with self.assertRaises(UnrealisableInputError):
             merge_solutions([self.repair_a, self.repair_b], oracle=_NeverRealisable())
 
-    # ---------------- guards on large / expensive merges ----------------
+    # ---------------- large / expensive merges ----------------
 
     def test_verify_inputs_can_be_skipped(self):
         """
@@ -157,35 +159,111 @@ class TestSolutionMerging(BaseTestCase):
         unchecked = merge_solutions([self.repair_a, self.repair_b], verify_inputs=False)
         self.assertEqual([s.to_str() for s in checked], [s.to_str() for s in unchecked])
 
-    def test_unrealisable_input_is_not_caught_when_verification_is_off(self):
-        """Documents the trade-off: the check is what raises, so turning it off removes that."""
+    def test_unrealisable_merge_splits_instead_of_tearing_down(self):
+        """
+        The whole point of divide and conquer: an unrealisable merge is split,
+        and the expensive unrealisable-core teardown is only ever reached for a
+        single specification - never for the large merge.
+        """
+        torn_down = []
+
         class _NeverRealisable:
             @staticmethod
             def is_realisable(_spec):
                 return False
 
-        with self.assertRaises(UnrealisableInputError):
-            merge_solutions([self.repair_a, self.repair_b], oracle=_NeverRealisable(),
-                            verify_inputs=True)
-        # With verification off the unrealisable merge is still detected, and
-        # here it is refused by the size guard rather than silently accepted.
-        with self.assertRaises(MergeTooLargeError):
-            merge_solutions([self.repair_a, self.repair_b], oracle=_NeverRealisable(),
-                            verify_inputs=False, max_formulas_for_trivial_fallback=0)
+        def _record_teardown(spec):
+            torn_down.append(spec)
+            return [spec]
 
-    def test_large_unrealisable_merge_is_refused_rather_than_attempted(self):
-        class _NeverRealisable:
+        with mock.patch("spec_repair.diagnosis.solution_merging."
+                        "get_all_trivial_solutions_guarantee_only", _record_teardown):
+            merged = merge_solutions([self.repair_a, self.repair_b],
+                                     oracle=_NeverRealisable(), verify_inputs=False)
+
+        # Split all the way down to singletons, so every teardown is of one spec.
+        self.assertEqual(2, len(torn_down))
+        for spec in torn_down:
+            self.assertIn(spec.to_str(), (self.repair_a.to_str(), self.repair_b.to_str()))
+        self.assertEqual(2, len(merged))
+
+    def test_realisable_merge_costs_a_single_check_and_never_tears_down(self):
+        """The common case: one realisability check, no split, no core search."""
+        checks = []
+
+        class _CountingOracle:
             @staticmethod
             def is_realisable(_spec):
-                return False
+                checks.append(_spec)
+                return True
 
-        with self.assertRaises(MergeTooLargeError) as ctx:
-            merge_solutions([self.repair_a, self.repair_b], oracle=_NeverRealisable(),
-                            verify_inputs=False, max_formulas_for_trivial_fallback=1)
-        self.assertIn("unrealisable specification", str(ctx.exception))
+        def _fail(_spec):
+            raise AssertionError("teardown must not be reached for a realisable merge")
 
-    def test_no_limit_still_attempts_the_fallback(self):
-        """A realisable merge never reaches the guard, whatever the limit."""
+        with mock.patch("spec_repair.diagnosis.solution_merging."
+                        "get_all_trivial_solutions_guarantee_only", _fail):
+            merged = merge_solutions([self.repair_a, self.repair_b],
+                                     oracle=_CountingOracle(), verify_inputs=False)
+        self.assertEqual(1, len(merged))
+        self.assertEqual(1, len(checks))
+
+    def test_deprecated_size_limit_is_accepted_and_ignored(self):
+        """
+        The old formula cap refused to answer above a size. It is now a no-op:
+        callers passing it still get a result rather than MergeTooLargeError.
+        """
         merged = merge_solutions([self.repair_a, self.repair_b],
                                  max_formulas_for_trivial_fallback=1)
+        self.assertGreaterEqual(len(merged), 1)
+
+
+class TestMergeUndoingTheWeakening(BaseTestCase):
+    """
+    Merging conjoins, and the repair search routinely produces several
+    weakenings of one formula by adding alternative disjuncts. When two such
+    disjuncts cannot both hold, conjoining them cancels the addition and
+    restores the formula that was weakened - so the merge of a set of genuine
+    repairs can be semantically equivalent to the thing they repaired.
+
+    Nothing else catches it: the merged spec stays realisable, and the ASP
+    violation check still reports the trace as admitted, because on a finite
+    prefix each disjunct is individually satisfiable. See
+    docs/session-notes/2026-07-31-merge-collapse-investigation.md.
+    """
+
+    ORIGINAL = "G(!highwater|!methane);"
+
+    def _weakened_with(self, disjunct: str) -> SpectraSpecification:
+        """spec_strong with `assumption2_1` weakened by an extra disjunct."""
+        text = spec_strong.replace(self.ORIGINAL, f"G(!highwater|!methane|{disjunct});")
+        assert text != spec_strong, "fixture no longer contains the expected formula"
+        return SpectraSpecification.from_str(text)
+
+    def test_complementary_weakenings_are_detected(self):
+        """`p | X(q)` and `p | X(!q)` conjoin back to `p`, undoing both repairs."""
+        og = SpectraSpecification.from_str(spec_strong)
+        a, b = self._weakened_with("next(pump)"), self._weakened_with("next(!pump)")
+        # Each is genuinely a strict weakening on its own - that is the point.
+        for one in (a, b):
+            self.assertTrue(og.implies(one, GR1FormulaType.ASM))
+            self.assertFalse(one.implies(og, GR1FormulaType.ASM))
+
+        merged = a.merge(b)
+        self.assertTrue(merged.implies(og, GR1FormulaType.ASM),
+                        "conjoining complementary disjuncts should restore the original")
+        self.assertFalse(
+            warn_if_merge_undid_the_weakening(merged, og),
+            "a merge equivalent to the original on assumptions must be reported")
+
+    def test_a_genuine_weakening_is_not_flagged(self):
+        """The guard must stay silent when the merge really is weaker."""
+        og = SpectraSpecification.from_str(spec_strong)
+        merged = self._weakened_with("next(pump)")
+        self.assertTrue(warn_if_merge_undid_the_weakening(merged, og))
+
+    def test_guard_is_silent_without_an_original_to_compare_against(self):
+        """No og_spec means no claim about weakening, so nothing to check."""
+        merged = merge_solutions(
+            [SpectraSpecification.from_str(spec_fixed_perf),
+             SpectraSpecification.from_str(spec_fixed_imperf)], og_spec=None)
         self.assertGreaterEqual(len(merged), 1)
