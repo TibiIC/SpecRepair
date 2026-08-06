@@ -132,5 +132,57 @@ class TestPerLearnerConfiguration(unittest.TestCase):
         self.assertFalse(asm.is_enabled(CONSEQUENT_WEAKENING))
 
 
+
+class TestLearnableWhenReachesTheEncoder(unittest.TestCase):
+    """
+    `learnable_when` must actually drive the learning task.
+
+    It was added to `LearningConfig`, unit-tested, and consumed by nothing: the
+    encoder went on reading the module-level `NON_LEARNABLE_WHEN`, so the field
+    was dead and the temporal axis was still global. These tests fail if that
+    happens again.
+    """
+
+    def _task(self, config):
+        import os
+        from spec_repair.components.new_spec_encoder import NewSpecEncoder
+        from spec_repair.enums import Learning
+        from spec_repair.model.spectra_specification import SpectraSpecification
+        from spec_repair.util.file_util import read_file_lines
+        from spec_repair.wrappers.asp_wrappers import get_violations
+
+        here = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        d = os.path.join(here, os.pardir, "input-files", "case-studies",
+                         "spectra", "case_study_2", "minepump")
+        spec = SpectraSpecification.from_file(os.path.join(d, "original.spectra"))
+        trace = read_file_lines(os.path.join(d, "violation_trace_0.txt"))
+        encoder = NewSpecEncoder(NoFilterHeuristicManager())
+        encoder.set_learning_config(config)
+        violations = get_violations(NewSpecEncoder.encode_ASP(spec, trace, []),
+                                    exp_type=Learning.ASSUMPTION_WEAKENING.exp_type())
+        return encoder.encode_ILASP(spec, trace, [], violations,
+                                    Learning.ASSUMPTION_WEAKENING)
+
+    def test_initial_formulas_stay_out_of_the_learning_task(self):
+        task = self._task(LearningConfig().enabling(INCLUDE_NEXT, INCLUDE_PREV))
+        self.assertNotIn("initial_assumption", task,
+                         "an initial assumption reached the learning task")
+
+    def test_denying_invariants_removes_them_from_the_learning_task(self):
+        """
+        The capability the field exists for: a learner can be denied a whole
+        temporal class, and one learner doing so must not affect another.
+        """
+        allowed = self._task(LearningConfig().enabling(INCLUDE_NEXT, INCLUDE_PREV))
+        self.assertIn("assumption2_1", allowed,
+                      "minepump's invariant assumption should be learnable by default")
+
+        denied = self._task(
+            LearningConfig(learnable_when=frozenset({GR1TemporalType.JUSTICE}))
+            .enabling(INCLUDE_NEXT, INCLUDE_PREV))
+        self.assertNotIn("#constant(expression_v, assumption2_1)", denied,
+                         "an invariant was offered to the solver despite being denied")
+
+
 if __name__ == "__main__":
     unittest.main()

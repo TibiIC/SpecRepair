@@ -33,6 +33,21 @@ if TYPE_CHECKING:
 NON_LEARNABLE_WHEN = GR1TemporalType.INITIAL
 
 
+def _may_learn(policy, when: GR1TemporalType) -> bool:
+    """
+    May a formula of this temporal type enter the learning task?
+
+    Asks the learner's own `LearningConfig` when there is one, so two learners
+    can differ. Falls back to the module-level NON_LEARNABLE_WHEN for a plain
+    heuristic manager, which is what the encoder is handed by callers that
+    predate per-learner configuration - and which gives exactly the previous
+    behaviour, INITIAL excluded and nothing else.
+    """
+    if hasattr(policy, "may_learn"):
+        return policy.may_learn(when)
+    return when != NON_LEARNABLE_WHEN
+
+
 class NewSpecEncoder:
     def __init__(self, heuristic_manager: Optional[IHeuristicManager]):
         if heuristic_manager is None:
@@ -80,7 +95,7 @@ class NewSpecEncoder:
         formula_type = learning_type.formula_type()
         sub_spec = spec.extract_sub_specification(
             lambda x: (x['type'] == formula_type)
-                      & (x['when'] != NON_LEARNABLE_WHEN)
+                      & x['when'].map(lambda w: _may_learn(self._hm, w))
         )
         if learning_type == Learning.ASSUMPTION_WEAKENING:
             exp_names_to_learn = get_violated_expression_names_of_type(violations, learning_type.exp_type_str())
@@ -135,7 +150,7 @@ class NewSpecEncoder:
         # initial formula can appear in either without ever passing through the
         # sub-specification filter.
         initial_names = set(spec.filter(
-            lambda x: x['when'] == NON_LEARNABLE_WHEN)["name"])
+            lambda x: ~x['when'].map(lambda w: _may_learn(self._hm, w)))["name"])
         for name in formula_names:
             if name in initial_names:
                 continue
