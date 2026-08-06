@@ -317,20 +317,56 @@ The English word "strengthened" is **kept where it is a description rather than
 a name** - a guarantee genuinely is strengthened, and `strong.spectra` is still
 the artificially strengthened specification inside `case_study_1`.
 
-**Not deployed to the shared checkout yet.** The four sweeps launched at 16:30
-run 8 concurrently out of 60, so the other 52 windows invoke Python from the
-working tree *later*. Applying the rename to
-`/vol/bitbucket/tg4018/PhD/SpecRepair` while they are queued would break every
-run that has not started. The rename is committed and pushed, and lands on the
-GPU boxes only once the sweeps finish. Their output therefore still uses the
-old `out/repair_syn` and `out/repair_trace_syn` directory names:
+## 12. The concurrency semaphore never worked
 
-    gpu11  logs/trace_tests/all_fastlas_2026-08-06_163019/     -> out/repair_trace_syn/
-    gpu13  logs/trace_tests/all_ilasp_2026-08-06_163028/       -> out/repair_trace_syn/
-    gpu14  logs/parallel_tests/all_fastlas_2026-08-06_163038/  -> out/repair_syn/
-    gpu15  logs/parallel_tests/all_ilasp_2026-08-06_163047/    -> out/repair_syn/
+Found while watching the 16:30 sweep on gpu11: windows showing
+`mv: cannot stat '.../slot_0.taken.3502253.taken.3502856.taken.3502799...'`,
+case studies that never started, and `amba` sitting in endless BDD garbage
+collection.
 
-## 12. Open
+`run_case_study_2.sh` capped concurrency with one semaphore file per slot,
+claimed by renaming `slot_<n>` to `slot_<n>.taken.<pid>` **in place**. The
+waiting loop globs `slot_*` - which matches `slot_0.taken.123` exactly as
+happily as `slot_0`. So a *waiting* window would claim an *already-claimed*
+slot, chaining the name further, and the true `slot_0` ceased to exist. The
+release `mv "$MY_SLOT.taken.$$" "$MY_SLOT"` then failed, because some other
+window had renamed the file again - hence the `cannot stat`, and hence slots
+that were never returned.
+
+**Measured on gpu11 before the fix: 0 free slots and 39 concurrent runs against
+a cap of 8.** That is the whole explanation for `amba` thrashing in garbage
+collection and for almost nothing finishing - the box was running five times
+its intended load.
+
+Free and taken slots now live in **separate directories**, so a claimed slot is
+invisible to the waiting glob, and the release is wrapped in a `trap ... EXIT
+INT TERM` so a killed run cannot leak its slot. Verified under simulated
+contention (12 workers, 3 slots): never exceeded 3 concurrent, every slot
+returned, none leaked, no chained names. Verified again live after relaunch:
+8 busy, 0 free, 0 chained, exactly 8 `python -m unittest` processes.
+
+`run_case_study_1.sh` has no semaphore and was unaffected.
+
+## 13. Sweeps relaunched again (17:15) on the new naming
+
+All four were killed and restarted on `af90b23`, so every result uses the new
+directory layout and the working semaphore.
+
+| Machine | Session | Log directory |
+| --- | --- | --- |
+| gpu11 | `case_study_2_all_fastlas` | `logs/case_study_2/all_fastlas_2026-08-06_171549/` |
+| gpu13 | `case_study_2_all_ilasp` | `logs/case_study_2/all_ilasp_2026-08-06_171552/` |
+| gpu14 | `case_study_1_all_fastlas` | `logs/case_study_1/all_fastlas_2026-08-06_171602/` |
+| gpu15 | `case_study_1_all_ilasp` | `logs/case_study_1/all_ilasp_2026-08-06_171603/` |
+
+The 16:30 runs are discarded: gpu11/gpu13 were crippled by the semaphore bug,
+and gpu14/gpu15 had only 4 results each, not worth keeping on the old naming.
+
+**Beware the shared NFS when checking progress.** `ls -dt logs/...` on gpu14
+returned *gpu15's* log directory, because all four machines share one
+filesystem. Always name the exact per-session log directory.
+
+## 14. Open
 
 * **Third experiment type** - supervisors want one. `unrealisable.spectra`
   exists for minepump and minepump_liveness (strengthened guarantees plus a
