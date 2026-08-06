@@ -157,3 +157,69 @@ class TestOrchestrationManagerSyntacticEquivalence(BaseTestCase):
         self.assertEqual(len(om._stack), 0)
         with self.assertRaises(IndexError):
             extracted_spec_3, extracted_data_3 = om.get_next()
+
+
+class TestGraphEdgeAnnotationDegradesGracefully(BaseTestCase):
+    """
+    The debug graph must never be able to end a repair run.
+
+    `_add_edge_data_to_graph` labels each edge with whatever record of the
+    transition exists - a deadlock completion, or the last adaptation. Both were
+    indexed unconditionally, so a transition carrying neither ended the whole
+    search with `IndexError: list index out of range` from inside graph
+    bookkeeping. That is reachable whenever a learner dead-ends before producing
+    any counter-trace, which FastLAS does far more often than ILASP because it
+    returns a single solution per step. Losing an annotation is an acceptable
+    cost; losing the run is not.
+    """
+
+    def setUp(self):
+        case_study_path = '../input-files/case-studies/spectra/strengthened/minepump'
+        self.spec = SpectraSpecification.from_file(f"{case_study_path}/strong.spectra")
+        self.trace = read_file_lines(f"{case_study_path}/violation_trace.txt")
+
+    def _data(self, learning_type=Learning.ASSUMPTION_WEAKENING,
+              counter_traces=None, adaptation_history=None) -> RepairData:
+        # Keyword arguments deliberately: the fourth positional parameter is
+        # `spec_history`, not `adaptation_history`, and passing the latter
+        # positionally silently populates the wrong field.
+        return RepairData(trace=self.trace,
+                          counter_traces=counter_traces or [],
+                          learning_type=learning_type,
+                          adaptation_history=adaptation_history or [])
+
+    def _edge_between(self, om, prev_data, data):
+        """Enqueue a transition and return the attributes of the edge it drew."""
+        om.initialise_learning_tasks(self.spec, prev_data)
+        prev = (self.spec, prev_data)
+        other = deepcopy(self.spec)
+        other.remove_formula("assumption2_1")
+        om.enqueue_new_tasks(other, data, prev=prev)
+        edges = list(om._graph.edges(data=True))
+        self.assertTrue(edges, "no edge was added to the graph")
+        return edges[-1][2]
+
+    def test_transition_with_neither_record_still_draws_an_edge(self):
+        """The regression: this raised IndexError instead of adding an edge."""
+        om = OrchestrationManagerSyntacticEquivalence()
+        attrs = self._edge_between(om, self._data(), self._data())
+        self.assertIn("details", attrs)
+
+    def test_transition_with_only_an_adaptation_history_is_labelled_with_it(self):
+        om = OrchestrationManagerSyntacticEquivalence()
+        attrs = self._edge_between(
+            om,
+            self._data(adaptation_history=[["some_adaptation"]]),
+            self._data())
+        self.assertEqual(["some_adaptation"], attrs.get("last_adaptation"))
+
+    def test_counter_traces_still_produce_the_deadlock_annotation(self):
+        """The informative path must be unchanged by the guard."""
+        ct1 = CounterTrace(ct_raw_trace, ct_path, ct_name)
+        ct2 = CounterTrace(ct_raw_trace.replace("holds_at(pump,1", "not_holds_at(pump,1"),
+                           ct_path, ct_name)
+        om = OrchestrationManagerSyntacticEquivalence()
+        attrs = self._edge_between(om,
+                                   self._data(counter_traces=[ct1]),
+                                   self._data(counter_traces=[ct2]))
+        self.assertIn("deadlock_completion", attrs)

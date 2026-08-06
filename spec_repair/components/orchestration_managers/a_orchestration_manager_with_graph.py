@@ -74,7 +74,18 @@ class AOrchestrationManagerWithStackAndGraph(IOrchestrationManager, ABC):
                     task_id,
                     last_adaptation=["Switch to Guarantee Weakening"]
                 )
-            else:
+            # Neither a failed candidate nor the switch to guarantee weakening.
+            # The edge is described by whichever record of the transition exists,
+            # most informative first.
+            #
+            # Every branch here is a *label on a debug graph*. Both indexes below
+            # used to be taken unconditionally, so a transition that carried
+            # neither record - reachable whenever a learner dead-ends without
+            # ever producing a counter-trace, which FastLAS does far more often
+            # than ILASP because it returns a single solution - ended the entire
+            # repair run with an IndexError. Losing the annotation is the correct
+            # cost; losing the run is not.
+            elif prev_data.counter_traces and data.counter_traces:
                 ct1 = prev_data.counter_traces[-1].print_one_line()
                 ct2 = data.counter_traces[-1].print_one_line()
                 if len(prev_data.counter_traces) == len(data.counter_traces) and ct1 != ct2:
@@ -86,12 +97,22 @@ class AOrchestrationManagerWithStackAndGraph(IOrchestrationManager, ABC):
                         after_deadlock_completion=data.counter_traces[-1].print_multi_line(),
                         deadlock_completion=list(difference)
                     )
-                else:
+                elif prev_data.adaptation_history:
                     self._graph.add_edge(
                         prev_task_id,
                         task_id,
                         last_adaptation=[str(adaptation) for adaptation in prev_data.adaptation_history[-1]]
                     )
+                else:
+                    self._graph.add_edge(prev_task_id, task_id, details="Same counter-trace")
+            elif prev_data.adaptation_history:
+                self._graph.add_edge(
+                    prev_task_id,
+                    task_id,
+                    last_adaptation=[str(adaptation) for adaptation in prev_data.adaptation_history[-1]]
+                )
+            else:
+                self._graph.add_edge(prev_task_id, task_id, details="No adaptation or counter-trace recorded")
 
     def connect_leaf_node(
             self,
