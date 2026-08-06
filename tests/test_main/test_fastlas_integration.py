@@ -28,6 +28,7 @@ from spec_repair.components.heuristic_managers.no_filter_heuristic_manager impor
 from spec_repair.components.learners.fastlas_spec_learner import (
     FastLASSpecLearner,
     FastLASTaskError,
+    enumerate_solutions,
     run_fastlas,
     translate_ilasp_task_to_fastlas,
 )
@@ -162,8 +163,8 @@ class TestFastLASOnRealTasks(BaseTestCase):
         """
         With every #modeh enabled, `ev_temp_op` - a body-free fact costing 0 -
         dominates and the space collapses to one candidate, so repeated runs
-        agree. A property of this task, not of FastLAS: given ties it varies,
-        which is what n_runs samples.
+        agree. A property of this task, not of FastLAS: given ties it picks one
+        arbitrarily, which is why the learner enumerates rather than repeats.
         """
         task = translate_ilasp_task_to_fastlas(build_learning_task('traffic_single'))
         outputs = {run_fastlas(task).strip() for _ in range(3)}
@@ -181,6 +182,67 @@ class TestFastLASOnRealTasks(BaseTestCase):
         adaptations = learner.find_adaptations_with_heuristic(
             spec, trace, [], Learning.ASSUMPTION_WEAKENING, violations, hm)
         self.assertEqual(1, len(adaptations))
+
+    def test_enumeration_recovers_every_ilasp_solution_deterministically(self):
+        """
+        The stronger form of test_fastlas_answers_are_among_ilasps: with
+        enumeration the containment becomes equality. Given enough runs FastLAS
+        should reach exactly ILASP's optimal solutions, and reach the same ones
+        every time - the branching factor of the search must not depend on which
+        way a tie happened to fall.
+        """
+        ilasp_task = build_learning_task('minepump', heuristic_manager(only="ANTECEDENT_WEAKENING"))
+        ilasp_rules = re.findall(r"%% Solution \d+ \(score \d+\)\s*\n(.+)", run_ILASP(ilasp_task))
+        self.assertTrue(ilasp_rules, "ILASP found nothing to compare against")
+        # Adaptation is unhashable, so comparison goes through its string form.
+        expected = {str(Adaptation.from_str(r.strip())) for r in ilasp_rules}
+
+        task = translate_ilasp_task_to_fastlas(ilasp_task)
+        runs = [{str(a) for _, solution in enumerate_solutions(task, n_runs=10)
+                 for a in solution} for _ in range(2)]
+        self.assertEqual(expected, runs[0],
+                         "enumeration did not recover exactly ILASP's solutions")
+        self.assertEqual(runs[0], runs[1], "enumeration is not deterministic")
+
+    def test_excluding_a_rule_leaves_rules_that_extend_it_reachable(self):
+        """
+        The exclusion must block the exact rule, never a superset of it.
+
+        A constraint that only listed the body literals would read "never this
+        head with *at least* these literals", so forbidding
+
+            antecedent_exception(...) :- not_holds_at(highwater,...)
+
+        would also lose the genuinely different, more specific
+
+            antecedent_exception(...) :- timepoint_of_op(prev,...), not_holds_at(highwater,...)
+
+        and the search would never see it. Seeding the one-literal exclusion and
+        checking the two-literal rule still turns up is the direct test: with
+        the body size pinned it survives, without the pin it disappears.
+        """
+        task = translate_ilasp_task_to_fastlas(
+            build_learning_task('minepump', heuristic_manager(only="ANTECEDENT_WEAKENING")))
+        subset = ':- in_head(antecedent_exception(_,_,_,_)), in_body(not_holds_at(highwater,V2,V1))'
+
+        # The superset at stake, in the form an Adaptation renders as. Matching
+        # on "highwater" alone would also catch ('current', 'highwater=true'),
+        # which the constraint never targets and which survives either way.
+        superset = "('prev', 'highwater=false')"
+
+        def reachable(seed):
+            return [r for _, sol in enumerate_solutions(task, n_runs=10, seed_constraints=[seed])
+                    for r in map(str, sol)]
+
+        pinned = reachable(f'{subset}, #count{{X : in_body(X)}} = 1.')
+        unpinned = reachable(f'{subset}.')
+        self.assertTrue(any(superset in r for r in pinned),
+                        "pinning the body size should leave the superset reachable")
+        self.assertFalse(any(superset in r for r in unpinned),
+                         "without the pin the superset should be collateral damage - "
+                         "if this now passes, the over-blocking is gone for another "
+                         "reason and this test no longer proves anything")
+        self.assertGreater(len(pinned), len(unpinned))
 
 
 class TestFastLASBuilderConfiguration(unittest.TestCase):

@@ -121,10 +121,10 @@ def main(argv=None) -> int:
     parser.add_argument("--trace", type=int, default=0,
                         help="which violating trace to use for trace_violation (default: 0)")
     parser.add_argument("--fastlas-runs", type=int, default=1,
-                        help="FastLAS invocations per learning step. FastLAS returns one "
-                             "solution per run and picks non-deterministically among "
-                             "equally-optimal candidates, so this is how many of ILASP's "
-                             "alternatives a run samples. Ignored for --learner ilasp.")
+                        help="cap on distinct solutions enumerated per learning step. "
+                             "FastLAS returns one solution per invocation, so each one "
+                             "found is forbidden before it is asked again; the step stops "
+                             "early once exhausted. Ignored for --learner ilasp.")
     parser.add_argument("--timeout", type=int, default=900,
                         help="per-run wall-clock limit in seconds (default: 900)")
     parser.add_argument("--date", default=None,

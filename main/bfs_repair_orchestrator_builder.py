@@ -204,11 +204,12 @@ class BFSRepairOrchestratorBuilder:
         Imported lazily so that nothing outside this method depends on FastLAS
         being installed.
 
-        `n_runs` invokes FastLAS repeatedly per learning step and keeps the
-        distinct solutions, because FastLAS returns one solution per run where
-        ILASP returns all optimal ones - and picks non-deterministically among
-        equally-optimal candidates, so repeated runs genuinely sample different
-        branches. Raising it trades invocations for search breadth.
+        `n_runs` caps how many distinct solutions a learning step enumerates.
+        FastLAS returns one solution per invocation where ILASP returns all
+        optimal ones, so the step runs it repeatedly, forbidding each solution
+        found before asking again, and stops as soon as the space is exhausted.
+        Raising it trades invocations for search breadth without risking
+        duplicate branches.
         """
         from spec_repair.components.learners.fastlas_spec_learner import FastLASSpecLearner
         return self.with_learner_factory(

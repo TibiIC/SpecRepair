@@ -201,6 +201,94 @@ class FastLASTaskError(RuntimeError):
     """Raised when FastLAS rejects the learning task itself."""
 
 
+# FastLAS injects a type guard for every var(T) into the learned rule
+# (`... :- holds_at(a,V0,V1), time(V0), trace(V1)`). They are an artefact of how
+# it grounds var(), present in every rule, so constraining on them would exclude
+# everything rather than one solution.
+_TYPE_GUARD_RE = re.compile(r'^(?:' + '|'.join(_TYPE_DEFINITIONS) + r')\(')
+# Split a rule body on commas that are not inside parentheses.
+_BODY_SPLIT_RE = re.compile(r',\s*(?![^()]*\))')
+
+
+def exclusion_constraint(rule: str) -> Optional[str]:
+    """
+    A `#bias` constraint forbidding the rule FastLAS just returned.
+
+    This is what makes enumeration possible without relying on FastLAS picking
+    differently between runs: block what has been found, ask again, repeat. It
+    mirrors what ILASP's pylasp driver does by adding `:- nge_HYP(...)` for each
+    hypothesis it has already reported.
+
+    Only usable because the `#bias` block is translated into FastLAS's own
+    meta-language (in_head/in_body). Against ILASP's `head`/`body` spelling the
+    constraint is silently inert - which is why an earlier attempt at exclusion
+    appeared to do nothing and the sampling approach was adopted instead.
+
+    **Only the exact rule is blocked, never a superset of it.** A bare
+    `:- in_head(h), in_body(a), in_body(b).` would forbid *any* rule whose body
+    contains both `a` and `b`, so excluding
+
+        antecedent_exception(...) :- not_holds_at(methane,...)
+
+    would also silently exclude the genuinely different, more specific
+
+        antecedent_exception(...) :- not_holds_at(methane,...), holds_at(highwater,...)
+
+    which the search still needs to see. Pinning the body size with
+    `#count{X : in_body(X)} = n` makes the constraint match that rule and no
+    other - the same device pylasp uses for ILASP, where the alternative is
+    spelled out as "if you want to allow non-subset-minimal solutions".
+
+    The count excludes FastLAS's injected `time`/`trace` type guards: `in_body`
+    ranges over the hypothesis-space literals, not the guards added when the
+    rule is rendered (measured - a 2-literal body counts as 2, not 5).
+
+    Returns None for a body-free fact (e.g. `ev_temp_op(a).`), which has no body
+    literals to constrain on - there the head alone would block every rule with
+    that head, which is far more than intended.
+    """
+    rule = rule.strip().rstrip('.')
+    head, _, body = rule.partition(' :- ')
+    if not body:
+        return None
+    literals = [lit.strip() for lit in _BODY_SPLIT_RE.split(body)]
+    literals = [lit for lit in literals if lit and not _TYPE_GUARD_RE.match(lit)]
+    if not literals:
+        return None
+    # The head is matched on its predicate only: the exception's own arguments
+    # are the formula name and the time/trace variables, which are fixed for the
+    # whole learning task and so carry no information about which solution this
+    # is. What distinguishes solutions is the body.
+    predicate = head.split('(')[0]
+    arity = head.count(',') + 1 if '(' in head else 0
+    head_pattern = f"{predicate}({','.join('_' * arity)})" if arity else predicate
+    body_terms = ", ".join(f"in_body({lit})" for lit in literals)
+    # The count is what keeps this from blocking supersets: without it the
+    # constraint reads "never this head with at least these literals", with it
+    # "never this head with exactly these literals".
+    exact_size = f"#count{{X : in_body(X)}} = {len(literals)}"
+    return f":- in_head({head_pattern}), {body_terms}, {exact_size}."
+
+
+def with_exclusions(las: str, constraints: List[str]) -> str:
+    """
+    Add exclusion constraints to a task's `#bias` block.
+
+    Appends to the existing block rather than adding a second one: FastLAS reads
+    a `#bias` as a fragment of one meta-program, and the encoder always emits a
+    block, so there is one to extend.
+    """
+    if not constraints:
+        return las
+    match = _BIAS_BLOCK.search(las)
+    if not match:
+        block = '#bias("\n' + "\n".join(constraints) + '\n").\n'
+        return las + block
+    body = match.group(1).rstrip("\n")
+    new_block = '#bias("' + body + "\n" + "\n".join(constraints) + '\n").'
+    return las[:match.start()] + new_block + las[match.end():]
+
+
 def run_fastlas(las: str, extra_args: Tuple[str, ...] = DEFAULT_FASTLAS_ARGS) -> str:
     """
     Run FastLAS over an already-translated task and return its stdout.
@@ -224,16 +312,91 @@ def run_fastlas(las: str, extra_args: Tuple[str, ...] = DEFAULT_FASTLAS_ARGS) ->
     return stdout
 
 
+
+def _append_unseen(adaptations: List[Tuple[int, List[Adaptation]]],
+                   seen: set,
+                   solutions: List[Tuple[int, List[Adaptation]]]) -> None:
+    """
+    Keep solutions not already recorded.
+
+    Still deduplicated even though enumeration should not repeat itself: the
+    exclusion constraint matches on the body literals, so two runs could in
+    principle produce rules that differ only in something the constraint does
+    not capture yet render to the same Adaptation - and a duplicate branch would
+    make the search do the same work twice.
+    """
+    for score, solution in solutions:
+        fingerprint = tuple(sorted(str(a) for a in solution))
+        if fingerprint in seen:
+            continue
+        seen.add(fingerprint)
+        adaptations.append((score, solution))
+
+
+def enumerate_solutions(
+        fastlas_task: str,
+        n_runs: int,
+        fastlas_args: Tuple[str, ...] = DEFAULT_FASTLAS_ARGS,
+        seed_constraints: Optional[List[str]] = None,
+) -> List[Tuple[int, List[Adaptation]]]:
+    """
+    Enumerate up to `n_runs` distinct solutions of a FastLAS task.
+
+    Enumerate rather than sample. FastLAS returns one solution per run, so the
+    previous approach ran it n_runs times and kept whatever distinct answers
+    turned up - which relied on it picking differently between runs, made the
+    branching non-deterministic, and duplicated work whenever it did not. Here
+    each solution found is added to the #bias as a constraint forbidding it, and
+    the next run is asked for something else. When the task goes UNSATISFIABLE
+    there is genuinely nothing left, so the loop stops early rather than burning
+    the remaining runs, and `n_runs` is a ceiling rather than a cost.
+
+    Only possible because the #bias is translated into FastLAS's own
+    in_head/in_body meta-language; against ILASP's head/body spelling the
+    constraints are silently ignored and every run returns the same answer.
+
+    :param seed_constraints: exclusions to start from, as if already found.
+        For testing what a given constraint does to the reachable space.
+    """
+    adaptations: List[Tuple[int, List[Adaptation]]] = []
+    seen = set()
+    constraints: List[str] = list(seed_constraints or [])
+
+    for _ in range(n_runs):
+        output = run_fastlas(with_exclusions(fastlas_task, constraints), fastlas_args)
+        rules: Optional[List[str]] = FastLASInterpreter.extract_learned_rules(output)
+        if rules is None:
+            # UNSATISFIABLE, or nothing on stdout: no further solution exists
+            # under the accumulated constraints.
+            break
+        solutions: Optional[List[Tuple[int, List[Adaptation]]]] = \
+            FastLASInterpreter.extract_learned_possible_adaptations(output)
+        if not solutions:
+            break
+
+        new_constraints = [c for c in (exclusion_constraint(r) for r in rules) if c]
+        if not new_constraints:
+            # A body-free fact cannot be excluded without blocking every rule
+            # with that head, so asking again would only repeat it.
+            _append_unseen(adaptations, seen, solutions)
+            break
+        constraints.extend(new_constraints)
+        _append_unseen(adaptations, seen, solutions)
+    return adaptations
+
+
 class FastLASSpecLearner(OptimisingSpecLearner):
     """
     OptimisingSpecLearner with FastLAS as the solver.
 
-    :param n_runs: how many times to invoke FastLAS per learning step, keeping
-        the distinct solutions. FastLAS returns one solution per run and picks
-        non-deterministically among equally-optimal candidates, so this is how
-        the search recovers more than one branch. The default of 1 matches
-        FastLAS's own single-answer behaviour; raise it to trade invocations
-        for breadth.
+    :param n_runs: ceiling on how many distinct solutions a learning step
+        enumerates. FastLAS returns one solution per invocation, so the step
+        runs it repeatedly, each time forbidding the solutions already found.
+        This is a ceiling and not a count: once the constrained task goes
+        UNSATISFIABLE the space is exhausted and the loop stops early, so a
+        step with three solutions costs four invocations whatever n_runs says.
+        The default of 1 matches FastLAS's own single-answer behaviour; the
+        sweeps use 10, mirroring ILASP's MAX_ASP_HYPOTHESES.
     """
 
     def __init__(
@@ -252,21 +415,4 @@ class FastLASSpecLearner(OptimisingSpecLearner):
         self.spec_encoder.set_heuristic_manager(hm)
         las: str = self.spec_encoder.encode_ILASP(spec, trace, cts, violations, learning_type)
         fastlas_task: str = translate_ilasp_task_to_fastlas(las)
-
-        adaptations: List[Tuple[int, List[Adaptation]]] = []
-        seen = set()
-        for _ in range(self.n_runs):
-            output = run_fastlas(fastlas_task, self.fastlas_args)
-            solutions: Optional[List[Tuple[int, List[Adaptation]]]] = \
-                FastLASInterpreter.extract_learned_possible_adaptations(output)
-            if not solutions:
-                continue
-            for score, solution in solutions:
-                # Deduplicate on the rendered adaptations: an identical solution
-                # from a second run is not a second branch for the search.
-                fingerprint = tuple(sorted(str(a) for a in solution))
-                if fingerprint in seen:
-                    continue
-                seen.add(fingerprint)
-                adaptations.append((score, solution))
-        return adaptations
+        return enumerate_solutions(fastlas_task, self.n_runs, self.fastlas_args)

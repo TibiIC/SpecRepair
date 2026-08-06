@@ -13,7 +13,7 @@
 #
 # Select the solver with LEARNER (default: ilasp):
 #   LEARNER=fastlas ./run_parallel_bfs_repair_syn.sh
-#   LEARNER=fastlas FASTLAS_RUNS=5 ./run_parallel_bfs_repair_syn.sh   # sample 5 solutions per step
+#   LEARNER=fastlas FASTLAS_RUNS=10 ./run_parallel_bfs_repair_syn.sh  # up to 10 solutions per step
 # A FastLAS run writes to <case_study>_fastlas_<date> and so lands beside an
 # ILASP run of the same date rather than overwriting it. ILASP runs keep the
 # unsuffixed name every existing path was written against.
@@ -64,10 +64,11 @@ case "$LEARNER" in
     *) echo "Unknown LEARNER '$LEARNER'. Use one of: ilasp, fastlas." >&2; exit 1 ;;
 esac
 
-# FastLAS returns one solution per run and picks non-deterministically among
-# equally-optimal candidates, so FASTLAS_RUNS is how many times it is invoked
-# per learning step - i.e. how many of ILASP's alternatives the run samples.
-# Ignored when LEARNER=ilasp.
+# FastLAS returns one solution per invocation where ILASP returns all optimal
+# ones, so FASTLAS_RUNS caps how many distinct solutions a learning step
+# enumerates: each solution found is forbidden before FastLAS is asked again,
+# and the step stops early once the space is exhausted. 10 mirrors ILASP's
+# MAX_ASP_HYPOTHESES. Ignored when LEARNER=ilasp.
 FASTLAS_RUNS="${FASTLAS_RUNS:-1}"
 if ! [[ "$FASTLAS_RUNS" =~ ^[1-9][0-9]*$ ]]; then
     echo "FASTLAS_RUNS='$FASTLAS_RUNS' must be a positive integer." >&2; exit 1

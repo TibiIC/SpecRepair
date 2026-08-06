@@ -23,6 +23,18 @@ from spec_repair.model.adaptation_learned import Adaptation
 RUN_FASTLAS = "spec_repair.components.learners.fastlas_spec_learner.run_fastlas"
 
 
+def _rule(atom: str) -> str:
+    """
+    Canned FastLAS output, in the shape the real binary emits.
+
+    Enumeration needs a rule with a body: the exclusion constraint is built from
+    the body literals, so a body-free fact cannot be excluded and ends the loop.
+    """
+    return (f"antecedent_exception(assumption2_1,0,V0,V1) :- "
+            f"timepoint_of_op(prev,V0,V2,V1), not_holds_at({atom},V2,V1), "
+            f"time(V0), trace(V1), time(V2).\n")
+
+
 class TestTaskTranslation(unittest.TestCase):
     def test_modeb_loses_the_annotation_but_keeps_the_recall(self):
         """
@@ -218,30 +230,71 @@ class TestFastLASSpecLearner(unittest.TestCase):
         self.assertEqual(1, run.call_count)
         self.assertEqual(1, len(result))
 
-    def test_n_runs_invokes_fastlas_that_many_times(self):
-        learner = FastLASSpecLearner(n_runs=4)
-        _, run = self._find(learner, ["ev_temp_op(a).\n"] * 4)
-        self.assertEqual(4, run.call_count)
+    def test_n_runs_is_a_ceiling_not_a_fixed_number_of_invocations(self):
+        """
+        Enumeration keeps asking until the task is exhausted, so a step with
+        two solutions costs three invocations however high n_runs is set - the
+        third being the UNSATISFIABLE that proves there is nothing left.
+        """
+        learner = FastLASSpecLearner(n_runs=10)
+        _, run = self._find(learner, [_rule("methane"), _rule("highwater"),
+                                      "UNSATISFIABLE"])
+        self.assertEqual(3, run.call_count)
+
+    def test_each_solution_found_is_excluded_from_the_next_task(self):
+        """
+        The mechanism the whole approach rests on: without the exclusions being
+        appended, FastLAS would be asked the identical question every time and
+        would answer it the same way.
+        """
+        learner = FastLASSpecLearner(n_runs=3)
+        _, run = self._find(learner, [_rule("methane"), _rule("highwater"),
+                                      "UNSATISFIABLE"])
+        second_task, third_task = (run.call_args_list[i][0][0] for i in (1, 2))
+        self.assertIn("not_holds_at(methane", second_task)
+        self.assertIn("not_holds_at(methane", third_task)
+        self.assertIn("not_holds_at(highwater", third_task)
+        # ...and each exclusion pins the body size, so it cannot take a rule
+        # that merely extends it down with it.
+        self.assertIn("#count{X : in_body(X)} = 2", second_task)
 
     def test_identical_solutions_are_deduplicated(self):
         """
-        The measured behaviour of FastLAS 2.1.0: repeated runs return the same
-        answer, so extra runs must not produce duplicate branches for the search.
+        Enumeration should not repeat itself, but a solver that returned the
+        same answer twice anyway must not produce duplicate branches for the
+        search - it would make the BFS do the same work twice.
         """
-        result, _ = self._find(FastLASSpecLearner(n_runs=3), ["ev_temp_op(a).\n"] * 3)
+        result, _ = self._find(FastLASSpecLearner(n_runs=3), [_rule("methane")] * 3)
         self.assertEqual(1, len(result))
 
     def test_distinct_solutions_are_all_kept(self):
         result, _ = self._find(
             FastLASSpecLearner(n_runs=3),
-            ["ev_temp_op(a).\n", "ev_temp_op(b).\n", "ev_temp_op(a).\n"])
-        self.assertEqual(2, len(result))
+            [_rule("methane"), _rule("highwater"), _rule("pump")])
+        self.assertEqual(3, len(result))
 
-    def test_unsatisfiable_runs_contribute_nothing(self):
-        result, _ = self._find(
-            FastLASSpecLearner(n_runs=3),
-            ["UNSATISFIABLE", "ev_temp_op(a).\n", "UNSATISFIABLE"])
+    def test_a_body_free_fact_stops_enumeration(self):
+        """
+        A fact has no body literals, so the only constraint expressible for it
+        would key on the head alone and block every rule sharing that head -
+        far more than the one solution found. Asking again would just repeat
+        the same answer, so the loop stops instead.
+        """
+        result, run = self._find(FastLASSpecLearner(n_runs=5), ["ev_temp_op(a).\n"] * 5)
+        self.assertEqual(1, run.call_count)
         self.assertEqual(1, len(result))
+
+    def test_unsatisfiable_stops_enumeration_immediately(self):
+        """
+        Constraints only ever accumulate, so once the task is unsatisfiable no
+        later run can succeed. Burning the remaining runs would cost real time
+        on the large case studies for a guaranteed non-answer.
+        """
+        result, run = self._find(
+            FastLASSpecLearner(n_runs=3),
+            ["UNSATISFIABLE", _rule("methane"), _rule("highwater")])
+        self.assertEqual(1, run.call_count)
+        self.assertEqual([], result)
 
     def test_all_runs_unsatisfiable_gives_no_adaptations(self):
         result, _ = self._find(FastLASSpecLearner(n_runs=2), ["UNSATISFIABLE"] * 2)
