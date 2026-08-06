@@ -49,10 +49,22 @@ def _may_learn(policy, when: GR1TemporalType) -> bool:
 
 
 class NewSpecEncoder:
-    def __init__(self, heuristic_manager: Optional[IHeuristicManager]):
-        if heuristic_manager is None:
-            self._hm = NoFilterHeuristicManager()
-        self._hm = heuristic_manager
+    """
+    Builds the ASP and ILASP/FastLAS tasks for one learning step.
+
+    Holds a *policy* - a `LearningConfig`, set per task via
+    `set_learning_config` - not a heuristic manager. It was named `_hm` while
+    genuinely being handed a mutated deep copy of the shared manager; the field
+    was renamed once that stopped being true, since the two answer different
+    questions and only one of them belongs here.
+    """
+
+    def __init__(self, heuristic_manager: Optional[IHeuristicManager] = None):
+        # A bare NoFilterHeuristicManager answers `is_enabled` with the same
+        # defaults a fresh LearningConfig does, so an un-configured encoder
+        # behaves as before until a config is set.
+        self._config = heuristic_manager if heuristic_manager is not None \
+            else NoFilterHeuristicManager()
 
     @staticmethod
     def encode_ASP(spec: ISpecification, trace: list[str], ct_list: List[CounterTrace]) -> str:
@@ -95,14 +107,14 @@ class NewSpecEncoder:
         formula_type = learning_type.formula_type()
         sub_spec = spec.extract_sub_specification(
             lambda x: (x['type'] == formula_type)
-                      & x['when'].map(lambda w: _may_learn(self._hm, w))
+                      & x['when'].map(lambda w: _may_learn(self._config, w))
         )
         if learning_type == Learning.ASSUMPTION_WEAKENING:
             exp_names_to_learn = get_violated_expression_names_of_type(violations, learning_type.exp_type_str())
         else:
             exp_names_to_learn = get_unrealisable_core_expression_names(spec)
             # exp_names_to_learn = get_expression_names_of_type(violations, learning_type.exp_type_str())
-        expressions_to_weaken = sub_spec.to_asp(learning_names=exp_names_to_learn, for_clingo=False, hm=self._hm)
+        expressions_to_weaken = sub_spec.to_asp(learning_names=exp_names_to_learn, for_clingo=False, hm=self._config)
         signature_string = create_atom_signature_asp(spec.get_atoms())
         las = SpecGenerator.generate_ilasp(mode_declaration, expressions_to_weaken, signature_string, trace_ilasp,
                                            ct_list_ilasp)
@@ -113,11 +125,11 @@ class NewSpecEncoder:
                  "%% Mode Declaration\n" \
                  "%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%\n\n"
 
-        if self._hm.is_enabled("ANTECEDENT_WEAKENING"):
+        if self._config.is_enabled("ANTECEDENT_WEAKENING"):
             output += f"#modeh(antecedent_exception(const(expression_v), const(index), var(time), var(trace))).\n"
-        if self._hm.is_enabled("CONSEQUENT_WEAKENING"):
+        if self._config.is_enabled("CONSEQUENT_WEAKENING"):
             output += f"#modeh(consequent_exception(const(expression_v), var(time), var(trace))).\n"
-        if self._hm.is_enabled("INVARIANT_TO_RESPONSE_WEAKENING"):
+        if self._config.is_enabled("INVARIANT_TO_RESPONSE_WEAKENING"):
             output += f"#modeh(ev_temp_op(const(expression_v))).\n"
 
         restriction = ", (positive)"
@@ -129,7 +141,7 @@ class NewSpecEncoder:
         for atom in atoms:
             output += f"#constant(usable_atom,{atom.name}).\n"
         # TODO: find a way to provide the correct end index value
-        if self._hm.is_enabled("ANTECEDENT_WEAKENING"):
+        if self._config.is_enabled("ANTECEDENT_WEAKENING"):
             # Index number multiplies the search space, so we limit it to the maximum number of disjuncts in the antecedent
             output += f"#constant(index,0..{max(0, spec.get_max_disjuncts_in_antecedent() - 1)}).\n"
         for temp_op in ["current", "next", "prev", "eventually"]:
@@ -150,7 +162,7 @@ class NewSpecEncoder:
         # initial formula can appear in either without ever passing through the
         # sub-specification filter.
         initial_names = set(spec.filter(
-            lambda x: ~x['when'].map(lambda w: _may_learn(self._hm, w)))["name"])
+            lambda x: ~x['when'].map(lambda w: _may_learn(self._config, w)))["name"])
         for name in formula_names:
             if name in initial_names:
                 continue
@@ -158,7 +170,7 @@ class NewSpecEncoder:
 
         output += f"#bias(\"\n"
         output += f":- constraint.\n"
-        if self._hm.is_enabled("ANTECEDENT_WEAKENING"):
+        if self._config.is_enabled("ANTECEDENT_WEAKENING"):
             output += f":- head(antecedent_exception(_,_,V1,V2)), body(timepoint_of_op(_,V3,_,V4)), (V1, V2) != (V3, V4).\n"
             output += f":- head(antecedent_exception(_,_,_,V1)), body(holds_at(_,_,V2)), V1 != V2.\n"
             output += f":- head(antecedent_exception(_,_,_,V1)), body(not_holds_at(_,_,V2)), V1 != V2.\n"
@@ -166,7 +178,7 @@ class NewSpecEncoder:
             output += f":- body(holds_at(_, _, _)), body(not_holds_at(_, _, _)).\n"
             output += f":- body(not_holds_at(_, _, _)), body(holds_at(_, _, _)).\n"
             output += f":- body(not_holds_at(E1, _, _)), body(not_holds_at(E2, _, _)), E1 != E2.\n"
-        if self._hm.is_enabled("CONSEQUENT_WEAKENING"):
+        if self._config.is_enabled("CONSEQUENT_WEAKENING"):
             output += f":- head(consequent_exception(_,V1,V2)), body(timepoint_of_op(_,V3,_,V4)), (V1, V2) != (V3, V4).\n"
             output += f":- head(consequent_exception(_,_,V1)), body(holds_at(_,_,V2)), V1 != V2.\n"
             output += f":- head(consequent_exception(_,_,V1)), body(not_holds_at(_,_,V2)), V1 != V2.\n"
@@ -181,31 +193,31 @@ class NewSpecEncoder:
         output += f":- body(not_holds_at(_,V1,V2)), not body(timepoint_of_op(_,_,V1,V2)).\n"
         output += f":- body(holds_at(A1,_,_)), body(not_holds_at(A2,_,_)), A1 == A2.\n"
 
-        if self._hm.is_enabled("ANTECEDENT_WEAKENING"):
+        if self._config.is_enabled("ANTECEDENT_WEAKENING"):
             # It makes little sense to learn a "NEXT" atom within an antecedent
             output += f":- head(antecedent_exception(_,_,_,_)), body(timepoint_of_op(next,_,_,_)).\n"
             # Learning eventually expressions doesn't make sense within the antecedent of a formula
             output += f":- head(antecedent_exception(_,_,_,_)), body(timepoint_of_op(eventually,_,_,_)).\n"
-            if not self._hm.is_enabled("INCLUDE_PREV"):
+            if not self._config.is_enabled("INCLUDE_PREV"):
                 output += f":- head(antecedent_exception(_,_,_,_)), body(timepoint_of_op(prev,_,_,_)).\n"
-        if self._hm.is_enabled("CONSEQUENT_WEAKENING"):
+        if self._config.is_enabled("CONSEQUENT_WEAKENING"):
             # It makes little sense to learn a "PREV" atom within a consequent
             output += f":- head(consequent_exception(_,_,_)), body(timepoint_of_op(prev,_,_,_)).\n"
             # This is already taken care of by the INVARIANT_TO_RESPONSE_WEAKENING behaviour
             output += f":- head(consequent_exception(_,_,_)), body(timepoint_of_op(eventually,_,_,_)).\n"
-            if not self._hm.is_enabled("INCLUDE_NEXT"):
+            if not self._config.is_enabled("INCLUDE_NEXT"):
                 output += f":- head(consequent_exception(_,_,_)), body(timepoint_of_op(next,_,_,_)).\n"
-        if self._hm.is_enabled("INVARIANT_TO_RESPONSE_WEAKENING"):
+        if self._config.is_enabled("INVARIANT_TO_RESPONSE_WEAKENING"):
             output += f":- head(ev_temp_op(_)), body(timepoint_of_op(_,_,_,_)).\n"
             output += f":- head(ev_temp_op(_)), body(holds_at(_,_,_)).\n"
             output += f":- head(ev_temp_op(_)), body(not_holds_at(_,_,_)).\n"
         if learning_type == Learning.ASSUMPTION_WEAKENING:
             sys_atom_names = [atom.name for atom in atoms if atom.atom_type == GR1AtomType.SYS]
             for sys_atom_name in sys_atom_names:
-                if self._hm.is_enabled("ANTECEDENT_WEAKENING"):
+                if self._config.is_enabled("ANTECEDENT_WEAKENING"):
                     output += f":- head(antecedent_exception(_,_,_,_)), body(timepoint_of_op(next,_,_,_)), body(holds_at({sys_atom_name },_,_)).\n"
                     output += f":- head(antecedent_exception(_,_,_,_)), body(timepoint_of_op(next,_,_,_)), body(not_holds_at({sys_atom_name},_,_)).\n"
-                if self._hm.is_enabled("CONSEQUENT_WEAKENING"):
+                if self._config.is_enabled("CONSEQUENT_WEAKENING"):
                     output += f":- head(consequent_exception(_,_,_)), body(timepoint_of_op(next,_,_,_)), body(holds_at({sys_atom_name},_,_)).\n"
                     output += f":- head(consequent_exception(_,_,_)), body(timepoint_of_op(next,_,_,_)), body(not_holds_at({sys_atom_name},_,_)).\n"
 
@@ -221,11 +233,11 @@ class NewSpecEncoder:
         this took a mutated deep copy of the shared heuristic manager, which made
         "what is enabled" a question with a time-dependent answer.
         """
-        self._hm = config
+        self._config = config
 
     def set_heuristic_manager(self, heuristic_manager):
         """Deprecated alias for `set_learning_config`. Both only need `is_enabled`."""
-        self._hm = heuristic_manager
+        self._config = heuristic_manager
 
 
 def get_violated_expression_names_of_type(violations: list[str], exp_type: str) -> list[str]:

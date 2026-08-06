@@ -50,6 +50,7 @@ from spec_repair.interfaces.ilearner import ILearner
 from spec_repair.interfaces.ioracle import IOracle
 from spec_repair.interfaces.iorchestration_manager import IOrchestrationManager
 from spec_repair.interfaces.irecorder import IRecorder
+from spec_repair.components.learners.optimising_final_spec_learner import _config_from
 from spec_repair.components.learning_config import LearningConfig
 from spec_repair.loggers.progress_reporter import ProgressReporter
 from spec_repair.loggers.spec_logger import SpecLogger
@@ -251,7 +252,15 @@ class BFSRepairOrchestratorBuilder:
             f"Unknown learner '{name}'. Use one of: {', '.join(sorted(LEARNER_NAMES))}.")
 
     def enabling(self, *flags: str) -> "BFSRepairOrchestratorBuilder":
-        """Enable heuristic flags (e.g. "INCLUDE_NEXT", "INCLUDE_PREV")."""
+        """
+        Enable learning flags for every learner (e.g. "INCLUDE_NEXT").
+
+        The blunt instrument; `with_learner_config` is the per-learner one, and
+        wins where both apply. Both end up in the same immutable
+        `LearningConfig` - the flags are no longer a separate mutable copy
+        living on the shared heuristic manager, which is what made them look
+        per-learner while being global.
+        """
         self._enabled.extend(flags)
         return self
 
@@ -366,13 +375,15 @@ class BFSRepairOrchestratorBuilder:
         # BFSRepairOrchestrator._initialise_repair reassigns every learner's
         # heuristic manager to its own, so passing `hm` here just keeps the
         # learners consistent before the first repair rather than mattering later.
-        learners: Dict[str, ILearner] = {}
-        for name in self._learner_names:
-            learner = self._learner_factory(hm)
-            config = self._learner_configs.get(name)
-            if config is not None:
-                learner._config = config
-            learners[name] = learner
+        # One policy for every learner unless told otherwise. Derived from the
+        # heuristic manager first, so a caller supplying one with flags turned
+        # off still gets what it asked for, then widened by `enabling`.
+        default_config = _config_from(hm).enabling(*self._enabled)
+        learners: Dict[str, ILearner] = {
+            name: self._learner_factory(hm) for name in self._learner_names
+        }
+        for name, learner in learners.items():
+            learner._config = self._learner_configs.get(name, default_config)
         recorder, intermediate_recorder = self._build_recorders()
 
         logger_kwargs = {"filename": self._log_file} if self._log_file else {}
