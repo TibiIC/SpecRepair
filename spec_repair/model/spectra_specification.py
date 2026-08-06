@@ -1,4 +1,5 @@
 import copy
+import logging
 import re
 import subprocess
 from collections import Counter
@@ -89,15 +90,21 @@ class SpectraSpecification(ISpecification):
         return self
 
     def integrate(self, adaptation: Adaptation):
+        """
+        Apply one learned adaptation to the formula it names.
+
+        Logged as a single line rather than the three-stanza Rule/Hypothesis/New
+        Rule block this used to print. That block ran once per adaptation per
+        candidate, which on a branching search is thousands of times - it buried
+        the events that say where the run actually is, and said nothing a
+        before/after pair does not.
+        """
         formula = self.get_formula(adaptation.formula_name)
-        print("Rule:")
-        print(f'\t{formula.to_str(self._formater)}')
-        print("Hypothesis:")
-        print(
-            f'\t{adaptation.type}({adaptation.formula_name},{adaptation.disjunction_index},{adaptation.atom_temporal_operators})')
+        before = formula.to_str(self._formater)
         formula.integrate(adaptation)
-        print("New Rule:")
-        print(f'\t{formula.to_str(self._formater)}')
+        logging.getLogger(__name__).debug(
+            "%s %s: %s -> %s", adaptation.type, adaptation.formula_name,
+            before, formula.to_str(self._formater))
         self.replace_formula(adaptation.formula_name, formula)
 
     def replace_formula(self, formula_name, formula):

@@ -20,8 +20,18 @@ from spec_repair.interfaces.iheuristic_manager import IHeuristicManager
 from spec_repair.components.heuristic_managers.no_filter_heuristic_manager import NoFilterHeuristicManager
 from spec_repair.interfaces.irecorder import IRecorder
 from spec_repair.components.recorders.unique_recorder import UniqueRecorder
+from spec_repair.loggers.progress_reporter import ProgressReporter, Timed
 from spec_repair.loggers.spec_logger import SpecLogger
 from spec_repair.wrappers.asp_wrappers import get_violations
+
+
+def _learning_label(learning_type) -> str:
+    """ASM/GAR - which side of the specification this node is weakening."""
+    if learning_type == Learning.ASSUMPTION_WEAKENING:
+        return "ASM"
+    if learning_type == Learning.GUARANTEE_WEAKENING:
+        return "GAR"
+    return "-"
 
 
 class BFSRepairOrchestrator:
@@ -35,7 +45,8 @@ class BFSRepairOrchestrator:
             hm: IHeuristicManager = NoFilterHeuristicManager(),
             recorder: IRecorder[ISpecification] = UniqueRecorder(),
             intermediate_recorder: IRecorder[ISpecification] = UniqueRecorder(),
-            logger: SpecLogger = SpecLogger("./main/spec_repair.log")
+            logger: SpecLogger = SpecLogger("./main/spec_repair.log"),
+            reporter: ProgressReporter = None
     ):
         self._learners = learners
         self._oracle = oracle
@@ -46,6 +57,7 @@ class BFSRepairOrchestrator:
         self._recorder = recorder
         self._intermediate_recorder = intermediate_recorder
         self._logger = logger
+        self._reporter = reporter or ProgressReporter(to_stdout=False, heartbeat_seconds=0)
         self._initialise_repair()
 
     @property
@@ -62,8 +74,16 @@ class BFSRepairOrchestrator:
         # Counter for recording counter-traces
         self._ct_cnt = 0
         self._hm.reset()
-        for learner in self._learners.values():
-            learner._hm = self._hm
+        # The mitigator and oracle share the run's heuristic manager: their
+        # choices - which counter-traces to keep, which alternative tasks to
+        # pursue - are about the search, and are the same question wherever they
+        # are asked.
+        #
+        # Learners no longer have theirs reassigned here. Each carries its own
+        # immutable LearningConfig (see spec_repair/components/learning_config),
+        # decided when it was built. Overwriting it at the start of every run was
+        # what made per-learner configuration impossible: whatever the assumption
+        # learner was configured with, the guarantee learner got the same object.
         self._mitigator._hm = self._hm
         self._oracle._hm = self._hm
 
@@ -179,8 +199,7 @@ class BFSRepairOrchestrator:
             learned_id = self._recorder.add(spec)
             self._om.connect_leaf_node(spec, learned_id, prev=None)
             self._logger.record(learned_id, spec, data, "Learned")
-            print("Branch ran out of moves on a specification that is already a "
-                  "solution - recorded as a leaf rather than dropped.")
+            self._reporter.event("SOLVED", f"leaf #{learned_id} (branch exhausted, already a solution)")
 
     def repair_bfs(
             self,
@@ -188,19 +207,32 @@ class BFSRepairOrchestrator:
             og_data: RepairData
     ):
         self._initialise_repair()
+        self._reporter.start()
         self._assert_repair_preconditions(og_spec, og_data)
         self._om.initialise_learning_tasks(og_spec, og_data)
 
+        node_no = 0
         while self._om.has_next():
             spec, data = self._om.get_next()
+            node_no += 1
+            self._reporter.node_started(
+                depth=data.learning_steps, node=node_no,
+                queue=self._om.pending_count(),
+                learning_type=_learning_label(data.learning_type))
             learning_strategy: str = self._discriminator.get_learning_strategy(spec, data)
             learner = self._learners[learning_strategy]
-            learned_tasks: List[Tuple[ISpecification, RepairData]] = learner.learn_new(spec, data)
+            # The learning step is the expensive one and the one worth timing:
+            # it is where ILASP/FastLAS and Spectra actually run, and where a
+            # run that appears stuck is nearly always sitting.
+            with Timed(self._reporter, "LEARN", f"learning d{data.learning_steps} ({learning_strategy})") as t:
+                learned_tasks: List[Tuple[ISpecification, RepairData]] = learner.learn_new(spec, data)
+                t.result(f"{len(learned_tasks)} candidate(s)")
             if not learned_tasks:
                 alt_tasks: List[Tuple[ISpecification, RepairData]] = self._mitigator.prepare_alternative_learning_tasks(
                     spec,
                     data)
                 self._reject_unchanged_mitigations(spec, data, alt_tasks)
+                self._reporter.event("MITIG", f"{len(alt_tasks)} alternative task(s)")
                 if not alt_tasks:
                     # The branch ends here. Before letting it, check whether the
                     # specification we are standing on is already a solution -
@@ -211,8 +243,11 @@ class BFSRepairOrchestrator:
             else:
                 for learned_spec, data in learned_tasks:
                     try:
-                        counter_examples_with_data: List[Tuple[CounterTrace, RepairData]] = self._oracle.is_valid_or_counter_arguments(
-                            learned_spec, data)
+                        with Timed(self._reporter, "VERIFY",
+                                   f"verifying d{data.learning_steps} candidate",
+                                   min_seconds=5.0):
+                            counter_examples_with_data: List[Tuple[CounterTrace, RepairData]] = self._oracle.is_valid_or_counter_arguments(
+                                learned_spec, data)
                     except SpecificationNotVerifiableException as e:
                         # Spectra cannot check this candidate at all - it breaks
                         # a structural rule of the CLI (see the exception). It is
@@ -222,16 +257,23 @@ class BFSRepairOrchestrator:
                         # unaffected, which is the point - one bad candidate used
                         # to end the whole run with a TypeError.
                         self._logger.record(-1, learned_spec, data, "Unverifiable")
-                        print(f"Skipping unverifiable candidate specification: {e}")
+                        self._reporter.event("SKIP", "candidate Spectra cannot verify")
                         continue
                     if not counter_examples_with_data:
                         learned_id = self._recorder.add(learned_spec)
                         self._om.connect_leaf_node(learned_spec, learned_id, prev=(spec, data))
                         self._logger.record(learned_id, learned_spec, data, "Learned")
+                        self._reporter.event("SOLVED", f"leaf #{learned_id}")
                     else:
                         intermediate_id = self._intermediate_recorder.add(learned_spec)
                         self._logger.record(intermediate_id, learned_spec, data, "Intermediate")
+                        self._reporter.event(
+                            "CEX", f"spec #{intermediate_id} -> "
+                                   f"{len(counter_examples_with_data)} counter-example(s)")
                         for counter_example, data in counter_examples_with_data:
                             new_spec, new_data = self._mitigator.prepare_learning_task(spec, data, learned_spec,
                                                                                        counter_example)
                             self._om.enqueue_new_tasks(new_spec, new_data, prev=(spec, data), failed_spec=learned_spec)
+
+        self._reporter.finish(len(self._recorder.get_specs()),
+                              len(self._intermediate_recorder.get_specs()))

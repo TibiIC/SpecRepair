@@ -1,3 +1,4 @@
+import os
 import os.path
 import re
 import subprocess
@@ -237,6 +238,47 @@ def synthesise_controller(spec_file_path, output_folder_path, suppress=False) ->
     return False
 
 
+
+_BDD_REORDER_ENV = "SPEC_REPAIR_BDD_REORDER"
+_reorder_state = {"applied": False}
+
+
+def _maybe_enable_bdd_reorder() -> None:
+    """
+    Turn on dynamic BDD variable reordering, when asked for explicitly.
+
+    We run Spectra with `--jtlv`, which selects the pure-Java BDD package,
+    because the default CUDD backend cannot load here - measured on macOS and on
+    the Linux GPU boxes alike, both failing with
+    `NullPointerException: Cannot load from int array because "attrSizes" is
+    null`. The JTLV factory runs a node table of 200033 that never grows: each
+    collection frees 40-60% of it, which is above the threshold at which
+    JavaBDD would resize, but the space refills within milliseconds. Measured on
+    amba: ~186 collections/second, indefinitely. It never errors and never
+    finishes.
+
+    Variable order is what actually drives BDD size, so sifting is the lever
+    that can move a specification out of that equilibrium. It is
+    semantics-preserving - reordering changes the representation, not the
+    function - so a realisability verdict cannot change.
+
+    **Opt-in, and deliberately not the default.** Reordering can change *which*
+    counter-strategy Spectra returns among the many valid ones, and the search
+    branches on the counter-strategy it is given. Every repair found remains a
+    genuine repair, but two runs either side of this flag are not
+    result-comparable, so it must not turn itself on underneath a sweep already
+    in progress. Set SPEC_REPAIR_BDD_REORDER=1 to enable.
+    """
+    if _reorder_state["applied"] or os.environ.get(_BDD_REORDER_ENV, "") != "1":
+        return
+    _reorder_state["applied"] = True
+    try:
+        jpype.JClass("tau.smlab.syntech.jtlv.Env").enableReorder()
+        print("BDD dynamic variable reordering enabled.")
+    except Exception as e:  # noqa: BLE001 - never let a tuning knob break a run
+        print(f"Could not enable BDD reordering ({type(e).__name__}); continuing without it.")
+
+
 def run_spectra_cli(args: list[str]) -> str:
     """
     Run a Java main method and capture its printed output as a string.
@@ -266,6 +308,8 @@ def run_spectra_cli(args: list[str]) -> str:
     java_lang_System.setOut(ps)
 
     try:
+        _maybe_enable_bdd_reorder()
+
         # Load the Java class and convert args to Java String[]
         java_args = JArray(JString)(args)
 

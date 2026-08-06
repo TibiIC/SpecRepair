@@ -50,6 +50,8 @@ from spec_repair.interfaces.ilearner import ILearner
 from spec_repair.interfaces.ioracle import IOracle
 from spec_repair.interfaces.iorchestration_manager import IOrchestrationManager
 from spec_repair.interfaces.irecorder import IRecorder
+from spec_repair.components.learning_config import LearningConfig
+from spec_repair.loggers.progress_reporter import ProgressReporter
 from spec_repair.loggers.spec_logger import SpecLogger
 
 ASSUMPTION_WEAKENING = "assumption_weakening"
@@ -140,6 +142,14 @@ class BFSRepairOrchestratorBuilder:
         self._debug_dir: Optional[str] = None
         self._flat_debug_dir: Optional[str] = None
         self._log_file: Optional[str] = None
+        self._run_label: Optional[str] = None
+        # Which solver, for the progress status file - _learner_names holds the
+        # weakening strategies, which is a different question.
+        self._learner_kind: str = ILASP_LEARNER
+        # Per-learner policy, keyed by learner name. Absent means "the default
+        # built from the shared flags", which is what every caller got before
+        # per-learner configuration existed.
+        self._learner_configs: Dict[str, LearningConfig] = {}
         self._on_record: Optional[OnRecord] = None
 
     # ---------------- presets ----------------
@@ -212,6 +222,7 @@ class BFSRepairOrchestratorBuilder:
         duplicate branches.
         """
         from spec_repair.components.learners.fastlas_spec_learner import FastLASSpecLearner
+        self._learner_kind = f"{FASTLAS_LEARNER} (n_runs={n_runs})"
         return self.with_learner_factory(
             lambda hm: FastLASSpecLearner(heuristic_manager=hm, n_runs=n_runs, **learner_kwargs))
 
@@ -285,6 +296,34 @@ class BFSRepairOrchestratorBuilder:
         self._log_file = log_file
         return self
 
+    def with_learner_config(self, learner_name: str,
+                            config: LearningConfig) -> "BFSRepairOrchestratorBuilder":
+        """
+        Give one learner its own policy.
+
+        The point of `LearningConfig` being per learner: assumption weakening and
+        guarantee weakening are different jobs and need not be allowed the same
+        moves, and a third learner can be added with a policy of its own without
+        touching either. Learners left unconfigured keep the shared default, so
+        setting one does not silently change the others.
+        """
+        if learner_name not in self._learner_names:
+            raise ValueError(
+                f"No learner named '{learner_name}' in this preset. "
+                f"Known: {', '.join(self._learner_names)}.")
+        self._learner_configs[learner_name] = config
+        return self
+
+    def with_run_label(self, label: str) -> "BFSRepairOrchestratorBuilder":
+        """
+        Name this run in its progress output and status file.
+
+        Worth setting on a sweep: the status files of 60 concurrent runs are
+        only tellable apart by what is written inside them.
+        """
+        self._run_label = label
+        return self
+
     def with_on_record(self, on_record: OnRecord) -> "BFSRepairOrchestratorBuilder":
         """
         Called as `on_record(repairer, idx, spec, data)` every time a spec is
@@ -327,13 +366,27 @@ class BFSRepairOrchestratorBuilder:
         # BFSRepairOrchestrator._initialise_repair reassigns every learner's
         # heuristic manager to its own, so passing `hm` here just keeps the
         # learners consistent before the first repair rather than mattering later.
-        learners: Dict[str, ILearner] = {
-            name: self._learner_factory(hm) for name in self._learner_names
-        }
+        learners: Dict[str, ILearner] = {}
+        for name in self._learner_names:
+            learner = self._learner_factory(hm)
+            config = self._learner_configs.get(name)
+            if config is not None:
+                learner._config = config
+            learners[name] = learner
         recorder, intermediate_recorder = self._build_recorders()
 
         logger_kwargs = {"filename": self._log_file} if self._log_file else {}
         logger = SpecLogger(**logger_kwargs)
+
+        # Progress goes next to the run's own output, so a status file belongs
+        # to exactly one run even when 60 share a filesystem.
+        progress_dir = self._debug_dir or self._flat_debug_dir
+        reporter = ProgressReporter(
+            label=self._run_label or (os.path.basename(progress_dir.rstrip("/"))
+                                      if progress_dir else "run"),
+            out_dir=progress_dir,
+            learner=self._learner_kind,
+        )
 
         repairer = BFSRepairOrchestrator(
             learners,
@@ -345,6 +398,7 @@ class BFSRepairOrchestratorBuilder:
             recorder=recorder,
             intermediate_recorder=intermediate_recorder,
             logger=logger,
+            reporter=reporter,
         )
 
         if self._on_record is not None:

@@ -28,3 +28,10 @@ class IOrchestrationManager:
     @abstractmethod
     def get_next(self) -> Tuple[ISpecification, Any]:
         pass
+
+    def pending_count(self) -> int:
+        """
+        How many tasks are waiting. Progress reporting only - a manager that
+        cannot answer says 0 rather than forcing every implementation to.
+        """
+        return 0

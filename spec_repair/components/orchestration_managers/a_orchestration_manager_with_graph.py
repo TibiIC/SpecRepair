@@ -132,5 +132,8 @@ class AOrchestrationManagerWithStackAndGraph(IOrchestrationManager, ABC):
     def has_next(self) -> bool:
         return bool(self._stack)
 
+    def pending_count(self) -> int:
+        return len(self._stack)
+
     def get_next(self) -> Tuple[ISpecification, Any]:
         return self._stack.popleft()

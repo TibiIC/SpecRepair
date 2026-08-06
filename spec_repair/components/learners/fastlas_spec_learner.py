@@ -411,8 +411,8 @@ class FastLASSpecLearner(OptimisingSpecLearner):
         self.n_runs = n_runs
         self.fastlas_args = tuple(fastlas_args)
 
-    def find_adaptations_with_heuristic(self, spec, trace, cts, learning_type, violations, hm):
-        self.spec_encoder.set_heuristic_manager(hm)
+    def find_adaptations_with_heuristic(self, spec, trace, cts, learning_type, violations, config):
+        self.spec_encoder.set_learning_config(config)
         las: str = self.spec_encoder.encode_ILASP(spec, trace, cts, violations, learning_type)
         fastlas_task: str = translate_ilasp_task_to_fastlas(las)
         return enumerate_solutions(fastlas_task, self.n_runs, self.fastlas_args)

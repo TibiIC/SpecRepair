@@ -197,7 +197,19 @@ class NewSpecEncoder:
         output += "\").\n\n"
         return output
 
+    def set_learning_config(self, config):
+        """
+        Set the policy for the next learning task.
+
+        Takes a `LearningConfig` - immutable, so the encoder cannot be looking at
+        different settings than the learner that handed them over. Previously
+        this took a mutated deep copy of the shared heuristic manager, which made
+        "what is enabled" a question with a time-dependent answer.
+        """
+        self._hm = config
+
     def set_heuristic_manager(self, heuristic_manager):
+        """Deprecated alias for `set_learning_config`. Both only need `is_enabled`."""
         self._hm = heuristic_manager
 
 

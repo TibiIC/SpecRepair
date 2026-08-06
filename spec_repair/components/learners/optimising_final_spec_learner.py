@@ -1,3 +1,4 @@
+import logging
 import re
 import subprocess
 from copy import copy, deepcopy
@@ -13,19 +14,53 @@ from spec_repair.exceptions import NoViolationException, NoWeakeningException, D
     NoAssumptionWeakeningException
 from spec_repair.interfaces.iheuristic_manager import IHeuristicManager
 from spec_repair.components.heuristic_managers.no_filter_heuristic_manager import NoFilterHeuristicManager
+from spec_repair.components.learning_config import (
+    ANTECEDENT_WEAKENING, CONSEQUENT_WEAKENING, INCLUDE_NEXT, INCLUDE_PREV,
+    INVARIANT_TO_RESPONSE_WEAKENING, LearningConfig)
 from spec_repair.helpers.parsers.ilasp_interpreter import ILASPInterpreter
 from spec_repair.model.spectra_specification import SpectraSpecification
 
 from spec_repair.wrappers.asp_wrappers import get_violations, run_ILASP
+
+_log = logging.getLogger(__name__)
+
+
+def _config_from(hm: IHeuristicManager) -> LearningConfig:
+    """
+    Read a learner policy out of a heuristic manager's flags.
+
+    The bridge for callers that still configure through the manager - notably
+    `builder.enabling("INCLUDE_NEXT", ...)`. It reads the flags once, at
+    construction, which is the whole point: after this the policy cannot move.
+    """
+    flags = [f for f in (ANTECEDENT_WEAKENING, CONSEQUENT_WEAKENING,
+                         INVARIANT_TO_RESPONSE_WEAKENING, INCLUDE_NEXT, INCLUDE_PREV)
+             if hm.is_enabled(f)]
+    return LearningConfig(operators=frozenset(), temporal_atoms=frozenset()).enabling(*flags)
 
 
 class OptimisingSpecLearner(ILearner):
     def __init__(
             self,
             heuristic_manager: IHeuristicManager = NoFilterHeuristicManager(),
+            config: Optional[LearningConfig] = None,
     ):
+        """
+        :param heuristic_manager: selection heuristics only - which counter-traces,
+            alternative tasks and adaptations to keep. Shared across learners by
+            design, because those choices are about the search, not the learner.
+        :param config: this learner's own policy, immutable for the run. Defaults
+            to whatever the heuristic manager was configured with, so a caller
+            that has not been updated behaves exactly as before.
+        """
         self._hm = heuristic_manager
+        self._config = config if config is not None else _config_from(heuristic_manager)
         self.spec_encoder = NewSpecEncoder(heuristic_manager)
+
+    @property
+    def config(self) -> LearningConfig:
+        """The policy this learner was built with - the same at every point of the run."""
+        return self._config
 
     # TODO: consider returning "data" instead of empty list when no learning is possible
     def learn_new(
@@ -49,7 +84,7 @@ class OptimisingSpecLearner(ILearner):
             new_tasks = [(new_spec, new_repair_data) for new_spec, new_repair_data in zip(new_specs, new_repair_datas)]
             return new_tasks
         except NoWeakeningException as e:
-            print(f"Weakening failed: NoWeakeningException thrown and {e}")
+            _log.info("no weakening available (%s)", type(e).__name__)
             return []
         except NoViolationException as e:
             if not data.counter_traces and data.learning_type == Learning.GUARANTEE_WEAKENING:
@@ -73,21 +108,20 @@ class OptimisingSpecLearner(ILearner):
                 # the search continues, a realisable one yields none and is
                 # recorded as a solution - which it is, having nothing left to
                 # repair.
-                print("No counter-traces for guarantee weakening, so moving "
-                      "straight to extracting counter strategies.")
+                _log.info("no counter-traces yet; deferring to counter-strategy extraction")
                 return [(spec, data)]
             else:
-                print(f"Weakening failed: NoViolationException thrown and {e}")
+                _log.info("no violation to weaken against (%s)", type(e).__name__)
                 return []
         except DeadlockRequiredException as e:
-            print(f"Weakening failed: DeadlockRequiredException thrown and {e}")
+            _log.info("deadlock completion required; branch ends here")
             return []
         except subprocess.TimeoutExpired as e:
             # run_ILASP's hypothesis search can time out on a large enough
             # spec (e.g. ColorSort) without being genuinely stuck - treat it
             # like the other "this branch didn't pan out" cases above rather
             # than crashing the whole BFS run.
-            print(f"Weakening failed: ILASP timed out and {e}")
+            _log.warning("learner timed out; branch ends here")
             return []
 
     def find_possible_adaptations(self, spec: SpectraSpecification, trace, cts, learning_type) -> List[
@@ -111,35 +145,28 @@ class OptimisingSpecLearner(ILearner):
         return useful_adaptations
 
     def find_all_exception_adaptations(self, spec, trace, cts, learning_type, violations) -> List[Tuple[int, List[Adaptation]]]:
-        hm = deepcopy(self._hm)
-        hm.set_enabled("ANTECEDENT_WEAKENING")
-        hm.set_enabled("CONSEQUENT_WEAKENING")
-        hm.set_enabled("INVARIANT_TO_RESPONSE_WEAKENING")
-        return self.find_adaptations_with_heuristic(spec, trace, cts, learning_type, violations, hm)
+        return self.find_adaptations_with_heuristic(
+            spec, trace, cts, learning_type, violations,
+            self._config.with_only(ANTECEDENT_WEAKENING, CONSEQUENT_WEAKENING,
+                                   INVARIANT_TO_RESPONSE_WEAKENING))
 
     def find_antecedent_exception_adaptations(self, spec, trace, cts, learning_type, violations) -> List[Tuple[int, List[Adaptation]]]:
-        hm = deepcopy(self._hm)
-        hm.set_enabled("ANTECEDENT_WEAKENING")
-        hm.set_disabled("CONSEQUENT_WEAKENING")
-        hm.set_disabled("INVARIANT_TO_RESPONSE_WEAKENING")
-        return self.find_adaptations_with_heuristic(spec, trace, cts, learning_type, violations, hm)
+        return self.find_adaptations_with_heuristic(
+            spec, trace, cts, learning_type, violations,
+            self._config.with_only(ANTECEDENT_WEAKENING))
 
     def find_consequent_exception_adaptations(self, spec, trace, cts, learning_type, violations) -> List[Tuple[int, List[Adaptation]]]:
-        hm = deepcopy(self._hm)
-        hm.set_disabled("ANTECEDENT_WEAKENING")
-        hm.set_enabled("CONSEQUENT_WEAKENING")
-        hm.set_disabled("INVARIANT_TO_RESPONSE_WEAKENING")
-        return self.find_adaptations_with_heuristic(spec, trace, cts, learning_type, violations, hm)
+        return self.find_adaptations_with_heuristic(
+            spec, trace, cts, learning_type, violations,
+            self._config.with_only(CONSEQUENT_WEAKENING))
 
     def find_eventualisation_adaptations(self, spec, trace, cts, learning_type, violations) -> List[Tuple[int, List[Adaptation]]]:
-        hm = deepcopy(self._hm)
-        hm.set_disabled("ANTECEDENT_WEAKENING")
-        hm.set_disabled("CONSEQUENT_WEAKENING")
-        hm.set_enabled("INVARIANT_TO_RESPONSE_WEAKENING")
-        return self.find_adaptations_with_heuristic(spec, trace, cts, learning_type, violations, hm)
+        return self.find_adaptations_with_heuristic(
+            spec, trace, cts, learning_type, violations,
+            self._config.with_only(INVARIANT_TO_RESPONSE_WEAKENING))
 
-    def find_adaptations_with_heuristic(self, spec, trace, cts, learning_type, violations, hm):
-        self.spec_encoder.set_heuristic_manager(hm)
+    def find_adaptations_with_heuristic(self, spec, trace, cts, learning_type, violations, config):
+        self.spec_encoder.set_learning_config(config)
         ilasp: str = self.spec_encoder.encode_ILASP(spec, trace, cts, violations, learning_type)
         output: str = run_ILASP(ilasp)
         adaptations: Optional[
