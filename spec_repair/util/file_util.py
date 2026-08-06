@@ -111,11 +111,17 @@ def make_directories_if_needed(output_filename):
 
 
 def write_trace(trace, filename):
+    # Traces are appended, each under the next trace_name_<n>. A file that does
+    # not exist yet and one that exists but names no trace both mean "nothing
+    # written so far" and must both start at 0 - only the first was handled, so
+    # an existing empty file (as generate_trace_asp is routinely handed) reached
+    # max() with an empty sequence and raised ValueError.
     try:
         prev = read_file_lines(filename)
-        timepoint = int(max(re.findall(r"trace_name_(\d*)", ''.join(prev)))) + 1
     except FileNotFoundError:
-        timepoint = 0
+        prev = []
+    names = re.findall(r"trace_name_(\d*)", ''.join(prev))
+    timepoint = int(max(names)) + 1 if names else 0
     trace_name = "trace_name_" + str(timepoint)
     output = ""
     for timepoint in trace.keys():
