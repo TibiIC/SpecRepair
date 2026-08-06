@@ -22,32 +22,52 @@ from tests.base_test_case import BaseTestCase
 
 
 def save_layered_graph(G: nx.DiGraph, filepath: str):
-    # Convert NetworkX graph to Graphviz Digraph
-    A = nx.nx_agraph.to_agraph(G)
-    A.node_attr.update(fontsize=24)
+    """
+    Write the debug graph: a pickle of the data, a PNG, and an interactive HTML.
 
-    # Find the node with '0' in its label
-    target_node_name = None
-    for node_name in G.nodes():
-        if node_name == 0:
-            target_node_name = node_name
-        if '#' in str(node_name):
-            leaf_node = A.get_node(node_name)
-            leaf_node.attr['color'] = 'blue'
-    target_node = A.get_node(target_node_name)
-    target_node.attr['penwidth'] = '5'
+    Everything here is a *debug artefact*, and this runs on every record via
+    `with_on_record`, so nothing in it may end the repair run. Both renderers
+    can fail on a graph the search happens to make large - `dot` is a
+    subprocess and died with an empty-stderr OSError on pcar_2 after 108s of
+    real work, taking the run with it.
 
-    # Render the Graphviz AGraph to an image file using Graphviz
-    A.draw(f"{filepath}/graph.png", format='png', prog='dot')
-
+    The pickle is written first and deliberately not guarded: it is a local
+    `pickle.dump` with no subprocess behind it, and it is the artefact worth
+    keeping, since both pictures can be regenerated from it afterwards.
+    """
     with open(f"{filepath}/graph.pkl", "wb") as f:
         pickle.dump(G, f)
 
-    # Create the interactive visualization
-    net = Network(height="800px", width="100%")
-    net.from_nx(G)
-    # Write the HTML file
-    net.write_html(f"{filepath}/graph.html")
+    try:
+        A = nx.nx_agraph.to_agraph(G)
+        A.node_attr.update(fontsize=24)
+
+        # Find the node with '0' in its label
+        target_node_name = None
+        for node_name in G.nodes():
+            if node_name == 0:
+                target_node_name = node_name
+            if '#' in str(node_name):
+                leaf_node = A.get_node(node_name)
+                leaf_node.attr['color'] = 'blue'
+        if target_node_name is not None:
+            A.get_node(target_node_name).attr['penwidth'] = '5'
+
+        # Render the Graphviz AGraph to an image file using Graphviz
+        A.draw(f"{filepath}/graph.png", format='png', prog='dot')
+    except Exception as e:
+        print(f"Could not render {filepath}/graph.png ({type(e).__name__}: {e}); "
+              f"graph.pkl is still written.")
+
+    try:
+        # Create the interactive visualization
+        net = Network(height="800px", width="100%")
+        net.from_nx(G)
+        # Write the HTML file
+        net.write_html(f"{filepath}/graph.html")
+    except Exception as e:
+        print(f"Could not write {filepath}/graph.html ({type(e).__name__}: {e}); "
+              f"graph.pkl is still written.")
 
 
 def learner_suffix(learner: str) -> str:
