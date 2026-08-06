@@ -106,7 +106,9 @@ different reasons — none of them tool limitations:
 1. **Tautologies.** minepump's `assumption2_1` is
    `G(!highwater -> (!highwater | !methane))`, which spot confirms is equivalent
    to `true`. Unviolable at any length. Presumably trivialised by an earlier
-   repair.
+   repair. *(Superseded 2026-07-30: strengthened to `G(!highwater | !methane)`,
+   now violable from 2 timepoints. See
+   [2026-07-30](2026-07-30-merge-splitting-legend-and-trace-violation-runner.md).)*
 2. **Trace too short.** A trace is a finite prefix ending in a *weak timepoint*
    where every atom both holds and does not, so a `next` evaluated at the last
    real timepoint is satisfied vacuously. A violation involving `next` must occur
@@ -153,6 +155,12 @@ JVM call it cannot be interrupted from Python. `merge_solutions` now raises
 `MergeTooLargeError` with the real numbers instead of hanging;
 `--max-merge-formulas` (default 50, 0 disables) overrides. elevator_updated now
 fails in **42 seconds** with an explanation.
+
+*Superseded 2026-07-30.* Failing fast is still not a result. The merge now
+splits an unrealisable set in half and merges each half separately, so the core
+search is never reached at scale and elevator_updated **succeeds** in 173s,
+returning 373 realisable specifications. The cap is gone. See
+[2026-07-30](2026-07-30-merge-splitting-legend-and-trace-violation-runner.md).
 
 Deduplicating inputs before merging was tried and rejected on measurement:
 semantic dedup of 966 specs is itself an O(n²) spot comparison that also exceeds
