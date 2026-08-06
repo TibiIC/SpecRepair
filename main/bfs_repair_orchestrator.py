@@ -1,7 +1,8 @@
 from typing import Dict, List, Tuple
 
 from spec_repair.enums import Learning
-from spec_repair.exceptions import InvalidCaseStudyException, SpecificationNotVerifiableException
+from spec_repair.exceptions import InvalidCaseStudyException, \
+    MitigationMadeNoProgressException, SpecificationNotVerifiableException
 from spec_repair.interfaces.idiscriminator import IDiscriminator
 from spec_repair.interfaces.ilearner import ILearner
 from spec_repair.interfaces.imitigator import IMitigator
@@ -117,6 +118,70 @@ class BFSRepairOrchestrator:
                 "assumption - there is nothing for it to weaken otherwise, and the "
                 "search cannot reach a leaf.\nTrace:\n" + "".join(data.trace))
 
+    @staticmethod
+    def _reject_unchanged_mitigations(
+            spec: ISpecification,
+            data: RepairData,
+            alt_tasks: List[Tuple[ISpecification, RepairData]]
+    ) -> None:
+        """
+        A mitigation must move the branch somewhere new, or say it has nothing.
+
+        Handing back the input unchanged is neither. The orchestration manager
+        recognises the task as already visited, returns its id without pushing
+        it onto the stack, and the branch vanishes without reaching a leaf - so
+        the run still reports a result, just a quietly smaller one.
+
+        `complete_counter_traces` does this when there are no counter-traces to
+        complete. Returning nothing at all remains legitimate: the
+        assumption-only preset uses `finish_here_return_nothing` to end a branch
+        deliberately, and `_record_if_solution` covers the case where that
+        branch was in fact a solution.
+        """
+        for alt_spec, alt_data in alt_tasks:
+            if (alt_spec.to_str() == spec.to_str()
+                    and alt_data.learning_type == data.learning_type
+                    and alt_data.counter_traces == data.counter_traces):
+                raise MitigationMadeNoProgressException(
+                    f"A {data.learning_type} mitigation returned its input unchanged: same "
+                    f"specification, same learning type, same {len(data.counter_traces)} "
+                    f"counter-trace(s). The branch would be silently dropped as already "
+                    f"visited.\n{spec.to_str()}")
+
+    def _is_solution(self, spec: ISpecification, data: RepairData) -> bool:
+        """
+        A solution is realisable, and its assumptions are no longer violated by
+        the violation trace.
+
+        The third property - assumptions weaker, guarantees weaker or equivalent
+        than the input's - is a side effect of only ever weakening, so it is not
+        re-checked here.
+        """
+        if not data.trace:
+            return False
+        if not self._oracle.is_realisable(spec):
+            return False
+        asp: str = NewSpecEncoder.encode_ASP(spec, data.trace, [])
+        violations: List[str] = get_violations(
+            asp, exp_type=Learning.ASSUMPTION_WEAKENING.exp_type())
+        return not get_violated_expression_names_of_type(violations, "assumption")
+
+    def _record_if_solution(self, spec: ISpecification, data: RepairData) -> None:
+        """
+        Record a terminating branch as a leaf when it is in fact a solution.
+
+        A branch can run out of moves while standing on a perfectly good repair -
+        the learner has nothing left to weaken precisely because there is nothing
+        left to fix. Without this, that repair is dropped and the run reports
+        fewer solutions than it found, with nothing to indicate the loss.
+        """
+        if self._is_solution(spec, data):
+            learned_id = self._recorder.add(spec)
+            self._om.connect_leaf_node(spec, learned_id, prev=None)
+            self._logger.record(learned_id, spec, data, "Learned")
+            print("Branch ran out of moves on a specification that is already a "
+                  "solution - recorded as a leaf rather than dropped.")
+
     def repair_bfs(
             self,
             og_spec: ISpecification,
@@ -135,6 +200,12 @@ class BFSRepairOrchestrator:
                 alt_tasks: List[Tuple[ISpecification, RepairData]] = self._mitigator.prepare_alternative_learning_tasks(
                     spec,
                     data)
+                self._reject_unchanged_mitigations(spec, data, alt_tasks)
+                if not alt_tasks:
+                    # The branch ends here. Before letting it, check whether the
+                    # specification we are standing on is already a solution -
+                    # otherwise a valid repair is thrown away silently.
+                    self._record_if_solution(spec, data)
                 for alt_spec, alt_data in alt_tasks:
                     self._om.enqueue_new_tasks(alt_spec, alt_data, prev=(spec, data))
             else:

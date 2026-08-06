@@ -25,6 +25,23 @@ class LearningException(Exception):
 class NameClashException(Exception):
     pass
 
+class MitigationMadeNoProgressException(Exception):
+    """
+    A mitigation strategy handed back a task identical to the one it was given.
+
+    The mitigator exists to move a branch that could not be learned from onto
+    something different - a different learning type, a completed counter-trace.
+    Returning its input unchanged is never that: the orchestration manager
+    recognises the task as already visited, returns its id without pushing it
+    onto the stack, and the branch disappears without reaching a leaf.
+
+    Silently losing a branch is worse than failing, because the run still
+    reports a result - just a smaller one, with no indication that anything went
+    missing. `complete_counter_traces` does exactly this when there are no
+    counter-traces to complete.
+    """
+
+
 class InvalidCaseStudyException(Exception):
     """
     The inputs to a repair run do not satisfy its preconditions.
