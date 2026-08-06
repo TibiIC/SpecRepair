@@ -1,5 +1,6 @@
 import os
 import os.path
+import platform
 import re
 import subprocess
 from typing import List, Set
@@ -72,7 +73,7 @@ def _extract_cores(text) -> List[Set[int]]:
 
 def run_all_unrealisable_cores_raw(filename) -> str:
     filepath = f"{filename}"
-    args = jpype.JArray(JString)([filepath, "--jtlv"])
+    args = jpype.JArray(JString)([filepath] + _bdd_args())
     output = SpectraToolbox.exploreAllCores(args)
     return str(output)
 
@@ -166,7 +167,7 @@ def realizable(file, suppress=False):
         print(file)
         return None
     file = pRespondsToS_substitution(file)
-    args = ["-i", file, "--jtlv"]
+    args = ["-i", file] + _bdd_args()
     output = run_spectra_cli(args)
     if re.search("Result: Specification is unrealizable", output):
         return False
@@ -185,7 +186,7 @@ def synthesise_extract_counter_strategies(file):
         print(file)
         return None
     file = pRespondsToS_substitution(file)
-    args = ["-i", file, "--counter-strategy", "--jtlv"]
+    args = ["-i", file, "--counter-strategy"] + _bdd_args()
     output = run_spectra_cli(args)
     return output
 
@@ -207,7 +208,7 @@ def synthesise_check_realisability_only(file):
         print(file)
         return None
     file = pRespondsToS_substitution(file)
-    args = ["-i", file, "--jtlv"]
+    args = ["-i", file] + _bdd_args()
     output = run_spectra_cli(args)
     return output
 
@@ -224,7 +225,7 @@ def synthesise_controller(spec_file_path, output_folder_path, suppress=False) ->
         return False
 
     spec_file_path = pRespondsToS_substitution(spec_file_path)
-    args = ["-i", spec_file_path, "--jtlv", '-s', '--static', '-o', output_folder_path]
+    args = ["-i", spec_file_path] + _bdd_args() + ['-s', '--static', '-o', output_folder_path]
     output = run_spectra_cli(args)
     if re.search("Error: Cannot synthesize an unrealizable specification", output):
         print("Error: Cannot synthesize an unrealizable specification")
@@ -237,6 +238,45 @@ def synthesise_controller(spec_file_path, output_folder_path, suppress=False) ->
     print(spec_file_path)
     return False
 
+
+
+_BDD_PACKAGE_ENV = "SPEC_REPAIR_BDD"
+_cudd_state = {"warned": False}
+
+
+def _bdd_args() -> list:
+    """
+    Which BDD backend to ask Spectra for.
+
+    Defaults to `--jtlv`, the pure-Java package. Not because it is better - it
+    is markedly slower, and its fixed 200033-node table is what leaves amba
+    thrashing in garbage collection indefinitely - but because it is the only
+    one that ran: CUDD needs a native library that ships inside the jars and was
+    never on `java.library.path`.
+
+    `SPEC_REPAIR_BDD=cudd` selects CUDD instead, which `jvm.ensure_cudd_native`
+    makes loadable on Linux and Windows. Measured on gpu13: minepump 0.19s under
+    CUDD against 1.17s under JTLV, genbuf 0.2s against 0.4s, same verdicts.
+
+    Opt-in rather than default for the same reason as reordering: a different
+    BDD package can return a different counter-strategy among the many valid
+    ones, and the search branches on the counter-strategy it is given. Repairs
+    stay genuine, but runs either side of this are not result-comparable, so it
+    must not switch itself on underneath a sweep already in progress.
+    """
+    if os.environ.get(_BDD_PACKAGE_ENV, "").strip().lower() != "cudd":
+        return ["--jtlv"]
+    if platform.system() == "Darwin":
+        # The jars ship libcudd.so and cudd.dll and no .dylib, so there is no
+        # CUDD to load on macOS at all. Honouring the request would swap a
+        # working run for `NullPointerException: ... "attrSizes" is null`, so
+        # say so once and carry on with JTLV.
+        if not _cudd_state["warned"]:
+            _cudd_state["warned"] = True
+            print(f"{_BDD_PACKAGE_ENV}=cudd ignored: Spectra ships no CUDD "
+                  f"native for macOS. Using JTLV.")
+        return ["--jtlv"]
+    return []
 
 
 _BDD_REORDER_ENV = "SPEC_REPAIR_BDD_REORDER"

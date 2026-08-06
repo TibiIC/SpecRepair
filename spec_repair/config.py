@@ -97,6 +97,22 @@ PATH_TO_TOOLBOX = f"{TOOLS_DIR}/spectra_toolbox.jar"
 PATH_TO_ILASP = f"{TOOLS_DIR}/bin/ILASP"
 PATH_TO_FASTLAS = f"{TOOLS_DIR}/bin/FastLAS"
 PATH_TO_JVM = _default_jvm_path()
+
+# Where CUDD's native library is unpacked, if it is used at all.
+#
+# Spectra's default BDD backend is CUDD, and it is dramatically faster than the
+# pure-Java JTLV package we fall back to - but it needs a native library that is
+# never on the library path, so every CUDD run failed with
+# `NullPointerException: Cannot load from int array because "attrSizes" is null`
+# and `--jtlv` became the only thing that worked.
+#
+# The library ships *inside* the Spectra jars: `libcudd.so` and `cudd.dll`.
+# There is no `.dylib`, so CUDD is available on Linux and Windows and simply
+# cannot run on macOS - which is why the same failure appears on both a Mac and
+# the Linux GPU boxes, for two different reasons. Extracting the bundled `.so`
+# needs no root, so a shared box can use it.
+CUDD_NATIVE_DIR = os.path.expanduser(
+    os.environ.get("SPEC_REPAIR_CUDD_DIR", f"{TOOLS_DIR}/native"))
 PATH_TO_SHIELD = os.path.join(PROJECT_PATH, "easy-downloads", "spectra-executor.jar")
 
 PRINT_CS = False
