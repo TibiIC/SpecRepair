@@ -1,7 +1,7 @@
 # Every node must lead to a leaf: dead ends, case-study preconditions, and making FastLAS deterministic
 
-Report date: 2026-08-06 (early report, written mid-afternoon; the four sweeps
-relaunched at 16:30 are still running).
+Report date: 2026-08-06 (written through the day; the four sweeps relaunched at
+17:15 are still running).
 
 **Short version.** The day started from a catalogue of overnight failures and
 ended with the search invariant restored and FastLAS made deterministic.
@@ -119,8 +119,8 @@ configuration while being global - worse than not offering the knob at all.
 
 Which formulas a methodology may weaken is also not a heuristic. Heuristics
 narrow a search that would still be correct without them; this decides what
-counts as an *admissible repair*. A configurable, per-learner version belongs
-with the deferred heuristic-manager refactor.
+counts as an *admissible repair*. A configurable, per-learner version now
+exists - see §15.2.
 
 ## 5. AMBA and genbuf, and three silent corruptions they surfaced
 
@@ -366,13 +366,144 @@ and gpu14/gpu15 had only 4 results each, not worth keeping on the old naming.
 returned *gpu15's* log directory, because all four machines share one
 filesystem. Always name the exact per-session log directory.
 
-## 14. Open
+## 14. Why `amba` sits in garbage collection forever
+
+Diagnosed from a log of `Garbage collection #3233 ... 200033 nodes`. The number
+that matters is the one that never changes: **200033 nodes on every line.** The
+table is not growing.
+
+We run Spectra with `--jtlv`, which selects the pure-Java BDD package instead of
+the default CUDD. That is not arbitrary - **CUDD cannot load in this
+deployment**, verified on macOS *and* on gpu13, both failing identically:
+
+    java.lang.NullPointerException: Cannot load from int array because "attrSizes" is null
+
+The JTLV factory runs a fixed node table of 200033. Each collection frees
+78k-130k nodes, so **40-65% of the table is free afterwards**. JavaBDD only
+resizes when free-after-GC falls *below* `minFreeNodes` (default 20%), so the
+engine concludes it need not grow - but the reclaimed space refills within
+milliseconds and it collects again. 3252 collections against 17.5s of cumulative
+GC is **~186 collections per second**, indefinitely.
+
+It is a stable equilibrium: never resizes, never runs out of memory, never
+finishes. Which makes it worse than a crash - there is nothing to catch. It is a
+different failure from the heap exhaustion already handled in
+`_synthesise_or_reject`, where `--counter-strategy` materialises a strategy past
+12.8M nodes and throws.
+
+Only the large case studies reach it: BDD size scales with the boolean state
+space, so `amba`, `genbuf` and `colorsort` qualify and `minepump` and `lift`
+never approach the table size.
+
+**What was done.** `Env` exposes `enableReorder` but *no* accessor for the node
+table, so of the two levers only variable reordering is reachable - sifting is
+what actually moves BDD size. It is wired in behind `SPEC_REPAIR_BDD_REORDER=1`
+and is **off by default, deliberately**. Reordering is semantics-preserving, and
+realisability verdicts were confirmed identical with it on and off. But it can
+change *which* counter-strategy Spectra returns among the many valid ones, and
+the search branches on the counter-strategy it is given - so runs either side of
+the flag are not result-comparable, and it must not switch itself on underneath
+a sweep in progress.
+
+Not time-boxed, by request. The run reports how long it has been where it is
+instead - see below.
+
+## 15. Run output, and per-learner configuration
+
+### 15.1 What a run says about itself
+
+Runs printed very little of use and a lot of noise. The three-stanza
+`Rule:`/`Hypothesis:`/`New Rule:` block fired once per adaptation per candidate -
+thousands of times on a branching search - and never said which node or depth it
+belonged to. It is now one debug-level line.
+
+`ProgressReporter` gives one compact line per event, carrying depth, node, queue
+and duration:
+
+    [    0.0s] START  lift trace 1  [ilasp]
+    [    0.8s] NODE   d0 n1  ASM   queue 0
+    [    3.0s] LEARN  d0 n1  21 candidate(s)  (2.2s)
+    [    3.1s] SOLVED d0 n1  leaf #0
+    [    4.0s] DONE   lift trace 1  21 final, 0 intermediate, 1 nodes explored, 4.0s
+
+The **learning step** is timed specifically - it is where ILASP/FastLAS and
+Spectra run, and where a run that looks stuck nearly always is. Verification is
+timed too but stays silent under 5s: it happens once per candidate and is
+normally instant, so printing every one buries the lines that say where the run
+is.
+
+Three outputs, deliberately separate: **stdout** for watching, **`progress.log`**
+for reconstructing a finished run after the pane is gone, and **`status.txt`**,
+rewritten in place, for coming back the next morning:
+
+    case study : lift trace 1
+    learner    : fastlas (n_runs=10)
+    started    : 2026-08-06 17:15:49
+    elapsed    : 4.0s
+    depth      : 0
+    node       : 1 (queue 0, 1 explored)
+    phase      : learning d0 (assumption_weakening)
+    in phase   : 2.2s
+    solutions  : 21 final, 0 intermediate
+
+`in phase` is the line that answers the `amba` question above. The heartbeat
+keeping it fresh sleeps between updates and writes a few hundred bytes, so it
+costs nothing against a run saturating a core in the JVM.
+
+### 15.2 `LearningConfig`: configuration that holds still
+
+The half of `IHeuristicManager` that was never a heuristic is now its own frozen
+object, owned per learner. A heuristic narrows a search that would still be
+correct without it; these flags decide what counts as an admissible repair.
+
+Three problems went with the old arrangement:
+
+* **One object, every learner.** `_initialise_repair` assigned the
+  orchestrator's manager to every learner at the start of each run, so a flag
+  set for the assumption learner could not mean anything different for the
+  guarantee learner. The knobs read as per-learner configuration while being
+  global - this is exactly why the six toggles of §4 were withdrawn.
+* **Mutated mid-run, then reset.** Running one weakening operator at a time
+  meant deep-copying the manager and flipping flags on the copy, three times per
+  learning step. "What is this learner configured to do" had a time-dependent
+  answer.
+* **Fixed at two learners.** Nothing was wrong with two; nothing supported a
+  third either.
+
+`LearningConfig` is frozen, and narrowing returns a new one:
+
+```python
+repairer = (BFSRepairOrchestratorBuilder.syntactic()
+            .with_learner_config(ASSUMPTION_WEAKENING,
+                                 LearningConfig().with_only(ANTECEDENT_WEAKENING))
+            .with_learner_config(GUARANTEE_WEAKENING,
+                                 LearningConfig().with_only(INVARIANT_TO_RESPONSE_WEAKENING))
+            .build())
+```
+
+Learners left unconfigured keep the shared default, so configuring one does not
+silently change the others, and a third learner can be added with a policy of
+its own. `with_only` intersects rather than replaces, so a learner cannot gain
+an operator it was denied. INITIAL stays out of `learnable_when` by default, for
+the reasons in §4.
+
+**Behaviour is unchanged**, which was the constraint. Verified end to end either
+side of the refactor: `lift` trace 1 gives 21 final specs, `minepump` trace 0
+gives 12, `traffic_single` trace 0 gives 1 final and 11 intermediate - identical
+before and after. 814 passed with only the five pre-existing failures, plus 12
+new tests covering the config itself.
+
+The deferred heuristic-manager refactor of §4 is therefore **done** for the
+configuration half. What remains in `IHeuristicManager` is now only genuine
+selection: which counter-traces, which alternative tasks, which adaptations.
+
+## 16. Open
 
 * **Third experiment type** - supervisors want one. `unrealisable.spectra`
   exists for minepump and minepump_liveness (strengthened guarantees plus a
   removed assumption), a natural seed exercising guarantee weakening as the
   primary path rather than as a fallback.
-* **Heuristic-manager refactor** on a branch - deferred deliberately (§4).
+* ~~Heuristic-manager refactor~~ - done, see §15.2.
 * **submarine** - realisability check throws; deliberately excluded from the
   precondition audit.
 * **`test_trivial_solution.py` JVM hang** (§10).
