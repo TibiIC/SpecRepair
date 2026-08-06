@@ -201,31 +201,6 @@ exp(E):-
 
 % ---*** Domain dependent Axioms ***---
 
-%assumption -- initial_assumption
-%	(highwater=false&methane=false)
-
-assumption(initial_assumption).
-
-antecedent_holds(initial_assumption,0,S):-
-	trace(S),
-	timepoint(0,S),
-	not weak_timepoint(0,S).
-
-consequent_holds(initial_assumption,0,S):-
-	trace(S),
-	timepoint(0,S),
-	not weak_timepoint(0,S),
-	root_consequent_holds(current,initial_assumption,0,0,0,S).
-
-root_consequent_holds(OP,initial_assumption,0,0,T1,S):-
-	trace(S),
-	timepoint(T1,S),
-	timepoint(T2,S),
-	temporal_operator(OP),
-	timepoint_of_op(OP,T1,T2,S),
-	not_holds_at(highwater,T2,S),
-	not_holds_at(methane,T2,S).
-
 %assumption -- assumption1_1
 %	G(((PREV(pump=true)&pump=true)->next(highwater=false)))
 

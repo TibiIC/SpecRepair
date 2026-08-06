@@ -2,7 +2,12 @@ import re
 from abc import ABC
 
 
-PRS_REG = re.compile(r"^\s*G[^-]*->\s*F")
+# `F\s*\(` rather than a bare `F`: the response pattern is G(a -> F(b)), and a
+# bare F also matches the literal constant FALSE, so an ordinary safety
+# constraint written `G(a -> FALSE)` was treated as a response pattern.
+# pRespondsToS_substitution then searched it for "F(" and died with
+# AttributeError on the None match. Three genbuf guarantees are of that form.
+PRS_REG = re.compile(r"^\s*G[^-]*->\s*F\s*\(")
 
 
 class ExceptionRule(ABC):

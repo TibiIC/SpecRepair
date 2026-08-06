@@ -24,9 +24,12 @@ def pRespondsToS_substitution(output_filename):
             if p[-2:] == "))":
                 p = p[0:-2]
             else:
-                print("Trouble extracting p from: " + line)
-                exit(1)
-                # return "No_file_written:" + line
+                # Raise rather than exit(1): this runs inside a repair, and
+                # killing the interpreter gives no traceback and no chance for
+                # the caller to treat it as a failed branch.
+                raise ValueError(
+                    f"Could not extract the response operand from what looked "
+                    f"like a pRespondsToS pattern: {line}")
             replacement = "\tpRespondsToS(" + s + "," + p + ");\n"
             spec[i] = replacement
     if found:

@@ -59,6 +59,10 @@ class TestNewSpecEncoder(BaseTestCase):
         violations = get_violations(asp, exp_type=ExpType.ASSUMPTION)
         las_str: str = encoder.encode_ILASP(spec, trace, cts, violations, Learning.ASSUMPTION_WEAKENING)
 
+        # The fixture no longer contains minepump's initial_assumption: initial
+        # formulas are excluded from the learning task (NON_LEARNABLE_WHEN in
+        # new_spec_encoder) while remaining in encode_ASP. Regenerated 2026-08-06;
+        # the only change was the removal of that one 25-line block.
         expected_las_str: str = read_file(self.minepump_ilasp_file)
         self.assertEqual(expected_las_str, las_str)
 

@@ -5,9 +5,31 @@ from spec_repair.enums import Learning
 
 
 def assign_equalities(formula_n, variables):
+    r"""
+    Rewrite bare atoms into Spectra's explicit `name=true` / `name=false` form.
+
+    The boundaries are `\b`, not `[a-z]`. The previous guards - a lookahead of
+    `(?!=|[a-z])` and a lookbehind of `(?<![a-z])` - stopped a match running
+    into a following *lowercase letter*, but not into an underscore or a digit.
+    So any variable whose name is a prefix of another, with `_` or a digit at
+    the join, was substituted inside the longer name:
+
+        !hready_counter_val0   ->   hready=false_counter_val0
+
+    which is syntactically valid and semantically nonsense; Spectra then
+    rejects it with "Couldn't resolve reference to Referrable
+    'false_counter_val0'", pointing nowhere near the cause. AMBA hits this with
+    `hready` against `hready_counter_val0`.
+
+    `\b` does not match between a word character and `_` or a digit, so the
+    longer name is left alone, while `!hready&`, `!hready)` and `!hready` at
+    end-of-string still match. `(?!=)` is kept so an already-assigned
+    `name=true` is not rewritten again.
+    """
     for var in variables:
-        formula_n = re.sub("!" + var + "(?!=|[a-z])", var + "=false", formula_n)
-        formula_n = re.sub("(?<![a-z])" + var + "(?!=|[a-z])", var + "=true", formula_n)
+        escaped = re.escape(var)
+        formula_n = re.sub(rf"!{escaped}\b(?!=)", var + "=false", formula_n)
+        formula_n = re.sub(rf"(?<!\w){escaped}\b(?!=)", var + "=true", formula_n)
     return formula_n
 
 
