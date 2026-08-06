@@ -85,6 +85,12 @@ if tmux has-session -t "$SESSION" 2>/dev/null; then
     exit 1
 fi
 
+# Refuse to start on top of a previous sweep, including one left under an older
+# session name - the exact-name check below only catches a collision with *this*
+# run's name.
+source "$(dirname "${BASH_SOURCE[0]}")/lib/sweep_guard.sh"
+assert_no_previous_sweep "$SESSION"
+
 mkdir -p "$LOGDIR"
 
 # Define the setup commands

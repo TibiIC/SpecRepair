@@ -96,6 +96,12 @@ if tmux has-session -t "$SESSION" 2>/dev/null; then
     exit 1
 fi
 
+# Refuse to start on top of a previous sweep, including one left under an older
+# session name - the exact-name check below only catches a collision with *this*
+# run's name.
+source "$(dirname "${BASH_SOURCE[0]}")/lib/sweep_guard.sh"
+assert_no_previous_sweep "$SESSION"
+
 mkdir -p "$LOGDIR"
 
 SETUP_CMDS="source ~/.sdkman/bin/sdkman-init.sh && source ~/phd_work.sh && conda activate $CONDA_ENV && export LD_LIBRARY_PATH=\$CONDA_PREFIX/lib:\$LD_LIBRARY_PATH && export SPEC_REPAIR_LEARNER=$LEARNER && export SPEC_REPAIR_FASTLAS_RUNS=$FASTLAS_RUNS && cd $WORKDIR"
