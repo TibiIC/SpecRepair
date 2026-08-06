@@ -564,36 +564,94 @@ Halving the searches helps proportionally but does not make it fast. The
 remaining levers are asking for *one* core rather than all where the caller only
 needs a hitting set, and CUDD (§16).
 
-## 18. The third experiment type - design, not yet built
+## 18. The third experiment type - built, and running
 
-**Not implemented.** Recorded here so it can be picked up directly.
+`case_study_3`. The first two setups manufacture their traces symbolically:
+ASP is asked for a trace violating some assumption and obliges, but it
+constrains the system's moves only by the specification, so a trace can contain
+system behaviour no synthesised controller would ever produce. A repair learned
+against such a trace is a repair against a fiction.
 
-The point is a violation trace that exhibits *real controller behaviour*, rather
-than one manufactured by ASP. ASP leaves the system's moves unconstrained by
-anything but the specification, so a trace can contain system behaviour no
-synthesised controller would ever produce.
+Here a controller is synthesised and **run**. The environment respects the
+assumptions for N steps, then acts at random until it breaks one. Every system
+value in the trace is genuine controller output.
 
-The procedure:
+### 18.1 What syntech provides, and what it does not
 
-1. Synthesise a controller from the specification
-   (`synthesise_controller` already exists and writes one out).
-2. Run it for **N** timesteps against an environment that **complies with the
-   assumptions** - at each step, choose an environment input satisfying the
-   assumptions given the state so far, and let the controller respond.
-3. From step **N+1**, let the environment act **at random**, ignoring the
-   assumptions, until it violates one.
-4. The resulting prefix is the violation trace, and the system half of it is
-   genuine controller output throughout.
+Controller execution is theirs: `ControllerExecutor` in **spectra-executor**,
+loaded here against a `StaticController` over the files
+`synthesise_controller` writes (`controller.init.bdd`, `controller.trans.bdd`,
+`vars.doms`).
 
-Open decisions for whoever implements it: N and the number of traces per case
-study (5 would mirror case_study_2); whether the random phase is seeded (it
-should be, for reproducibility); and how to sample an assumption-compliant input
-cheaply - the controller's own BDD gives the legal environment moves, which is
-the natural source and avoids a solver call per step.
+**The environment side does not exist anywhere in the SpectraSynthesizer
+org.** Checked: `ControllerExecutor` offers `getAllLegalSystemOutputs` with no
+counterpart for inputs; **spectra-ext** has only `CTDExecutor`; and
+**spectra-sim** turns out to be a set of worked examples - CinderellaStepmother,
+TowersOfHanoi, MonkeyRunner - each hand-rolling its own environment in a
+per-example `Board.java`, with nothing shared to reuse.
 
-It lands as `case_study_3` under the naming convention of §11, with the same
-`original.spectra` + `violation_trace_<n>.txt` shape as case_study_2 so the
-existing runner, pipeline and precondition assertions apply unchanged.
+So "does this input respect the assumptions" is answered with **this project's
+own ASP violation check** - the same one the repair, the preconditions and the
+oracle use. That keeps one definition of "violates an assumption" across the
+whole pipeline instead of introducing a second.
+
+### 18.2 Two things the controller itself teaches
+
+Both found by getting them wrong first, and both are properties of GR(1) rather
+than of this code:
+
+* **A refused step is free to retry.** Spectra's controller will not accept an
+  input its assumptions forbid, and the executor does not advance when it
+  refuses - so the next candidate starts from the same state. That does most of
+  the compliance filtering for free. A step that succeeds and only *then* turns
+  out to violate is the unrecoverable one: there is no rewind, so the episode is
+  abandoned and retried.
+* **A refusal during the random phase is not a dead end - it is the
+  violation.** The controller is only obliged to respond while the environment
+  keeps its assumptions, so a refusal means one has just been broken. Treating
+  it as failure produced traces for **minepump alone**, whose controller happens
+  to tolerate the violating input and carry on; every other case study silently
+  produced nothing. The difference was whether the controller tolerated the
+  violation, not whether one occurred.
+
+### 18.3 What was generated
+
+**29 traces, precondition audit 29 OK / 0 BAD.**
+
+| Case study | Traces | Example violation |
+| --- | --- | --- |
+| minepump | 5 | `assumption2_1`, `assumption1_1` |
+| minepump_liveness | 5 | `assumption3_1`, `assumption1_1` |
+| gyro | 5 | `ready_stays_ready` |
+| traffic_single | 5 | `car_moves_when_green`, `car_idle_when_red` |
+| traffic_updated | 5 | `carA_moves_when_green`, `carB_idle_when_red` |
+| pcar | 4 | `sideSense_mutual_exclusion` |
+
+Not generated, and why:
+
+* **amba** - the CLI rejects its initial conditions before synthesis, so no
+  controller can be built (the same check that made §16's benchmark report "(no
+  verdict)").
+* **arbiter** - only a liveness assumption, which no finite prefix can violate.
+  It is excluded from case_study_2 for exactly this reason.
+* **lift, elevator, humanoid, colorsort, genbuf** - a uniformly random
+  environment did not break their assumptions within the step budget. These want
+  a *targeted* environment - one that aims at a chosen assumption rather than
+  sampling blindly - which is the obvious next iteration.
+
+The layout matches case_study_2 exactly (`original.spectra` +
+`violation_trace_<n>.txt`), so the runner, the pipeline and the precondition
+assertions all apply unchanged.
+
+### 18.4 Running now
+
+| Machine | Learner | Session | Log directory |
+| --- | --- | --- | --- |
+| gpu12 | FastLAS `n_runs=10` | `case_study_3_all_fastlas` | `logs/case_study_3/all_fastlas_2026-08-07_000503/` |
+| gpu20 | ILASP | `case_study_3_all_ilasp` | `logs/case_study_3/all_ilasp_2026-08-07_000514/` |
+
+30 runs each, capped at 8 concurrent, alongside the four case_study_1 and
+case_study_2 sweeps on gpu11/13/14/15.
 
 ## 19. Housekeeping
 
@@ -612,7 +670,8 @@ existing runner, pipeline and precondition assertions apply unchanged.
 
 ## 20. Open
 
-* **Third experiment type** - designed in §18, not built.
+* **Third experiment type** - built and running (§18). Five case studies still
+  need a targeted rather than random environment.
 * ~~Heuristic-manager refactor~~ - done, see §15.2.
 * **submarine** - realisability check throws; deliberately excluded from the
   precondition audit.
