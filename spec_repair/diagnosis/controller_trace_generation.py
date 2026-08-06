@@ -118,6 +118,47 @@ def _candidate_inputs(env_domains: Dict[str, List[str]],
             for _ in range(MAX_CANDIDATES_PER_STEP)]
 
 
+
+def _would_violate(spec, states, candidate, variables, repairable, trace_name):
+    """
+    Would this environment input break a repairable assumption, if taken now?
+
+    Evaluated on a *hypothetical* next state: the candidate's environment values
+    over the system's current output, since the system has not moved yet. That
+    is exact for the assumption shapes that matter here - a safety assumption
+    constrains the environment from the previous state and the new input - and
+    where it is not, the real check after the step still decides. Nothing is
+    accepted on the strength of this prediction alone.
+
+    This is what makes the environment *targeted*. A uniformly random
+    environment breaks an assumption quickly when the assumption is easy to
+    break and never when it is not: minepump's `!highwater | !methane` falls to
+    one draw in four, while lift, elevator, humanoid, colorsort and genbuf
+    survived thousands of random steps. Choosing inputs that aim at an
+    assumption turns "wait for luck" into "go and do it".
+    """
+    hypothetical = list(states)
+    previous = dict(states[-1]) if states else {}
+    previous.update({k: v for k, v in candidate.items() if k in variables})
+    hypothetical.append(previous)
+    violated = set(_violated_assumptions(
+        spec, _trace_lines(hypothetical, variables, trace_name)))
+    return bool(violated & repairable)
+
+
+def _targeted_input(spec, states, env_domains, variables, repairable, rng, trace_name):
+    """
+    An environment input chosen to break an assumption, or a random one if none
+    of the candidates considered would.
+    """
+    candidates = _candidate_inputs(env_domains, rng)
+    for candidate in candidates:
+        if _would_violate(spec, states, candidate, variables, repairable, trace_name):
+            return candidate
+    return candidates[0] if candidates else {
+        n: rng.choice(env_domains[n]) for n in sorted(env_domains)}
+
+
 def _executor_for(spec_path: str, work_dir: str):
     """Synthesise a controller for this specification and open it for stepping."""
     controller_dir = os.path.join(work_dir, "controller")
@@ -198,9 +239,10 @@ def _run_episode(spec, spec_path, work_dir, variables, repairable,
         if _violated_assumptions(spec, _trace_lines(states, variables, trace_name)):
             return None
 
-    # Phase 2: an environment that no longer cares.
+    # Phase 2: an environment that no longer cares, and aims.
     for _ in range(max_random_steps):
-        inputs = {n: rng.choice(env_domains[n]) for n in sorted(env_domains)}
+        inputs = _targeted_input(spec, states, env_domains, variables,
+                                 repairable, rng, trace_name)
         if not step(inputs):
             # The controller refused the move. That is not a dead end - it is
             # the event being hunted: in GR(1) the controller is only obliged to
