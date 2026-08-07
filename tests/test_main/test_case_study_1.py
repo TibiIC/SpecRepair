@@ -1,5 +1,6 @@
 import os
 import subprocess
+from typing import Optional
 import pickle
 import unittest
 from datetime import datetime
@@ -32,6 +33,13 @@ from tests.base_test_case import BaseTestCase
 GRAPH_RENDER_TIMEOUT = int(os.environ.get("SPEC_REPAIR_GRAPH_TIMEOUT", "30"))
 GRAPH_RENDER_MAX_NODES = int(os.environ.get("SPEC_REPAIR_GRAPH_MAX_NODES", "400"))
 
+# The deepest search depth each output directory has had a picture drawn for.
+# The callback fires on every record - a run reaching 255 leaves redrew a
+# growing graph 255 times - but the graph only changes shape meaningfully as the
+# search descends, so one picture per depth captures the same story for a
+# fraction of the work.
+_rendered_depth: dict = {}
+
 
 def _render_png(A, path: str) -> None:
     """
@@ -50,7 +58,7 @@ def _render_png(A, path: str) -> None:
         raise RuntimeError(f"dot exited {proc.returncode}: {proc.stderr.strip()[:200]}")
 
 
-def save_layered_graph(G: nx.DiGraph, filepath: str):
+def save_layered_graph(G: nx.DiGraph, filepath: str, depth: Optional[int] = None):
     """
     Write the debug graph: a pickle of the data, a PNG, and an interactive HTML.
 
@@ -65,12 +73,21 @@ def save_layered_graph(G: nx.DiGraph, filepath: str):
     GRAPH_RENDER_MAX_NODES. A layout of a few thousand nodes is unreadable as a
     picture regardless, so the choice is between an image nobody can use and a
     run that finishes.
+
+    They are also drawn at most once per search depth. `depth` is the caller's
+    `data.learning_steps`; passing None keeps the old draw-every-time behaviour
+    for anything that has no depth to give.
     """
     with open(f"{filepath}/graph.pkl", "wb") as f:
         pickle.dump(G, f)
 
     if G.number_of_nodes() > GRAPH_RENDER_MAX_NODES:
         return
+
+    if depth is not None:
+        if _rendered_depth.get(filepath) == depth:
+            return
+        _rendered_depth[filepath] = depth
 
     try:
         A = nx.nx_agraph.to_agraph(G)
@@ -480,7 +497,7 @@ class TestCaseStudy1(BaseTestCase):
                    .using_learner(self.learner)
                    .with_run_label(f"case_study_1 / {case_study_name}")
                    .with_log_file(log_file)
-                   .with_on_record(lambda r, idx, s, d: save_layered_graph(r._om._graph, out_test_dir_name)))
+                   .with_on_record(lambda r, idx, s, d: save_layered_graph(r._om._graph, out_test_dir_name, d.learning_steps)))
         if is_debug:
             builder.with_debug_dir(out_test_dir_name)
         repairer: BFSRepairOrchestrator = builder.build()
@@ -507,7 +524,7 @@ class TestCaseStudy1(BaseTestCase):
                    .using_learner(self.learner)
                    .with_run_label(f"case_study_1 / {case_study_name}")
                    .with_log_file(log_file)
-                   .with_on_record(lambda r, idx, s, d: save_layered_graph(r._om._graph, out_test_dir_name)))
+                   .with_on_record(lambda r, idx, s, d: save_layered_graph(r._om._graph, out_test_dir_name, d.learning_steps)))
         if is_debug:
             builder.with_debug_dir(out_test_dir_name)
         repairer: BFSRepairOrchestrator = builder.build()
@@ -566,7 +583,7 @@ class TestCaseStudy1(BaseTestCase):
                    .using_learner(self.learner)
                    .with_run_label(f"case_study_1 / {case_study_name}")
                    .with_log_file(log_file)
-                   .with_on_record(lambda r, idx, s, d: save_layered_graph(r._om._graph, out_test_dir_name)))
+                   .with_on_record(lambda r, idx, s, d: save_layered_graph(r._om._graph, out_test_dir_name, d.learning_steps)))
         if is_debug:
             builder.with_debug_dir(out_test_dir_name)
         repairer: BFSRepairOrchestrator = builder.build()

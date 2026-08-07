@@ -116,7 +116,7 @@ class TestCaseStudy3(BaseTestCase):
                    .using_learner(self.learner)
                    .with_run_label(f"case_study_3 / {case_study_name} / trace {trace_id}")
                    .with_log_file(log_file)
-                   .with_on_record(lambda r, idx, s, d: save_layered_graph(r._om._graph, out_test_dir_name)))
+                   .with_on_record(lambda r, idx, s, d: save_layered_graph(r._om._graph, out_test_dir_name, d.learning_steps)))
         if is_debug:
             builder.with_debug_dir(out_test_dir_name)
         repairer: BFSRepairOrchestrator = builder.build()
