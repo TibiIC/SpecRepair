@@ -75,6 +75,14 @@ export LD_LIBRARY_PATH="$CONDA_PREFIX/lib:${LD_LIBRARY_PATH:-}"
 # fails with "Class cores.SpectraToolbox is not found".
 export SPEC_REPAIR_TOOLS="${SPEC_REPAIR_TOOLS:-/vol/bitbucket/tg4018/Tools}"
 export PATH="$SPEC_REPAIR_TOOLS/bin:$PATH"
+
+# clingo is invoked by name, and the compute nodes do not have it - the DoC lab
+# machines get it from /usr/bin as a system package, the GPU cluster nodes do
+# not. The build on /vol/bitbucket is shared storage, so it is reachable from
+# any node.
+CLINGO_BIN="${CLINGO_BIN:-/vol/bitbucket/tg4018/clingo-build/bin}"
+[[ -x "$CLINGO_BIN/clingo" ]] && export PATH="$CLINGO_BIN:$PATH"
+command -v clingo >/dev/null || { echo "clingo not on PATH - set CLINGO_BIN." >&2; exit 1; }
 export SPEC_REPAIR_LEARNER="$LEARNER_ARG"
 export SPEC_REPAIR_FASTLAS_RUNS="${FASTLAS_RUNS:-10}"
 
