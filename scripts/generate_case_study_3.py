@@ -28,7 +28,8 @@ REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, REPO_ROOT)
 
 from spec_repair.diagnosis.controller_trace_generation import (  # noqa: E402
-    ControllerTraceError, generate_controller_violation_trace)
+    ControllerTraceError, generate_controller_violation_trace,
+    violatable_assumptions)
 
 SPECTRA = os.path.join(REPO_ROOT, "input-files", "case-studies", "spectra")
 SOURCE = os.path.join(SPECTRA, "case_study_2")
@@ -41,25 +42,44 @@ def case_studies_available():
 
 
 def generate_for(case_study: str, traces: int, compliant_steps: int,
-                 max_random_steps: int, attempts: int) -> int:
+                 max_random_steps: int, attempts: int, max_targets: int = 1) -> int:
     src_spec = os.path.join(SOURCE, case_study, "original.spectra")
     out_dir = os.path.join(TARGET, case_study)
     os.makedirs(out_dir, exist_ok=True)
     shutil.copyfile(src_spec, os.path.join(out_dir, "original.spectra"))
 
+    # Each trace gets its own assumption to aim at, cycling through them, and
+    # assumptions already covered are tried last on the fallbacks. Coverage of
+    # the assumptions is what makes five traces worth more than one.
+    available = violatable_assumptions(src_spec)
+    covered: list = []
+
     written = 0
     for seed in range(traces):
-        try:
-            lines, violated = generate_controller_violation_trace(
-                src_spec, compliant_steps=compliant_steps,
-                max_random_steps=max_random_steps, seed=seed, attempts=attempts,
-                trace_name=f"trace_name_{seed}")
-        except ControllerTraceError as e:
-            print(f"  trace {seed}: none ({str(e).splitlines()[0][:80]})")
+        preferred = available[seed % len(available)] if available else None
+        order = ([preferred] if preferred else []) + \
+                [a for a in available if a != preferred and a not in covered] + \
+                [a for a in available if a != preferred and a in covered]
+
+        lines = violated = None
+        for target in order:
+            try:
+                lines, violated = generate_controller_violation_trace(
+                    src_spec, compliant_steps=compliant_steps,
+                    max_random_steps=max_random_steps, seed=seed, attempts=attempts,
+                    trace_name=f"trace_name_{seed}", max_targets=max_targets,
+                    target_assumptions=[target])
+                break
+            except ControllerTraceError:
+                continue
+            except Exception as e:  # noqa: BLE001 - one bad target must not stop the rest
+                print(f"  trace {seed}: FAILED on {target} "
+                      f"({type(e).__name__}: {str(e)[:70]})")
+                continue
+        if lines is None:
+            print(f"  trace {seed}: none (no assumption of {available} was reachable)")
             continue
-        except Exception as e:  # noqa: BLE001 - one bad case study must not stop the rest
-            print(f"  trace {seed}: FAILED {type(e).__name__}: {str(e)[:90]}")
-            continue
+        covered.extend(violated)
         with open(os.path.join(out_dir, f"violation_trace_{seed}.txt"), "w") as f:
             f.writelines(lines)
         steps = sum(1 for ln in lines if ln.strip() == "") or 1
@@ -82,6 +102,13 @@ def main(argv=None) -> int:
                         help="N: steps the environment respects the assumptions")
     parser.add_argument("--max-random-steps", type=int, default=40)
     parser.add_argument("--attempts", type=int, default=25)
+    parser.add_argument("--max-targets", type=int, default=1,
+                        help="how many assumptions one trace may violate at once. "
+                             "One by default: an environment that breaks every "
+                             "assumption simultaneously is not a deployment anyone "
+                             "would recognise, and the repair cannot tell which "
+                             "weakening such a trace is asking for. Two is the "
+                             "sensible ceiling.")
     args = parser.parse_args(argv)
 
     selected = args.case_studies or case_studies_available()
@@ -94,7 +121,7 @@ def main(argv=None) -> int:
     for case_study in selected:
         print(f"{case_study}:")
         total += generate_for(case_study, args.traces, args.compliant_steps,
-                              args.max_random_steps, args.attempts)
+                              args.max_random_steps, args.attempts, args.max_targets)
     print(f"\n{total} trace(s) written under {os.path.relpath(TARGET, REPO_ROOT)}")
     return 0
 

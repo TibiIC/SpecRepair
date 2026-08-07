@@ -13,8 +13,8 @@ not_holds_at(greenB,1,trace_name_2).
 not_holds_at(carA,2,trace_name_2).
 not_holds_at(carB,2,trace_name_2).
 not_holds_at(emergency,2,trace_name_2).
-holds_at(greenA,2,trace_name_2).
-not_holds_at(greenB,2,trace_name_2).
+not_holds_at(greenA,2,trace_name_2).
+holds_at(greenB,2,trace_name_2).
 
 holds_at(carA,3,trace_name_2).
 not_holds_at(carB,3,trace_name_2).
@@ -28,7 +28,7 @@ holds_at(emergency,4,trace_name_2).
 not_holds_at(greenA,4,trace_name_2).
 not_holds_at(greenB,4,trace_name_2).
 
-not_holds_at(carA,5,trace_name_2).
+holds_at(carA,5,trace_name_2).
 not_holds_at(carB,5,trace_name_2).
 holds_at(emergency,5,trace_name_2).
 not_holds_at(greenA,5,trace_name_2).

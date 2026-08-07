@@ -4,7 +4,7 @@ not_holds_at(pump,0,trace_name_3).
 
 not_holds_at(highwater,1,trace_name_3).
 not_holds_at(methane,1,trace_name_3).
-not_holds_at(pump,1,trace_name_3).
+holds_at(pump,1,trace_name_3).
 
 not_holds_at(highwater,2,trace_name_3).
 holds_at(methane,2,trace_name_3).
@@ -20,5 +20,5 @@ holds_at(pump,4,trace_name_3).
 
 holds_at(highwater,5,trace_name_3).
 holds_at(methane,5,trace_name_3).
-holds_at(pump,5,trace_name_3).
+not_holds_at(pump,5,trace_name_3).
 

@@ -37,7 +37,7 @@ import jpype
 from spec_repair.components.new_spec_encoder import (
     NewSpecEncoder, get_violated_expression_names_of_type)
 from spec_repair.enums import Learning
-from spec_repair.ltl_types import GR1TemporalType
+from spec_repair.ltl_types import GR1FormulaType, GR1TemporalType
 from spec_repair.model.spectra_specification import SpectraSpecification
 from spec_repair.wrappers.asp_wrappers import get_violations
 from spec_repair.wrappers.spectra_toolbox import synthesise_controller
@@ -119,23 +119,20 @@ def _candidate_inputs(env_domains: Dict[str, List[str]],
 
 
 
-def _would_violate(spec, states, candidate, variables, repairable, trace_name):
+def _hypothetical_violations(spec, states, candidate, variables, repairable,
+                             trace_name) -> set:
     """
-    Would this environment input break a repairable assumption, if taken now?
+    Which repairable assumptions this environment input would break, if taken.
 
-    Evaluated on a *hypothetical* next state: the candidate's environment values
-    over the system's current output, since the system has not moved yet. That
-    is exact for the assumption shapes that matter here - a safety assumption
-    constrains the environment from the previous state and the new input - and
-    where it is not, the real check after the step still decides. Nothing is
-    accepted on the strength of this prediction alone.
+    Evaluated on a hypothetical next state: the candidate's environment values
+    over the system's current output, since the system has not moved yet. Exact
+    for the assumption shapes that matter here, and where it is not, the real
+    check after the step still decides - nothing is accepted on the strength of
+    this prediction alone.
 
-    This is what makes the environment *targeted*. A uniformly random
-    environment breaks an assumption quickly when the assumption is easy to
-    break and never when it is not: minepump's `!highwater | !methane` falls to
-    one draw in four, while lift, elevator, humanoid, colorsort and genbuf
-    survived thousands of random steps. Choosing inputs that aim at an
-    assumption turns "wait for luck" into "go and do it".
+    Returns the *set*, not a yes/no. Which assumptions break is the whole
+    question: a trace that breaks all of them at once describes no deployment
+    anyone would recognise, and gives the repair nothing to discriminate on.
     """
     hypothetical = list(states)
     previous = dict(states[-1]) if states else {}
@@ -143,20 +140,61 @@ def _would_violate(spec, states, candidate, variables, repairable, trace_name):
     hypothetical.append(previous)
     violated = set(_violated_assumptions(
         spec, _trace_lines(hypothetical, variables, trace_name)))
-    return bool(violated & repairable)
+    return violated & repairable
 
 
-def _targeted_input(spec, states, env_domains, variables, repairable, rng, trace_name):
+def _targeted_input(spec, states, env_domains, variables, repairable, targets,
+                    rng, trace_name):
     """
-    An environment input chosen to break an assumption, or a random one if none
-    of the candidates considered would.
+    An environment input that breaks the target assumptions and nothing else.
+
+    Three preferences, in order:
+
+    1. an input whose violations are exactly the targets - the trace we want;
+    2. an input that breaks a non-empty subset of the targets - still on
+       target, and the remainder may follow;
+    3. an input that breaks nothing at all - keep the run going and try again
+       from the next state.
+
+    An input that would break something *outside* the targets is never chosen.
+    A real environment fails in one way at a time; one that violates every
+    assumption simultaneously is not a deployment scenario, and the repair
+    cannot tell which weakening the trace is actually asking for.
     """
-    candidates = _candidate_inputs(env_domains, rng)
-    for candidate in candidates:
-        if _would_violate(spec, states, candidate, variables, repairable, trace_name):
-            return candidate
-    return candidates[0] if candidates else {
-        n: rng.choice(env_domains[n]) for n in sorted(env_domains)}
+    on_target = []
+    partial = []
+    harmless = []
+    for candidate in _candidate_inputs(env_domains, rng):
+        violated = _hypothetical_violations(
+            spec, states, candidate, variables, repairable, trace_name)
+        if violated - targets:
+            continue                      # breaks something we are not aiming at
+        if violated == targets:
+            on_target.append(candidate)
+        elif violated:
+            partial.append(candidate)
+        else:
+            harmless.append(candidate)
+    for bucket in (on_target, partial, harmless):
+        if bucket:
+            return bucket[0]
+    return None
+
+
+def violatable_assumptions(spec_path: str) -> List[str]:
+    """
+    The non-initial assumptions a trace could be made to violate.
+
+    Public so the case-study generator can hand a different one to each trace.
+    Left to itself, every trace picks its own target and the easy assumption
+    wins repeatedly - gyro produced `ready_stays_ready` five times over. Five
+    traces breaking five different assumptions exercise five weakenings; five
+    breaking the same one exercise a single weakening five times.
+    """
+    spec = SpectraSpecification.from_file(spec_path)
+    repairable = _non_initial_assumption_names(spec)
+    return sorted(repairable & set(
+        spec.filter(lambda x: x["type"] == GR1FormulaType.ASM)["name"]))
 
 
 def _executor_for(spec_path: str, work_dir: str):
@@ -184,7 +222,7 @@ def _state_from(executor, variables: List[str]) -> Dict[str, str]:
     return state
 
 
-def _run_episode(spec, spec_path, work_dir, variables, repairable,
+def _run_episode(spec, spec_path, work_dir, variables, repairable, targets,
                  compliant_steps, max_random_steps, rng, trace_name):
     """
     One attempt: a compliant prefix, then a rogue environment.
@@ -242,7 +280,12 @@ def _run_episode(spec, spec_path, work_dir, variables, repairable,
     # Phase 2: an environment that no longer cares, and aims.
     for _ in range(max_random_steps):
         inputs = _targeted_input(spec, states, env_domains, variables,
-                                 repairable, rng, trace_name)
+                                 repairable, targets, rng, trace_name)
+        if inputs is None:
+            # Every candidate would break something outside the targets. Better
+            # to abandon the episode than to record a trace that violates more
+            # than it was asked to.
+            return None
         if not step(inputs):
             # The controller refused the move. That is not a dead end - it is
             # the event being hunted: in GR(1) the controller is only obliged to
@@ -261,15 +304,19 @@ def _run_episode(spec, spec_path, work_dir, variables, repairable,
             states.append({**last_outputs, **{k: v for k, v in inputs.items()
                                               if k in variables}})
             violated = set(_violated_assumptions(
-                spec, _trace_lines(states, variables, trace_name)))
-            if violated & repairable:
+                spec, _trace_lines(states, variables, trace_name))) & repairable
+            if violated and not violated - targets:
                 return (_trace_lines(states, variables, trace_name),
-                        sorted(violated & repairable))
+                        sorted(violated))
             return None
         violated = set(_violated_assumptions(
-            spec, _trace_lines(states, variables, trace_name)))
-        if violated & repairable:
-            return _trace_lines(states, variables, trace_name), sorted(violated & repairable)
+            spec, _trace_lines(states, variables, trace_name))) & repairable
+        if violated - targets:
+            # Overshot: the step broke something outside the targets after all,
+            # and a step cannot be undone.
+            return None
+        if violated:
+            return _trace_lines(states, variables, trace_name), sorted(violated)
     return None
 
 
@@ -280,6 +327,8 @@ def generate_controller_violation_trace(
         seed: int = 0,
         attempts: int = 25,
         trace_name: str = "trace_name_0",
+        target_assumptions: Optional[List[str]] = None,
+        max_targets: int = 1,
 ) -> Tuple[List[str], List[str]]:
     """
     Run a controller until the environment breaks an assumption.
@@ -301,18 +350,44 @@ def generate_controller_violation_trace(
     spec = SpectraSpecification.from_file(spec_path)
     variables = _spec_variable_names(spec)
     repairable = _non_initial_assumption_names(spec)
+    assumption_names = sorted(
+        repairable & set(spec.filter(lambda x: x["type"] == GR1FormulaType.ASM)["name"]))
+    if not assumption_names:
+        raise ControllerTraceError(
+            f"{spec_path} has no non-initial assumption to violate.")
+
+    if target_assumptions:
+        candidates = [[a] for a in target_assumptions if a in assumption_names]
+        if not candidates:
+            raise ControllerTraceError(
+                f"None of {target_assumptions} is a non-initial assumption of "
+                f"{spec_path}. It has: {assumption_names}")
+    else:
+        # Each attempt aims at a different assumption, in an order the seed
+        # decides. Spreading the target across traces is the point: five traces
+        # all breaking the same easy assumption exercise one weakening five
+        # times, where five traces breaking five assumptions exercise five.
+        shuffled = list(assumption_names)
+        rng.shuffle(shuffled)
+        candidates = [[a] for a in shuffled]
+        if max_targets > 1:
+            # Pairs only after every single target has been tried alone.
+            candidates += [sorted(pair) for pair in
+                           zip(shuffled, shuffled[1:] + shuffled[:1])]
 
     work_dir = tempfile.mkdtemp(prefix="controller_trace_")
     try:
-        for _ in range(attempts):
+        for attempt in range(attempts):
+            targets = set(candidates[attempt % len(candidates)])
             result = _run_episode(spec, spec_path, work_dir, variables, repairable,
-                                  compliant_steps, max_random_steps, rng, trace_name)
+                                  targets, compliant_steps, max_random_steps, rng,
+                                  trace_name)
             if result is not None:
                 return result
         raise ControllerTraceError(
-            f"No non-initial assumption was violated for {spec_path} in "
-            f"{attempts} episodes of {compliant_steps} compliant + "
-            f"{max_random_steps} random steps. Its assumptions may all be "
+            f"No targeted assumption was violated for {spec_path} in {attempts} "
+            f"episodes of {compliant_steps} compliant + {max_random_steps} "
+            f"random steps, over targets {assumption_names}. They may be "
             f"liveness properties, which no finite prefix can violate.")
     finally:
         shutil.rmtree(work_dir, ignore_errors=True)

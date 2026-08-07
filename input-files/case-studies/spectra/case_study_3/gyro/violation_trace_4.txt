@@ -37,6 +37,6 @@ not_holds_at(balancer_bwd,5,trace_name_4).
 holds_at(balancer_fwd,5,trace_name_4).
 not_holds_at(balancer_turn_left,5,trace_name_4).
 not_holds_at(balancer_turn_right,5,trace_name_4).
-holds_at(distSense_blocked,5,trace_name_4).
+not_holds_at(distSense_blocked,5,trace_name_4).
 not_holds_at(isReady,5,trace_name_4).
 
