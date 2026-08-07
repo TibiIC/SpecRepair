@@ -51,14 +51,22 @@ fi
 # arbiter is absent deliberately: its only assumption is GF(a), and liveness is
 # vacuously satisfied on a finite prefix, so it has no violating trace to repair
 # against at any length. See docs/session-notes/2026-07-28.
-all_case_studies=(
-    "gyro"
-    "minepump"
-    "minepump_liveness"
-    "pcar"
-    "traffic_single"
-    "traffic_updated"
-)
+# Discovered from disk, not listed. A controller-generated setup gains and
+# loses case studies as the generator improves - genbuf started producing a
+# trace once the environment was aimed at a specific assumption, and a
+# hardcoded list silently skipped it, running 27 jobs where 28 existed. The
+# same drift already cost a phantom pcar_3.
+CASE_STUDY_DIR="$WORKDIR/input-files/case-studies/spectra/case_study_3"
+all_case_studies=()
+for _dir in "$CASE_STUDY_DIR"/*/; do
+    [[ -d "$_dir" ]] || continue
+    _name="$(basename "$_dir")"
+    compgen -G "$_dir/violation_trace_*.txt" >/dev/null || continue
+    all_case_studies+=("$_name")
+done
+if [[ ${#all_case_studies[@]} -eq 0 ]]; then
+    echo "No case studies with traces under $CASE_STUDY_DIR." >&2; exit 1
+fi
 
 case_study_arg="${1:-all}"
 trace_arg="${2:-}"
