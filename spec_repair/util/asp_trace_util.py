@@ -530,6 +530,23 @@ def aspify(expressions):
     return expressions
 
 
+# Clingo signals its verdict through the exit code: 10 SATISFIABLE, 20
+# UNSATISFIABLE, 30 satisfiable and search exhausted. Anything else is a
+# failure to reach a verdict - 65 for a malformed program, 127 when the binary
+# cannot load its shared libraries - and 65 is the one that matters, because
+# clingo still prints "UNKNOWN" and exits, so reading the output alone cannot
+# tell an error from an answer.
+CLINGO_VERDICT_CODES = (10, 20, 30)
+
+
 def run_clingo_raw(filename, n_models: int = 1) -> str:
+    """
+    Run clingo, and fail loudly when it does not reach a verdict.
+
+    Previously this returned whatever was on stdout, discarding the exit code.
+    An empty result then flowed into `get_violations`, which reported no
+    violations - so a clingo that never ran became the claim "this trace
+    violates nothing", which is a statement about the specification.
+    """
     cmd = create_cmd(['clingo', f'--models={n_models}', filename])
-    return run_subprocess(cmd)
+    return run_subprocess(cmd, ok_returncodes=CLINGO_VERDICT_CODES)

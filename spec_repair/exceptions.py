@@ -76,3 +76,14 @@ class SpecificationNotVerifiableException(Exception):
     A repair candidate that trips this is malformed rather than merely wrong, so
     it is not a solution and must not be recorded as one.
     """
+
+
+class SolverInvocationError(RuntimeError):
+    """
+    A solver could not be run, as distinct from running and finding nothing.
+
+    The distinction is the entire point. `get_violations` returned an empty list
+    for both, so clingo failing to start read as "this trace violates no
+    assumption" - a claim about the specification, made because a shared library
+    was missing.
+    """
