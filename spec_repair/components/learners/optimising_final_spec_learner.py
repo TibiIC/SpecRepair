@@ -20,7 +20,7 @@ from spec_repair.components.learning_config import (
 from spec_repair.helpers.parsers.ilasp_interpreter import ILASPInterpreter
 from spec_repair.model.spectra_specification import SpectraSpecification
 
-from spec_repair.wrappers.asp_wrappers import get_violations, run_ILASP
+from spec_repair.wrappers.asp_wrappers import get_violations, learner_timeout, run_ILASP
 
 _log = logging.getLogger(__name__)
 
@@ -115,13 +115,15 @@ class OptimisingSpecLearner(ILearner):
                 return []
         except DeadlockRequiredException as e:
             _log.info("deadlock completion required; branch ends here")
+            data.unresolvable_reason = "deadlock completion required"
             return []
         except subprocess.TimeoutExpired as e:
             # run_ILASP's hypothesis search can time out on a large enough
             # spec (e.g. ColorSort) without being genuinely stuck - treat it
             # like the other "this branch didn't pan out" cases above rather
             # than crashing the whole BFS run.
-            _log.warning("learner timed out; branch ends here")
+            _log.warning("learner timed out after %ss; branch ends here", learner_timeout())
+            data.unresolvable_reason = f"learner timed out after {learner_timeout()}s"
             return []
 
     def find_possible_adaptations(self, spec: SpectraSpecification, trace, cts, learning_type) -> List[

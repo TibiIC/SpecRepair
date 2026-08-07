@@ -74,11 +74,37 @@ else
     case_studies=("$case_study_arg")
 fi
 
-if [[ -n "$trace_arg" ]]; then
-    traces=("$trace_arg")
-else
-    read -r -a traces <<< "${TRACES:-0 1 2 3 4}"
-fi
+# Traces are discovered per case study, not assumed. Unlike case_study_2, which
+# has exactly five everywhere, a controller-generated case study only has the
+# traces its controller actually produced - pcar has 0, 1, 2 and 4, because no
+# violation was reached for 3 within the budget. Iterating a fixed 0..4 launched
+# a test that was never generated, and unittest failed the window with
+# "AttributeError: type object 'TestCaseStudy3' has no attribute
+# test_case_study_3_pcar_3_syn", which reads like a broken test rather than a
+# trace that does not exist.
+#
+# The test module already discovers its traces from disk; this makes the runner
+# agree with it instead of guessing.
+CASE_STUDY_DIR="$WORKDIR/input-files/case-studies/spectra/case_study_3"
+
+traces_for() {
+    local case_study="$1"
+    if [[ -n "$trace_arg" ]]; then
+        echo "$trace_arg"
+        return
+    fi
+    if [[ -n "${TRACES:-}" ]]; then
+        echo "$TRACES"
+        return
+    fi
+    local f n found=""
+    for f in "$CASE_STUDY_DIR/$case_study"/violation_trace_*.txt; do
+        [[ -e "$f" ]] || continue
+        n="${f##*violation_trace_}"
+        found+="${n%.txt} "
+    done
+    echo "$found"
+}
 
 # Session name is scoped to the selection, so a single-case-study rerun can be
 # started alongside a full run already in progress.
@@ -104,6 +130,7 @@ SETUP_CMDS="source ~/.sdkman/bin/sdkman-init.sh && source ~/phd_work.sh && conda
 # the concurrency cap are both known before anything starts.
 jobs=()
 for case_study in "${case_studies[@]}"; do
+    read -r -a traces <<< "$(traces_for "$case_study")"
     for trace in "${traces[@]}"; do
         jobs+=("${case_study}_${trace}")
     done

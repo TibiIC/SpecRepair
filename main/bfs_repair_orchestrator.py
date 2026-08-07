@@ -139,34 +139,32 @@ class BFSRepairOrchestrator:
                 "search cannot reach a leaf.\nTrace:\n" + "".join(data.trace))
 
     @staticmethod
-    def _reject_unchanged_mitigations(
+    def _mitigation_made_no_progress(
             spec: ISpecification,
             data: RepairData,
             alt_tasks: List[Tuple[ISpecification, RepairData]]
-    ) -> None:
+    ) -> bool:
         """
-        A mitigation must move the branch somewhere new, or say it has nothing.
+        Did the mitigation hand back its own input?
 
-        Handing back the input unchanged is neither. The orchestration manager
-        recognises the task as already visited, returns its id without pushing
-        it onto the stack, and the branch vanishes without reaching a leaf - so
-        the run still reports a result, just a quietly smaller one.
+        That is neither progress nor a decision to stop: the orchestration
+        manager recognises the task as already visited, returns its id without
+        pushing it, and the branch vanishes without reaching a leaf.
+        `complete_counter_traces` does exactly this when there are no
+        counter-traces to complete.
 
-        `complete_counter_traces` does this when there are no counter-traces to
-        complete. Returning nothing at all remains legitimate: the
-        assumption-only preset uses `finish_here_return_nothing` to end a branch
-        deliberately, and `_record_if_solution` covers the case where that
-        branch was in fact a solution.
+        A predicate rather than a raise. It used to throw here, which put it
+        *before* `_record_if_solution` and so killed the whole run over branches
+        that were standing on a perfectly good repair - measured on the
+        case_study_3 sweep: gyro traces 0 and 3 and minepump_liveness trace 4,
+        all guarantee weakening with no counter-traces. "The mitigator has
+        nothing to add" and "this branch is a dead end" are different claims,
+        and only the second is a problem.
         """
-        for alt_spec, alt_data in alt_tasks:
-            if (alt_spec.to_str() == spec.to_str()
-                    and alt_data.learning_type == data.learning_type
-                    and alt_data.counter_traces == data.counter_traces):
-                raise MitigationMadeNoProgressException(
-                    f"A {data.learning_type} mitigation returned its input unchanged: same "
-                    f"specification, same learning type, same {len(data.counter_traces)} "
-                    f"counter-trace(s). The branch would be silently dropped as already "
-                    f"visited.\n{spec.to_str()}")
+        return any(alt_spec.to_str() == spec.to_str()
+                   and alt_data.learning_type == data.learning_type
+                   and alt_data.counter_traces == data.counter_traces
+                   for alt_spec, alt_data in alt_tasks)
 
     def _is_solution(self, spec: ISpecification, data: RepairData) -> bool:
         """
@@ -186,7 +184,7 @@ class BFSRepairOrchestrator:
             asp, exp_type=Learning.ASSUMPTION_WEAKENING.exp_type())
         return not get_violated_expression_names_of_type(violations, "assumption")
 
-    def _record_if_solution(self, spec: ISpecification, data: RepairData) -> None:
+    def _record_if_solution(self, spec: ISpecification, data: RepairData) -> bool:
         """
         Record a terminating branch as a leaf when it is in fact a solution.
 
@@ -200,6 +198,8 @@ class BFSRepairOrchestrator:
             self._om.connect_leaf_node(spec, learned_id, prev=None)
             self._logger.record(learned_id, spec, data, "Learned")
             self._reporter.event("SOLVED", f"leaf #{learned_id} (branch exhausted, already a solution)")
+            return True
+        return False
 
     def repair_bfs(
             self,
@@ -212,6 +212,7 @@ class BFSRepairOrchestrator:
         self._om.initialise_learning_tasks(og_spec, og_data)
 
         node_no = 0
+        self._unresolved: List[str] = []
         while self._om.has_next():
             spec, data = self._om.get_next()
             node_no += 1
@@ -231,13 +232,37 @@ class BFSRepairOrchestrator:
                 alt_tasks: List[Tuple[ISpecification, RepairData]] = self._mitigator.prepare_alternative_learning_tasks(
                     spec,
                     data)
-                self._reject_unchanged_mitigations(spec, data, alt_tasks)
+                stalled = self._mitigation_made_no_progress(spec, data, alt_tasks)
+                if stalled:
+                    # Handing back the input is the mitigator saying it has
+                    # nothing, in the one way the search cannot act on.
+                    alt_tasks = []
                 self._reporter.event("MITIG", f"{len(alt_tasks)} alternative task(s)")
                 if not alt_tasks:
                     # The branch ends here. Before letting it, check whether the
                     # specification we are standing on is already a solution -
                     # otherwise a valid repair is thrown away silently.
-                    self._record_if_solution(spec, data)
+                    if not self._record_if_solution(spec, data) and stalled:
+                        if data.unresolvable_reason:
+                            # The branch stopped for a known reason - a learner
+                            # out of time, or a repair shape the methodology does
+                            # not cover. Both are real limitations, and both are
+                            # reported rather than hidden, but neither justifies
+                            # discarding what every other branch found.
+                            self._unresolved.append(data.unresolvable_reason)
+                            self._reporter.event(
+                                "LIMIT", f"branch abandoned - {data.unresolvable_reason}")
+                            continue
+                        # Nowhere to go and nothing worth keeping: a real dead
+                        # end, and the invariant that every node reaches a leaf
+                        # is broken. Loud, because it means the search lost work.
+                        raise MitigationMadeNoProgressException(
+                            f"A {data.learning_type} mitigation returned its input "
+                            f"unchanged and the specification is not a solution: same "
+                            f"specification, same learning type, same "
+                            f"{len(data.counter_traces)} counter-trace(s). The branch "
+                            f"would be silently dropped as already visited.\n"
+                            f"{spec.to_str()}")
                 for alt_spec, alt_data in alt_tasks:
                     self._om.enqueue_new_tasks(alt_spec, alt_data, prev=(spec, data))
             else:
@@ -275,5 +300,11 @@ class BFSRepairOrchestrator:
                                                                                        counter_example)
                             self._om.enqueue_new_tasks(new_spec, new_data, prev=(spec, data), failed_spec=learned_spec)
 
+        if self._unresolved:
+            # Never silent: a branch that ended without a leaf is a gap in the
+            # result, whatever the reason for it.
+            counts = {r: self._unresolved.count(r) for r in set(self._unresolved)}
+            self._reporter.event("LIMIT", "unresolved branches: " + ", ".join(
+                f"{n}x {reason}" for reason, n in sorted(counts.items())))
         self._reporter.finish(len(self._recorder.get_specs()),
                               len(self._intermediate_recorder.get_specs()))

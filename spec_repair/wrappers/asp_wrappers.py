@@ -1,3 +1,4 @@
+import os
 import re
 from typing import Optional
 
@@ -157,9 +158,37 @@ def run_ILASP_raw(las_file, pylasp_integrated=False):
         cmd = create_cmd(["FastLAS", "--nopl", "--force-safety", las_file])
     else:
         cmd = create_cmd(['ILASP', las_file])
-    output = run_subprocess(cmd, timeout=60)
+    output = run_subprocess(cmd, timeout=learner_timeout())
     error_check_ILASP_output(output)
     return output
+
+
+def learner_timeout() -> int:
+    """
+    Seconds a single learning task gets before it is abandoned.
+
+    Was hardcoded at 60. That is generous for the small case studies and too
+    tight for the large ones: gyro's controller-generated trace exceeded it on
+    assumption weakening, and the consequences were unrecognisable as their
+    cause - the branch returned no candidates, the mitigator moved it to
+    guarantee weakening, which has nothing to weaken without counter-traces, and
+    the run died reporting a mitigation that made no progress. Nothing in that
+    chain mentions a timeout.
+
+    Configurable so a sweep over harder case studies can raise it without
+    changing what the quick ones do.
+    """
+    raw = os.environ.get("SPEC_REPAIR_LEARNER_TIMEOUT", "").strip()
+    if not raw:
+        return 60
+    try:
+        seconds = int(raw)
+    except ValueError:
+        raise ValueError(
+            f"SPEC_REPAIR_LEARNER_TIMEOUT='{raw}' is not an integer.") from None
+    if seconds < 1:
+        raise ValueError(f"SPEC_REPAIR_LEARNER_TIMEOUT='{raw}' must be at least 1.")
+    return seconds
 
 
 def run_ILASP(las, pylasp_integrated=False):
