@@ -136,8 +136,20 @@ class ASPExceptionFormatter(ILTLFormatter):
                     raise ValueError(f"Unsupported value for atomic proposition: {value}")
             case Not(formula=formula):
                 if isinstance(formula, AtomicProposition):
-                    formula.value = not formula.value
-                    return self.format_exp(formula)
+                    # A negated copy, never a flip in place. This used to do
+                    # `formula.value = not formula.value`, mutating the atom the
+                    # specification is built from - so formatting the same
+                    # `Not(atom)` twice flipped it back, and every other
+                    # occurrence came out with the wrong polarity.
+                    #
+                    # Measured on elevator's floor_mutual_exclusion,
+                    # `G(!(fl&fm) & !(fl&fu) & !(fm&fu))`, which normalises to
+                    # eight disjuncts of negated atoms. The encoding alternated
+                    # with a period of four - disjuncts 0 and 4 correct,
+                    # 1,2,3,5,6,7 wrong - because the shared atoms were being
+                    # flipped once per occurrence. A state with two floors true
+                    # was reported as violating nothing.
+                    return self.format_exp(negate_literal(formula))
                 else:
                     raise ValueError("Not operator not supported for this formula")
             case And(left=lhs, right=rhs):
