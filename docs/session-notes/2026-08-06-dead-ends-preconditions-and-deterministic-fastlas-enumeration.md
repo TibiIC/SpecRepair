@@ -670,13 +670,14 @@ case_study_2 sweeps on gpu11/13/14/15.
 
 ## 20. Open
 
-* **Third experiment type** - built and running (§18). Five case studies still
-  need a targeted rather than random environment.
+* **Third experiment type** - built and running (§18). The random environment
+  was replaced by a targeted one on 2026-08-07; see that day's notes, §4.
 * ~~Heuristic-manager refactor~~ - done, see §15.2.
 * **submarine** - realisability check throws; deliberately excluded from the
   precondition audit.
 * **`test_trivial_solution.py`** - no longer hangs the suite for the other case
   studies (33 pass in 10s), but colorsort alone still exceeds 150s in
   `exploreAllCores` (§17).
-* **Does CUDD fix amba and colorsort?** Unmeasured (§16), and the reason CUDD
-  was worth pursuing.
+* ~~Does CUDD fix amba and colorsort?~~ **Measured on 2026-08-07: yes.** A full
+  amba repair completed in 577s with **zero** garbage-collection lines. See the
+  2026-08-07 notes, §3.
