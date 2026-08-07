@@ -59,9 +59,15 @@ else
 fi
 conda activate "${CONDA_ENV:-logic}" || { echo "conda activate failed" >&2; exit 1; }
 
-# Java for the Spectra JVM. sdkman's init is safe to source in batch; its
-# absence is not fatal if java is already on PATH.
-[[ -f ~/.sdkman/bin/sdkman-init.sh ]] && source ~/.sdkman/bin/sdkman-init.sh || true
+# Java for the Spectra JVM. sdkman's init reads variables it does not set
+# first - it fails on line 20 with "SDKMAN_CANDIDATES_API: unbound variable"
+# under `set -u` - so nounset is lifted across the source and restored after.
+# Its absence is not fatal if java is already on PATH.
+if [[ -f ~/.sdkman/bin/sdkman-init.sh ]]; then
+    set +u
+    source ~/.sdkman/bin/sdkman-init.sh
+    set -u
+fi
 export LD_LIBRARY_PATH="$CONDA_PREFIX/lib:${LD_LIBRARY_PATH:-}"
 export SPEC_REPAIR_LEARNER="$LEARNER_ARG"
 export SPEC_REPAIR_FASTLAS_RUNS="${FASTLAS_RUNS:-10}"
