@@ -1,4 +1,5 @@
 import os
+import subprocess
 import pickle
 import unittest
 from datetime import datetime
@@ -21,22 +22,55 @@ from spec_repair.wrappers.spectra_toolbox import synthesise_controller
 from tests.base_test_case import BaseTestCase
 
 
+# Rendering the debug graph is optional work on a growing artefact, and it runs
+# on every record. Both limits below exist because of measured stalls, not
+# caution: on the 2026-08-07 sweep six of gpu11's eight jobs sat at 0% CPU for
+# over twelve hours, each blocked in `futex_do_wait` on a child `dot -Tpng` that
+# never returned. The runs were not verifying or learning - `status.txt` said
+# "verifying d1 candidate" and the logs had stopped after two minutes - they were
+# inside Graphviz.
+GRAPH_RENDER_TIMEOUT = int(os.environ.get("SPEC_REPAIR_GRAPH_TIMEOUT", "30"))
+GRAPH_RENDER_MAX_NODES = int(os.environ.get("SPEC_REPAIR_GRAPH_MAX_NODES", "400"))
+
+
+def _render_png(A, path: str) -> None:
+    """
+    Draw with `dot`, but never wait on it indefinitely.
+
+    `pygraphviz`'s `A.draw(prog="dot")` spawns a subprocess with no timeout, so
+    a graph `dot` cannot lay out quickly hangs the run that produced it - the
+    Python process blocks on the child and neither ever finishes. Driving the
+    subprocess directly is the only way to bound it.
+    """
+    dot_source = A.to_string()
+    proc = subprocess.run(["dot", "-Tpng", "-o", path],
+                          input=dot_source, text=True,
+                          capture_output=True, timeout=GRAPH_RENDER_TIMEOUT)
+    if proc.returncode != 0:
+        raise RuntimeError(f"dot exited {proc.returncode}: {proc.stderr.strip()[:200]}")
+
+
 def save_layered_graph(G: nx.DiGraph, filepath: str):
     """
     Write the debug graph: a pickle of the data, a PNG, and an interactive HTML.
 
     Everything here is a *debug artefact*, and this runs on every record via
-    `with_on_record`, so nothing in it may end the repair run. Both renderers
-    can fail on a graph the search happens to make large - `dot` is a
-    subprocess and died with an empty-stderr OSError on pcar_2 after 108s of
-    real work, taking the run with it.
+    `with_on_record`, so nothing in it may end - or stall - the repair run.
 
     The pickle is written first and deliberately not guarded: it is a local
     `pickle.dump` with no subprocess behind it, and it is the artefact worth
     keeping, since both pictures can be regenerated from it afterwards.
+
+    The pictures are skipped entirely once the graph passes
+    GRAPH_RENDER_MAX_NODES. A layout of a few thousand nodes is unreadable as a
+    picture regardless, so the choice is between an image nobody can use and a
+    run that finishes.
     """
     with open(f"{filepath}/graph.pkl", "wb") as f:
         pickle.dump(G, f)
+
+    if G.number_of_nodes() > GRAPH_RENDER_MAX_NODES:
+        return
 
     try:
         A = nx.nx_agraph.to_agraph(G)
@@ -53,8 +87,10 @@ def save_layered_graph(G: nx.DiGraph, filepath: str):
         if target_node_name is not None:
             A.get_node(target_node_name).attr['penwidth'] = '5'
 
-        # Render the Graphviz AGraph to an image file using Graphviz
-        A.draw(f"{filepath}/graph.png", format='png', prog='dot')
+        _render_png(A, f"{filepath}/graph.png")
+    except subprocess.TimeoutExpired:
+        print(f"Graph render exceeded {GRAPH_RENDER_TIMEOUT}s and was abandoned; "
+              f"graph.pkl is still written.")
     except Exception as e:
         print(f"Could not render {filepath}/graph.png ({type(e).__name__}: {e}); "
               f"graph.pkl is still written.")
