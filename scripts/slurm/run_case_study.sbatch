@@ -81,7 +81,14 @@ export PATH="$SPEC_REPAIR_TOOLS/bin:$PATH"
 # not. The build on /vol/bitbucket is shared storage, so it is reachable from
 # any node.
 CLINGO_BIN="${CLINGO_BIN:-/vol/bitbucket/tg4018/clingo-build/bin}"
-[[ -x "$CLINGO_BIN/clingo" ]] && export PATH="$CLINGO_BIN:$PATH"
+# libclingo.so sits beside the binary, so it needs to be on the loader path too.
+# Without it clingo fails to start, produces nothing, and the empty output is
+# parsed as "this trace violates no assumption at all" - the trial run reported
+# exactly that for a trace that passes the same check locally.
+if [[ -x "$CLINGO_BIN/clingo" ]]; then
+    export PATH="$CLINGO_BIN:$PATH"
+    export LD_LIBRARY_PATH="$CLINGO_BIN:${LD_LIBRARY_PATH:-}"
+fi
 command -v clingo >/dev/null || { echo "clingo not on PATH - set CLINGO_BIN." >&2; exit 1; }
 export SPEC_REPAIR_LEARNER="$LEARNER_ARG"
 export SPEC_REPAIR_FASTLAS_RUNS="${FASTLAS_RUNS:-10}"
