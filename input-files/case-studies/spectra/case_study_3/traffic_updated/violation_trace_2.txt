@@ -28,9 +28,9 @@ holds_at(emergency,4,trace_name_2).
 not_holds_at(greenA,4,trace_name_2).
 not_holds_at(greenB,4,trace_name_2).
 
-holds_at(carA,5,trace_name_2).
+not_holds_at(carA,5,trace_name_2).
 not_holds_at(carB,5,trace_name_2).
-holds_at(emergency,5,trace_name_2).
+not_holds_at(emergency,5,trace_name_2).
 not_holds_at(greenA,5,trace_name_2).
 not_holds_at(greenB,5,trace_name_2).
 

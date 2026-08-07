@@ -206,9 +206,41 @@ def _executor_for(spec_path: str, work_dir: str):
             f"Spectra would not synthesise a controller for {spec_path}. The "
             f"specification must be realisable, and in a form the CLI accepts.")
     StaticController = jpype.JClass("tau.smlab.syntech.controller.StaticController")
-    ControllerExecutor = jpype.JClass(
-        "tau.smlab.syntech.controller.executor.ControllerExecutor")
-    return ControllerExecutor(StaticController(), controller_dir)
+    # FlexibleControllerExecutor rather than ControllerExecutor, for
+    # reproducibility. A controller usually has several legal responses to an
+    # input; the plain executor picks one itself and does not pick the same one
+    # every time, so identical seeds produced different traces - across separate
+    # processes, and differing in length, not just in values. The flexible one
+    # stops after each step with `waitingForChoice` set, hands back the
+    # successor states via getChoices(), and takes the decision from us.
+    FlexibleControllerExecutor = jpype.JClass(
+        "tau.smlab.syntech.controller.executor.FlexibleControllerExecutor")
+    return FlexibleControllerExecutor(StaticController(), controller_dir)
+
+
+def _settle(executor, rng) -> None:
+    """
+    Resolve the controller's outstanding choice, reproducibly.
+
+    After `updateState` the executor is waiting: `getChoices()` lists the
+    successor states and nothing advances until `chooseNextState` picks one.
+    The choices are sorted into a canonical order first - they arrive from a BDD
+    traversal, whose order is not something to depend on - and then drawn with
+    the run's seeded generator. Seeded rather than always-first so different
+    seeds still explore different controller behaviour, which is the point of
+    generating five traces.
+    """
+    choices = executor.getChoices()
+    if choices is None or len(choices) == 0:
+        return
+    canonical = sorted(
+        ({str(k): str(v) for k, v in choice.items()} for choice in choices),
+        key=lambda state: tuple(sorted(state.items())))
+    picked = canonical[rng.randrange(len(canonical))]
+    java_state = jpype.JClass("java.util.HashMap")()
+    for k, v in picked.items():
+        java_state.put(k, v)
+    executor.chooseNextState(java_state)
 
 
 def _state_from(executor, variables: List[str]) -> Dict[str, str]:
@@ -250,6 +282,9 @@ def _run_episode(spec, spec_path, work_dir, variables, repairable, targets,
                 started = True
             else:
                 executor.updateState(java_inputs)
+            # updateState leaves the executor waiting on a choice; nothing
+            # advances and getCurrOutputs is not meaningful until it is made.
+            _settle(executor, rng)
         except jpype.JException:
             # The controller has no legal response. In GR(1) that means the
             # environment has broken its side of the contract - the event being

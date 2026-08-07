@@ -163,33 +163,43 @@ class TestGenerationEndToEnd(unittest.TestCase):
                     target_assumptions=[target])
                 self.assertEqual([target], violated)
 
-    def test_the_seed_fixes_which_assumption_breaks_but_not_the_trace(self):
+    def test_the_same_seed_gives_the_same_trace(self):
         """
-        Pins what reproducibility this actually has, which is less than I
-        assumed when writing it.
+        Reproducibility, which this did not have until the controller's choice
+        was pinned.
 
-        The seed governs every choice *this* code makes, and controller
-        synthesis is deterministic - two syntheses of minepump hash identically.
-        The traces still differ run to run, across separate processes as well as
-        within one, because the controller itself has freedom: it usually has
-        several legal outputs for a given input (hence
-        `getAllLegalSystemOutputs`) and does not pick the same one every time.
-        A different system response leads the environment somewhere else, and
-        the whole episode diverges - even its length.
+        The seed always governed every choice *this* code makes, and synthesis
+        is deterministic - two syntheses of minepump hash identically. The
+        traces still differed run to run, across separate processes and in
+        length, because the controller has freedom: it usually has several legal
+        responses to an input, and `ControllerExecutor` picked among them
+        itself, differently each time.
 
-        So the committed traces are the artefact of record; regenerating gives
-        different, equally valid ones. Making this reproducible means pinning
-        the controller's choice, for which `FlexibleControllerExecutor` exposes
-        `getChoices`/`chooseNextState`.
-
-        What is stable is the target: the same seed aims at the same assumption,
-        which is what makes a case study comparable across regenerations.
+        `FlexibleControllerExecutor` hands that decision back - it waits after
+        each step, offers the successor states through `getChoices()`, and
+        advances only on `chooseNextState()`. Sorting those into a canonical
+        order and drawing with the run's seeded generator makes the whole trace
+        a function of the seed.
         """
-        _, first = generate_controller_violation_trace(
+        first, first_violated = generate_controller_violation_trace(
             MINEPUMP, seed=3, attempts=6, max_random_steps=30)
-        _, second = generate_controller_violation_trace(
+        second, second_violated = generate_controller_violation_trace(
             MINEPUMP, seed=3, attempts=6, max_random_steps=30)
         self.assertEqual(first, second)
+        self.assertEqual(first_violated, second_violated)
+
+    def test_different_seeds_still_explore_differently(self):
+        """
+        Pinning the choice must not collapse the traces into one. Drawing the
+        controller's move with the seeded generator - rather than always taking
+        the first - keeps five traces worth generating.
+        """
+        traces = set()
+        for seed in range(5):
+            lines, _ = generate_controller_violation_trace(
+                MINEPUMP, seed=seed, attempts=6, max_random_steps=30)
+            traces.add("".join(lines))
+        self.assertGreater(len(traces), 1, "every seed produced the same trace")
 
     def test_different_seeds_reach_different_assumptions(self):
         """

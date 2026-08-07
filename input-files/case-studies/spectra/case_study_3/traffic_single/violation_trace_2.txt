@@ -6,14 +6,14 @@ holds_at(police,0,trace_name_2).
 holds_at(car,1,trace_name_2).
 not_holds_at(emergency,1,trace_name_2).
 holds_at(green,1,trace_name_2).
-holds_at(police,1,trace_name_2).
+not_holds_at(police,1,trace_name_2).
 
 not_holds_at(car,2,trace_name_2).
 not_holds_at(emergency,2,trace_name_2).
 holds_at(green,2,trace_name_2).
 not_holds_at(police,2,trace_name_2).
 
-holds_at(car,3,trace_name_2).
+not_holds_at(car,3,trace_name_2).
 not_holds_at(emergency,3,trace_name_2).
 holds_at(green,3,trace_name_2).
 holds_at(police,3,trace_name_2).
@@ -21,60 +21,65 @@ holds_at(police,3,trace_name_2).
 not_holds_at(car,4,trace_name_2).
 holds_at(emergency,4,trace_name_2).
 holds_at(green,4,trace_name_2).
-holds_at(police,4,trace_name_2).
+not_holds_at(police,4,trace_name_2).
 
-holds_at(car,5,trace_name_2).
-holds_at(emergency,5,trace_name_2).
-holds_at(green,5,trace_name_2).
+not_holds_at(car,5,trace_name_2).
+not_holds_at(emergency,5,trace_name_2).
+not_holds_at(green,5,trace_name_2).
 holds_at(police,5,trace_name_2).
 
-not_holds_at(car,6,trace_name_2).
-not_holds_at(emergency,6,trace_name_2).
-holds_at(green,6,trace_name_2).
-not_holds_at(police,6,trace_name_2).
+holds_at(car,6,trace_name_2).
+holds_at(emergency,6,trace_name_2).
+not_holds_at(green,6,trace_name_2).
+holds_at(police,6,trace_name_2).
 
 not_holds_at(car,7,trace_name_2).
 not_holds_at(emergency,7,trace_name_2).
-not_holds_at(green,7,trace_name_2).
-not_holds_at(police,7,trace_name_2).
+holds_at(green,7,trace_name_2).
+holds_at(police,7,trace_name_2).
 
-not_holds_at(car,8,trace_name_2).
-not_holds_at(emergency,8,trace_name_2).
-not_holds_at(green,8,trace_name_2).
-not_holds_at(police,8,trace_name_2).
+holds_at(car,8,trace_name_2).
+holds_at(emergency,8,trace_name_2).
+holds_at(green,8,trace_name_2).
+holds_at(police,8,trace_name_2).
 
-holds_at(car,9,trace_name_2).
-holds_at(emergency,9,trace_name_2).
-not_holds_at(green,9,trace_name_2).
-not_holds_at(police,9,trace_name_2).
+not_holds_at(car,9,trace_name_2).
+not_holds_at(emergency,9,trace_name_2).
+holds_at(green,9,trace_name_2).
+holds_at(police,9,trace_name_2).
 
-not_holds_at(car,10,trace_name_2).
-not_holds_at(emergency,10,trace_name_2).
-not_holds_at(green,10,trace_name_2).
-not_holds_at(police,10,trace_name_2).
+holds_at(car,10,trace_name_2).
+holds_at(emergency,10,trace_name_2).
+holds_at(green,10,trace_name_2).
+holds_at(police,10,trace_name_2).
 
 not_holds_at(car,11,trace_name_2).
 holds_at(emergency,11,trace_name_2).
 holds_at(green,11,trace_name_2).
-not_holds_at(police,11,trace_name_2).
+holds_at(police,11,trace_name_2).
 
 holds_at(car,12,trace_name_2).
-not_holds_at(emergency,12,trace_name_2).
+holds_at(emergency,12,trace_name_2).
 holds_at(green,12,trace_name_2).
 holds_at(police,12,trace_name_2).
 
-not_holds_at(car,13,trace_name_2).
-holds_at(emergency,13,trace_name_2).
+holds_at(car,13,trace_name_2).
+not_holds_at(emergency,13,trace_name_2).
 holds_at(green,13,trace_name_2).
 not_holds_at(police,13,trace_name_2).
 
-holds_at(car,14,trace_name_2).
+not_holds_at(car,14,trace_name_2).
 not_holds_at(emergency,14,trace_name_2).
 not_holds_at(green,14,trace_name_2).
-holds_at(police,14,trace_name_2).
+not_holds_at(police,14,trace_name_2).
 
-not_holds_at(car,15,trace_name_2).
-holds_at(emergency,15,trace_name_2).
+holds_at(car,15,trace_name_2).
+not_holds_at(emergency,15,trace_name_2).
 not_holds_at(green,15,trace_name_2).
-not_holds_at(police,15,trace_name_2).
+holds_at(police,15,trace_name_2).
+
+not_holds_at(car,16,trace_name_2).
+not_holds_at(emergency,16,trace_name_2).
+not_holds_at(green,16,trace_name_2).
+holds_at(police,16,trace_name_2).
 

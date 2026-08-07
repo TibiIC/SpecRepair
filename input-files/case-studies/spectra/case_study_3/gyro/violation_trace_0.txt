@@ -20,21 +20,21 @@ not_holds_at(distSense_blocked,2,trace_name_0).
 not_holds_at(isReady,2,trace_name_0).
 
 not_holds_at(balancer_bwd,3,trace_name_0).
-holds_at(balancer_fwd,3,trace_name_0).
+not_holds_at(balancer_fwd,3,trace_name_0).
 not_holds_at(balancer_turn_left,3,trace_name_0).
 not_holds_at(balancer_turn_right,3,trace_name_0).
-not_holds_at(distSense_blocked,3,trace_name_0).
-holds_at(isReady,3,trace_name_0).
+holds_at(distSense_blocked,3,trace_name_0).
+not_holds_at(isReady,3,trace_name_0).
 
 not_holds_at(balancer_bwd,4,trace_name_0).
-not_holds_at(balancer_fwd,4,trace_name_0).
+holds_at(balancer_fwd,4,trace_name_0).
 not_holds_at(balancer_turn_left,4,trace_name_0).
 not_holds_at(balancer_turn_right,4,trace_name_0).
-holds_at(distSense_blocked,4,trace_name_0).
+not_holds_at(distSense_blocked,4,trace_name_0).
 holds_at(isReady,4,trace_name_0).
 
 not_holds_at(balancer_bwd,5,trace_name_0).
-not_holds_at(balancer_fwd,5,trace_name_0).
+holds_at(balancer_fwd,5,trace_name_0).
 not_holds_at(balancer_turn_left,5,trace_name_0).
 not_holds_at(balancer_turn_right,5,trace_name_0).
 holds_at(distSense_blocked,5,trace_name_0).
