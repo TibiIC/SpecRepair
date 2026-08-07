@@ -69,6 +69,12 @@ if [[ -f ~/.sdkman/bin/sdkman-init.sh ]]; then
     set -u
 fi
 export LD_LIBRARY_PATH="$CONDA_PREFIX/lib:${LD_LIBRARY_PATH:-}"
+# The jars and solver binaries live off /vol/bitbucket, not ~/Tools. phd_work.sh
+# exports this for interactive shells, but that file cannot be sourced in batch
+# (see above), so it is set here explicitly - without it the JVM starts and then
+# fails with "Class cores.SpectraToolbox is not found".
+export SPEC_REPAIR_TOOLS="${SPEC_REPAIR_TOOLS:-/vol/bitbucket/tg4018/Tools}"
+export PATH="$SPEC_REPAIR_TOOLS/bin:$PATH"
 export SPEC_REPAIR_LEARNER="$LEARNER_ARG"
 export SPEC_REPAIR_FASTLAS_RUNS="${FASTLAS_RUNS:-10}"
 
