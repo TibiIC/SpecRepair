@@ -1,0 +1,31 @@
+{
+  "case_study": "pcar",
+  "traces": [
+    {
+      "trace": 3,
+      "seed": 3,
+      "target": "unnamed_assumption_1",
+      "violated": [
+        "unnamed_assumption_1"
+      ],
+      "steps": 7,
+      "compliant_steps": 5,
+      "max_random_steps": 35,
+      "attempts": 14,
+      "max_targets": 1
+    },
+    {
+      "trace": 4,
+      "seed": 4,
+      "target": "obstacle_mutual_exclusion",
+      "violated": [
+        "obstacle_mutual_exclusion"
+      ],
+      "steps": 6,
+      "compliant_steps": 5,
+      "max_random_steps": 35,
+      "attempts": 14,
+      "max_targets": 1
+    }
+  ]
+}

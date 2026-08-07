@@ -93,6 +93,25 @@ def _non_initial_assumption_names(spec: SpectraSpecification) -> set:
         lambda x: x['when'] != GR1TemporalType.INITIAL)["name"])
 
 
+def _violatable_by_a_finite_prefix(spec: SpectraSpecification) -> set:
+    """
+    The assumptions a finite trace could actually break: the invariants.
+
+    A JUSTICE assumption is liveness - `GF(p)` says p holds infinitely often,
+    and no finite prefix can refute that, since the prefix can always be
+    extended. Offering one as a target is not merely fruitless but expensive:
+    every attempt runs its full step budget, with an ASP call per step, before
+    giving up. Measured on gyro, whose `ready_infinitely_often` made a run with
+    --attempts 14 slower than the entire rest of the suite.
+
+    This is the same reason arbiter has no trace at all, and the same reason
+    `not_police_often`, `no_emergency_often` and minepump_liveness's
+    `assumption4_1` never appear as violated.
+    """
+    return set(spec.filter(
+        lambda x: x['when'] == GR1TemporalType.INVARIANT)["name"])
+
+
 def _candidate_inputs(env_domains: Dict[str, List[str]],
                       rng: random.Random) -> List[Dict[str, str]]:
     """
@@ -192,8 +211,7 @@ def violatable_assumptions(spec_path: str) -> List[str]:
     breaking the same one exercise a single weakening five times.
     """
     spec = SpectraSpecification.from_file(spec_path)
-    repairable = _non_initial_assumption_names(spec)
-    return sorted(repairable & set(
+    return sorted(_violatable_by_a_finite_prefix(spec) & set(
         spec.filter(lambda x: x["type"] == GR1FormulaType.ASM)["name"]))
 
 
@@ -385,8 +403,7 @@ def generate_controller_violation_trace(
     spec = SpectraSpecification.from_file(spec_path)
     variables = _spec_variable_names(spec)
     repairable = _non_initial_assumption_names(spec)
-    assumption_names = sorted(
-        repairable & set(spec.filter(lambda x: x["type"] == GR1FormulaType.ASM)["name"]))
+    assumption_names = violatable_assumptions(spec_path)
     if not assumption_names:
         raise ControllerTraceError(
             f"{spec_path} has no non-initial assumption to violate.")

@@ -1,0 +1,70 @@
+{
+  "case_study": "traffic_updated",
+  "traces": [
+    {
+      "trace": 0,
+      "seed": 0,
+      "target": "carA_idle_when_red",
+      "violated": [
+        "carA_idle_when_red"
+      ],
+      "steps": 7,
+      "compliant_steps": 5,
+      "max_random_steps": 35,
+      "attempts": 14,
+      "max_targets": 1
+    },
+    {
+      "trace": 1,
+      "seed": 1,
+      "target": "carA_moves_when_green",
+      "violated": [
+        "carA_moves_when_green"
+      ],
+      "steps": 8,
+      "compliant_steps": 5,
+      "max_random_steps": 35,
+      "attempts": 14,
+      "max_targets": 1
+    },
+    {
+      "trace": 2,
+      "seed": 2,
+      "target": "carB_idle_when_red",
+      "violated": [
+        "carB_idle_when_red"
+      ],
+      "steps": 6,
+      "compliant_steps": 5,
+      "max_random_steps": 35,
+      "attempts": 14,
+      "max_targets": 1
+    },
+    {
+      "trace": 3,
+      "seed": 3,
+      "target": "carB_moves_when_green",
+      "violated": [
+        "carB_moves_when_green"
+      ],
+      "steps": 8,
+      "compliant_steps": 5,
+      "max_random_steps": 35,
+      "attempts": 14,
+      "max_targets": 1
+    },
+    {
+      "trace": 4,
+      "seed": 4,
+      "target": "carA_idle_when_red",
+      "violated": [
+        "carA_idle_when_red"
+      ],
+      "steps": 6,
+      "compliant_steps": 5,
+      "max_random_steps": 35,
+      "attempts": 14,
+      "max_targets": 1
+    }
+  ]
+}

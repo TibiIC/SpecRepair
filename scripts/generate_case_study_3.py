@@ -20,6 +20,7 @@ and shipping one that does not is what cost a day of unrecognisable failures on
 2026-08-06.
 """
 import argparse
+import json
 import os
 import shutil
 import sys
@@ -53,6 +54,7 @@ def generate_for(case_study: str, traces: int, compliant_steps: int,
     # the assumptions is what makes five traces worth more than one.
     available = violatable_assumptions(src_spec)
     covered: list = []
+    manifest: list = []
 
     written = 0
     for seed in range(traces):
@@ -84,12 +86,42 @@ def generate_for(case_study: str, traces: int, compliant_steps: int,
             f.writelines(lines)
         steps = sum(1 for ln in lines if ln.strip() == "") or 1
         print(f"  trace {seed}: {steps} steps, violates {', '.join(violated)}")
+        manifest.append({
+            "trace": seed,
+            "seed": seed,
+            "target": target,
+            "violated": violated,
+            "steps": steps,
+            "compliant_steps": compliant_steps,
+            "max_random_steps": max_random_steps,
+            "attempts": attempts,
+            "max_targets": max_targets,
+        })
         written += 1
 
     if written == 0:
         # An empty case study directory is worse than none: the runner would
         # generate tests for traces that do not exist.
         shutil.rmtree(out_dir, ignore_errors=True)
+        return 0
+
+    # Record how each trace was made. Generation is reproducible from the seed,
+    # but only if you know which assumption it aimed at: a trace whose preferred
+    # target proved unreachable fell back to another, and nothing in the trace
+    # file says which. Without this, a specific trace cannot be regenerated -
+    # verified the hard way, when two of three spot-checks failed to reproduce
+    # for exactly this reason.
+    #
+    # One caveat this does not remove. Replaying a single trace from its
+    # manifest reproduces it exactly for the smaller case studies (gyro checks
+    # out) but not always for the larger ones (pcar does not). Spectra's Env is
+    # global to the JVM, so state accumulates across the generator's calls, and
+    # a trace generated after four earlier seeds in one process is not
+    # guaranteed to match one generated first in a fresh one. Regenerating the
+    # whole case study in order is the reliable replay.
+    with open(os.path.join(out_dir, "traces.json"), "w") as f:
+        json.dump({"case_study": case_study, "traces": manifest}, f, indent=2)
+        f.write("\n")
     return written
 
 
