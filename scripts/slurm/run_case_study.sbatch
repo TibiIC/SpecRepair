@@ -45,9 +45,23 @@ LEARNER_ARG="${LEARNER:-ilasp}"
 WORKDIR="${WORKDIR:-/vol/bitbucket/$USER/PhD/SpecRepair}"
 cd "$WORKDIR" || { echo "no $WORKDIR" >&2; exit 1; }
 
-source ~/.sdkman/bin/sdkman-init.sh >/dev/null 2>&1
-source ~/phd_work.sh >/dev/null 2>&1
-conda activate "${CONDA_ENV:-logic}"
+# Initialise conda explicitly. A batch job is not an interactive shell: `conda`
+# is not defined here (measured on gpuvm36 - `type -t conda` is empty and
+# `which python` is /usr/bin/python), and sourcing ~/phd_work.sh is not a
+# substitute. That file is written for a login shell and ends the job outright
+# when sourced in batch: the first trial exited 1 with a completely empty
+# output file, which is what a `source` that exits looks like.
+CONDA_BASE="${CONDA_BASE:-/vol/bitbucket/tg4018/anaconda3}"
+if [[ -f "$CONDA_BASE/etc/profile.d/conda.sh" ]]; then
+    source "$CONDA_BASE/etc/profile.d/conda.sh"
+else
+    echo "No conda at $CONDA_BASE - set CONDA_BASE." >&2; exit 1
+fi
+conda activate "${CONDA_ENV:-logic}" || { echo "conda activate failed" >&2; exit 1; }
+
+# Java for the Spectra JVM. sdkman's init is safe to source in batch; its
+# absence is not fatal if java is already on PATH.
+[[ -f ~/.sdkman/bin/sdkman-init.sh ]] && source ~/.sdkman/bin/sdkman-init.sh || true
 export LD_LIBRARY_PATH="$CONDA_PREFIX/lib:${LD_LIBRARY_PATH:-}"
 export SPEC_REPAIR_LEARNER="$LEARNER_ARG"
 export SPEC_REPAIR_FASTLAS_RUNS="${FASTLAS_RUNS:-10}"
