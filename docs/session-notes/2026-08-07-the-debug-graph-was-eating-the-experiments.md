@@ -298,11 +298,13 @@ if the hop is ever needed.
 
 ## 8. Open
 
-* **`get_violations` treats a failed clingo as "no violations"** (§5.1). The
-  most valuable thing on this list.
-* **elevator's `floor_mutual_exclusion`** reports no violation for a state that
-  plainly violates it - unexplained, and it would affect case_study_2's elevator
-  traces too.
+* ~~`get_violations` treats a failed clingo as "no violations"~~ **Fixed
+  2026-08-08.** It was the most valuable thing on the list, and chasing it
+  turned up a second instance of the same shape - see that day's notes, §1-2.
+* ~~elevator's `floor_mutual_exclusion` reports no violation~~ **Explained and
+  fixed 2026-08-08**: negating an atom mutated the specification, so every other
+  occurrence of a negated atom was encoded with the wrong polarity. See that
+  day's notes, §2.
 * **Slurm** is one `conda install clingo` from working.
 * **genbuf, colorsort, lift, elevator, humanoid** produce no case_study_3
   traces; `lift` needs two-step planning.
