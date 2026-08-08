@@ -87,5 +87,44 @@ class TestReturnCodeChecking(unittest.TestCase):
         self.assertEqual("out\n", run_subprocess([binary]))
 
 
+class TestLearnerOutputChecks(unittest.TestCase):
+    """
+    ILASP and FastLAS, whose conventions differ in a way that matters.
+
+    Measured: both exit 0 on success and 1 on a malformed task, and both print
+    UNSATISFIABLE with exit 0 - a verdict the FastLAS enumeration depends on
+    receiving rather than an exception. FastLAS exits 255 on a missing file.
+    **ILASP exits 0**, writing the reason to stderr only, so nothing about its
+    exit code or stdout says anything went wrong.
+    """
+
+    def test_no_output_at_all_is_refused(self):
+        """
+        The ILASP missing-file case. The guard that should have caught it
+        compared output to `"b''"` - the repr of empty bytes, which a decoded
+        string can never equal - so it had matched nothing since output started
+        being decoded, and an empty result flowed on as "the learner found no
+        weakening".
+        """
+        from spec_repair.wrappers.asp_wrappers import error_check_ILASP_output
+        for empty in ("", "   ", "\n\n"):
+            with self.subTest(output=repr(empty)):
+                with self.assertRaises(SolverInvocationError):
+                    error_check_ILASP_output(empty)
+
+    def test_unsatisfiable_is_accepted(self):
+        """
+        UNSAT is an answer from both solvers, and the FastLAS enumeration stops
+        on it. Refusing it would break the search rather than protect it.
+        """
+        from spec_repair.wrappers.asp_wrappers import error_check_ILASP_output
+        error_check_ILASP_output("UNSATISFIABLE\n")   # must not raise
+
+    def test_a_timeout_is_still_reported_as_a_timeout(self):
+        from spec_repair.wrappers.asp_wrappers import error_check_ILASP_output
+        with self.assertRaises(TimeoutError):
+            error_check_ILASP_output("Timeout")
+
+
 if __name__ == "__main__":
     unittest.main()

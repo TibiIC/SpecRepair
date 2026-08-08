@@ -4,6 +4,7 @@ from typing import Optional
 
 from spec_repair.config import FASTLAS, MAX_ASP_HYPOTHESES, PROJECT_PATH
 from spec_repair.enums import ExpType
+from spec_repair.exceptions import SolverInvocationError
 from spec_repair.util.subprocess_util import run_subprocess, create_cmd
 from spec_repair.util.asp_trace_util import run_clingo_raw
 from spec_repair.util.file_util import generate_filename, generate_temp_filename, write_to_file, read_file_lines, \
@@ -119,11 +120,28 @@ def append_pylasp_script(las_file, pylasp_script):
 
 
 def error_check_ILASP_output(output):
+    """
+    Refuse output that means the solver never ran.
+
+    The empty-output guard used to test `output == "b''"`, the repr of empty
+    bytes - which a decoded string can never equal, so it had matched nothing
+    for as long as run_subprocess has been decoding. That matters for ILASP
+    specifically: it exits **0** when it cannot open its input file, writing the
+    reason to stderr only. Measured. So neither the exit code nor stdout says
+    anything is wrong, and an empty result flowed on as "the learner found no
+    weakening" - a claim about the specification.
+
+    FastLAS does not share that: a missing file exits 255, and UNSATISFIABLE is
+    printed on stdout with exit 0, which is a verdict and must stay one.
+    """
     asp_tool_name = 'FASTLAS' if FASTLAS else 'ILASP'
     if output == "Timeout":
         raise TimeoutError(f"{asp_tool_name} timed out during run!")
-    if output == "b''":
-        raise ValueError(f"{asp_tool_name} Error! No output returned!")
+    if not output.strip():
+        raise SolverInvocationError(
+            f"{asp_tool_name} produced no output at all. It did not reach a "
+            f"verdict - a task it solves prints solutions, and one it cannot "
+            f"prints UNSATISFIABLE.")
     if "error" in output.lower():
         raise ModuleNotFoundError(output)
 
@@ -158,7 +176,10 @@ def run_ILASP_raw(las_file, pylasp_integrated=False):
         cmd = create_cmd(["FastLAS", "--nopl", "--force-safety", las_file])
     else:
         cmd = create_cmd(['ILASP', las_file])
-    output = run_subprocess(cmd, timeout=learner_timeout())
+    # Both solvers exit 0 on success and 1 on a malformed task; FastLAS exits
+    # 255 on a missing file. UNSATISFIABLE is exit 0 for both - a verdict, and
+    # the FastLAS enumeration depends on receiving it rather than an exception.
+    output = run_subprocess(cmd, timeout=learner_timeout(), ok_returncodes=(0,))
     error_check_ILASP_output(output)
     return output
 
