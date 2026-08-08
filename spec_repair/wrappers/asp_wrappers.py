@@ -7,7 +7,7 @@ from spec_repair.enums import ExpType
 from spec_repair.exceptions import SolverInvocationError
 from spec_repair.util.subprocess_util import run_subprocess, create_cmd
 from spec_repair.util.asp_trace_util import run_clingo_raw
-from spec_repair.util.file_util import generate_filename, generate_temp_filename, write_to_file, read_file_lines, \
+from spec_repair.util.file_util import discard_temp_file, generate_filename, generate_temp_filename, write_to_file, read_file_lines, \
     write_file
 
 
@@ -152,7 +152,16 @@ def error_check_ILASP_output(output):
 def run_clingo(asp: str, n_models: int = 1) -> list[str]:
     asp_file = generate_temp_filename(ext=".lp")
     write_to_file(asp_file, asp)
-    output = run_clingo_raw(asp_file, n_models=n_models)
+    # Deleted as soon as clingo has read it. This is the hottest path in the
+    # system - a BFS search makes one per violation check, and they accounted
+    # for 1.2M of the files that filled /tmp on 2026-08-08. Kept on failure, so
+    # the input to a run that went wrong can still be inspected.
+    try:
+        output = run_clingo_raw(asp_file, n_models=n_models)
+    except Exception:
+        raise
+    else:
+        discard_temp_file(asp_file)
     output = output.split("\n")
     for i, line in enumerate(output):
         if len(line) > 100:
@@ -223,6 +232,9 @@ def run_ILASP(las, pylasp_integrated=False):
     ilasp_file = generate_temp_filename(ext=".las")
     write_to_file(ilasp_file, las)
     output = run_ILASP_raw(ilasp_file, pylasp_integrated)
+    # Kept when the learner fails: the task is the thing worth inspecting then,
+    # and FastLASTaskError names this path in its message.
+    discard_temp_file(ilasp_file)
     return output
 
 

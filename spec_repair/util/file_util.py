@@ -1,4 +1,7 @@
+import atexit
 import os
+import tempfile
+import shutil
 import random
 import re
 import string
@@ -86,11 +89,53 @@ def generate_filename(spectra_file, replacement, output=False):
     return spectra_file.replace(".spectra", replacement)
 
 
+# Every temp file this process makes, under one directory that is removed when
+# the process exits.
+#
+# They used to go loose into /tmp and were never deleted by anyone. On
+# 2026-08-08 that filled a 32G tmpfs on every GPU box - 1.2M .lp files, 121k
+# .las and 133k .spectra on gpu11 alone - and *every* run of case_study_2 ILASP
+# and case_study_3 FastLAS failed with `OSError: [Errno 28] No space left on
+# device`. The failure looked like a code regression and was a full disk.
+_TEMP_DIR = os.path.join(
+    os.environ.get("SPEC_REPAIR_TMP", tempfile.gettempdir()),
+    f"spec_repair_{os.getpid()}")
+
+
+def _cleanup_temp_dir() -> None:
+    shutil.rmtree(_TEMP_DIR, ignore_errors=True)
+
+
+atexit.register(_cleanup_temp_dir)
+
+
 def generate_temp_filename(ext):
+    """
+    A path for a scratch file, inside this process's own temp directory.
+
+    Grouping them per process means a killed run leaves one identifiable
+    directory rather than scattering files that cannot be told from anyone
+    else's, and a normal exit removes the lot. Callers on hot paths should
+    still delete their own file as soon as it has been read - a long search
+    makes thousands, and waiting for exit is what filled the disk.
+    """
     assert is_file_extension(ext)
+    os.makedirs(_TEMP_DIR, exist_ok=True)
     random_name = generate_random_string(length=10)
-    temp_path = os.path.join('/tmp', f"{random_name}{ext}")
-    return temp_path
+    return os.path.join(_TEMP_DIR, f"{random_name}{ext}")
+
+
+def discard_temp_file(path: str) -> None:
+    """
+    Remove a scratch file, tolerating its absence.
+
+    Deliberately silent: losing a temp file is never worth failing a repair
+    over, and the caller is finished with it by definition.
+    """
+    try:
+        os.remove(path)
+    except OSError:
+        pass
 
 
 def generate_random_string(length: int = 10) -> str:

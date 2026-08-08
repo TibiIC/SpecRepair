@@ -12,7 +12,7 @@ from spec_repair.model.counter_strategy import CounterStrategy
 from spec_repair.model.counter_trace import cts_from_cs, CounterTrace
 from spec_repair.helpers.parsers.spectra_cs_parser import SpectraCSParser
 from spec_repair.model.spectra_specification import SpectraSpecification
-from spec_repair.util.file_util import generate_temp_filename, write_to_file
+from spec_repair.util.file_util import discard_temp_file, generate_temp_filename, write_to_file
 from spec_repair.wrappers.spectra_toolbox import synthesise_extract_counter_strategies, \
     synthesise_check_realisability_only, run_all_unrealisable_cores
 from spec_repair.wrappers.asp_wrappers import get_violations
@@ -160,11 +160,21 @@ class SpectraGR1Oracle(IOracle):
         spec_str = spec.to_str(is_to_compile=True)
         spectra_file: str = generate_temp_filename(ext=".spectra")
         write_to_file(spectra_file, spec_str)
-        return synthesise_extract_counter_strategies(spectra_file)
+        try:
+            return synthesise_extract_counter_strategies(spectra_file)
+        finally:
+            # Every candidate the search verifies writes one of these. Spectra
+            # has read the file by the time it returns, and on failure the
+            # specification is reachable from the exception rather than from a
+            # path in /tmp.
+            discard_temp_file(spectra_file)
 
     @staticmethod
     def _synthesise_realisability_only(spec: SpectraSpecification):
         spec_str = spec.to_str(is_to_compile=True)
         spectra_file: str = generate_temp_filename(ext=".spectra")
         write_to_file(spectra_file, spec_str)
-        return synthesise_check_realisability_only(spectra_file)
+        try:
+            return synthesise_check_realisability_only(spectra_file)
+        finally:
+            discard_temp_file(spectra_file)

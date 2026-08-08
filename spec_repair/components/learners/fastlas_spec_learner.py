@@ -35,7 +35,7 @@ from spec_repair.helpers.parsers.fastlas_interpreter import FastLASInterpreter
 from spec_repair.interfaces.iheuristic_manager import IHeuristicManager
 from spec_repair.components.heuristic_managers.no_filter_heuristic_manager import NoFilterHeuristicManager
 from spec_repair.model.adaptation_learned import Adaptation
-from spec_repair.util.file_util import generate_temp_filename, write_to_file
+from spec_repair.util.file_util import discard_temp_file, generate_temp_filename, write_to_file
 from spec_repair.util.subprocess_util import create_cmd
 
 # FastLAS keeps ILASP's recall bound and rejects only the (positive)/(negative)
@@ -307,8 +307,10 @@ def run_fastlas(las: str, extra_args: Tuple[str, ...] = DEFAULT_FASTLAS_ARGS) ->
     stdout, stderr = process.communicate()
     stdout, stderr = stdout.decode("utf-8"), stderr.decode("utf-8")
     if stderr.strip() and not stdout.strip():
+        # Deliberately not deleted: the message points at this file.
         raise FastLASTaskError(
             f"FastLAS rejected the learning task: {stderr.strip()}\nTask written to {las_file}")
+    discard_temp_file(las_file)
     return stdout
 
 
