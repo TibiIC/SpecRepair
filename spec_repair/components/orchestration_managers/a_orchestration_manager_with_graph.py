@@ -123,11 +123,23 @@ class AOrchestrationManagerWithStackAndGraph(IOrchestrationManager, ABC):
         prev_id = self._get_task_id(*prev)
         prev_spec, prev_data = prev
         self._graph.add_node(f"#{unique_id}", spec=spec.to_str(), color=BLUE)
-        self._graph.add_edge(
-            prev_id,
-            f"#{unique_id}",
-            last_adaptation=[str(adaptation) for adaptation in prev_data.adaptation_history[-1]]
-        )
+        # A leaf can be reached without any adaptation on the way in. Guarantee
+        # weakening with no counter-traces hands its task straight back for the
+        # oracle to extract counter-strategies from, unchanged and with nothing
+        # appended to the history; if that specification then verifies clean, it
+        # is a leaf whose incoming edge has no adaptation to name.
+        #
+        # `enqueue_new_tasks` has guarded this since it was written. This did
+        # not, and indexing [-1] on an empty history killed 11 of 57 runs on the
+        # 2026-08-07 ILASP sweep - every amba and colorsort trace, plus gyro_0 -
+        # with an IndexError raised while labelling a debug graph.
+        edge = {}
+        if prev_data.adaptation_history:
+            edge["last_adaptation"] = [
+                str(adaptation) for adaptation in prev_data.adaptation_history[-1]]
+        else:
+            edge["details"] = "Solution reached without a further adaptation"
+        self._graph.add_edge(prev_id, f"#{unique_id}", **edge)
 
     def has_next(self) -> bool:
         return bool(self._stack)
