@@ -38,7 +38,6 @@ REMOTE_SUBDIR.
 """
 import os
 import re
-from datetime import datetime
 from typing import List
 
 from main.bfs_repair_orchestrator import BFSRepairOrchestrator
@@ -48,7 +47,7 @@ from spec_repair.enums import Learning
 from spec_repair.model.spectra_specification import SpectraSpecification
 from spec_repair.util.file_util import read_file_lines
 from tests.base_test_case import BaseTestCase
-from tests.test_main.test_case_study_1 import learner_suffix, save_layered_graph
+from tests.test_main.test_case_study_1 import learner_suffix, run_date_str, save_layered_graph
 
 CASE_STUDIES_DIR = os.path.join(
     os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))),
@@ -84,7 +83,7 @@ class TestCaseStudy3(BaseTestCase):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
-        cls.date_str = datetime.now().strftime("%Y-%m-%d")
+        cls.date_str = run_date_str()
         cls.learner = learner_from_env()
         cls.learner_suffix = learner_suffix(cls.learner)
 

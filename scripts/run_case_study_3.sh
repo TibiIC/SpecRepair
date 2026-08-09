@@ -18,6 +18,7 @@
 #   TRACES="0 1" ./run_case_study_3.sh     # every case study, traces 0 and 1
 #   LEARNER=fastlas ./run_case_study_3.sh  # learn with FastLAS, not ILASP
 #   LEARNER=fastlas FASTLAS_RUNS=10 ./run_case_study_3.sh  # up to 10 solutions per step
+#   LEARNER_TIMEOUT=900 ./run_case_study_3.sh    # seconds per learning task (default 600)
 #
 # A FastLAS run writes to <case_study>_trace<ID>_fastlas_<date>, so it lands
 # beside an ILASP run of the same date rather than overwriting it.
@@ -114,6 +115,27 @@ traces_for() {
     echo "$found"
 }
 
+# Seconds a single learning task gets before its branch is abandoned. The
+# library default is 60, which the 2026-08-08 sweep showed is far too tight for
+# ILASP: 2,671 learning tasks across the three ILASP sweeps hit it (1,109 in
+# this one) against 0 for FastLAS. Each is a branch the ILASP arm never
+# explored, so at 60s a comparison between the two learners measures the
+# timeout rather than the learners. Exported explicitly rather than left to the
+# library default, so the value a sweep ran under is visible in its launch.
+LEARNER_TIMEOUT="${LEARNER_TIMEOUT:-600}"
+if ! [[ "$LEARNER_TIMEOUT" =~ ^[1-9][0-9]*$ ]]; then
+    echo "LEARNER_TIMEOUT='$LEARNER_TIMEOUT' must be a positive integer." >&2; exit 1
+fi
+
+# Resolved once, here, and handed to every job. The date used to come from
+# `datetime.now()` inside the test, which is evaluated when the *job* starts -
+# and jobs start over many hours as the concurrency semaphore releases them. A
+# sweep launched at 20:11 therefore stamped its output directories with two
+# different dates, and every pipeline step selects a run by globbing
+# `*_<date>`, so half the results were silently left behind. A two-day sweep
+# would scatter across three.
+RUN_DATE="$(date +%Y-%m-%d)"
+
 # Session name is scoped to the selection, so a single-case-study rerun can be
 # started alongside a full run already in progress.
 SESSION="case_study_3_${case_study_arg}${trace_arg:+_$trace_arg}_${LEARNER}"
@@ -132,7 +154,7 @@ assert_no_previous_sweep "$SESSION"
 
 mkdir -p "$LOGDIR"
 
-SETUP_CMDS="source ~/.sdkman/bin/sdkman-init.sh && source ~/phd_work.sh && conda activate $CONDA_ENV && export LD_LIBRARY_PATH=\$CONDA_PREFIX/lib:\$LD_LIBRARY_PATH && export SPEC_REPAIR_LEARNER=$LEARNER && export SPEC_REPAIR_FASTLAS_RUNS=$FASTLAS_RUNS && cd $WORKDIR"
+SETUP_CMDS="source ~/.sdkman/bin/sdkman-init.sh && source ~/phd_work.sh && conda activate $CONDA_ENV && export LD_LIBRARY_PATH=\$CONDA_PREFIX/lib:\$LD_LIBRARY_PATH && export SPEC_REPAIR_LEARNER=$LEARNER && export SPEC_REPAIR_FASTLAS_RUNS=$FASTLAS_RUNS && export SPEC_REPAIR_LEARNER_TIMEOUT=$LEARNER_TIMEOUT && export SPEC_REPAIR_RUN_DATE=$RUN_DATE && cd $WORKDIR"
 
 # Build the full (case study, trace) work list first, so the window count and
 # the concurrency cap are both known before anything starts.

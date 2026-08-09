@@ -15,7 +15,14 @@
 # deliberate. FORCE=1 kills what it finds and proceeds.
 
 # Session names that mean "a sweep", including the pre-2026-08-06 ones.
-SWEEP_SESSION_RE='^(case_study_[12]_|parallel_tests|trace_tests)'
+#
+# `case_study_3` was added to the pattern after the fact: the guard was written
+# when only two setups existed and was never widened, so a leftover
+# `case_study_3_all_ilasp` session was invisible to exactly the check that
+# exists to find it. The process pattern below always caught it - it matches
+# `test_case_study_` with no digit - so the hole was only in the session half,
+# which is the half that reports *what* to close.
+SWEEP_SESSION_RE='^(case_study_[123]_|parallel_tests|trace_tests)'
 SWEEP_PROC_RE='python -m unittest tests\.test_main\.test_case_study_'
 
 assert_no_previous_sweep() {

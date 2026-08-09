@@ -1,4 +1,5 @@
 import os
+import re
 import subprocess
 from typing import Optional
 import pickle
@@ -135,11 +136,39 @@ def learner_suffix(learner: str) -> str:
     return "" if learner == DEFAULT_LEARNER else f"_{learner}"
 
 
+def run_date_str() -> str:
+    """
+    The date stamped into every output directory name for this sweep.
+
+    `datetime.now()` is evaluated when the *job* starts, not when the sweep
+    does, and a sweep runs its jobs through a concurrency semaphore over many
+    hours. A sweep launched at 20:11 therefore stamps the jobs that start
+    before midnight `_2026-08-08` and the ones that start after `_2026-08-09`,
+    splitting one experiment across two directory names. That is not cosmetic:
+    `pull_experiment_from_ssh.sh` and every pipeline step after it select a run
+    by globbing `*_<date>`, so half the results are silently left on the
+    remote - and a two-day sweep scatters across three.
+
+    `SPEC_REPAIR_RUN_DATE` lets the runner resolve the date once at launch and
+    hand the same value to every job. Unset, the old behaviour stands, so a
+    developer running a single test still gets today's date.
+    """
+    stamped = os.environ.get("SPEC_REPAIR_RUN_DATE", "").strip()
+    if not stamped:
+        return datetime.now().strftime("%Y-%m-%d")
+    if not re.fullmatch(r"\d{4}-\d{2}-\d{2}", stamped):
+        raise ValueError(
+            f"SPEC_REPAIR_RUN_DATE='{stamped}' must look like YYYY-MM-DD. It "
+            f"becomes part of an output directory name that the experiment "
+            f"pipeline selects on.")
+    return stamped
+
+
 class TestCaseStudy1(BaseTestCase):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
-        cls.date_str = datetime.now().strftime("%Y-%m-%d")
+        cls.date_str = run_date_str()
         # Read once per class: a mid-run change would make half the results
         # ILASP's and half FastLAS's under one directory name.
         cls.learner = learner_from_env()
