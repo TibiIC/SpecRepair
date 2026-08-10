@@ -178,10 +178,30 @@ It is **not** the learner budget: both sweeps logged **zero** learner timeouts,
 so 60s versus 600s cannot account for it. FastLAS is deterministic and BDD
 reordering was off in both.
 
-**Two runs of the same tuple with the same learner do not produce the same
-specifications.** Until that is explained, any FastLAS-versus-ILASP difference
-contains an unquantified amount of run-to-run noise. This outranks everything
-above.
+### 7.1 Retracted: the comparison was against contaminated directories
+
+Post-processing the pulled runs later the same day showed the table above cannot
+be read as run-to-run divergence, because **both** tuples in it were
+contaminated.
+
+A relaunch writes into `<case>_trace<N>[_fastlas]_<date>`, which already exists,
+and nothing clears it - so `final_specs/` accumulates across every sweep that
+shares a name. 2026-08-08 had three launches (00:00, 12:47, 20:11), and ten of
+its FastLAS runs hold specifications written *before their own run started*:
+
+    minepump_trace0_fastlas         14/14 stale   started 12:47, oldest spec 02:01
+    traffic_single_trace4_fastlas    2/19 stale   started 20:12, oldest spec 01:01
+
+`minepump_trace0_fastlas`'s `status.txt` reports the run 0.0s in with 0
+solutions, beside 14 specification files from the midnight sweep. So the 08-08
+column was a different sweep's output - entirely for one tuple, partly for the
+other.
+
+Whether two identical runs diverge is therefore **still unknown**: it was never
+tested. Establishing it needs two runs into directories known to be empty. What
+*is* established is that any analysis of a date with a relaunch mixes sweeps
+unless the directories were cleared by hand - which affects every earlier
+comparison drawn from 2026-08-08.
 
 A smaller inconsistency found alongside it: `minepump_0`'s 08-08 log reports 15
 repaired specs while its directory holds 14 files, and `status.txt` reports
@@ -190,7 +210,14 @@ intermediates. The counters and the files do not agree.
 
 ## 8. Open
 
-* **Reproducibility (section 7)** - the run-to-run divergence, unexplained.
+* **Run directories are never cleared on relaunch** (section 7.1), so
+  `final_specs/` accumulates across sweeps sharing a name. This is the more
+  serious of the two: it silently corrupts the inputs to post-processing, and
+  the corruption is invisible in the directory - only the file mtimes give it
+  away. A run should start by clearing, or refusing to start into, a
+  non-empty output directory.
+* **Reproducibility** - whether two identical runs diverge is untested, the
+  earlier evidence for it having been withdrawn.
 * **gyro and pcar have no box.** They are excluded from the current sweep and
   every other machine is running one; the sweep guard will refuse a second
   session on gpu12. gyro has never completed on either learner.
