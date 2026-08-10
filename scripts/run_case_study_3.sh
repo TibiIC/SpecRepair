@@ -19,6 +19,7 @@
 #   LEARNER=fastlas ./run_case_study_3.sh  # learn with FastLAS, not ILASP
 #   LEARNER=fastlas FASTLAS_RUNS=10 ./run_case_study_3.sh  # up to 10 solutions per step
 #   LEARNER_TIMEOUT=900 ./run_case_study_3.sh    # seconds per learning task (default 600)
+#   EXCLUDE="gyro pcar" ./run_case_study_3.sh    # every case study except these
 #
 # A FastLAS run writes to <case_study>_trace<ID>_fastlas_<date>, so it lands
 # beside an ILASP run of the same date rather than overwriting it.
@@ -73,6 +74,41 @@ for _dir in "$CASE_STUDY_DIR"/*/; do
 done
 if [[ ${#all_case_studies[@]} -eq 0 ]]; then
     echo "No case studies with traces under $CASE_STUDY_DIR." >&2; exit 1
+fi
+
+# EXCLUDE drops case studies from an otherwise-full sweep:
+#
+#   EXCLUDE="gyro pcar" ./run_case_study_3.sh
+#
+# The alternative - one session per case study - gives each its own slots
+# directory and therefore its own semaphore, so four "capped at 4" sessions run
+# sixteen JVMs. There has to be a way to say "all of it except this" within a
+# single sweep.
+#
+# The case for using it: with a cap of 4 and jobs queued in case-study order,
+# gyro claims every slot at launch and has never finished a run in 44h, so
+# nothing behind it would ever start. Excluding the runs that do not terminate
+# is what lets the rest of the sweep produce results at all.
+read -r -a _excluded <<< "${EXCLUDE:-}"
+if [[ ${#_excluded[@]} -gt 0 ]]; then
+    _kept=()
+    for _name in "${all_case_studies[@]}"; do
+        _skip=0
+        for _drop in "${_excluded[@]}"; do
+            [[ "$_name" == "$_drop" ]] && { _skip=1; break; }
+        done
+        [[ "$_skip" -eq 1 ]] || _kept+=("$_name")
+    done
+    for _drop in "${_excluded[@]}"; do
+        [[ " ${all_case_studies[*]} " == *" $_drop "* ]] || \
+            echo "EXCLUDE names '$_drop', which is not a case study with traces." >&2
+    done
+    # `"${_kept[@]}"` on an empty array is an unbound-variable error under
+    # `set -u`, which would abort with bash's message instead of the one below.
+    all_case_studies=(${_kept[@]+"${_kept[@]}"})
+    if [[ ${#all_case_studies[@]} -eq 0 ]]; then
+        echo "EXCLUDE removed every case study." >&2; exit 1
+    fi
 fi
 
 case_study_arg="${1:-all}"
