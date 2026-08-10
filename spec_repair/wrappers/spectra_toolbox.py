@@ -3,6 +3,7 @@ import os.path
 import platform
 import re
 import subprocess
+import tempfile
 from typing import List, Set
 
 import jpype
@@ -319,6 +320,33 @@ def _maybe_enable_bdd_reorder() -> None:
         print(f"Could not enable BDD reordering ({type(e).__name__}); continuing without it.")
 
 
+_CALL_LOG_ENV = "SPEC_REPAIR_SPECTRA_CALL_LOG_DIR"
+
+
+def spectra_call_log_path() -> str:
+    """
+    Where the *current* Spectra call's output is written as it is produced.
+
+    Spectra runs inside this process's JVM, so a native crash or a kill during
+    synthesis takes the repair run down with it - and the output was previously
+    captured into an in-memory `ByteArrayOutputStream` that was only read back
+    after `main` returned. Anything Spectra said on its way down therefore died
+    in that buffer, which is why five FastLAS runs on 2026-08-08 ended with an
+    ordinary progress line and no cause: every one of them was inside a
+    verification call.
+
+    Written per process (the pid is in the name) and overwritten per call, so
+    what survives a death is the last call - the one that killed it.
+
+    Set `SPEC_REPAIR_SPECTRA_CALL_LOG_DIR` to keep it beside the sweep's other
+    logs; it falls back to the system temp directory, where a run that nobody is
+    supervising costs nothing.
+    """
+    directory = os.environ.get(_CALL_LOG_ENV, "").strip() or tempfile.gettempdir()
+    os.makedirs(directory, exist_ok=True)
+    return os.path.join(directory, f"spectra_last_call_{os.getpid()}.log")
+
+
 def run_spectra_cli(args: list[str]) -> str:
     """
     Run a Java main method and capture its printed output as a string.
@@ -334,15 +362,18 @@ def run_spectra_cli(args: list[str]) -> str:
 
     # Import Java system classes
     java_lang_System = jpype.JClass("java.lang.System")
-    java_io_ByteArrayOutputStream = jpype.JClass("java.io.ByteArrayOutputStream")
+    java_io_FileOutputStream = jpype.JClass("java.io.FileOutputStream")
     java_io_PrintStream = jpype.JClass("java.io.PrintStream")
 
     # Backup original System.out
     original_out = java_lang_System.out
 
-    # Prepare streams to capture output
-    baos = java_io_ByteArrayOutputStream()
-    ps = java_io_PrintStream(baos)
+    # Capture to a file rather than to memory, with autoFlush so each line
+    # reaches the disk as Spectra prints it. See spectra_call_log_path: the
+    # point is that the output survives the process, not that it is a file.
+    call_log = spectra_call_log_path()
+    fos = java_io_FileOutputStream(call_log, False)
+    ps = java_io_PrintStream(fos, True, "UTF-8")
 
     # Redirect System.out to our PrintStream
     java_lang_System.setOut(ps)
@@ -356,15 +387,16 @@ def run_spectra_cli(args: list[str]) -> str:
         # Call the main method
         SpectraCLI.main(java_args)
 
-        # Flush and get captured output as bytes
+        # Flush and read back what was captured
         ps.flush()
-        output_bytes = baos.toByteArray()
-
-        # Decode bytes to Python string
-        output_str = bytes(output_bytes).decode("utf-8")
+        with open(call_log, "rb") as f:
+            output_str = f.read().decode("utf-8")
 
     finally:
-        # Restore original System.out no matter what
+        # Restore original System.out no matter what, and close the file behind
+        # it - a sweep makes tens of thousands of these calls, and the sweep
+        # box's open-file limit is 1024.
         java_lang_System.setOut(original_out)
+        ps.close()
 
     return output_str

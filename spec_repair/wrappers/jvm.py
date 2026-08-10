@@ -10,6 +10,7 @@ no-ops, matching jpype's own recommended idempotent-startup pattern.
 """
 import atexit
 import os
+import tempfile
 import threading
 
 import jpype
@@ -59,9 +60,32 @@ def ensure_cudd_native() -> str:
         return ""
 
 
+def _error_file_arg() -> str:
+    """
+    Put the JVM's fatal-error log somewhere findable, one file per process.
+
+    The default is `hs_err_pid%p.log` in the working directory, which on the
+    sweep box is the repository root - and after seven JVM deaths on the
+    2026-08-08 sweep there was not one there, so the default is unreliable
+    under whatever conditions actually kill it (a directory the run cannot
+    write, or a crash too early to open it). Naming it explicitly, next to the
+    Spectra call log, means a crash leaves *some* record even when the process
+    dies with its stdout buffer unflushed.
+    """
+    directory = os.environ.get("SPEC_REPAIR_SPECTRA_CALL_LOG_DIR", "").strip() or tempfile.gettempdir()
+    try:
+        os.makedirs(directory, exist_ok=True)
+    except OSError:
+        return ""
+    return f"-XX:ErrorFile={os.path.join(directory, 'hs_err_pid%p.log')}"
+
+
 if not jpype.isJVMStarted():
     _native_dir = ensure_cudd_native()
     _jvm_args = ["-ea", "--enable-native-access=ALL-UNNAMED"]
+    _error_file = _error_file_arg()
+    if _error_file:
+        _jvm_args.append(_error_file)
     if _native_dir:
         _jvm_args.append(f"-Djava.library.path={_native_dir}")
     jpype.startJVM(

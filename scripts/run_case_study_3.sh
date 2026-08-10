@@ -30,7 +30,13 @@ set -u
 
 WORKDIR="${WORKDIR:-/vol/bitbucket/tg4018/PhD/SpecRepair}"
 CONDA_ENV="${CONDA_ENV:-logic}"
-MAX_WINDOWS="${MAX_WINDOWS:-10}"
+# 4, not 10. Measured on gpu12 during the 2026-08-08 sweep: a case_study_3 run
+# holds 5-9GB resident once its BFS queue is a few thousand nodes deep (gyro
+# reached 28,149), and the JVM's BDD tables are native and uncapped, so the
+# figure grows with elapsed time rather than settling. Ten of those do not fit
+# in the box's 62GB, and seven runs died mid-verification on the sweep that
+# tried. Four leaves headroom for the tail of long runs to grow into.
+MAX_WINDOWS="${MAX_WINDOWS:-4}"
 TEST_MODULE="tests.test_main.test_case_study_3.TestCaseStudy3"
 
 LEARNER="${LEARNER:-ilasp}"
@@ -154,7 +160,7 @@ assert_no_previous_sweep "$SESSION"
 
 mkdir -p "$LOGDIR"
 
-SETUP_CMDS="source ~/.sdkman/bin/sdkman-init.sh && source ~/phd_work.sh && conda activate $CONDA_ENV && export LD_LIBRARY_PATH=\$CONDA_PREFIX/lib:\$LD_LIBRARY_PATH && export SPEC_REPAIR_LEARNER=$LEARNER && export SPEC_REPAIR_FASTLAS_RUNS=$FASTLAS_RUNS && export SPEC_REPAIR_LEARNER_TIMEOUT=$LEARNER_TIMEOUT && export SPEC_REPAIR_RUN_DATE=$RUN_DATE && cd $WORKDIR"
+SETUP_CMDS="source ~/.sdkman/bin/sdkman-init.sh && source ~/phd_work.sh && conda activate $CONDA_ENV && export LD_LIBRARY_PATH=\$CONDA_PREFIX/lib:\$LD_LIBRARY_PATH && export SPEC_REPAIR_LEARNER=$LEARNER && export SPEC_REPAIR_FASTLAS_RUNS=$FASTLAS_RUNS && export SPEC_REPAIR_LEARNER_TIMEOUT=$LEARNER_TIMEOUT && export SPEC_REPAIR_RUN_DATE=$RUN_DATE && export SPEC_REPAIR_SPECTRA_CALL_LOG_DIR=$LOGDIR/jvm && cd $WORKDIR"
 
 # Build the full (case study, trace) work list first, so the window count and
 # the concurrency cap are both known before anything starts.
@@ -174,12 +180,15 @@ fi
 source "$(dirname "${BASH_SOURCE[0]}")/lib/slots.sh"
 slots_init "$LOGDIR" "$MAX_WINDOWS"
 
+source "$(dirname "${BASH_SOURCE[0]}")/lib/job_cmd.sh"
+
 run_command_for() {
     local job="$1"
     local case_study="${job%_*}"
     local trace="${job##*_}"
     local test_name="test_case_study_3_${case_study}_${trace}_syn"
-    local test_cmd="python -m unittest ${TEST_MODULE}.${test_name} 2>&1 | tee $LOGDIR/${job}.log"
+    local test_cmd
+    test_cmd="$(job_test_cmd "$LOGDIR" "$job" "${TEST_MODULE}.${test_name}")"
 
     echo "$SETUP_CMDS && $(slots_wrap "$LOGDIR" "$MAX_WINDOWS" "$test_cmd"); read"
 }
