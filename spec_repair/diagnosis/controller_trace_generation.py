@@ -497,9 +497,11 @@ def _run_episode(spec, spec_path, work_dir, variables, repairable, targets,
                    for k, v in executor.getEnvVars().items()}
     states: List[Dict[str, str]] = []
     started = False
+    refusal = ""            # why the controller last refused a step, if it did
 
     def step(inputs: Dict[str, str]) -> bool:
-        nonlocal started
+        nonlocal started, refusal
+        refusal = ""
         java_inputs = jpype.JClass("java.util.HashMap")()
         for k, v in inputs.items():
             java_inputs.put(k, v)
@@ -512,10 +514,24 @@ def _run_episode(spec, spec_path, work_dir, variables, repairable, targets,
             # updateState leaves the executor waiting on a choice; nothing
             # advances and getCurrOutputs is not meaningful until it is made.
             _settle(executor, rng)
-        except jpype.JException:
-            # The controller has no legal response. In GR(1) that means the
-            # environment has broken its side of the contract - the event being
-            # hunted - but the step did not happen, so there is no state for it.
+        except jpype.JException as e:
+            # The controller has no legal response - but *why* decides whether
+            # this is the event being hunted or a dead end, and Syntech says
+            # which through the exception type:
+            #
+            #   IllegalArgumentException - this input violates a safety
+            #       assumption. That is the event: the environment has broken
+            #       its side of the contract.
+            #   IllegalStateException - the environment is in a deadlock, with
+            #       no safe input available from this state at all. Nothing was
+            #       violated by choosing this input; there was nothing to
+            #       choose. Recording it as a violation would attribute to the
+            #       environment's behaviour something that is a property of the
+            #       state it was already in.
+            #
+            # Both were caught as one, so a deadlock was written down as a
+            # violation of whichever assumption the checker then reported.
+            refusal = str(e.getClass().getSimpleName())
             return False
         states.append(_state_from(executor, variables))
         return True
@@ -554,7 +570,13 @@ def _run_episode(spec, spec_path, work_dir, variables, repairable, targets,
         # respond only while the environment keeps its assumptions, so refusal
         # is the expected answer to a violating input, and searching for an
         # accepted one selects for the weakest violations available.
-        if not step(inputs):
+        accepted = step(inputs)
+        if not accepted and refusal == "IllegalStateException":
+            # An environment deadlock, not a violation. No input was available
+            # from this state at all, so nothing the environment did here broke
+            # anything; the episode has run into a corner and is abandoned.
+            return None
+        if not accepted:
             # The controller refused the move. That is not a dead end - it is
             # the event being hunted: in GR(1) the controller is only obliged to
             # respond while the environment keeps its assumptions, so a refusal
