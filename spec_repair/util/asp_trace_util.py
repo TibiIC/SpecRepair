@@ -7,9 +7,54 @@ from spec_repair.config import PROJECT_PATH
 from spec_repair.util.file_util import read_file_lines, write_file, generate_temp_filename, write_to_file, \
     write_trace
 from spec_repair.util.formula_string_util import remove_multiple_newlines, extract_all_expressions, spectra_to_DNF, \
-    strip_vars
+    strip_vars, matching_paren, split_top_level_implication, strip_redundant_parens
 from spec_repair.util.patterns import PRS_REG
 from spec_repair.util.subprocess_util import create_cmd, run_subprocess
+
+
+def _response_operands(line: str) -> Tuple[str, str]:
+    """
+    The `s` and `p` of a `G(s -> F(p))` response, as balanced expressions.
+
+    This used to be two regexes - everything after `G(` up to the first `-`,
+    and everything after `F(` less its last two characters. Both are only
+    correct when the formula has exactly one level of parentheses around the
+    implication, which is the form `ideal.spectra` happens to be written in.
+    Every `strong.spectra` carries one level more, and amba's original does
+    too, so `s` came out with an unmatched `(` and `p` with a spare `)`:
+
+        G((a->F(b)))  ->  pRespondsToS((a,b))
+
+    Spectra then rejected the file it was handed with `missing ')' at ','`,
+    which reads like a malformed *specification* rather than a malformed
+    substitution, and takes the whole case study down with it - amba could
+    never be synthesised through this path at all.
+
+    Counting parentheses instead: strip the `G(...)`, strip any redundant
+    wrapping, split at the implication that is not nested inside anything, and
+    take the operand of the leading `F`.
+    """
+    body = line.strip().rstrip(";").strip()
+    if not body.startswith("G("):
+        raise ValueError(f"Not a G(...) formula: {line!r}")
+    body = strip_redundant_parens(body[1:])
+
+    split = split_top_level_implication(body)
+    if split is None:
+        raise ValueError(f"No top-level implication in what looked like a "
+                         f"pRespondsToS pattern: {line!r}")
+    s, consequent = split
+
+    consequent = strip_redundant_parens(consequent)
+    if not consequent.startswith("F("):
+        raise ValueError(f"The consequent of a pRespondsToS pattern must be "
+                         f"F(...), got {consequent!r} in {line!r}")
+    close = matching_paren(consequent, 1)
+    if consequent[close + 1:].strip():
+        raise ValueError(f"Trailing text after F(...) in {line!r}")
+    p = consequent[2:close].strip()
+
+    return strip_redundant_parens(s), strip_redundant_parens(p)
 
 
 def pRespondsToS_substitution(output_filename):
@@ -19,17 +64,10 @@ def pRespondsToS_substitution(output_filename):
         line = line.strip("\t|\n|;")
         if PRS_REG.search(line):
             found = True
-            s = re.search(r"G\(([^-]*)", line).group(1)
-            p = re.search(r"F\((.*)", line).group(1)
-            if p[-2:] == "))":
-                p = p[0:-2]
-            else:
-                # Raise rather than exit(1): this runs inside a repair, and
-                # killing the interpreter gives no traceback and no chance for
-                # the caller to treat it as a failed branch.
-                raise ValueError(
-                    f"Could not extract the response operand from what looked "
-                    f"like a pRespondsToS pattern: {line}")
+            # Raise rather than exit(1): this runs inside a repair, and killing
+            # the interpreter gives no traceback and no chance for the caller to
+            # treat it as a failed branch.
+            s, p = _response_operands(line)
             replacement = "\tpRespondsToS(" + s + "," + p + ");\n"
             spec[i] = replacement
     if found:

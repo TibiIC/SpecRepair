@@ -566,3 +566,52 @@ def re_line_spec(spec: list[str]) -> list[str]:
     :return: new_spec: Specification reformatted as explained above
     """
     return [line + '\n' for line in ''.join(spec).split("\n")]
+
+
+def matching_paren(expr: str, open_index: int) -> int:
+    """
+    Index of the `)` closing the `(` at `open_index`.
+
+    Counting rather than matching a regex: nesting is the whole difficulty, and
+    a regex cannot count. Raises rather than returning -1 - an unbalanced
+    formula is a bug in whatever produced it, and silently returning a wrong
+    span is how it stays hidden.
+    """
+    if expr[open_index] != "(":
+        raise ValueError(f"No '(' at index {open_index} of {expr!r}")
+    depth = 0
+    for i in range(open_index, len(expr)):
+        if expr[i] == "(":
+            depth += 1
+        elif expr[i] == ")":
+            depth -= 1
+            if depth == 0:
+                return i
+    raise ValueError(f"Unbalanced parentheses in {expr!r}")
+
+
+def strip_redundant_parens(expr: str) -> str:
+    """`((a & b))` -> `a & b`, leaving `(a) & (b)` alone."""
+    expr = expr.strip()
+    while expr.startswith("(") and matching_paren(expr, 0) == len(expr) - 1:
+        expr = expr[1:-1].strip()
+    return expr
+
+
+def split_top_level_implication(expr: str):
+    """
+    Split `s -> p` at the `->` that is not inside parentheses, or None.
+
+    The top-level one is the only one that separates antecedent from
+    consequent; `(a -> b) -> F(c)` has two, and splitting at the first gives
+    nonsense.
+    """
+    depth = 0
+    for i, c in enumerate(expr):
+        if c == "(":
+            depth += 1
+        elif c == ")":
+            depth -= 1
+        elif c == "-" and depth == 0 and expr[i:i + 2] == "->":
+            return expr[:i].strip(), expr[i + 2:].strip()
+    return None
