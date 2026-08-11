@@ -27,18 +27,24 @@ across the whole pipeline rather than inventing a second.
 """
 import os
 import random
+import re
 import shutil
 import tempfile
 from itertools import product
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, Set, Tuple
 
 import jpype
 
 from spec_repair.components.new_spec_encoder import (
     NewSpecEncoder, get_violated_expression_names_of_type)
+from spec_repair.components.spec_generator import SpecGenerator
+from spec_repair.diagnosis.violation_trace_generation import (
+    _parse_models, _trace_skeleton_asp)
 from spec_repair.enums import Learning
 from spec_repair.ltl_types import GR1FormulaType, GR1TemporalType
 from spec_repair.model.spectra_specification import SpectraSpecification
+from spec_repair.util.asp_trace_util import create_atom_signature_asp, run_clingo_raw
+from spec_repair.util.file_util import generate_temp_filename, write_to_file
 from spec_repair.wrappers.asp_wrappers import get_violations
 from spec_repair.wrappers.spectra_toolbox import synthesise_controller
 
@@ -48,6 +54,31 @@ from spec_repair.wrappers.spectra_toolbox import synthesise_controller
 # large - exhaustive search is only worth it while it is cheap.
 MAX_CANDIDATES_PER_STEP = 64
 EXHAUSTIVE_LIMIT = 64
+
+# How many environment inputs to ask the solver for per step. Each is a
+# hypothesis about what the system will do next, so more than one is worth
+# having: when the controller's actual response contradicts the first, the
+# second is tried without solving again. Small, because they are alternatives
+# for one step, not a search.
+ASP_MODELS_PER_STEP = 8
+
+# The guess rule, lifted verbatim from the case_study_2 generator so a trace
+# built here and a trace built there mean the same thing. `_pinned_prefix_asp`
+# then fixes everything already observed, leaving only the new timepoint free.
+GUESS_ASP = """
+%---*** Environment step construction ***---
+
+1 { holds_at(A,T,S) ; not_holds_at(A,T,S) } 1 :-
+    atom(A),
+    trace(S),
+    timepoint(T,S),
+    not weak_timepoint(T,S).
+
+#show holds_at/3.
+#show not_holds_at/3.
+"""
+
+_HOLDS_RE = re.compile(r"^(not_)?holds_at\(([^,]+),([^,]+),")
 
 
 class ControllerTraceError(RuntimeError):
@@ -138,6 +169,132 @@ def _candidate_inputs(env_domains: Dict[str, List[str]],
 
 
 
+def _pinned_prefix_asp(states: List[Dict[str, str]], variables: List[str],
+                       trace_name: str) -> str:
+    """
+    The trace so far, as facts, so the solver reasons about what happened.
+
+    Pinning a fact beside the guess rule prunes it rather than clashing with
+    it: the choice is `1 { holds_at ; not_holds_at } 1`, so asserting one leaves
+    the other unsatisfiable, and the prefix stops being a degree of freedom.
+    """
+    lines = []
+    for t, state in enumerate(states):
+        for var in variables:
+            prefix = "" if str(state.get(var, "false")).lower() == "true" else "not_"
+            lines.append(f"{prefix}holds_at({var},{t},{trace_name}).")
+    return "\n".join(lines) + ("\n" if lines else "")
+
+
+def _pinned_response_asp(states: List[Dict[str, str]], sys_names: List[str],
+                         trace_name: str) -> str:
+    """
+    Pin the system's values at the new timepoint to what it is doing *now*.
+
+    The controller has not moved yet, so the system half of the new state is
+    unknown to both the solver and the checker. They must assume the same thing
+    about it or they are answering different questions: left free, the solver
+    picks whichever system response makes the constraint easiest, proposes an
+    input that depends on it, and `_hypothetical_violations` - which holds the
+    system at its current output - then rejects the model. Every model gets
+    rejected that way, and the walk never lands a violation. It cost minepump
+    every violation it used to find, which is what the end-to-end tests caught.
+
+    So this mirrors `_hypothetical_violations` exactly: the previous state's
+    system values, or false at the start where there is no previous state.
+    """
+    t = len(states)
+    previous = states[-1] if states else {}
+    lines = []
+    for var in sys_names:
+        value = str(previous.get(var, "false")).lower()
+        prefix = "" if value == "true" else "not_"
+        lines.append(f"{prefix}holds_at({var},{t},{trace_name}).")
+    return "\n".join(lines) + ("\n" if lines else "")
+
+
+def _next_input_constraint_asp(targets: Set[str]) -> str:
+    """
+    What the next step has to achieve: break exactly the targets, or nothing.
+
+    The compliant prefix and the violating step are the same question asked with
+    a different constraint, which is why both go through the solver rather than
+    only the interesting one.
+    """
+    if not targets:
+        return "\n:- violation_holds(E,T,S).\n"
+    facts = "\n".join(f"to_violate({name})." for name in sorted(targets))
+    return f"""
+{facts}
+
+violated_exp(E,S) :- violation_holds(E,T,S), trace(S), timepoint(T,S).
+
+% Nothing outside the chosen set may break ...
+:- violation_holds(E,T,S), not to_violate(E).
+% ... and everything inside it must.
+:- to_violate(E), trace(S), not violated_exp(E,S).
+"""
+
+
+def _asp_next_inputs(spec, states, variables, env_names, targets, trace_name,
+                     n_models: int = ASP_MODELS_PER_STEP) -> List[Dict[str, str]]:
+    """
+    Environment inputs for the next step, *constructed* rather than sampled.
+
+    This replaces enumerate-and-test. The old approach drew up to 64 candidate
+    assignments and ran the violation check on each, which is exhaustive only
+    while the environment has at most six or so boolean variables: amba and
+    genbuf have nine (512 assignments), colorsort sixteen (65,536), and there
+    the sampler simply missed. It is also why "no trace" was indistinguishable
+    from "not looked hard enough" - genbuf ran ~72,000 solver calls and reported
+    nothing, which is not the same as impossible.
+
+    Here the solver is asked for assignments that meet the constraint, so
+    UNSATISFIABLE is a real answer, and the cost stops depending on how many
+    environment variables there are.
+
+    The system's values at the new timepoint are guessed by the solver, because
+    the controller has not moved yet - so a returned input is a *hypothesis*,
+    exactly as before, and the real check after the controller responds still
+    decides. Several models are returned so a hypothesis the controller
+    contradicts can be followed by another without re-solving.
+    """
+    n_timepoints = len(states) + 1
+    sys_names = [v for v in variables if v not in set(env_names)]
+    program = (SpecGenerator.background_knowledge
+               + spec.to_asp(for_clingo=True)
+               + create_atom_signature_asp(spec.get_atoms())
+               + _trace_skeleton_asp(trace_name, n_timepoints)
+               + GUESS_ASP
+               + _pinned_prefix_asp(states, variables, trace_name)
+               + _pinned_response_asp(states, sys_names, trace_name)
+               + _next_input_constraint_asp(targets))
+
+    path = generate_temp_filename(".lp")
+    write_to_file(path, program)
+    try:
+        output = run_clingo_raw(path, n_models=n_models)
+    finally:
+        if os.path.exists(path):
+            os.remove(path)
+
+    t = len(states)
+    inputs = []
+    for model in _parse_models(output):
+        assignment = {}
+        for fact in model:
+            m = _HOLDS_RE.match(fact)
+            if not m:
+                continue
+            negated, var, timepoint = m.group(1), m.group(2), int(m.group(3))
+            if timepoint != t or var not in env_names:
+                continue
+            assignment[var] = "false" if negated else "true"
+        if len(assignment) == len(env_names) and assignment not in inputs:
+            inputs.append(assignment)
+    return inputs
+
+
 def _hypothetical_violations(spec, states, candidate, variables, repairable,
                              trace_name) -> set:
     """
@@ -180,6 +337,58 @@ def _targeted_input(spec, states, env_domains, variables, repairable, targets,
     assumption simultaneously is not a deployment scenario, and the repair
     cannot tell which weakening the trace is actually asking for.
     """
+    ranked = _targeted_inputs(spec, states, env_domains, variables, repairable,
+                              targets, rng, trace_name)
+    return ranked[0] if ranked else None
+
+
+def _targeted_inputs(spec, states, env_domains, variables, repairable, targets,
+                     rng, trace_name) -> List[Dict[str, str]]:
+    """
+    The same, ranked, so a caller can try the next one when the controller
+    refuses the first. A refusal does not advance the executor, so trying
+    another is free - and it is what decides whether the violating state ends
+    up with a real controller response or a carried-over one.
+    """
+    # Constructed first. Only if the solver is unavailable - not if it says
+    # UNSATISFIABLE, which is an answer - does this fall back to sampling.
+    env_names = sorted(env_domains)
+    try:
+        constructed = _asp_next_inputs(spec, states, variables, env_names,
+                                       targets, trace_name)
+        solver_spoke = True
+    except Exception:  # noqa: BLE001 - a solver failure must not lose the episode
+        constructed, solver_spoke = [], False
+
+    if solver_spoke:
+        matching = []
+        for candidate in constructed:
+            violated = _hypothetical_violations(
+                spec, states, candidate, variables, repairable, trace_name)
+            if violated - targets:
+                continue
+            if violated == targets or (not targets and not violated):
+                matching.append(candidate)
+        if matching:
+            return matching
+        # UNSATISFIABLE here means the targets cannot be broken *from this
+        # state*, which is not the same as not at all - an assumption over
+        # `next` needs the right predecessor, and the walk has to be allowed to
+        # reach one. So ask for a step that breaks nothing and keep going,
+        # which is what the sampler's third bucket did by accident and this
+        # does on purpose. Returning nothing instead ended the episode, and cost
+        # minepump every violation it used to find.
+        if not constructed and targets:
+            keep_walking = _asp_next_inputs(spec, states, variables, env_names,
+                                            set(), trace_name)
+            harmless = [c for c in keep_walking
+                        if not _hypothetical_violations(spec, states, c, variables,
+                                                        repairable, trace_name)]
+            if harmless:
+                return harmless
+        if not constructed and not targets:
+            return []
+
     on_target = []
     partial = []
     harmless = []
@@ -194,10 +403,10 @@ def _targeted_input(spec, states, env_domains, variables, repairable, targets,
             partial.append(candidate)
         else:
             harmless.append(candidate)
-    for bucket in (on_target, partial, harmless):
-        if bucket:
-            return bucket[0]
-    return None
+    # Ranked, not just the best one: the caller retries down the list when the
+    # controller refuses, and on-target inputs are the ones most likely to be
+    # refused - refusal *is* the violation, from the controller's side.
+    return on_target + partial + harmless
 
 
 def violatable_assumptions(spec_path: str) -> List[str]:
@@ -339,6 +548,12 @@ def _run_episode(spec, spec_path, work_dir, variables, repairable, targets,
             # to abandon the episode than to record a trace that violates more
             # than it was asked to.
             return None
+
+        # One input, taken as ranked. Retrying until the controller accepts a
+        # violating input would be backwards: a controller is obliged to
+        # respond only while the environment keeps its assumptions, so refusal
+        # is the expected answer to a violating input, and searching for an
+        # accepted one selects for the weakest violations available.
         if not step(inputs):
             # The controller refused the move. That is not a dead end - it is
             # the event being hunted: in GR(1) the controller is only obliged to
