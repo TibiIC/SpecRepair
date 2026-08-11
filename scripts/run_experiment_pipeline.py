@@ -65,7 +65,7 @@ OUT_SSH_ROOT = os.path.join(REPO_ROOT, "tests", "test_files", "out_ssh")
 TRIVIAL_ROOT = os.path.join(REPO_ROOT, "tests", "test_files", "out", "trivial_solutions")
 SPECTRA_CASE_STUDIES = os.path.join(REPO_ROOT, "input-files", "case-studies", "spectra")
 
-# The two experimental setups differ in what step 6 draws alongside the merged
+# The three experimental setups differ in what step 6 draws alongside the merged
 # results - which is the only place the pipeline needs to know them apart:
 #
 #   case_study_1    - repairs weaken a manufactured `strong.spectra` back down,
@@ -74,6 +74,10 @@ SPECTRA_CASE_STUDIES = os.path.join(REPO_ROOT, "input-files", "case-studies", "s
 #   case_study_2    - there is no manufactured spec and no known-good answer;
 #                     the one reference point is `original.spectra`, the thing
 #                     that was repaired.
+#   case_study_3    - identical to case_study_2 in everything the pipeline sees;
+#                     the difference is upstream, in where the violating traces
+#                     come from (a real controller run rather than ASP), which
+#                     changes the traces, not the specs or the reference point.
 #
 # Everything before step 6 - merging, maximal, unique - is identical, so it is a
 # flag rather than a second script.
@@ -85,6 +89,11 @@ SETUPS = {
     },
     "case_study_2": {
         "dir": os.path.join(SPECTRA_CASE_STUDIES, "case_study_2"),
+        "reference_specs": ("original.spectra",),
+        "og_spec": "original.spectra",
+    },
+    "case_study_3": {
+        "dir": os.path.join(SPECTRA_CASE_STUDIES, "case_study_3"),
         "reference_specs": ("original.spectra",),
         "og_spec": "original.spectra",
     },
@@ -234,9 +243,19 @@ def step_6_graph(run_dir: str, case_study: str, date: str, graph_types: Tuple[st
     case_study_dir = os.path.join(setup["dir"], case_study_dir_name(case_study))
     references = [(os.path.splitext(spec)[0], os.path.join(case_study_dir, spec))
                   for spec in setup["reference_specs"]]
+    # Trivial solutions are per *run* where a setup has one trace per run, and
+    # per case study where it has one trace full stop. A trace-violation run
+    # repairs against its own trace, so `minepump_trace3`'s floor is not
+    # `minepump_trace0`'s; falling back to the case-study directory keeps
+    # case_study_1, which has a single violation_trace.txt, working as before.
+    trivial_by_run = os.path.join(TRIVIAL_ROOT, date, "all",
+                                  LEARNER_SUFFIX_RE.sub("", case_study))
+    trivial_by_case_study = os.path.join(TRIVIAL_ROOT, date, "all",
+                                         case_study_dir_name(case_study))
+    trivial = (trivial_by_run if os.path.isdir(trivial_by_run) else trivial_by_case_study)
+
     for label, path in (references
-                        + [("trivial", os.path.join(TRIVIAL_ROOT, date, "all",
-                                                    case_study_dir_name(case_study))),
+                        + [("trivial", trivial),
                            ("unique_max_merged", os.path.join(run_dir, UNIQUE_MAX_MERGED))]):
         if os.path.exists(path):
             groups.append((label, path))
@@ -288,6 +307,11 @@ def main(argv=None) -> int:
                              "out_ssh/<date>/. Use for locally produced runs, which land in "
                              "tests/test_files/out/case_study_1 or .../case_study_2")
     parser.add_argument("--skip-graph", action="store_true", help="skip step 6")
+    parser.add_argument("--graph-only", action="store_true",
+                        help="redraw step 6 from the merged specifications already on disk, "
+                             "skipping steps 2-4. For changing what the graph shows without "
+                             "paying for the merge again - it is the expensive step, and on a "
+                             "run with thousands of final specs it may not finish at all")
     args = parser.parse_args(argv)
     setup = SETUPS[args.setup]
 
@@ -305,10 +329,15 @@ def main(argv=None) -> int:
                                        setup["og_spec"])
                 og_spec = SpectraSpecification.from_file(og_path) if os.path.exists(og_path) else None
 
-            if step_2_merge(run_dir, og_spec) == 0:
-                continue
-            step_3_maximal(run_dir)
-            step_4_unique(run_dir)
+            if args.graph_only:
+                if not os.path.isdir(os.path.join(run_dir, UNIQUE_MAX_MERGED)):
+                    print(f"  --graph-only: no {UNIQUE_MAX_MERGED}/ - run without it first")
+                    continue
+            else:
+                if step_2_merge(run_dir, og_spec) == 0:
+                    continue
+                step_3_maximal(run_dir)
+                step_4_unique(run_dir)
             if not args.skip_graph:
                 step_6_graph(run_dir, case_study, args.date, tuple(args.graph_type),
                              setup, legend=args.legend)
