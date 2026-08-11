@@ -31,7 +31,7 @@ import re
 import shutil
 import tempfile
 from itertools import product
-from typing import Dict, List, Optional, Set, Tuple
+from typing import Dict, List, Optional, Sequence, Set, Tuple
 
 import jpype
 
@@ -219,7 +219,8 @@ def _pinned_response_asp(states: List[Dict[str, str]], sys_names: List[str],
     return "\n".join(lines) + ("\n" if lines else "")
 
 
-def _next_input_constraint_asp(targets: Set[str]) -> str:
+def _next_input_constraint_asp(targets: Set[str],
+                               guarantees: Sequence[str] = ()) -> str:
     """
     What the next step has to achieve: break exactly the targets, or nothing.
 
@@ -230,10 +231,22 @@ def _next_input_constraint_asp(targets: Set[str]) -> str:
     if not targets:
         return "\n:- violation_holds(E,T,S).\n"
     facts = "\n".join(f"to_violate({name})." for name in sorted(targets))
+    gar_facts = "\n".join(f"is_guarantee({name})." for name in sorted(guarantees))
     return f"""
 {facts}
 
+{gar_facts}
+
 violated_exp(E,S) :- violation_holds(E,T,S), trace(S), timepoint(T,S).
+
+% The system's moves in a plan are guesses - the controller has not made them
+% yet - so they have to be guesses the controller could actually make. A
+% synthesised controller satisfies its guarantees by construction, so a plan
+% that relies on one breaking is a plan against a system that does not exist.
+% Without this the solver was free to invent a cooperative system, propose the
+% input that suited it, and be contradicted the moment the real controller
+% answered - which is why deepening the horizon alone changed nothing.
+:- violation_holds(E,T,S), is_guarantee(E).
 
 % The target must break. Nothing says it has to break *alone*: requiring that
 % made the target unreachable wherever assumptions overlap - a step that breaks
@@ -278,6 +291,8 @@ def _asp_next_inputs(spec, states, variables, env_names, targets, trace_name,
     # ran.
     n_timepoints = len(states) + horizon
     sys_names = [v for v in variables if v not in set(env_names)]
+    guarantee_names = sorted(spec.filter(
+        lambda x: x["type"] == GR1FormulaType.GAR)["name"])
     program = (SpecGenerator.background_knowledge
                + spec.to_asp(for_clingo=True)
                + create_atom_signature_asp(spec.get_atoms())
@@ -285,7 +300,7 @@ def _asp_next_inputs(spec, states, variables, env_names, targets, trace_name,
                + GUESS_ASP
                + _pinned_prefix_asp(states, variables, trace_name)
                + _pinned_response_asp(states, sys_names, trace_name)
-               + _next_input_constraint_asp(targets))
+               + _next_input_constraint_asp(targets, guarantee_names))
 
     path = generate_temp_filename(".lp")
     write_to_file(path, program)

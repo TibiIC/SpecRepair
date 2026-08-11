@@ -155,13 +155,22 @@ class TestGenerationEndToEnd(unittest.TestCase):
             MINEPUMP, seed=0, attempts=6, max_random_steps=30)
         self.assertEqual(1, len(violated), f"expected one violation, got {violated}")
 
-    def test_the_requested_assumption_is_the_one_violated(self):
+    def test_the_requested_assumption_is_among_those_violated(self):
+        """
+        The target must break. It no longer has to break *alone*.
+
+        Requiring it to be the only one made the target unreachable wherever
+        assumptions overlap: the step that reaches the state where the intended
+        assumption can break may be a step that breaks another on the way, and
+        rejecting those left some assumptions with no trace at all. Everything
+        violated is recorded, so the repair still knows what it was handed.
+        """
         for target in violatable_assumptions(MINEPUMP):
             with self.subTest(target=target):
                 _, violated = generate_controller_violation_trace(
                     MINEPUMP, seed=0, attempts=6, max_random_steps=30,
                     target_assumptions=[target])
-                self.assertEqual([target], violated)
+                self.assertIn(target, violated)
 
     def test_the_same_seed_gives_the_same_trace(self):
         """
