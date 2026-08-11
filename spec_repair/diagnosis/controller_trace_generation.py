@@ -428,10 +428,17 @@ def _executor_for(spec_path: str, work_dir: str):
     """Synthesise a controller for this specification and open it for stepping."""
     controller_dir = os.path.join(work_dir, "controller")
     os.makedirs(controller_dir, exist_ok=True)
-    if not synthesise_controller(spec_path, controller_dir, suppress=True):
-        raise ControllerTraceError(
-            f"Spectra would not synthesise a controller for {spec_path}. The "
-            f"specification must be realisable, and in a form the CLI accepts.")
+    # Synthesised once per call, not once per episode. The controller depends
+    # only on the specification, and every attempt was rebuilding it: measured
+    # on amba, 15 syntheses in two hours at ~8 minutes each, which is the whole
+    # runtime - the episode never got as far as walking. The executor still has
+    # to be fresh each time, since it carries the run's state, but it can be
+    # opened on a controller that is already on disk.
+    if not os.listdir(controller_dir):
+        if not synthesise_controller(spec_path, controller_dir, suppress=True):
+            raise ControllerTraceError(
+                f"Spectra would not synthesise a controller for {spec_path}. The "
+                f"specification must be realisable, and in a form the CLI accepts.")
     StaticController = jpype.JClass("tau.smlab.syntech.controller.StaticController")
     # FlexibleControllerExecutor rather than ControllerExecutor, for
     # reproducibility. A controller usually has several legal responses to an
