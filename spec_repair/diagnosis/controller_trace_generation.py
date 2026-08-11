@@ -62,6 +62,12 @@ EXHAUSTIVE_LIMIT = 64
 # for one step, not a search.
 ASP_MODELS_PER_STEP = 8
 
+# How far ahead the solver may plan to reach a state where the target can break.
+# Two is enough for lift's `G(b1 & f1 -> next(!b1))`; the rest is headroom for
+# assumptions whose antecedent takes longer to set up. Deeper costs more per
+# solve and is only paid when shallower horizons come back UNSATISFIABLE.
+MAX_PLAN_HORIZON = 6
+
 # The guess rule, lifted verbatim from the case_study_2 generator so a trace
 # built here and a trace built there mean the same thing. `_pinned_prefix_asp`
 # then fixes everything already observed, leaving only the new timepoint free.
@@ -229,15 +235,18 @@ def _next_input_constraint_asp(targets: Set[str]) -> str:
 
 violated_exp(E,S) :- violation_holds(E,T,S), trace(S), timepoint(T,S).
 
-% Nothing outside the chosen set may break ...
-:- violation_holds(E,T,S), not to_violate(E).
-% ... and everything inside it must.
+% The target must break. Nothing says it has to break *alone*: requiring that
+% made the target unreachable wherever assumptions overlap - a step that breaks
+% a mutual-exclusion assumption may be the only way to reach the state where
+% the intended one can break at all. The trace records everything it violated,
+% so a repair still knows what it is being asked for.
 :- to_violate(E), trace(S), not violated_exp(E,S).
 """
 
 
 def _asp_next_inputs(spec, states, variables, env_names, targets, trace_name,
-                     n_models: int = ASP_MODELS_PER_STEP) -> List[Dict[str, str]]:
+                     n_models: int = ASP_MODELS_PER_STEP,
+                     horizon: int = 1) -> List[Dict[str, str]]:
     """
     Environment inputs for the next step, *constructed* rather than sampled.
 
@@ -259,7 +268,15 @@ def _asp_next_inputs(spec, states, variables, env_names, targets, trace_name,
     decides. Several models are returned so a hypothesis the controller
     contradicts can be followed by another without re-solving.
     """
-    n_timepoints = len(states) + 1
+    # `horizon` timepoints beyond the trace so far. Only the first is executed;
+    # the rest are the plan that justifies it. An invariant like
+    # `G(b1 & f1 -> next(!b1))` cannot be broken from wherever the walk happens
+    # to be - the antecedent has to be reached first, and reaching it may take
+    # several moves whose own effect is nothing at all. Asking one step at a
+    # time can only ever find violations that are one step away, which is why
+    # the case studies needing two or more produced nothing however long they
+    # ran.
+    n_timepoints = len(states) + horizon
     sys_names = [v for v in variables if v not in set(env_names)]
     program = (SpecGenerator.background_knowledge
                + spec.to_asp(for_clingo=True)
@@ -353,23 +370,35 @@ def _targeted_inputs(spec, states, env_domains, variables, repairable, targets,
     # Constructed first. Only if the solver is unavailable - not if it says
     # UNSATISFIABLE, which is an answer - does this fall back to sampling.
     env_names = sorted(env_domains)
-    try:
-        constructed = _asp_next_inputs(spec, states, variables, env_names,
-                                       targets, trace_name)
-        solver_spoke = True
-    except Exception:  # noqa: BLE001 - a solver failure must not lose the episode
-        constructed, solver_spoke = [], False
+    # Deepen until the target becomes reachable. Horizon 1 answers "can it break
+    # now"; deeper horizons answer "is there a way to get somewhere it can".
+    constructed, solver_spoke = [], False
+    horizons = (1,) if not targets else range(1, MAX_PLAN_HORIZON + 1)
+    for horizon in horizons:
+        try:
+            constructed = _asp_next_inputs(spec, states, variables, env_names,
+                                           targets, trace_name, horizon=horizon)
+            solver_spoke = True
+        except Exception:  # noqa: BLE001 - a solver failure must not lose the episode
+            constructed, solver_spoke = [], False
+            break
+        if constructed:
+            break
 
     if solver_spoke:
         matching = []
         for candidate in constructed:
             violated = _hypothetical_violations(
                 spec, states, candidate, variables, repairable, trace_name)
-            if violated - targets:
-                continue
-            if violated == targets or (not targets and not violated):
-                matching.append(candidate)
+            if targets and (violated & targets):
+                matching.append(candidate)      # on target - extra breakage is allowed
+            elif not violated:
+                matching.append(candidate)      # a step toward it, breaking nothing
         if matching:
+            # Clingo generates the candidates; the choice among them is the only
+            # thing left to chance, and it is seeded. Randomness picks between
+            # equally valid answers - it is not used to find them.
+            rng.shuffle(matching)
             return matching
         # UNSATISFIABLE here means the targets cannot be broken *from this
         # state*, which is not the same as not at all - an assumption over
@@ -602,18 +631,22 @@ def _run_episode(spec, spec_path, work_dir, variables, repairable, targets,
                                               if k in variables}})
             violated = set(_violated_assumptions(
                 spec, _trace_lines(states, variables, trace_name))) & repairable
-            if violated and not violated - targets:
+            if violated & targets:
                 return (_trace_lines(states, variables, trace_name),
                         sorted(violated))
             return None
         violated = set(_violated_assumptions(
             spec, _trace_lines(states, variables, trace_name))) & repairable
-        if violated - targets:
-            # Overshot: the step broke something outside the targets after all,
-            # and a step cannot be undone.
-            return None
-        if violated:
+        if violated & targets:
+            # On target. Anything else it broke on the way is recorded rather
+            # than disqualifying: insisting the target break alone made it
+            # unreachable wherever assumptions overlap, and the manifest names
+            # everything violated, so nothing is hidden by allowing it.
             return _trace_lines(states, variables, trace_name), sorted(violated)
+        if violated:
+            # Broke something, but not what was aimed at. The step cannot be
+            # undone, so this episode no longer serves its target.
+            return None
     return None
 
 
