@@ -31,6 +31,12 @@ from spec_repair.diagnosis.controller_trace_generation import (
     violatable_assumptions)
 from spec_repair.model.spectra_specification import SpectraSpecification
 
+import os as _os
+
+# A line per step is what makes a long generation legible; in a test run it
+# buries the assertion that failed.
+_os.environ["SPEC_REPAIR_TRACE_GEN_QUIET"] = "1"
+
 CASE_STUDIES = os.path.join(
     os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))),
     "input-files", "case-studies", "spectra", "case_study_2")

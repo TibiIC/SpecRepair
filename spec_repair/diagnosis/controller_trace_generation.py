@@ -31,6 +31,7 @@ import random
 import re
 import shutil
 import tempfile
+import time
 from itertools import product
 from typing import Dict, List, Optional, Sequence, Set, Tuple
 
@@ -87,6 +88,30 @@ GUESS_ASP = """
 """
 
 _HOLDS_RE = re.compile(r"^(not_)?holds_at\(([^,]+),([^,]+),")
+
+
+_PROGRESS_START: Optional[float] = None
+
+
+def _progress(message: str) -> None:
+    """
+    A line per step, so a long run is legible while it happens.
+
+    Generation logged only when a whole trace finished, which for amba meant
+    nothing at all between "amba:" and a result an hour later - leaving CPU
+    percentage and log mtime as the only evidence it was alive. Steps are where
+    the time goes, so steps are what this prints.
+
+    Silenced with SPEC_REPAIR_TRACE_GEN_QUIET=1; the tests set it, since a line
+    per step across every case study buries the assertion that failed.
+    """
+    if os.environ.get("SPEC_REPAIR_TRACE_GEN_QUIET"):
+        return
+    global _PROGRESS_START
+    if _PROGRESS_START is None:
+        _PROGRESS_START = time.time()
+    elapsed = int(time.time() - _PROGRESS_START)
+    print(f"    [{elapsed // 60:3d}m{elapsed % 60:02d}s] {message}", flush=True)
 
 
 class ControllerTraceError(RuntimeError):
@@ -371,7 +396,13 @@ def _targeted_inputs(spec, states, env_domains, variables, repairable, targets,
         constructed = _asp_next_inputs(spec, states, variables, env_names,
                                        targets, trace_name, horizon=horizon)
         if constructed:
+            if targets and horizon > 1:
+                _progress(f"SOLVE  t={len(states)} horizon={horizon} "
+                          f"-> {len(constructed)} plan(s)")
             break
+        if targets and horizon == MAX_PLAN_HORIZON:
+            _progress(f"SOLVE  t={len(states)} UNSAT to horizon {MAX_PLAN_HORIZON} "
+                      f"for {sorted(targets)}")
 
     # No pre-filtering against a frozen system. `_hypothetical_violations`
     # answers "what breaks if the system does not move", which is not the
@@ -579,8 +610,10 @@ def _run_episode(spec, spec_path, work_dir, variables, repairable, targets,
             return None
         for candidate in compliant:
             if step(candidate):
+                _progress(f"PREFIX t={len(states) - 1} accepted")
                 break
         else:
+            _progress("PREFIX every compliant input was refused")
             return None
         if _violated_assumptions(spec, _trace_lines(states, variables, trace_name)):
             return None
@@ -631,6 +664,8 @@ def _run_episode(spec, spec_path, work_dir, variables, repairable, targets,
             return None
         violated = set(_violated_assumptions(
             spec, _trace_lines(states, variables, trace_name))) & repairable
+        _progress(f"AIM    t={len(states) - 1} "
+                  + (f"violated {sorted(violated)}" if violated else "no violation yet"))
         if violated & targets:
             # On target. Anything else it broke on the way is recorded rather
             # than disqualifying: insisting the target break alone made it

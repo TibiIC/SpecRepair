@@ -66,6 +66,7 @@ def generate_for(case_study: str, traces: int, compliant_steps: int,
         lines = violated = None
         for target in order:
             try:
+                print(f"  trace {seed}: aiming at {target}", flush=True)
                 lines, violated = generate_controller_violation_trace(
                     src_spec, compliant_steps=compliant_steps,
                     max_random_steps=max_random_steps, seed=seed, attempts=attempts,
