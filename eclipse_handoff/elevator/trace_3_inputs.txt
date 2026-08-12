@@ -1,0 +1,10 @@
+floor_lower=true  floor_middle=false  floor_upper=false
+floor_lower=true  floor_middle=false  floor_upper=false
+floor_lower=false  floor_middle=false  floor_upper=true
+floor_lower=false  floor_middle=true  floor_upper=false
+floor_lower=true  floor_middle=false  floor_upper=false
+floor_lower=false  floor_middle=false  floor_upper=false
+floor_lower=false  floor_middle=false  floor_upper=false
+floor_lower=false  floor_middle=false  floor_upper=false
+floor_lower=false  floor_middle=false  floor_upper=false
+floor_lower=true  floor_middle=false  floor_upper=true   # violating step

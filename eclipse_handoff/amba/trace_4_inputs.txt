@@ -1,0 +1,6 @@
+hburst_burst4=false  hburst_single=false  hbusreq_0=false  hbusreq_1=false  hbusreq_2=false  hlock_0=false  hlock_1=false  hlock_2=false  hready=false
+hburst_burst4=false  hburst_single=true  hbusreq_0=true  hbusreq_1=true  hbusreq_2=true  hlock_0=false  hlock_1=true  hlock_2=true  hready=true
+hburst_burst4=false  hburst_single=true  hbusreq_0=true  hbusreq_1=true  hbusreq_2=true  hlock_0=true  hlock_1=false  hlock_2=true  hready=true
+hburst_burst4=false  hburst_single=true  hbusreq_0=true  hbusreq_1=true  hbusreq_2=true  hlock_0=false  hlock_1=true  hlock_2=true  hready=true
+hburst_burst4=false  hburst_single=true  hbusreq_0=true  hbusreq_1=true  hbusreq_2=true  hlock_0=true  hlock_1=false  hlock_2=true  hready=true
+hburst_burst4=true  hburst_single=true  hbusreq_0=true  hbusreq_1=true  hbusreq_2=true  hlock_0=true  hlock_1=false  hlock_2=true  hready=true   # violating step
