@@ -89,43 +89,13 @@ class TestCandidateInputs(unittest.TestCase):
         self.assertEqual(first, second)
 
 
-class TestTargetSelection(unittest.TestCase):
-    """
-    Which input the rogue environment picks, given what each would violate.
-
-    The violation oracle is stubbed: this is about the preference order, not
-    about whether the ASP encoding is right.
-    """
-
-    DOMAINS = {"x": ["false", "true"]}
-
-    def _pick(self, violations_by_x, targets):
-        def fake(spec, states, candidate, variables, repairable, trace_name):
-            return set(violations_by_x[candidate["x"]])
-        with patch.object(ctg, "_hypothetical_violations", fake):
-            return ctg._targeted_input(None, [], self.DOMAINS, ["x"],
-                                       {"A", "B"}, targets, random.Random(0), "t")
-
-    def test_an_input_breaking_exactly_the_target_is_chosen(self):
-        chosen = self._pick({"true": ["A"], "false": []}, {"A"})
-        self.assertEqual({"x": "true"}, chosen)
-
-    def test_an_input_breaking_a_non_target_is_never_chosen(self):
-        """
-        The methodological point: a real environment fails in one way at a
-        time, and a trace that breaks assumptions nobody aimed at tells the
-        repair nothing about which weakening is wanted.
-        """
-        chosen = self._pick({"true": ["B"], "false": []}, {"A"})
-        self.assertEqual({"x": "false"}, chosen, "picked an off-target violation")
-
-    def test_a_harmless_input_is_preferred_to_an_off_target_one(self):
-        chosen = self._pick({"true": ["A", "B"], "false": []}, {"A"})
-        self.assertEqual({"x": "false"}, chosen)
-
-    def test_none_when_every_candidate_would_overshoot(self):
-        """Abandon the episode rather than record more violations than asked."""
-        self.assertIsNone(self._pick({"true": ["B"], "false": ["B"]}, {"A"}))
+# TestTargetSelection removed. It asserted the sampler's preference ordering
+# (harmless preferred to off-target, None when everything overshoots) and the
+# rule that a step may never break a non-target. Both are gone: candidates come
+# from clingo, and the target no longer has to break alone. What replaced those
+# guarantees is checked by the end-to-end tests and by the solver itself -
+# an unsatisfiable request now returns nothing instead of falling back to a
+# guess.
 
 
 class TestViolatableAssumptions(unittest.TestCase):

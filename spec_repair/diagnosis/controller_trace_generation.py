@@ -192,33 +192,6 @@ def _pinned_prefix_asp(states: List[Dict[str, str]], variables: List[str],
     return "\n".join(lines) + ("\n" if lines else "")
 
 
-def _pinned_response_asp(states: List[Dict[str, str]], sys_names: List[str],
-                         trace_name: str) -> str:
-    """
-    Pin the system's values at the new timepoint to what it is doing *now*.
-
-    The controller has not moved yet, so the system half of the new state is
-    unknown to both the solver and the checker. They must assume the same thing
-    about it or they are answering different questions: left free, the solver
-    picks whichever system response makes the constraint easiest, proposes an
-    input that depends on it, and `_hypothetical_violations` - which holds the
-    system at its current output - then rejects the model. Every model gets
-    rejected that way, and the walk never lands a violation. It cost minepump
-    every violation it used to find, which is what the end-to-end tests caught.
-
-    So this mirrors `_hypothetical_violations` exactly: the previous state's
-    system values, or false at the start where there is no previous state.
-    """
-    t = len(states)
-    previous = states[-1] if states else {}
-    lines = []
-    for var in sys_names:
-        value = str(previous.get(var, "false")).lower()
-        prefix = "" if value == "true" else "not_"
-        lines.append(f"{prefix}holds_at({var},{t},{trace_name}).")
-    return "\n".join(lines) + ("\n" if lines else "")
-
-
 def _next_input_constraint_asp(targets: Set[str],
                                guarantees: Sequence[str] = ()) -> str:
     """
@@ -299,7 +272,6 @@ def _asp_next_inputs(spec, states, variables, env_names, targets, trace_name,
                + _trace_skeleton_asp(trace_name, n_timepoints)
                + GUESS_ASP
                + _pinned_prefix_asp(states, variables, trace_name)
-               + _pinned_response_asp(states, sys_names, trace_name)
                + _next_input_constraint_asp(targets, guarantee_names))
 
     path = generate_temp_filename(".lp")
@@ -387,70 +359,31 @@ def _targeted_inputs(spec, states, env_domains, variables, repairable, targets,
     env_names = sorted(env_domains)
     # Deepen until the target becomes reachable. Horizon 1 answers "can it break
     # now"; deeper horizons answer "is there a way to get somewhere it can".
-    constructed, solver_spoke = [], False
-    horizons = (1,) if not targets else range(1, MAX_PLAN_HORIZON + 1)
-    for horizon in horizons:
-        try:
-            constructed = _asp_next_inputs(spec, states, variables, env_names,
-                                           targets, trace_name, horizon=horizon)
-            solver_spoke = True
-        except Exception:  # noqa: BLE001 - a solver failure must not lose the episode
-            constructed, solver_spoke = [], False
-            break
+    #
+    # There is no fallback. If the solver cannot run, that is a bug to see, not
+    # a reason to start guessing - a random fallback would quietly produce a
+    # worse trace and hide the cause. UNSATISFIABLE at every horizon is an
+    # answer, and an empty list says so.
+    constructed = []
+    for horizon in ((1,) if not targets else range(1, MAX_PLAN_HORIZON + 1)):
+        constructed = _asp_next_inputs(spec, states, variables, env_names,
+                                       targets, trace_name, horizon=horizon)
         if constructed:
             break
 
-    if solver_spoke:
-        matching = []
-        for candidate in constructed:
-            violated = _hypothetical_violations(
-                spec, states, candidate, variables, repairable, trace_name)
-            if targets and (violated & targets):
-                matching.append(candidate)      # on target - extra breakage is allowed
-            elif not violated:
-                matching.append(candidate)      # a step toward it, breaking nothing
-        if matching:
-            # Clingo generates the candidates; the choice among them is the only
-            # thing left to chance, and it is seeded. Randomness picks between
-            # equally valid answers - it is not used to find them.
-            rng.shuffle(matching)
-            return matching
-        # UNSATISFIABLE here means the targets cannot be broken *from this
-        # state*, which is not the same as not at all - an assumption over
-        # `next` needs the right predecessor, and the walk has to be allowed to
-        # reach one. So ask for a step that breaks nothing and keep going,
-        # which is what the sampler's third bucket did by accident and this
-        # does on purpose. Returning nothing instead ended the episode, and cost
-        # minepump every violation it used to find.
-        if not constructed and targets:
-            keep_walking = _asp_next_inputs(spec, states, variables, env_names,
-                                            set(), trace_name)
-            harmless = [c for c in keep_walking
-                        if not _hypothetical_violations(spec, states, c, variables,
-                                                        repairable, trace_name)]
-            if harmless:
-                return harmless
-        if not constructed and not targets:
-            return []
-
-    on_target = []
-    partial = []
-    harmless = []
-    for candidate in _candidate_inputs(env_domains, rng):
-        violated = _hypothetical_violations(
-            spec, states, candidate, variables, repairable, trace_name)
-        if violated - targets:
-            continue                      # breaks something we are not aiming at
-        if violated == targets:
-            on_target.append(candidate)
-        elif violated:
-            partial.append(candidate)
-        else:
-            harmless.append(candidate)
-    # Ranked, not just the best one: the caller retries down the list when the
-    # controller refuses, and on-target inputs are the ones most likely to be
-    # refused - refusal *is* the violation, from the controller's side.
-    return on_target + partial + harmless
+    # No pre-filtering against a frozen system. `_hypothetical_violations`
+    # answers "what breaks if the system does not move", which is not the
+    # question: the system is about to move, and its move is what keeps the
+    # guarantees. Filtering on it rejected exactly the inputs the solver chose
+    # for good reason. The controller answers next, and `_run_episode` checks
+    # the resulting trace - once, against what actually happened.
+    #
+    # Clingo generates the candidates; the choice among them is the only thing
+    # left to chance, and it is seeded. Randomness picks between equally valid
+    # answers - it is never used to find them.
+    candidates = list(constructed)
+    rng.shuffle(candidates)
+    return candidates
 
 
 def violatable_assumptions(spec_path: str) -> List[str]:
@@ -598,7 +531,13 @@ def _run_episode(spec, spec_path, work_dir, variables, repairable, targets,
     # one: the executor has advanced and there is no rewind, so the episode is
     # abandoned and retried from a fresh controller.
     for _ in range(compliant_steps):
-        for candidate in _candidate_inputs(env_domains, rng):
+        compliant = _targeted_inputs(spec, states, env_domains, variables,
+                                     repairable, set(), rng, trace_name)
+        if not compliant:
+            # No assumption-respecting input exists from here. The solver says
+            # so; there is nothing to try instead.
+            return None
+        for candidate in compliant:
             if step(candidate):
                 break
         else:
@@ -697,8 +636,17 @@ def generate_controller_violation_trace(
     repairable = _non_initial_assumption_names(spec)
     assumption_names = violatable_assumptions(spec_path)
     if not assumption_names:
+        # The precondition for this setup: a specification needs at least one
+        # invariant assumption. Only invariants can be broken by a finite
+        # prefix - a liveness assumption `GF(p)` is never refuted by one,
+        # because the prefix can always be extended. arbiter, whose only
+        # assumption is `GF(a)`, fails this and always will; that is a property
+        # of the specification, not a shortcoming of the generator, and it is
+        # reported as such rather than after exhausting a budget.
         raise ControllerTraceError(
-            f"{spec_path} has no non-initial assumption to violate.")
+            f"{spec_path} has no invariant assumption. Only invariants can be "
+            f"violated by a finite trace, so this specification cannot yield "
+            f"one at any length or budget.")
 
     if target_assumptions:
         candidates = [[a] for a in target_assumptions if a in assumption_names]
