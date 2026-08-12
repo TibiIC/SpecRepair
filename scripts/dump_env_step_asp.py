@@ -30,7 +30,7 @@ sys.path.insert(0, REPO_ROOT)
 from spec_repair.components.spec_generator import SpecGenerator
 from spec_repair.diagnosis import controller_trace_generation as ctg
 from spec_repair.diagnosis.violation_trace_generation import _trace_skeleton_asp
-from spec_repair.ltl_types import GR1FormulaType
+from spec_repair.ltl_types import GR1FormulaType, GR1TemporalType
 from spec_repair.model.spectra_specification import SpectraSpecification
 from spec_repair.util.asp_trace_util import create_atom_signature_asp
 
