@@ -8,10 +8,10 @@
       "violated": [
         "assumption1_1"
       ],
-      "steps": 13,
+      "steps": 8,
       "compliant_steps": 5,
-      "max_random_steps": 35,
-      "attempts": 14,
+      "max_random_steps": 40,
+      "attempts": 25,
       "max_targets": 1
     },
     {
@@ -21,10 +21,10 @@
       "violated": [
         "assumption2_1"
       ],
-      "steps": 6,
+      "steps": 7,
       "compliant_steps": 5,
-      "max_random_steps": 35,
-      "attempts": 14,
+      "max_random_steps": 40,
+      "attempts": 25,
       "max_targets": 1
     },
     {
@@ -32,12 +32,13 @@
       "seed": 2,
       "target": "assumption1_1",
       "violated": [
-        "assumption1_1"
+        "assumption1_1",
+        "assumption2_1"
       ],
-      "steps": 20,
+      "steps": 9,
       "compliant_steps": 5,
-      "max_random_steps": 35,
-      "attempts": 14,
+      "max_random_steps": 40,
+      "attempts": 25,
       "max_targets": 1
     },
     {
@@ -47,10 +48,10 @@
       "violated": [
         "assumption2_1"
       ],
-      "steps": 6,
+      "steps": 7,
       "compliant_steps": 5,
-      "max_random_steps": 35,
-      "attempts": 14,
+      "max_random_steps": 40,
+      "attempts": 25,
       "max_targets": 1
     },
     {
@@ -58,12 +59,13 @@
       "seed": 4,
       "target": "assumption1_1",
       "violated": [
-        "assumption1_1"
+        "assumption1_1",
+        "assumption2_1"
       ],
-      "steps": 6,
+      "steps": 9,
       "compliant_steps": 5,
-      "max_random_steps": 35,
-      "attempts": 14,
+      "max_random_steps": 40,
+      "attempts": 25,
       "max_targets": 1
     }
   ]

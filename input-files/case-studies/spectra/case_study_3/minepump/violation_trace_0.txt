@@ -3,50 +3,30 @@ not_holds_at(methane,0,trace_name_0).
 not_holds_at(pump,0,trace_name_0).
 
 not_holds_at(highwater,1,trace_name_0).
-not_holds_at(methane,1,trace_name_0).
+holds_at(methane,1,trace_name_0).
 holds_at(pump,1,trace_name_0).
 
 not_holds_at(highwater,2,trace_name_0).
-not_holds_at(methane,2,trace_name_0).
+holds_at(methane,2,trace_name_0).
 not_holds_at(pump,2,trace_name_0).
 
-holds_at(highwater,3,trace_name_0).
-not_holds_at(methane,3,trace_name_0).
+not_holds_at(highwater,3,trace_name_0).
+holds_at(methane,3,trace_name_0).
 not_holds_at(pump,3,trace_name_0).
 
 not_holds_at(highwater,4,trace_name_0).
-holds_at(methane,4,trace_name_0).
-holds_at(pump,4,trace_name_0).
+not_holds_at(methane,4,trace_name_0).
+not_holds_at(pump,4,trace_name_0).
 
-not_holds_at(highwater,5,trace_name_0).
-holds_at(methane,5,trace_name_0).
-not_holds_at(pump,5,trace_name_0).
+holds_at(highwater,5,trace_name_0).
+not_holds_at(methane,5,trace_name_0).
+holds_at(pump,5,trace_name_0).
 
-not_holds_at(highwater,6,trace_name_0).
-holds_at(methane,6,trace_name_0).
-not_holds_at(pump,6,trace_name_0).
+holds_at(highwater,6,trace_name_0).
+not_holds_at(methane,6,trace_name_0).
+holds_at(pump,6,trace_name_0).
 
 holds_at(highwater,7,trace_name_0).
 not_holds_at(methane,7,trace_name_0).
-not_holds_at(pump,7,trace_name_0).
-
-not_holds_at(highwater,8,trace_name_0).
-not_holds_at(methane,8,trace_name_0).
-holds_at(pump,8,trace_name_0).
-
-holds_at(highwater,9,trace_name_0).
-not_holds_at(methane,9,trace_name_0).
-not_holds_at(pump,9,trace_name_0).
-
-holds_at(highwater,10,trace_name_0).
-not_holds_at(methane,10,trace_name_0).
-holds_at(pump,10,trace_name_0).
-
-not_holds_at(highwater,11,trace_name_0).
-holds_at(methane,11,trace_name_0).
-holds_at(pump,11,trace_name_0).
-
-holds_at(highwater,12,trace_name_0).
-not_holds_at(methane,12,trace_name_0).
-holds_at(pump,12,trace_name_0).
+holds_at(pump,7,trace_name_0).
 
