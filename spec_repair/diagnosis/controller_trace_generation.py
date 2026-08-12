@@ -770,10 +770,23 @@ def generate_controller_violation_trace(
 
     work_dir = tempfile.mkdtemp(prefix="controller_trace_")
     try:
+        # The prefix shortens as attempts go on. A controller step cannot be
+        # undone, so if five compliant steps walk into a state the target
+        # cannot be reached from, the only way back is a fresh episode with a
+        # shorter run-up. lift is the case: unreachable after five steps,
+        # solved immediately after one or two. Later attempts therefore try
+        # progressively shorter prefixes rather than the same one again, and
+        # only fall back to a single step once every length has been tried.
         for attempt in range(attempts):
             targets = set(candidates[attempt % len(candidates)])
+            cycle = attempt // max(1, len(candidates))
+            prefix = compliant_steps - cycle
+            if prefix < 1:
+                prefix = 1
+            if prefix != compliant_steps:
+                _progress(f"RETRY  attempt {attempt} with a {prefix}-step prefix")
             result = _run_episode(spec, spec_path, work_dir, variables, repairable,
-                                  targets, compliant_steps, max_random_steps, rng,
+                                  targets, prefix, max_random_steps, rng,
                                   trace_name)
             if result is not None:
                 return result
