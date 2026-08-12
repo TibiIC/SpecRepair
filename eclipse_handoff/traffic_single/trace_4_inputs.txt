@@ -1,0 +1,8 @@
+car=false  emergency=false  police=true
+car=true  emergency=true  police=true
+car=true  emergency=false  police=true
+car=true  emergency=false  police=true
+car=true  emergency=true  police=false
+car=false  emergency=true  police=true
+car=true  emergency=false  police=true
+car=false  emergency=true  police=true   # violating step

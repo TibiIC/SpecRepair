@@ -1,0 +1,6 @@
+obstacle_clear=true  obstacle_blocked=false  sideSense_clear=true  sideSense_p_o=false
+obstacle_clear=false  obstacle_blocked=true  sideSense_clear=false  sideSense_p_o=false
+obstacle_clear=true  obstacle_blocked=false  sideSense_clear=false  sideSense_p_o=false
+obstacle_clear=true  obstacle_blocked=false  sideSense_clear=false  sideSense_p_o=true
+obstacle_clear=true  obstacle_blocked=false  sideSense_clear=false  sideSense_p_o=false
+obstacle_clear=true  obstacle_blocked=true  sideSense_clear=false  sideSense_p_o=true   # violating step

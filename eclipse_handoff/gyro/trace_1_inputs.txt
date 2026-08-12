@@ -1,0 +1,6 @@
+distSense_blocked=false  isReady=false
+distSense_blocked=true  isReady=true
+distSense_blocked=false  isReady=true
+distSense_blocked=true  isReady=true
+distSense_blocked=false  isReady=true
+distSense_blocked=false  isReady=false   # violating step

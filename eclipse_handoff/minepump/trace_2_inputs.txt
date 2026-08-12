@@ -1,0 +1,20 @@
+highwater=false  methane=false
+highwater=false  methane=false
+highwater=false  methane=false
+highwater=false  methane=true
+highwater=false  methane=false
+highwater=false  methane=false
+highwater=false  methane=false
+highwater=false  methane=true
+highwater=false  methane=true
+highwater=false  methane=false
+highwater=false  methane=true
+highwater=false  methane=true
+highwater=false  methane=false
+highwater=false  methane=true
+highwater=false  methane=true
+highwater=false  methane=true
+highwater=true  methane=false
+highwater=true  methane=false
+highwater=true  methane=false
+highwater=true  methane=false   # violating step

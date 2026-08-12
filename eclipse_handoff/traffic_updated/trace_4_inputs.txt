@@ -1,0 +1,6 @@
+carA=false  carB=false  emergency=true
+carA=true  carB=true  emergency=true
+carA=true  carB=false  emergency=true
+carA=false  carB=false  emergency=false
+carA=true  carB=true  emergency=false
+carA=false  carB=false  emergency=true   # violating step

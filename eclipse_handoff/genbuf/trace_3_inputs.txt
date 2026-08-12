@@ -1,0 +1,6 @@
+eMPTY=true  fULL=false  rtoB_ACK0=false  rtoB_ACK1=false  stoB_REQ0=false  stoB_REQ1=false  stoB_REQ2=false  stoB_REQ3=false  stoB_REQ4=false
+eMPTY=true  fULL=false  rtoB_ACK0=false  rtoB_ACK1=false  stoB_REQ0=false  stoB_REQ1=true  stoB_REQ2=true  stoB_REQ3=true  stoB_REQ4=true
+eMPTY=true  fULL=false  rtoB_ACK0=false  rtoB_ACK1=false  stoB_REQ0=true  stoB_REQ1=true  stoB_REQ2=true  stoB_REQ3=true  stoB_REQ4=true
+eMPTY=true  fULL=false  rtoB_ACK0=false  rtoB_ACK1=false  stoB_REQ0=true  stoB_REQ1=true  stoB_REQ2=true  stoB_REQ3=true  stoB_REQ4=true
+eMPTY=false  fULL=true  rtoB_ACK0=false  rtoB_ACK1=false  stoB_REQ0=true  stoB_REQ1=false  stoB_REQ2=true  stoB_REQ3=true  stoB_REQ4=true
+eMPTY=true  fULL=false  rtoB_ACK0=false  rtoB_ACK1=true  stoB_REQ0=false  stoB_REQ1=true  stoB_REQ2=false  stoB_REQ3=false  stoB_REQ4=false   # violating step
