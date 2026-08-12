@@ -107,6 +107,12 @@ def incomplete_trace(spec_path, target, seed, compliant_steps, walk_limit):
 
 def write(out_dir, index, states, violating, env, sysv, target):
     os.makedirs(out_dir, exist_ok=True)
+    # The "no traces yet" placeholder is a statement about the folder, and it
+    # stops being true the moment one is written. Left behind, it contradicts
+    # the files next to it.
+    placeholder = os.path.join(out_dir, "NO_TRACES_YET.md")
+    if os.path.exists(placeholder):
+        os.remove(placeholder)
 
     def row(state, names):
         return "  ".join(f"{n}={str(state.get(n, False)).lower()}" for n in names)
