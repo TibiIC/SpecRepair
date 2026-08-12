@@ -317,6 +317,23 @@ def _asp_next_inputs(spec, states, variables, env_names, targets, trace_name,
         if os.path.exists(path):
             os.remove(path)
 
+    # An UNSAT program is the thing worth looking at, and it is the one thing
+    # that was never kept: the temp file is deleted, so every diagnosis so far
+    # has been done on a *reconstruction* with a synthetic prefix, which
+    # misleads in both directions - a fabricated history that violates the
+    # guarantees, or no history at all. Set SPEC_REPAIR_DUMP_UNSAT to a
+    # directory to keep the real one.
+    dump_dir = os.environ.get("SPEC_REPAIR_DUMP_UNSAT", "").strip()
+    if dump_dir and "UNSATISFIABLE" in output:
+        os.makedirs(dump_dir, exist_ok=True)
+        label = "-".join(sorted(targets)) if targets else "compliant"
+        name = f"unsat_t{len(states)}_h{horizon}_{label}.lp"[:120]
+        with open(os.path.join(dump_dir, name), "w") as f:
+            f.write(f"% UNSAT: {len(states)} pinned state(s), horizon {horizon}, "
+                    f"target(s) {sorted(targets) or '(none)'}\n"
+                    f"% the prefix below is real controller output, not a stand-in\n\n")
+            f.write(program)
+
     t = len(states)
     inputs = []
     for model in _parse_models(output):
