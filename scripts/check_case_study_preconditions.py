@@ -63,6 +63,16 @@ def violated(spec, trace_lines, kind: str):
     return [n for n in names if when.get(n) != GR1TemporalType.JUSTICE]
 
 
+def _without_last_state(lines):
+    """The trace up to, but excluding, its final timepoint."""
+    text = "".join(lines)
+    blocks = [b for b in text.split("\n\n") if b.strip()]
+    if len(blocks) <= 1:
+        return lines
+    kept = "\n\n".join(blocks[:-1]) + "\n"
+    return [l + "\n" for l in kept.splitlines()]
+
+
 def check(setup: str, case_study: str):
     """Returns (rows, ok) for one case study."""
     directory = os.path.join(SPECTRA, setup, case_study)
@@ -85,7 +95,19 @@ def check(setup: str, case_study: str):
         name = os.path.basename(path)
         lines = read_file_lines(path)
         asms = violated(spec, lines, "assumption")
-        gars = violated(spec, lines, "guarantee")
+        # Guarantees are judged on the trace *without* its last state.
+        #
+        # That last state is where the environment breaks an assumption, and
+        # GR(1) is assumptions -> guarantees: once the environment breaks its
+        # side, the system owes nothing. Holding the system to its guarantees
+        # there asks the trace to break the antecedent while still honouring
+        # the consequent, which no violating trace can do - amba, colorsort and
+        # genbuf all failed on exactly that, and minepump's own controller
+        # breaks a guarantee at that step when run by hand in the walker.
+        #
+        # It also matches what the generator now assumes when it plans, so the
+        # two agree on what a valid trace is.
+        gars = violated(spec, _without_last_state(lines), "guarantee")
         if not asms:
             verdict, detail = "BAD: violates no assumption", ""
         elif gars:
