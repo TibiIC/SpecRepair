@@ -1,0 +1,73 @@
+{
+  "case_study": "lift",
+  "traces": [
+    {
+      "trace": 0,
+      "seed": 0,
+      "target": "button1_off_at_floor1",
+      "violated": [
+        "button1_off_at_floor1"
+      ],
+      "steps": 3,
+      "compliant_steps": 5,
+      "max_random_steps": 40,
+      "attempts": 25,
+      "max_targets": 1
+    },
+    {
+      "trace": 1,
+      "seed": 1,
+      "target": "button2_stays_on",
+      "violated": [
+        "button2_stays_on"
+      ],
+      "steps": 3,
+      "compliant_steps": 5,
+      "max_random_steps": 40,
+      "attempts": 25,
+      "max_targets": 1
+    },
+    {
+      "trace": 2,
+      "seed": 2,
+      "target": "button1_stays_on",
+      "violated": [
+        "button1_stays_on",
+        "button3_stays_on"
+      ],
+      "steps": 4,
+      "compliant_steps": 5,
+      "max_random_steps": 40,
+      "attempts": 25,
+      "max_targets": 1
+    },
+    {
+      "trace": 3,
+      "seed": 3,
+      "target": "button2_stays_on",
+      "violated": [
+        "button2_stays_on",
+        "button3_stays_on"
+      ],
+      "steps": 3,
+      "compliant_steps": 5,
+      "max_random_steps": 40,
+      "attempts": 25,
+      "max_targets": 1
+    },
+    {
+      "trace": 4,
+      "seed": 4,
+      "target": "one_floor_only1",
+      "violated": [
+        "one_floor_only1",
+        "one_floor_only2"
+      ],
+      "steps": 2,
+      "compliant_steps": 5,
+      "max_random_steps": 40,
+      "attempts": 25,
+      "max_targets": 1
+    }
+  ]
+}
