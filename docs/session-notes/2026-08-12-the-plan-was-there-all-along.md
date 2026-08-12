@@ -97,13 +97,89 @@ Our carry-over would have written `pump=true` there, violating
 `G(methane -> next(!pump))`. That is exactly why four of genbuf's five traces
 failed their preconditions.
 
-## 6. Running
+## 6. Three more, found by running it
 
-Trace generation for all twelve viable case studies, amba and genbuf first.
-arbiter is excluded permanently: its only assumption is `GF(a)`, and no finite
-trace refutes liveness.
+**Response-shaped assumptions were being offered as targets.** `G(a -> F(b))`
+is classified an invariant because its outer operator is `G`, but the
+consequent is an eventually and no finite prefix refutes one. amba spent three
+of its five seeds on `a10_0`, `a10_1` and `a10_2`, each costing a full horizon
+search that could only return UNSAT. Filtered with `PRS_REG`, the same pattern
+the pRespondsToS rewrite uses. amba: five targets down to two, humanoid two
+down to one.
 
-## 7. Open
+**The audit disagreed with the generator.** The generator stopped holding
+guarantees against the final step; the check still held them everywhere, so
+amba failed 2/2, colorsort 5/5 and genbuf 4/5 on traces the generator
+considered valid. "Violates an assumption and no guarantee" is unsatisfiable as
+literally stated - it asks a trace to break the antecedent while honouring the
+consequent, when GR(1) is `assumptions -> guarantees`. minepump's own
+controller, run by hand in the walker, breaks a guarantee at that step.
+Guarantees are now judged on the trace *without* its final state. Re-audited:
+**0 BAD, all 51 traces pass**.
+
+**lift needed a shorter run-up.** A controller step cannot be undone, so five
+compliant steps that walk into a state the target is unreachable from end the
+episode - and the next attempt walks into it again. Attempts now shorten the
+prefix once each target has been tried at the current length. lift went from
+1/5 to 5/5, violating five different assumptions in two-to-four step plans.
+
+## 7. Coverage, and what it cost before
+
+| | traces | note |
+| --- | --- | --- |
+| amba | 5 | first ever; two hours for nothing before, four seconds each now |
+| colorsort | 5 | first ever |
+| elevator | 5 | first ever |
+| lift | 5 | first ever |
+| genbuf, gyro, minepump, minepump_liveness, pcar, traffic_single, traffic_updated | 5 each | pcar was 2 |
+| humanoid | 0 | unexplained |
+| arbiter | - | excluded permanently |
+
+**55 traces across 11 case studies, 0 BAD.** The controller-trace test file runs
+in 8s against 100s when the day started.
+
+## 8. Experiments running
+
+68 runs across five machines, all stamped 2026-08-12:
+
+| box | arm | runs |
+| --- | --- | --- |
+| gpu12 | FastLAS, amba + genbuf | 10 |
+| gpu20 | ILASP, amba + genbuf, `LEARNER_TIMEOUT=3600` | 10 |
+| gpu03 | FastLAS, genbuf reruns 0/3/4 | 3 |
+| gpu06 | FastLAS, the other eight + lift_4 | 41 |
+| gpu01 | FastLAS, lift 0-3 | 4 |
+
+**amba's FastLAS arm is already complete: 5/5 clean, 21 repaired specifications
+each.**
+
+**ILASP is failing on the learner budget again.** 25 timeouts against FastLAS's
+zero; `amba_0` ran 17m52s and hit the 600s per-task limit at depth 0, node 2 -
+task times out, `0 candidate(s)`, branch abandoned, no repair. Nine of ten runs
+ended that way. Relaunched at 3600s. If that is still not enough, it is a
+result rather than a bug: ILASP cannot do these two at a practical budget.
+
+**Three genbuf runs were killed** - exit 137 and 143, external termination
+rather than a crash. Rerun on a different box, which will discriminate between
+something local to gpu12 and something systemic. The `.exitcode` files are the
+only reason this was visible at all; a fortnight ago they would have been
+indistinguishable from queued.
+
+## 9. Two process mistakes
+
+`git stash -u` on the remote, to unblock a merge, swept up freshly generated
+traces: colorsort, elevator and lift vanished and pcar fell back to its
+committed two. Recovered with `git checkout stash@{0}^3 -- <path>`, but the
+memory in this project says not to stash for exactly this reason, written after
+a stray `pop` conflicted eight files in June. Move the directory aside instead.
+
+lift's regenerated traces were left local while gpu06 was launched, so that
+sweep started with the single old trace - one `lift_4` window among 41. Caught
+from the window list, pushed, and the missing four launched separately on
+gpu01. lift's runs are therefore split across two boxes and two log
+directories, which post-processing has to collect from both.
+
+## 10. Open
 
 * **lift and humanoid** produce nothing: the solver names no violating input
   for their targets at all. Untouched by today's fixes and not understood.
