@@ -115,7 +115,8 @@ literally stated - it asks a trace to break the antecedent while honouring the
 consequent, when GR(1) is `assumptions -> guarantees`. minepump's own
 controller, run by hand in the walker, breaks a guarantee at that step.
 Guarantees are now judged on the trace *without* its final state. Re-audited:
-**0 BAD, all 51 traces pass**.
+**0 BAD, all 51 traces pass** - and lift's four later traces audited separately,
+also clean, for **55 of 55**.
 
 **lift needed a shorter run-up.** A controller step cannot be undone, so five
 compliant steps that walk into a state the target is unreachable from end the
