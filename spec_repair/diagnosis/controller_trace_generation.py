@@ -46,6 +46,7 @@ from spec_repair.diagnosis.violation_trace_generation import (
 from spec_repair.enums import Learning
 from spec_repair.ltl_types import GR1FormulaType, GR1TemporalType
 from spec_repair.model.spectra_specification import SpectraSpecification
+from spec_repair.util.patterns import PRS_REG
 from spec_repair.util.asp_trace_util import create_atom_signature_asp, run_clingo_raw
 from spec_repair.util.file_util import generate_temp_filename, write_to_file
 from spec_repair.wrappers.asp_wrappers import get_violations
@@ -459,8 +460,36 @@ def violatable_assumptions(spec_path: str) -> List[str]:
     breaking the same one exercise a single weakening five times.
     """
     spec = SpectraSpecification.from_file(spec_path)
-    return sorted(_violatable_by_a_finite_prefix(spec) & set(
+    names = sorted(_violatable_by_a_finite_prefix(spec) & set(
         spec.filter(lambda x: x["type"] == GR1FormulaType.ASM)["name"]))
+    return [n for n in names if n not in _response_shaped(spec_path)]
+
+
+def _response_shaped(spec_path: str) -> Set[str]:
+    """
+    Assumptions of the form `G(a -> F(b))`, which no finite trace can break.
+
+    They are classified as invariants because the outer operator is `G`, so
+    they arrive as targets - but the consequent is `F`, and an eventually is
+    never refuted by a prefix: the obligation can always be discharged one step
+    later. Aiming at one costs a full horizon search per attempt and can only
+    ever come back UNSAT. amba spends three of its five seeds this way, on
+    `a10_0`, `a10_1` and `a10_2`.
+
+    Detected with the same pattern the pRespondsToS rewrite uses, so the two
+    agree on what a response formula is.
+    """
+    shaped, current = set(), None
+    for line in open(spec_path):
+        stripped = line.strip()
+        if stripped.startswith("assumption"):
+            current = stripped.split("--")[-1].strip() if "--" in stripped else None
+        elif current and PRS_REG.search(line.strip("\t\n;")):
+            shaped.add(current)
+            current = None
+        elif stripped and not stripped.startswith("assumption"):
+            current = current if not stripped.endswith(";") else None
+    return shaped
 
 
 def _controller_cache_dir(spec_path: str) -> str:
