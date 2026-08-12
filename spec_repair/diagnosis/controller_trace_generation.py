@@ -25,6 +25,7 @@ project's own ASP violation check - the same one the repair, the preconditions
 and the oracle all use, which keeps one definition of "violates an assumption"
 across the whole pipeline rather than inventing a second.
 """
+import hashlib
 import os
 import random
 import re
@@ -38,6 +39,7 @@ import jpype
 from spec_repair.components.new_spec_encoder import (
     NewSpecEncoder, get_violated_expression_names_of_type)
 from spec_repair.components.spec_generator import SpecGenerator
+from spec_repair.config import PROJECT_PATH
 from spec_repair.diagnosis.violation_trace_generation import (
     _parse_models, _trace_skeleton_asp)
 from spec_repair.enums import Learning
@@ -401,21 +403,59 @@ def violatable_assumptions(spec_path: str) -> List[str]:
         spec.filter(lambda x: x["type"] == GR1FormulaType.ASM)["name"]))
 
 
+def _controller_cache_dir(spec_path: str) -> str:
+    """
+    Where a synthesised controller is kept between runs.
+
+    Keyed by the specification's contents, not its path: an edited spec must not
+    be answered with the controller of the old one, and two paths holding the
+    same spec may share.
+    """
+    digest = hashlib.sha256(open(spec_path, "rb").read()).hexdigest()[:16]
+    name = os.path.basename(os.path.dirname(spec_path))
+    root = os.environ.get("SPEC_REPAIR_CONTROLLER_CACHE") or os.path.join(
+        PROJECT_PATH, "tests", "test_files", "out", "controller_cache")
+    return os.path.join(root, f"{name}_{digest}")
+
+
+def _cached_controller(spec_path: str) -> str:
+    """
+    Synthesise the controller, or reuse the one already on disk.
+
+    Synthesis depends only on the specification and is deterministic, but it is
+    not cheap: amba takes about eight minutes, and it was being paid again on
+    every invocation because each run built into a fresh temporary directory
+    that was deleted on the way out. Across a session of repeated attempts that
+    is most of the runtime, spent recomputing an identical answer.
+
+    Written to a temporary directory and renamed into place, so a run that dies
+    mid-synthesis cannot leave a half-written controller for the next one to
+    load.
+    """
+    cache_dir = _controller_cache_dir(spec_path)
+    if os.path.isdir(cache_dir) and os.listdir(cache_dir):
+        return cache_dir
+
+    os.makedirs(os.path.dirname(cache_dir), exist_ok=True)
+    staging = f"{cache_dir}.building.{os.getpid()}"
+    shutil.rmtree(staging, ignore_errors=True)
+    os.makedirs(staging, exist_ok=True)
+    if not synthesise_controller(spec_path, staging, suppress=True):
+        shutil.rmtree(staging, ignore_errors=True)
+        raise ControllerTraceError(
+            f"Spectra would not synthesise a controller for {spec_path}. The "
+            f"specification must be realisable, and in a form the CLI accepts.")
+    try:
+        os.rename(staging, cache_dir)
+    except OSError:
+        # Another process got there first; its copy is as good as this one.
+        shutil.rmtree(staging, ignore_errors=True)
+    return cache_dir
+
+
 def _executor_for(spec_path: str, work_dir: str):
     """Synthesise a controller for this specification and open it for stepping."""
-    controller_dir = os.path.join(work_dir, "controller")
-    os.makedirs(controller_dir, exist_ok=True)
-    # Synthesised once per call, not once per episode. The controller depends
-    # only on the specification, and every attempt was rebuilding it: measured
-    # on amba, 15 syntheses in two hours at ~8 minutes each, which is the whole
-    # runtime - the episode never got as far as walking. The executor still has
-    # to be fresh each time, since it carries the run's state, but it can be
-    # opened on a controller that is already on disk.
-    if not os.listdir(controller_dir):
-        if not synthesise_controller(spec_path, controller_dir, suppress=True):
-            raise ControllerTraceError(
-                f"Spectra would not synthesise a controller for {spec_path}. The "
-                f"specification must be realisable, and in a form the CLI accepts.")
+    controller_dir = _cached_controller(spec_path)
     StaticController = jpype.JClass("tau.smlab.syntech.controller.StaticController")
     # FlexibleControllerExecutor rather than ControllerExecutor, for
     # reproducibility. A controller usually has several legal responses to an
