@@ -30,6 +30,7 @@ sys.path.insert(0, REPO_ROOT)
 from spec_repair.components.new_spec_encoder import (
     NewSpecEncoder, get_violated_expression_names_of_type)
 from spec_repair.enums import Learning
+from spec_repair.ltl_types import GR1TemporalType
 from spec_repair.model.spectra_specification import SpectraSpecification
 from spec_repair.util.file_util import read_file_lines
 from spec_repair.wrappers.asp_wrappers import get_violations
@@ -39,14 +40,27 @@ SPECTRA = os.path.join(REPO_ROOT, "input-files", "case-studies", "spectra")
 
 
 def violated(spec, trace_lines, kind: str):
-    """Names of violated expressions of one kind, by the project's own check."""
+    """
+    Violated expressions of one kind, liveness excluded.
+
+    A `GF(p)` is neither satisfied nor refuted by a finite trace - the prefix
+    can always be extended - so the checker reporting one as violated says
+    nothing about the trace. Counting those would fail case studies for a
+    property no finite trace could ever have, and would equally let a trace
+    "violate an assumption" without doing anything an experiment can use.
+
+    Initial expressions stay in: a finite trace does pin down its first state.
+    """
     learning = (Learning.ASSUMPTION_WEAKENING if kind == "assumption"
                 else Learning.GUARANTEE_WEAKENING)
     asp = NewSpecEncoder.encode_ASP(spec, trace_lines, [])
     violations = get_violations(asp, exp_type=learning.exp_type())
     if not violations:
         return []
-    return get_violated_expression_names_of_type(violations, kind)
+    names = get_violated_expression_names_of_type(violations, kind)
+    df = spec.filter(lambda x: x["name"].notna())
+    when = dict(zip(df["name"].tolist(), df["when"].tolist()))
+    return [n for n in names if when.get(n) != GR1TemporalType.JUSTICE]
 
 
 def check(setup: str, case_study: str):
