@@ -220,7 +220,8 @@ def _pinned_prefix_asp(states: List[Dict[str, str]], variables: List[str],
 
 
 def _next_input_constraint_asp(targets: Set[str],
-                               guarantees: Sequence[str] = ()) -> str:
+                               guarantees: Sequence[str] = (),
+                               last_real: int = 0) -> str:
     """
     What the next step has to achieve: break exactly the targets, or nothing.
 
@@ -246,7 +247,7 @@ violated_exp(E,S) :- violation_holds(E,T,S), trace(S), timepoint(T,S).
 % Without this the solver was free to invent a cooperative system, propose the
 % input that suited it, and be contradicted the moment the real controller
 % answered - which is why deepening the horizon alone changed nothing.
-:- violation_holds(E,T,S), is_guarantee(E).
+:- violation_holds(E,T,S), is_guarantee(E), T < {last_real}.
 
 % The target must break. Nothing says it has to break *alone*: requiring that
 % made the target unreachable wherever assumptions overlap - a step that breaks
@@ -259,7 +260,7 @@ violated_exp(E,S) :- violation_holds(E,T,S), trace(S), timepoint(T,S).
 
 def _asp_next_inputs(spec, states, variables, env_names, targets, trace_name,
                      n_models: int = ASP_MODELS_PER_STEP,
-                     horizon: int = 1) -> List[Dict[str, str]]:
+                     horizon: int = 1) -> List[List[Dict[str, str]]]:
     """
     Environment inputs for the next step, *constructed* rather than sampled.
 
@@ -307,7 +308,8 @@ def _asp_next_inputs(spec, states, variables, env_names, targets, trace_name,
                + _trace_skeleton_asp(trace_name, n_timepoints)
                + GUESS_ASP
                + _pinned_prefix_asp(states, variables, trace_name)
-               + _next_input_constraint_asp(targets, guarantee_names))
+               + _next_input_constraint_asp(targets, guarantee_names,
+                                            last_real=n_timepoints - 1))
 
     path = generate_temp_filename(".lp")
     write_to_file(path, program)
@@ -334,21 +336,28 @@ def _asp_next_inputs(spec, states, variables, env_names, targets, trace_name,
                     f"% the prefix below is real controller output, not a stand-in\n\n")
             f.write(program)
 
-    t = len(states)
-    inputs = []
+    # Every new timepoint, in order - the plan, not just its first move. The
+    # early steps respect the assumptions and exist to set up the antecedent;
+    # the last one breaks it. Executing the first and re-planning threw those
+    # away and then went looking for them again, which is what turned a
+    # three-step plan into a twenty-step wander.
+    first = len(states)
+    plans = []
     for model in _parse_models(output):
-        assignment = {}
+        steps = {}
         for fact in model:
             m = _HOLDS_RE.match(fact)
             if not m:
                 continue
             negated, var, timepoint = m.group(1), m.group(2), int(m.group(3))
-            if timepoint != t or var not in env_names:
+            if timepoint < first or var not in env_names:
                 continue
-            assignment[var] = "false" if negated else "true"
-        if len(assignment) == len(env_names) and assignment not in inputs:
-            inputs.append(assignment)
-    return inputs
+            steps.setdefault(timepoint, {})[var] = "false" if negated else "true"
+        plan = [steps[t] for t in sorted(steps)
+                if len(steps[t]) == len(env_names)]
+        if plan and plan not in plans:
+            plans.append(plan)
+    return plans
 
 
 def _hypothetical_violations(spec, states, candidate, variables, repairable,
@@ -399,49 +408,44 @@ def _targeted_input(spec, states, env_domains, variables, repairable, targets,
 
 
 def _targeted_inputs(spec, states, env_domains, variables, repairable, targets,
-                     rng, trace_name) -> List[Dict[str, str]]:
+                     rng, trace_name) -> List[List[Dict[str, str]]]:
     """
-    The same, ranked, so a caller can try the next one when the controller
-    refuses the first. A refusal does not advance the executor, so trying
-    another is free - and it is what decides whether the violating state ends
-    up with a real controller response or a carried-over one.
-    """
-    # Constructed first. Only if the solver is unavailable - not if it says
-    # UNSATISFIABLE, which is an answer - does this fall back to sampling.
-    env_names = sorted(env_domains)
-    # Deepen until the target becomes reachable. Horizon 1 answers "can it break
-    # now"; deeper horizons answer "is there a way to get somewhere it can".
-    #
-    # There is no fallback. If the solver cannot run, that is a bug to see, not
-    # a reason to start guessing - a random fallback would quietly produce a
-    # worse trace and hide the cause. UNSATISFIABLE at every horizon is an
-    # answer, and an empty list says so.
-    constructed = []
-    for horizon in ((1,) if not targets else range(1, MAX_PLAN_HORIZON + 1)):
-        constructed = _asp_next_inputs(spec, states, variables, env_names,
-                                       targets, trace_name, horizon=horizon)
-        if constructed:
-            if targets and horizon > 1:
-                _progress(f"SOLVE  t={len(states)} horizon={horizon} "
-                          f"-> {len(constructed)} plan(s)")
-            break
-        if targets and horizon == MAX_PLAN_HORIZON:
-            _progress(f"SOLVE  t={len(states)} UNSAT to horizon {MAX_PLAN_HORIZON} "
-                      f"for {sorted(targets)}")
+    Plans: each a list of environment moves, the last of which breaks a target.
 
-    # No pre-filtering against a frozen system. `_hypothetical_violations`
-    # answers "what breaks if the system does not move", which is not the
-    # question: the system is about to move, and its move is what keeps the
-    # guarantees. Filtering on it rejected exactly the inputs the solver chose
-    # for good reason. The controller answers next, and `_run_episode` checks
-    # the resulting trace - once, against what actually happened.
-    #
-    # Clingo generates the candidates; the choice among them is the only thing
-    # left to chance, and it is seeded. Randomness picks between equally valid
-    # answers - it is never used to find them.
-    candidates = list(constructed)
-    rng.shuffle(candidates)
-    return candidates
+    A plan is asked for once and returned whole. Its early moves respect the
+    assumptions and exist to reach the state where the target becomes
+    breakable - they are not separate "violate nothing" steps to be gone
+    looking for afterwards.
+    """
+    env_names = sorted(env_domains)
+
+    # The trace ends in a weak timepoint where everything holds vacuously, so a
+    # violation involving `next` has to land before the end: horizon k buys k-1
+    # usable steps, and horizon 1 buys none. That is why a `next`-based
+    # assumption is always UNSAT at 1, and why the search starts at 2. A GR(1)
+    # invariant needs three steps at worst, so six is generous headroom.
+    if not targets:
+        horizons = (2,)
+    else:
+        horizons = range(2, MAX_PLAN_HORIZON + 1)
+
+    for horizon in horizons:
+        plans = _asp_next_inputs(spec, states, variables, env_names,
+                                 targets, trace_name, horizon=horizon)
+        if plans:
+            if targets:
+                _progress(f"PLAN   t={len(states)} horizon={horizon} -> "
+                          f"{len(plans)} plan(s), {len(plans[0])} step(s)")
+            # Every plan clingo returned breaks the target, so choosing between
+            # them at random is choosing between correct answers - and it is
+            # what makes five traces of one case study five *different* traces
+            # rather than five copies. Seeded, so a trace is still reproducible.
+            rng.shuffle(plans)
+            return plans
+    if targets:
+        _progress(f"PLAN   t={len(states)} UNSAT to horizon {MAX_PLAN_HORIZON} "
+                  f"for {sorted(targets)}")
+    return []
 
 
 def violatable_assumptions(spec_path: str) -> List[str]:
@@ -616,91 +620,59 @@ def _run_episode(spec, spec_path, work_dir, variables, repairable, targets,
         states.append(_state_from(executor, variables))
         return True
 
-    # Phase 1: an environment that respects the assumptions.
-    #
-    # A refused step is free to retry: the controller rejected the move, so the
-    # executor never advanced and the next candidate starts from the same state.
-    # That is the common case here - Spectra's controller simply will not accept
-    # an input its assumptions forbid, which does most of the filtering for us.
-    #
-    # A step that succeeds and *then* turns out to violate is the unrecoverable
-    # one: the executor has advanced and there is no rewind, so the episode is
-    # abandoned and retried from a fresh controller.
+    # Phase 1: a compliant prefix, one solved step at a time.
     for _ in range(compliant_steps):
-        compliant = _targeted_inputs(spec, states, env_domains, variables,
-                                     repairable, set(), rng, trace_name)
-        if not compliant:
-            # No assumption-respecting input exists from here. The solver says
-            # so; there is nothing to try instead.
+        plans = _targeted_inputs(spec, states, env_domains, variables,
+                                 repairable, set(), rng, trace_name)
+        if not plans or not step(plans[0][0]):
             return None
-        for candidate in compliant:
-            if step(candidate):
-                _progress(f"PREFIX t={len(states) - 1} accepted")
-                break
-        else:
-            _progress("PREFIX every compliant input was refused")
-            return None
-        if _violated_assumptions(spec, _trace_lines(states, variables, trace_name)):
-            return None
+        _progress(f"PREFIX t={len(states) - 1} accepted")
 
-    # Phase 2: an environment that no longer cares, and aims.
-    for _ in range(max_random_steps):
-        inputs = _targeted_input(spec, states, env_domains, variables,
-                                 repairable, targets, rng, trace_name)
-        if inputs is None:
-            # Every candidate would break something outside the targets. Better
-            # to abandon the episode than to record a trace that violates more
-            # than it was asked to.
-            return None
+    # Phase 2: one plan, executed whole.
+    #
+    # The plan's early moves respect the assumptions and exist to reach the
+    # state where the target becomes breakable; its last move breaks it.
+    # Executing only the first and re-planning discarded exactly those moves
+    # and then went looking for them again, which is what turned a three-step
+    # plan into a twenty-step wander.
+    plans = _targeted_inputs(spec, states, env_domains, variables,
+                             repairable, targets, rng, trace_name)
+    if not plans:
+        return None
 
-        # One input, taken as ranked. Retrying until the controller accepts a
-        # violating input would be backwards: a controller is obliged to
-        # respond only while the environment keeps its assumptions, so refusal
-        # is the expected answer to a violating input, and searching for an
-        # accepted one selects for the weakest violations available.
-        accepted = step(inputs)
-        if not accepted and refusal == "IllegalStateException":
-            # An environment deadlock, not a violation. No input was available
-            # from this state at all, so nothing the environment did here broke
-            # anything; the episode has run into a corner and is abandoned.
-            return None
-        if not accepted:
-            # The controller refused the move. That is not a dead end - it is
-            # the event being hunted: in GR(1) the controller is only obliged to
-            # respond while the environment keeps its assumptions, so a refusal
-            # means the environment has just broken one. The step is recorded
-            # with the system holding its previous output, since the system does
-            # not move: it has nothing legal to move to.
-            #
-            # Missing this cost most of the case studies. minepump's controller
-            # happens to accept the violating input and carry on, so it produced
-            # traces while every other case study produced none - the difference
-            # was whether the controller tolerated the violation, not whether one
-            # occurred.
-            last_outputs = {k: v for k, v in (states[-1] if states else {}).items()
-                            if k not in inputs}
-            states.append({**last_outputs, **{k: v for k, v in inputs.items()
-                                              if k in variables}})
+    for plan in plans:
+        for position, inputs in enumerate(plan):
+            accepted = step(inputs)
+            if not accepted and refusal == "IllegalStateException":
+                _progress("AIM    environment deadlock - no input available here")
+                return None
+            if not accepted:
+                # The controller will not answer. Only defensible at the last
+                # move, where the environment has just broken its side of the
+                # contract; earlier it means the plan assumed a response the
+                # controller would not give.
+                if position != len(plan) - 1:
+                    _progress(f"AIM    refused mid-plan at step {position} - "
+                              f"the plan assumed a response the controller "
+                              f"would not make")
+                    return None
+                last_outputs = {k: v for k, v in (states[-1] if states else {}).items()
+                                if k not in inputs}
+                states.append({**last_outputs, **{k: v for k, v in inputs.items()
+                                                  if k in variables}})
             violated = set(_violated_assumptions(
                 spec, _trace_lines(states, variables, trace_name))) & repairable
+            _progress(f"AIM    t={len(states) - 1} "
+                      + (f"violated {sorted(violated)}" if violated
+                         else "no violation yet"))
             if violated & targets:
-                return (_trace_lines(states, variables, trace_name),
-                        sorted(violated))
-            return None
-        violated = set(_violated_assumptions(
-            spec, _trace_lines(states, variables, trace_name))) & repairable
-        _progress(f"AIM    t={len(states) - 1} "
-                  + (f"violated {sorted(violated)}" if violated else "no violation yet"))
-        if violated & targets:
-            # On target. Anything else it broke on the way is recorded rather
-            # than disqualifying: insisting the target break alone made it
-            # unreachable wherever assumptions overlap, and the manifest names
-            # everything violated, so nothing is hidden by allowing it.
-            return _trace_lines(states, variables, trace_name), sorted(violated)
-        if violated:
-            # Broke something, but not what was aimed at. The step cannot be
-            # undone, so this episode no longer serves its target.
-            return None
+                return _trace_lines(states, variables, trace_name), sorted(violated)
+            if not accepted:
+                return None
+        # Plan exhausted without the target breaking: the controller's actual
+        # responses diverged from what the plan assumed.
+        _progress("AIM    plan finished without breaking the target")
+        return None
     return None
 
 
