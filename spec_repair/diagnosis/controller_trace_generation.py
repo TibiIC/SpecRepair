@@ -203,6 +203,33 @@ def _candidate_inputs(env_domains: Dict[str, List[str]],
 
 
 
+def _asp_name(name: str) -> str:
+    """
+    A variable or expression as the ASP encoding spells it.
+
+    Two name spaces are in play and they differ in exactly one character. The
+    specification file - and the controller built from it - keeps the author's
+    casing: `InputMoveMode_fwd`, `Obstacle_clear`. The ASP encoding lowercases
+    the first letter, because a capitalised token is a *variable* to clingo,
+    not a constant. Every other case study is lowercase throughout, so the two
+    spaces coincide and nothing shows; humanoid is the one that is not, and it
+    cost three separate misdiagnoses today - a dump tool that grounded to an
+    error, an `is_guarantee` fact wrongly suspected, and finally this: plan
+    extraction filtering the solver's atoms against the controller's spelling
+    and discarding every one of them, so a SATISFIABLE query looked like "no
+    violating input reachable".
+
+    Translate at the boundary, in both directions, rather than lowercasing at
+    a fourth call site.
+    """
+    return name[:1].lower() + name[1:] if name else name
+
+
+def _controller_names(env_domains: Dict[str, List[str]]) -> Dict[str, str]:
+    """ASP spelling -> the controller's spelling, for handing inputs back."""
+    return {_asp_name(name): name for name in env_domains}
+
+
 def _pinned_prefix_asp(states: List[Dict[str, str]], variables: List[str],
                        trace_name: str) -> str:
     """
@@ -418,7 +445,10 @@ def _targeted_inputs(spec, states, env_domains, variables, repairable, targets,
     breakable - they are not separate "violate nothing" steps to be gone
     looking for afterwards.
     """
-    env_names = sorted(env_domains)
+    # The solver speaks the encoding's names; the controller speaks the
+    # specification's. Ask in one, translate the answer back to the other.
+    controller_name = _controller_names(env_domains)
+    env_names = sorted(controller_name)
 
     # The trace ends in a weak timepoint where everything holds vacuously, so a
     # violation involving `next` has to land before the end: horizon k buys k-1
@@ -434,6 +464,8 @@ def _targeted_inputs(spec, states, env_domains, variables, repairable, targets,
         plans = _asp_next_inputs(spec, states, variables, env_names,
                                  targets, trace_name, horizon=horizon)
         if plans:
+            plans = [[{controller_name[k]: v for k, v in stepd.items()}
+                      for stepd in plan] for plan in plans]
             if targets:
                 _progress(f"PLAN   t={len(states)} horizon={horizon} -> "
                           f"{len(plans)} plan(s), {len(plans[0])} step(s)")
