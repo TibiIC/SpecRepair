@@ -63,6 +63,40 @@ class GR1TemporalType(Enum):
         return hash(self.value)
 
 
+class TemporalDialect(Enum):
+    """
+    How the always-operators are spelled when a specification is written out.
+
+    Spectra accepts two spellings, and they are *not* interchangeable. The
+    grammar puts them in different categories - `G` is an alias for `trans` and
+    fills the `safety` field, while `alw`/`always` fills `stateInv` - and the
+    controllers that come out differ: given an assumption-violating input, a
+    `G` controller offers legal responses where an `alw` one rejects the input
+    outright as a safety violation.
+
+    case_study_3 needs `G`, because a violating step with no response cannot be
+    completed and the trace would have to be fabricated. Other contexts may
+    want `alw`; this is the switch.
+    """
+    G = "G"
+    ALW = "alw"
+
+    @property
+    def invariant(self) -> str:
+        return "G" if self is TemporalDialect.G else "alw"
+
+    @property
+    def justice(self) -> str:
+        return "GF" if self is TemporalDialect.G else "alwEv"
+
+    @staticmethod
+    def default() -> "TemporalDialect":
+        """`SPEC_REPAIR_TEMPORAL_DIALECT=alw` to switch, `G` unless it says so."""
+        import os
+        value = os.environ.get("SPEC_REPAIR_TEMPORAL_DIALECT", "G").strip().lower()
+        return TemporalDialect.ALW if value in ("alw", "always") else TemporalDialect.G
+
+
 class LTLFiltOperation(Enum):
     IMPLIES = "imply"
     EQUIVALENT = "equivalent-to"

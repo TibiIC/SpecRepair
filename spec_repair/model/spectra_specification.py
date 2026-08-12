@@ -20,7 +20,7 @@ from spec_repair.model.gr1_formula import GR1Formula
 from spec_repair.helpers.formatters.spectra_formula_formatter import SpectraFormulaFormatter
 from spec_repair.helpers.parsers.spectra_formula_parser import SpectraFormulaParser
 from spec_repair.helpers.formatters.spot_specification_formatter import SpotSpecificationFormatter
-from spec_repair.ltl_types import GR1FormulaType, GR1TemporalType
+from spec_repair.ltl_types import GR1FormulaType, GR1TemporalType, TemporalDialect
 from spec_repair.util.file_util import read_file_lines, validate_spectra_file
 from spec_repair.util.ltl_formula_util import get_disjuncts_from_disjunction
 from spec_repair.util.formula_string_util import format_spec
@@ -195,10 +195,17 @@ class SpectraSpecification(ISpecification):
     def __repr__(self):
         return self.to_str()
 
-    def to_str(self, is_to_compile: bool = False) -> str:
+    def to_str(self, is_to_compile: bool = False,
+               dialect: "TemporalDialect" = None) -> str:
         """
         Convert the specification to a string representation.
+
+        `dialect` chooses how the always-operators are spelled - see
+        TemporalDialect. It rewrites only the operator that begins a formula,
+        so a `G` inside an expression, or a variable whose name starts with
+        one, is untouched.
         """
+        dialect = dialect or TemporalDialect.default()
         spec_str = f"module {self._module_name}\n\n"
         for atom in sorted(self._atoms):
             spec_str += f"{atom.atom_type} {atom.value_type} {atom.name};\n"
@@ -213,6 +220,10 @@ class SpectraSpecification(ISpecification):
         if is_to_compile and "pRespondsToS" in spec_str:
             spec_str += self._response_pattern
         self._formater.is_response_pattern = False
+        if dialect is not TemporalDialect.G:
+            # GF before G, or `GF(` would be rewritten to `alw F(`.
+            spec_str = re.sub(r"(?m)^(\s*)GF\(", rf"\1{dialect.justice}(", spec_str)
+            spec_str = re.sub(r"(?m)^(\s*)G\(", rf"\1{dialect.invariant}(", spec_str)
         return spec_str
 
     def __deepcopy__(self, memo):

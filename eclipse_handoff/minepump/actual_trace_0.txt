@@ -1,0 +1,11 @@
+<highwater:false, methane:false, pump:false, PREV_aux_0:false, Zn:0>
+<highwater:false, methane:true, pump:false, PREV_aux_0:false, Zn:0>
+<highwater:false, methane:true, pump:false, PREV_aux_0:false, Zn:0>
+<highwater:false, methane:true, pump:false, PREV_aux_0:false, Zn:0>
+<highwater:true, methane:false, pump:false, PREV_aux_0:false, Zn:0>
+<highwater:false, methane:false, pump:true, PREV_aux_0:false, Zn:0>
+<highwater:false, methane:true, pump:false, PREV_aux_0:true, Zn:0>
+<highwater:false, methane:false, pump:false, PREV_aux_0:false, Zn:0>
+<highwater:true, methane:false, pump:false, PREV_aux_0:false, Zn:0>
+<highwater:false, methane:true, pump:true, PREV_aux_0:false, Zn:0>
+<highwater:true, methane:true, pump:false, PREV_aux_0:true, Zn:0>
