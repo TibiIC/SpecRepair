@@ -291,8 +291,16 @@ def _asp_next_inputs(spec, states, variables, env_names, targets, trace_name,
     # ran.
     n_timepoints = len(states) + horizon
     sys_names = [v for v in variables if v not in set(env_names)]
+    # Safety guarantees only. A `GF(p)` guarantee is liveness, and a finite
+    # prefix neither satisfies nor refutes it - but the encoding reports it as
+    # violated whenever p has not happened yet, which for a real prefix is most
+    # of the time. Constraining those made the *pinned history* unsatisfiable,
+    # so every plan was UNSAT however deep it went, for amba's seven justice
+    # guarantees in particular. Symmetric with only ever targeting invariant
+    # assumptions, and for the same reason.
     guarantee_names = sorted(spec.filter(
-        lambda x: x["type"] == GR1FormulaType.GAR)["name"])
+        lambda x: (x["type"] == GR1FormulaType.GAR)
+        & (x["when"] == GR1TemporalType.INVARIANT))["name"])
     program = (SpecGenerator.background_knowledge
                + spec.to_asp(for_clingo=True)
                + create_atom_signature_asp(spec.get_atoms())

@@ -69,7 +69,11 @@ def main(argv=None) -> int:
     env_names = sorted(l.split()[-1].rstrip(";")
                        for l in open(spec_path) if l.strip().startswith("env "))
     sys_names = [v for v in variables if v not in set(env_names)]
-    guarantees = sorted(spec.filter(lambda x: x["type"] == GR1FormulaType.GAR)["name"])
+    # Safety guarantees only - see _asp_next_inputs: liveness cannot be held
+    # against a finite prefix, and constraining it makes every program UNSAT.
+    guarantees = sorted(spec.filter(
+        lambda x: (x["type"] == GR1FormulaType.GAR)
+        & (x["when"] == GR1TemporalType.INVARIANT))["name"])
     targets = {args.target} if args.target else set()
     trace_name = "trace_name_0"
 
