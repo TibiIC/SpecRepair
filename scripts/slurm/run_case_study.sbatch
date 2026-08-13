@@ -78,18 +78,27 @@ export PATH="$SPEC_REPAIR_TOOLS/bin:$PATH"
 
 # clingo is invoked by name, and the compute nodes do not have it - the DoC lab
 # machines get it from /usr/bin as a system package, the GPU cluster nodes do
-# not. The build on /vol/bitbucket is shared storage, so it is reachable from
-# any node.
-CLINGO_BIN="${CLINGO_BIN:-/vol/bitbucket/tg4018/clingo-build/bin}"
-# libclingo.so sits beside the binary, so it needs to be on the loader path too.
-# Without it clingo fails to start, produces nothing, and the empty output is
-# parsed as "this trace violates no assumption at all" - the trial run reported
-# exactly that for a trace that passes the same check locally.
-if [[ -x "$CLINGO_BIN/clingo" ]]; then
+# not. The conda env on /vol/bitbucket carries its own clingo and its own
+# libraries, so it is the first choice; the standalone build is the fallback.
+#
+# The test is that clingo *runs*, not that the file is executable. The
+# standalone build passes an -x test on every node and then exits 127 on the
+# compute nodes, where it cannot load liblua5.1.so.0 - the whole of array
+# 273723 died that way, five for five, seconds in.
+clingo_runs() { "$1" --version >/dev/null 2>&1; }
+
+if ! clingo_runs clingo; then
+    CLINGO_BIN="${CLINGO_BIN:-/vol/bitbucket/tg4018/clingo-build/bin}"
+    # libclingo.so sits beside the binary, so it needs the loader path too.
     export PATH="$CLINGO_BIN:$PATH"
     export LD_LIBRARY_PATH="$CLINGO_BIN:${LD_LIBRARY_PATH:-}"
 fi
-command -v clingo >/dev/null || { echo "clingo not on PATH - set CLINGO_BIN." >&2; exit 1; }
+clingo_runs clingo || {
+    echo "clingo is on PATH but will not run here ($(command -v clingo))." >&2
+    echo "Exit 127 means a missing shared library - check with ldd." >&2
+    exit 1
+}
+echo "clingo: $(command -v clingo) ($(clingo --version 2>&1 | head -1))"
 export SPEC_REPAIR_LEARNER="$LEARNER_ARG"
 export SPEC_REPAIR_FASTLAS_RUNS="${FASTLAS_RUNS:-10}"
 
