@@ -249,23 +249,32 @@ def _bdd_args() -> list:
     """
     Which BDD backend to ask Spectra for.
 
-    Defaults to `--jtlv`, the pure-Java package. Not because it is better - it
-    is markedly slower, and its fixed 200033-node table is what leaves amba
-    thrashing in garbage collection indefinitely - but because it is the only
-    one that ran: CUDD needs a native library that ships inside the jars and was
-    never on `java.library.path`.
+    **Defaults to CUDD since 2026-08-13.** `SPEC_REPAIR_BDD=jtlv` selects the
+    pure-Java package instead.
 
-    `SPEC_REPAIR_BDD=cudd` selects CUDD instead, which `jvm.ensure_cudd_native`
-    makes loadable on Linux and Windows. Measured on gpu13: minepump 0.19s under
-    CUDD against 1.17s under JTLV, genbuf 0.2s against 0.4s, same verdicts.
+    It used to default to `--jtlv`, not because that is better but because it
+    was the only one that ran: CUDD needs a native library shipped inside the
+    jars and never on `java.library.path`, which `jvm.ensure_cudd_native` now
+    unpacks. Measured on gpu13: minepump 0.19s under CUDD against 1.17s under
+    JTLV, genbuf 0.2s against 0.4s, same verdicts.
 
-    Opt-in rather than default for the same reason as reordering: a different
-    BDD package can return a different counter-strategy among the many valid
-    ones, and the search branches on the counter-strategy it is given. Repairs
-    stay genuine, but runs either side of this are not result-comparable, so it
-    must not switch itself on underneath a sweep already in progress.
+    JTLV is not merely slower on the large case studies - it does not finish.
+    Its node table never grows, so a big specification reaches an equilibrium of
+    permanent garbage collection: genbuf trace 0 sat an hour at 100% CPU in
+    `JTLVJavaFactory.makenode` with no progress, and under CUDD cleared that
+    phase immediately. A default that cannot complete amba, genbuf or colorsort
+    is not a safe default.
+
+    The comparability caveat is real and stands: a different BDD package can
+    return a different counter-strategy among the many valid ones, and the
+    search branches on the counter-strategy it is given. Every repair found
+    remains genuine, but results from either side of this change are not
+    comparable with each other - which is why it changed between full reruns
+    rather than underneath one, and why anything measured before 2026-08-13
+    needs regenerating before it sits in the same table.
     """
-    if os.environ.get(_BDD_PACKAGE_ENV, "").strip().lower() != "cudd":
+    requested = os.environ.get(_BDD_PACKAGE_ENV, "").strip().lower() or "cudd"
+    if requested == "jtlv":
         return ["--jtlv"]
     if platform.system() == "Darwin":
         # The jars ship libcudd.so and cudd.dll and no .dylib, so there is no
@@ -274,8 +283,9 @@ def _bdd_args() -> list:
         # say so once and carry on with JTLV.
         if not _cudd_state["warned"]:
             _cudd_state["warned"] = True
-            print(f"{_BDD_PACKAGE_ENV}=cudd ignored: Spectra ships no CUDD "
-                  f"native for macOS. Using JTLV.")
+            print("Spectra ships no CUDD native for macOS; using JTLV. The "
+                  "large case studies do not finish under JTLV, so run them on "
+                  "a Linux box.")
         return ["--jtlv"]
     return []
 
