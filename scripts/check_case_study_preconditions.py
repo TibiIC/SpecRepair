@@ -73,17 +73,21 @@ def _without_last_state(lines):
     return [l + "\n" for l in kept.splitlines()]
 
 
-def check(setup: str, case_study: str):
+def check(setup: str, case_study: str, skip_realisability: bool = False):
     """Returns (rows, ok) for one case study."""
     directory = os.path.join(SPECTRA, setup, case_study)
     spec_path = os.path.join(directory, "original.spectra")
     if not os.path.isfile(spec_path):
         return [(case_study, "-", "NO SPEC", "")], False
 
-    output = synthesise_check_realisability_only(spec_path) or ""
-    realisable = "Result: Specification is realizable" in output
-    rows = [(case_study, "-", "realisable" if realisable else "NOT REALISABLE", "")]
-    ok = realisable
+    if skip_realisability:
+        rows = [(case_study, "-", "realisability not checked", "--skip-realisability")]
+        ok = True
+    else:
+        output = synthesise_check_realisability_only(spec_path) or ""
+        realisable = "Result: Specification is realizable" in output
+        rows = [(case_study, "-", "realisable" if realisable else "NOT REALISABLE", "")]
+        ok = realisable
 
     spec = SpectraSpecification.from_file(spec_path)
     traces = sorted(glob.glob(os.path.join(directory, "violation_trace_*.txt")))
@@ -125,6 +129,13 @@ def main(argv=None) -> int:
     p.add_argument("setup", help="e.g. case_study_3")
     p.add_argument("case_studies", nargs="*",
                    help="default: every case study in the setup that has traces")
+    p.add_argument("--skip-realisability", action="store_true",
+                   help="check only the traces, not that the specification is "
+                        "realisable. On macOS the realisability check goes through "
+                        "JTLV - the jars ship no CUDD .dylib - and on a large "
+                        "specification (amba, colorsort, genbuf) that sits in a "
+                        "garbage-collection equilibrium which never finishes. The "
+                        "trace checks are clingo and take seconds.")
     args = p.parse_args(argv)
 
     root = os.path.join(SPECTRA, args.setup)
@@ -134,7 +145,7 @@ def main(argv=None) -> int:
 
     all_ok = True
     for case_study in names:
-        rows, ok = check(args.setup, case_study)
+        rows, ok = check(args.setup, case_study, args.skip_realisability)
         all_ok = all_ok and ok
         for cs, trace, verdict, detail in rows:
             print(f"{cs:<20} {trace:<26} {verdict:<28} {detail}")
