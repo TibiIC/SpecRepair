@@ -95,13 +95,21 @@ export PATH="$SPEC_REPAIR_TOOLS/bin:$PATH"
 # standalone build passes an -x test on every node and then exits 127 on the
 # compute nodes, where it cannot load liblua5.1.so.0 - the whole of array
 # 273723 died that way, five for five, seconds in.
+#
+# Fix it *here*, per node, and never by installing clingo into the conda env.
+# That env is on shared NFS, so an install into it lands on every lab box at
+# once, ahead of /usr/bin/clingo - and FastLAS shells out to whatever clingo is
+# on PATH. Doing exactly that on 2026-08-13 turned every FastLAS learning task
+# into UNSATISFIABLE across the whole estate, with no code change to explain it.
+# Both builds reported version 5.7.1; the version string proves nothing.
 clingo_runs() { "$1" --version >/dev/null 2>&1; }
 
 if ! clingo_runs clingo; then
     CLINGO_BIN="${CLINGO_BIN:-/vol/bitbucket/tg4018/clingo-build/bin}"
-    # libclingo.so sits beside the binary, so it needs the loader path too.
+    # libclingo.so sits beside the binary, and liblua5.1.so.0 - which the
+    # compute nodes do not carry - is staged in ../lib next to it.
     export PATH="$CLINGO_BIN:$PATH"
-    export LD_LIBRARY_PATH="$CLINGO_BIN:${LD_LIBRARY_PATH:-}"
+    export LD_LIBRARY_PATH="$CLINGO_BIN:$(dirname "$CLINGO_BIN")/lib:${LD_LIBRARY_PATH:-}"
 fi
 clingo_runs clingo || {
     echo "clingo is on PATH but will not run here ($(command -v clingo))." >&2
