@@ -72,6 +72,12 @@ ASP_MODELS_PER_STEP = 8
 # solve and is only paid when shallower horizons come back UNSATISFIABLE.
 MAX_PLAN_HORIZON = 6
 
+# How many times a plan may be recomputed when the controller's response
+# diverges from what the plan assumed. Small: each re-plan starts from a state
+# the run actually reached, so a handful is either enough or the target is not
+# reachable from this walk at all.
+MAX_REPLANS = 5
+
 # The guess rule, lifted verbatim from the case_study_2 generator so a trace
 # built here and a trace built there mean the same thing. `_pinned_prefix_asp`
 # then fixes everything already observed, leaving only the new timepoint free.
@@ -689,34 +695,41 @@ def _run_episode(spec, spec_path, work_dir, variables, repairable, targets,
             return None
         _progress(f"PREFIX t={len(states) - 1} accepted")
 
-    # Phase 2: one plan, executed whole.
+    # Phase 2: a plan, executed - and re-planned when the controller diverges
+    # from it.
     #
-    # The plan's early moves respect the assumptions and exist to reach the
-    # state where the target becomes breakable; its last move breaks it.
-    # Executing only the first and re-planning discarded exactly those moves
-    # and then went looking for them again, which is what turned a three-step
-    # plan into a twenty-step wander.
-    plans = _targeted_inputs(spec, states, env_domains, variables,
-                             repairable, targets, rng, trace_name)
-    if not plans:
-        return None
+    # A plan is computed against a system constrained only by its guarantees,
+    # but the controller picks one specific response among those allowed. When
+    # it picks differently from what the plan assumed, the rest of the plan was
+    # computed for a state the run is no longer in, and pressing on walks into
+    # a corner: humanoid accepted the first move and hit an environment
+    # deadlock on the second.
+    #
+    # So a refusal mid-plan is not the end of the episode. The executor has
+    # advanced to a state the plan did not predict; the answer is to ask for a
+    # plan from *there*. Bounded, and every plan still comes from the solver -
+    # this is re-planning against observed state, not wandering in search of
+    # something to try.
+    for _ in range(MAX_REPLANS):
+        plans = _targeted_inputs(spec, states, env_domains, variables,
+                                 repairable, targets, rng, trace_name)
+        if not plans:
+            return None
 
-    for plan in plans:
-        for position, inputs in enumerate(plan):
+        diverged = False
+        for position, inputs in enumerate(plans[0]):
             accepted = step(inputs)
             if not accepted and refusal == "IllegalStateException":
                 _progress("AIM    environment deadlock - no input available here")
                 return None
+            if not accepted and position != len(plans[0]) - 1:
+                _progress(f"AIM    refused at step {position} - re-planning from "
+                          f"where the controller actually is")
+                diverged = True
+                break
             if not accepted:
-                # The controller will not answer. Only defensible at the last
-                # move, where the environment has just broken its side of the
-                # contract; earlier it means the plan assumed a response the
-                # controller would not give.
-                if position != len(plan) - 1:
-                    _progress(f"AIM    refused mid-plan at step {position} - "
-                              f"the plan assumed a response the controller "
-                              f"would not make")
-                    return None
+                # Refused on the last move: the environment has just broken its
+                # side, and the system has nothing legal to move to.
                 last_outputs = {k: v for k, v in (states[-1] if states else {}).items()
                                 if k not in inputs}
                 states.append({**last_outputs, **{k: v for k, v in inputs.items()
@@ -730,10 +743,8 @@ def _run_episode(spec, spec_path, work_dir, variables, repairable, targets,
                 return _trace_lines(states, variables, trace_name), sorted(violated)
             if not accepted:
                 return None
-        # Plan exhausted without the target breaking: the controller's actual
-        # responses diverged from what the plan assumed.
-        _progress("AIM    plan finished without breaking the target")
-        return None
+        if not diverged:
+            _progress("AIM    plan finished without breaking the target - re-planning")
     return None
 
 
