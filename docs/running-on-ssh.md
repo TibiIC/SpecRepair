@@ -37,6 +37,15 @@ same one every runner script uses:
 
 `LD_LIBRARY_PATH` matters: without it clingo cannot find `libclingo.so`.
 
+**But do not run `tmux` itself with it set.** tmux then loads conda's
+`libtinfo` and dies with `undefined symbol: tiparm_s`. That failure is quiet in
+the worst way: `tmux new-window` fails, the sweep still prints
+`Started 10 run(s)`, and you get a session with no windows and an empty log
+directory. The runner scripts strip it for their own tmux calls; if you are
+driving tmux by hand from a shell where you exported it, use
+`env -u LD_LIBRARY_PATH tmux ...`, or set the variable *inside* the window
+rather than outside it.
+
 Detach with `Ctrl-b d`, come back with `tmux attach -t work`. Work that should
 survive your ssh dropping **must** be inside tmux.
 

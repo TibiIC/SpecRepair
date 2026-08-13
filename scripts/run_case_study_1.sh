@@ -99,6 +99,12 @@ RUN_DATE="$(date +%Y-%m-%d)"
 # Session and log directory are learner-scoped, so a FastLAS sweep can run
 # alongside an ILASP one without the has-session check below rejecting it.
 SESSION="case_study_1_${1:-all}_${LEARNER}"
+# See run_case_study_3.sh: tmux under the conda LD_LIBRARY_PATH picks up conda's
+# libtinfo and dies with `undefined symbol: tiparm_s`, so new-window fails while
+# the sweep still reports the runs as started. Each window sets its own
+# environment, so stripping it for the tmux calls costs nothing.
+tmux() { env -u LD_LIBRARY_PATH command tmux "$@"; }
+
 CONDA_ENV="logic"
 WORKDIR="/vol/bitbucket/tg4018/PhD/SpecRepair"  # Optional working directory
 LOGDIR="$WORKDIR/logs/case_study_1/${1:-all}_${LEARNER}_$(date +%Y-%m-%d_%H%M%S)"

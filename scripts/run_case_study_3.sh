@@ -29,6 +29,17 @@
 
 set -u
 
+# tmux must not run under the conda environment's LD_LIBRARY_PATH. It picks up
+# conda's libtinfo and dies with `undefined symbol: tiparm_s, version
+# NCURSES6_TINFO_6.4.current`, which is worse than it sounds: `new-window`
+# fails, the sweep reports "Started 10 run(s)" anyway, and the session ends up
+# with no windows and an empty log directory. Observed on gpu20 on 2026-08-13,
+# following the exported LD_LIBRARY_PATH that docs/running-on-ssh.md asks for.
+#
+# Each window re-establishes its own environment through SETUP_CMDS below -
+# including LD_LIBRARY_PATH - so stripping it for the tmux calls costs nothing.
+tmux() { env -u LD_LIBRARY_PATH command tmux "$@"; }
+
 WORKDIR="${WORKDIR:-/vol/bitbucket/tg4018/PhD/SpecRepair}"
 CONDA_ENV="${CONDA_ENV:-logic}"
 # 4, not 10. Measured on gpu12 during the 2026-08-08 sweep: a case_study_3 run

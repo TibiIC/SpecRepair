@@ -28,6 +28,12 @@
 
 set -u
 
+# See run_case_study_3.sh: tmux under the conda LD_LIBRARY_PATH picks up conda's
+# libtinfo and dies with `undefined symbol: tiparm_s`, so new-window fails while
+# the sweep still reports the runs as started. Each window sets its own
+# environment, so stripping it for the tmux calls costs nothing.
+tmux() { env -u LD_LIBRARY_PATH command tmux "$@"; }
+
 WORKDIR="${WORKDIR:-/vol/bitbucket/tg4018/PhD/SpecRepair}"
 CONDA_ENV="${CONDA_ENV:-logic}"
 MAX_WINDOWS="${MAX_WINDOWS:-10}"
