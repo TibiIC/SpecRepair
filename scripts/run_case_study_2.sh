@@ -32,7 +32,7 @@ set -u
 # libtinfo and dies with `undefined symbol: tiparm_s`, so new-window fails while
 # the sweep still reports the runs as started. Each window sets its own
 # environment, so stripping it for the tmux calls costs nothing.
-tmux() { env -u LD_LIBRARY_PATH command tmux "$@"; }
+tmux() { env -u LD_LIBRARY_PATH tmux "$@"; }
 
 WORKDIR="${WORKDIR:-/vol/bitbucket/tg4018/PhD/SpecRepair}"
 CONDA_ENV="${CONDA_ENV:-logic}"

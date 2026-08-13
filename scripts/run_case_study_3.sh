@@ -38,7 +38,10 @@ set -u
 #
 # Each window re-establishes its own environment through SETUP_CMDS below -
 # including LD_LIBRARY_PATH - so stripping it for the tmux calls costs nothing.
-tmux() { env -u LD_LIBRARY_PATH command tmux "$@"; }
+# `env` execs the tmux binary from PATH, so this cannot recurse into the
+# function - and it must not be `command tmux`, which asks env to run a program
+# called "command" and fails with `env: 'command': No such file or directory`.
+tmux() { env -u LD_LIBRARY_PATH tmux "$@"; }
 
 WORKDIR="${WORKDIR:-/vol/bitbucket/tg4018/PhD/SpecRepair}"
 CONDA_ENV="${CONDA_ENV:-logic}"
