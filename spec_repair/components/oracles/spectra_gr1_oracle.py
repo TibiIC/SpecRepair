@@ -1,6 +1,6 @@
 import re
 from copy import deepcopy
-from typing import Optional, List, Tuple
+from typing import Optional, List, Set, Tuple
 
 import jpype
 
@@ -19,7 +19,24 @@ from spec_repair.wrappers.asp_wrappers import get_violations
 
 
 def filter_counter_traces(cts: List[CounterTrace], spec: SpectraSpecification) -> List[CounterTrace]:
-    unrealisable_cores = set(get_unrealisable_core_expression_names(spec))
+    """
+    Keep the counter-traces worth branching on.
+
+    The unrealisable cores are computed lazily, on the first counter-trace that
+    actually has violations, because that is the only branch that reads them.
+    Computing them up front costs Spectra's exhaustive `exploreAllCores` search
+    on every call - measured on genbuf: over an hour in
+    `Checker$Memoize.seek`, per node - even when every counter-trace is
+    violation-free and the answer is never looked at. Same verdicts either way;
+    the search is simply not run until something needs it.
+    """
+    cores_cache: List[Set[str]] = []
+
+    def unrealisable_cores() -> Set[str]:
+        if not cores_cache:
+            cores_cache.append(set(get_unrealisable_core_expression_names(spec)))
+        return cores_cache[0]
+
     filtered_cts = []
     for ct in cts:
         asp: str = NewSpecEncoder.encode_ASP(spec, [""], [ct])
@@ -31,7 +48,7 @@ def filter_counter_traces(cts: List[CounterTrace], spec: SpectraSpecification) -
             violated_expressions = set(re.findall(pattern, violations[0]))
             guarantees = set(re.findall(r'guarantee\(\s*([^)]+)\s*\)', violations[0]))
             violated_guarantees = violated_expressions.intersection(guarantees)
-            if not violated_guarantees - unrealisable_cores:
+            if not violated_guarantees - unrealisable_cores():
                 filtered_cts.append(ct)
     return filtered_cts
 
