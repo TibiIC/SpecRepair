@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 import random
 import re
 from collections import defaultdict
@@ -149,9 +150,62 @@ def ct_from_cs(cs: CounterStrategy, heuristic: HeuristicType, cs_id: Optional[in
     return choose_one_with_heuristic(cts_from_cs(cs, cs_id), heuristic)
 
 
+class CounterTraceLimitReached(Exception):
+    """Internal signal that `extract_trace` has produced as many traces as asked for."""
+
+
+_MAX_COUNTER_TRACES_ENV = "SPEC_REPAIR_MAX_COUNTER_TRACES"
+DEFAULT_MAX_COUNTER_TRACES = 1000
+
+
+def max_counter_traces() -> int:
+    """
+    How many counter-traces one counter-strategy may expand into. 0 is unbounded.
+
+    `extract_trace` walks every path through the counter-strategy and keeps the
+    ASP encoding of each, so its cost is the *number of paths* - exponential in
+    the graph, not linear in it. Measured on genbuf trace 0: the process reached
+    **52.89GB** resident inside this expansion and was OOM-killed, which is what
+    had been killing genbuf on the lab boxes (kernel SIGKILL, no `hs_err` log,
+    "dies seconds after LEARN") and what Slurm reported outright as
+    `Detected 1 oom_kill event`. Every caller then runs a clingo solve *per*
+    counter-trace in `filter_counter_traces`, so an unbounded count is
+    unaffordable twice over.
+
+    The cap is far above what the working case studies produce - minepump trace
+    2 expands to at most 3 counter-traces per counter-strategy across 18
+    expansions - so it changes nothing for them; it exists to stop a run dying.
+    """
+    raw = os.environ.get(_MAX_COUNTER_TRACES_ENV, "").strip()
+    if not raw:
+        return DEFAULT_MAX_COUNTER_TRACES
+    try:
+        value = int(raw)
+    except ValueError:
+        print(f"{_MAX_COUNTER_TRACES_ENV}={raw!r} is not an integer; "
+              f"using {DEFAULT_MAX_COUNTER_TRACES}.")
+        return DEFAULT_MAX_COUNTER_TRACES
+    return max(value, 0)
+
+
 def cs_to_named_cs_traces(cs: CounterStrategy) -> dict[str, str]:
+    """
+    Expand a counter-strategy into its counter-traces, up to `max_counter_traces()`.
+
+    Truncation is announced rather than silent. Each counter-trace kept is a
+    genuine counter-example, so a repair found from a truncated set is still a
+    real repair - but the set is no longer every counter-example the strategy
+    admits, and a branch that needed one of the discarded ones will not find it.
+    That is a completeness limitation, and one worth seeing in the log.
+    """
     trace_name_dict: dict[str, str] = {}
-    extract_trace(cs, "", cs.initial_state, 0, "ini", trace_name_dict)
+    limit = max_counter_traces()
+    try:
+        extract_trace(cs, "", cs.initial_state, 0, "ini", trace_name_dict, limit)
+    except CounterTraceLimitReached:
+        print(f"Counter-strategy expansion truncated at {limit} counter-traces "
+              f"({_MAX_COUNTER_TRACES_ENV} to change it; 0 is unbounded). "
+              f"The strategy admits more, and they are not being considered.")
 
     return trace_name_dict
 
@@ -165,7 +219,7 @@ def trace_replace_name(trace: str, old_name: str, new_name: str) -> str:
 
 # TODO: replace traces as Dict with a Set[Tuple[str,str]]
 def extract_trace(cs: CounterStrategy, output: str, state: str, timepoint: int, trace_name: str,
-                  traces: dict[str, str]) -> Optional[str]:
+                  traces: dict[str, str], limit: int = 0) -> Optional[str]:
     # Terminate on reaching the dead state, or on detecting a cycle (the same
     # state appearing more than once in the path built so far).
     if trace_name.split("_").count(state) > 1 or state == cs.dead_state:
@@ -181,9 +235,16 @@ def extract_trace(cs: CounterStrategy, output: str, state: str, timepoint: int, 
         out_copy = deepcopy(output)
         out_copy += vars_to_asp(t.outputs, timepoint)
         new_trace_name = trace_name + "_" + t.target
-        new_output = extract_trace(cs, out_copy, t.target, timepoint + 1, new_trace_name, traces)
+        new_output = extract_trace(cs, out_copy, t.target, timepoint + 1, new_trace_name, traces, limit)
         if new_output is not None:
             traces[new_output] = new_trace_name
+            # Checked here, where a trace is actually recorded, so the cap counts
+            # kept traces rather than visited paths. Unwinding by exception
+            # rather than by return: every frame below is mid-loop over its own
+            # transitions, and there is no return value that means "stop" as
+            # distinct from this path's existing "nothing to record".
+            if limit and len(traces) >= limit:
+                raise CounterTraceLimitReached
     return None
 
 

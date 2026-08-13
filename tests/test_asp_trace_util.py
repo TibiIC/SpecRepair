@@ -1,5 +1,6 @@
+import os
 import unittest
-from unittest import TestCase
+from unittest import TestCase, mock
 
 from spec_repair.model.counter_trace import cs_to_named_cs_traces
 from spec_repair.helpers.parsers.spectra_cs_parser import SpectraCSParser
@@ -68,6 +69,48 @@ class Test(TestCase):
         self.assertIn(',1,', trace)
         self.assertIn(',2,', trace)
         self.assertNotIn(',3,', trace)
+
+    def test_expansion_stops_at_the_cap(self):
+        """
+        A branching counter-strategy must not expand past the cap.
+
+        Unbounded, this expansion is exponential in the graph: genbuf trace 0
+        reached 52.89GB resident here and was OOM-killed.
+        """
+        cs_lines = [
+            'INI -> S0 {a:false} / {b:false};',
+            'INI -> S1 {a:true} / {b:true};',
+            'S0 -> DEAD {a:true} / {b:false};',
+            'S0 -> DEAD {a:true} / {b:true};',
+            'S1 -> DEAD {a:false} / {b:true};',
+            'S1 -> DEAD {a:false} / {b:false};',
+        ]
+        cs = self.parser.from_lines(cs_lines)
+
+        with mock.patch.dict(os.environ, {"SPEC_REPAIR_MAX_COUNTER_TRACES": "2"}):
+            capped = cs_to_named_cs_traces(cs)
+        self.assertEqual(2, len(capped))
+
+        with mock.patch.dict(os.environ, {"SPEC_REPAIR_MAX_COUNTER_TRACES": "0"}):
+            uncapped = cs_to_named_cs_traces(cs)
+        self.assertEqual(4, len(uncapped))
+
+    def test_cap_leaves_smaller_expansions_untouched(self):
+        """Below the cap, the result is exactly what it was before there was one."""
+        cs_lines = [
+            'INI -> S0 {a:false} / {b:false};',
+            'INI -> S1 {a:true} / {b:true};',
+            'S0 -> DEAD {a:true} / {b:false};',
+            'S1 -> DEAD {a:false} / {b:true};',
+        ]
+        cs = self.parser.from_lines(cs_lines)
+
+        with mock.patch.dict(os.environ, {"SPEC_REPAIR_MAX_COUNTER_TRACES": "1000"}):
+            bounded = cs_to_named_cs_traces(cs)
+        with mock.patch.dict(os.environ, {"SPEC_REPAIR_MAX_COUNTER_TRACES": "0"}):
+            unbounded = cs_to_named_cs_traces(cs)
+        self.assertEqual(unbounded, bounded)
+        self.assertEqual({'ini_S0_DEAD', 'ini_S1_DEAD'}, set(bounded.values()))
 
 
 if __name__ == "__main__":
