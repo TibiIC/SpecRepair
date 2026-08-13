@@ -1,0 +1,28 @@
+module Elevator
+
+env boolean floor_lower;
+env boolean floor_middle;
+env boolean floor_upper;
+sys boolean elevMot_fwd;
+sys boolean elevMot_bwd;
+
+assumption -- floor_mutual_exclusion
+	G(!(floor_lower&floor_middle) & !(floor_lower&floor_upper) & !(floor_middle&floor_upper));
+
+assumption -- stopped_implies_floor_known
+	G((!elevMot_fwd&!elevMot_bwd)->(floor_lower|floor_middle|floor_upper));
+
+guarantee -- initial_state
+	!elevMot_fwd & !elevMot_bwd;
+
+guarantee -- elevMot_mutual_exclusion
+	G(!(elevMot_fwd&elevMot_bwd));
+
+guarantee -- goal_of_forklift
+	GF(elevMot_fwd);
+
+guarantee -- change_direction_at_lower_floor
+	GF(floor_lower->elevMot_fwd);
+
+guarantee -- change_direction_at_upper_floor
+	GF(floor_upper->elevMot_bwd);

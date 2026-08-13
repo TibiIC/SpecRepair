@@ -1,0 +1,70 @@
+{
+  "case_study": "elevator",
+  "traces": [
+    {
+      "trace": 0,
+      "seed": 0,
+      "target": "floor_mutual_exclusion",
+      "violated": [
+        "floor_mutual_exclusion"
+      ],
+      "steps": 6,
+      "compliant_steps": 5,
+      "max_random_steps": 40,
+      "attempts": 25,
+      "max_targets": 1
+    },
+    {
+      "trace": 1,
+      "seed": 1,
+      "target": "stopped_implies_floor_known",
+      "violated": [
+        "stopped_implies_floor_known"
+      ],
+      "steps": 7,
+      "compliant_steps": 5,
+      "max_random_steps": 40,
+      "attempts": 25,
+      "max_targets": 1
+    },
+    {
+      "trace": 2,
+      "seed": 2,
+      "target": "floor_mutual_exclusion",
+      "violated": [
+        "floor_mutual_exclusion"
+      ],
+      "steps": 6,
+      "compliant_steps": 5,
+      "max_random_steps": 40,
+      "attempts": 25,
+      "max_targets": 1
+    },
+    {
+      "trace": 3,
+      "seed": 3,
+      "target": "stopped_implies_floor_known",
+      "violated": [
+        "stopped_implies_floor_known"
+      ],
+      "steps": 7,
+      "compliant_steps": 5,
+      "max_random_steps": 40,
+      "attempts": 25,
+      "max_targets": 1
+    },
+    {
+      "trace": 4,
+      "seed": 4,
+      "target": "floor_mutual_exclusion",
+      "violated": [
+        "floor_mutual_exclusion"
+      ],
+      "steps": 6,
+      "compliant_steps": 5,
+      "max_random_steps": 40,
+      "attempts": 25,
+      "max_targets": 1
+    }
+  ]
+}

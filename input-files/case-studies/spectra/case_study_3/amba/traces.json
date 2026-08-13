@@ -1,0 +1,74 @@
+{
+  "case_study": "amba",
+  "traces": [
+    {
+      "trace": 0,
+      "seed": 0,
+      "target": "a30",
+      "violated": [
+        "a30",
+        "hburst_mutual_exclusion"
+      ],
+      "steps": 6,
+      "compliant_steps": 5,
+      "max_random_steps": 40,
+      "attempts": 25,
+      "max_targets": 1
+    },
+    {
+      "trace": 1,
+      "seed": 1,
+      "target": "hburst_mutual_exclusion",
+      "violated": [
+        "a30",
+        "hburst_mutual_exclusion"
+      ],
+      "steps": 7,
+      "compliant_steps": 5,
+      "max_random_steps": 40,
+      "attempts": 25,
+      "max_targets": 1
+    },
+    {
+      "trace": 2,
+      "seed": 2,
+      "target": "a30",
+      "violated": [
+        "a30",
+        "hburst_mutual_exclusion"
+      ],
+      "steps": 6,
+      "compliant_steps": 5,
+      "max_random_steps": 40,
+      "attempts": 25,
+      "max_targets": 1
+    },
+    {
+      "trace": 3,
+      "seed": 3,
+      "target": "hburst_mutual_exclusion",
+      "violated": [
+        "a30",
+        "hburst_mutual_exclusion"
+      ],
+      "steps": 6,
+      "compliant_steps": 5,
+      "max_random_steps": 40,
+      "attempts": 25,
+      "max_targets": 1
+    },
+    {
+      "trace": 4,
+      "seed": 4,
+      "target": "a30",
+      "violated": [
+        "a30"
+      ],
+      "steps": 6,
+      "compliant_steps": 5,
+      "max_random_steps": 40,
+      "attempts": 25,
+      "max_targets": 1
+    }
+  ]
+}
