@@ -98,6 +98,15 @@ def check(setup: str, case_study: str, skip_realisability: bool = False):
     for path in traces:
         name = os.path.basename(path)
         lines = read_file_lines(path)
+        # The violation must be *at the last step*, not merely somewhere.
+        #
+        # Checking only "some assumption is violated in this trace" accepts a
+        # trace that broke one at step 2 and then carried on - the prefix would
+        # not be assumption-respecting behaviour, and the repair would be
+        # learning from a run that had already left the contract several steps
+        # earlier. So the prefix must be clean and the full trace must not be:
+        # everything violated appears only once the final state is included.
+        asms_prefix = violated(spec, _without_last_state(lines), "assumption")
         asms = violated(spec, lines, "assumption")
         # Guarantees are judged on the trace *without* its last state.
         #
@@ -114,6 +123,9 @@ def check(setup: str, case_study: str, skip_realisability: bool = False):
         gars = violated(spec, _without_last_state(lines), "guarantee")
         if not asms:
             verdict, detail = "BAD: violates no assumption", ""
+        elif asms_prefix:
+            verdict = "BAD: assumption broken before the last step"
+            detail = ", ".join(sorted(asms_prefix))
         elif gars:
             verdict, detail = "BAD: violates guarantee(s)", ", ".join(sorted(gars))
         else:
