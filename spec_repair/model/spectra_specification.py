@@ -20,7 +20,7 @@ from spec_repair.model.gr1_formula import GR1Formula
 from spec_repair.helpers.formatters.spectra_formula_formatter import SpectraFormulaFormatter
 from spec_repair.helpers.parsers.spectra_formula_parser import SpectraFormulaParser
 from spec_repair.helpers.formatters.spot_specification_formatter import SpotSpecificationFormatter
-from spec_repair.ltl_types import GR1FormulaType, GR1TemporalType, TemporalDialect
+from spec_repair.ltl_types import GR1FormulaType, GR1TemporalType, TemporalDialect, LTLFiltOperation
 from spec_repair.util.file_util import read_file_lines, validate_spectra_file
 from spec_repair.util.ltl_formula_util import get_disjuncts_from_disjunction
 from spec_repair.util.formula_string_util import format_spec
@@ -282,9 +282,9 @@ class SpectraSpecification(ISpecification):
         return self.is_equivalent_to_spot("G(false)", formula_type)
 
     def equivalent_to(self, other, formula_type: Optional[GR1FormulaType] = None) -> bool:
-        f1 = spot.formula(self.to_formatted_string(SpotSpecificationFormatter(formula_type)))
-        f2 = spot.formula(other.to_formatted_string(SpotSpecificationFormatter(formula_type)))
-        return spot.are_equivalent(f1, f2)
+        f1 = self.to_formatted_string(SpotSpecificationFormatter(formula_type))
+        f2 = other.to_formatted_string(SpotSpecificationFormatter(formula_type))
+        return are_equivalent(f1, f2)
 
     def implies(self, other, formula_type: Optional[GR1FormulaType] = None) -> bool:
         f1 = self.to_formatted_string(SpotSpecificationFormatter(formula_type))
@@ -295,9 +295,8 @@ class SpectraSpecification(ISpecification):
         return other.implies(self, formula_type)
 
     def is_equivalent_to_spot(self, formula: str, formula_type: Optional[GR1FormulaType]):
-        f1 = spot.formula(self.to_formatted_string(SpotSpecificationFormatter(formula_type)))
-        f2 = spot.formula(formula)
-        return spot.are_equivalent(f1, f2)
+        f1 = self.to_formatted_string(SpotSpecificationFormatter(formula_type))
+        return are_equivalent(f1, formula)
 
     def get_weakness(self, type: GR1FormulaType = GR1FormulaType.ASM) -> Weakness:
         """
@@ -463,6 +462,34 @@ class SpectraSpecification(ISpecification):
         merged_spec._atoms = self._atoms.union(other._atoms)
 
         return merged_spec
+
+
+def are_equivalent(left_exp: str, right_exp: str) -> bool:
+    """
+    Equivalence through `ltlfilt`, in a subprocess, never in this process.
+
+    `spot.formula()` interns formula nodes, and on a large formula that
+    interning segfaults - `spot::fnode::unique`, SIGSEGV, si_addr 0x30, a null
+    dereference. Because `import spot` loads libspot into *this* process,
+    alongside the JVM, the crash takes the whole run with it: amba's trace 3
+    lost a six-hour repair at the merge, and the same frame killed runs during
+    the sweeps.
+
+    A subprocess cannot do that. If ltlfilt dies, one comparison fails and the
+    caller sees an exception it can handle, which is exactly how
+    `does_left_imply_right` has always worked - equivalence simply never
+    followed suit.
+    """
+    cmd = ["ltlfilt", "-c", "-f", left_exp, LTLFiltOperation.EQUIVALENT.flag(), right_exp]
+    p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stdin=subprocess.PIPE,
+                         stderr=subprocess.PIPE)
+    output = p.communicate()[0].decode("utf-8")
+    reg = re.search(r"([01])\n", output)
+    if not reg:
+        raise Exception(
+            f"The output of ltlfilt is unexpected, ergo error occurred during the "
+            f"equivalence check of:\n{left_exp}\nand\n{right_exp}")
+    return reg.group(1) == "1"
 
 
 def does_left_imply_right(left_exp: str, right_exp: str) -> bool:
