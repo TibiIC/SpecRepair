@@ -31,8 +31,18 @@
 
 #SBATCH --job-name=specrepair
 #SBATCH --cpus-per-task=2
-#SBATCH --mem=8G
-#SBATCH --time=12:00:00
+# A repair run holds 5-9GB once its search is a few thousand nodes deep, so 8G
+# was inside the range it is expected to reach - and over the limit is an OOM
+# kill, not a slowdown.
+#SBATCH --mem=16G
+# Slurm ends a job at its time limit with SIGTERM, which is exit 143 - the same
+# signature as the unexplained lab-box kills. Long runs are intended here
+# (minepump_2 was at leaf #2149 after 5h51m and still going), so the limit must
+# be well clear of them. The `long` partition allows up to 30 days; every
+# partition on this cluster is a GPU partition, so gres/gpu:1 is not optional
+# and CPU-only jobs still queue against the GPU quota.
+#SBATCH --partition=long
+#SBATCH --time=7-00:00:00
 #SBATCH --output=slurm-%A_%a.out
 
 set -u
