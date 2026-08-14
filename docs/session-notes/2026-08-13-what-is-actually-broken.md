@@ -62,3 +62,72 @@ Worth noting as a limitation: four of the five traces violate *both* violable
 assumptions, and only trace 4 isolates one. No trace isolates
 `hburst_mutual_exclusion`. So as coverage of distinct weakenings amba gives two
 cases, not five.
+
+**Those numbers are now superseded.** They were measured under JTLV, and the
+rerun below is under CUDD. The two are not comparable, and the results file
+still carries the JTLV figures until the rerun finishes.
+
+## CUDD, and the rerun
+
+JTLV does not merely slow the large case studies down, it never finishes them,
+so `SPEC_REPAIR_BDD` now defaults to **cudd** (`7fdb277`); `=jtlv` opts out, and
+macOS still falls back since the jars ship no `.dylib`. The comparability
+caveat that kept it opt-in is real and unchanged - a different BDD package can
+return a different counter-strategy, and the search branches on what it is
+given - which is why it changed between full reruns rather than underneath one.
+
+Everything measured before 2026-08-13 therefore needs regenerating.
+
+Both arms relaunched at 21:57 and 21:58 on gpu20 and gpu12: 55 runs each, all
+eleven case studies, four concurrent. Confirmed on a live process rather than
+assumed - `net.sf.javabdd.CUDDFactory` loaded, zero JTLV frames.
+
+## The sweep that started nothing
+
+The first launch printed `Started 10 run(s)` and produced no windows and an
+empty log directory. tmux had loaded conda's `libtinfo` and died with
+`undefined symbol: tiparm_s`, so every `new-window` failed while the script
+counted them as started. The trigger is the `LD_LIBRARY_PATH` export that
+`running-on-ssh.md` tells you to set, so the trap sits in the documented path.
+
+Fixed in all three runners and the doc (`04da663`). The first attempt at the fix
+used `env -u LD_LIBRARY_PATH command tmux`, which asks `env` to exec a shell
+builtin and failed identically - a session with no windows (`7bc984d`). The
+count also went from a wrong "10" to the correct 55 once tmux worked, so the job
+enumeration had been fine all along.
+
+## Trivial solutions
+
+50 of 55 generated ahead of the runs, stamped `2026-08-13` to match them: 146
+specification files, every directory populated (checked for empty directories
+explicitly - one produces a graph silently missing its floor).
+
+genbuf is the exception, at 0 of 5. It has sat over 13 hours in
+`Checker$Memoize.seek` - Spectra's `exploreAllCores` - and because the script
+works alphabetically it was blocking the 40 case studies behind it, which is why
+the rest ran separately on gpu01.
+
+## What the rerun is showing so far
+
+**genbuf finishes.** It had never once completed, on any machine, under either
+learner. It now does, in about ten minutes: ILASP has four of five in
+(`genbuf_2` repaired, `genbuf_0/1/4` completing with no repair), and FastLAS has
+`genbuf_2` clean. Both fixes were needed - the counter-trace cap for the 53GB,
+CUDD for the JTLV thrash.
+
+**ILASP repairs amba after all.** The results file records 0/5 at 600s and
+3600s; under CUDD `amba_4` comes back exit 0. Those earlier runs were dying
+rather than failing to learn, so "ILASP cannot repair amba or genbuf" needs
+rewriting from this data rather than carried forward.
+
+Two things still open, both on the same two ceilings:
+
+* `colorsort_0` reached **28.5GB** and ended on **exit 143**, a SIGTERM rather
+  than the kernel's SIGKILL. Not the expansion bug - that is capped, and this
+  grew steadily with elapsed time, which is what CUDD's native, uncapped BDD
+  tables do. The unexplained SIGTERM is therefore still unexplained.
+* `genbuf_3` on the FastLAS arm has been in `exploreAllCores` for 13 hours,
+  where its sibling traces cleared the same code in minutes. Same wall as the
+  trivial solutions. Bounding that search - and treating an overrun as "Spectra
+  reached no verdict", which is the mechanism already used when synthesis
+  exhausts the heap - is the open decision.
