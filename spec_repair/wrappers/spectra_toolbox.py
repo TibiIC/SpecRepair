@@ -15,6 +15,7 @@ from spec_repair.enums import SimEnv
 from spec_repair.util.asp_trace_util import pRespondsToS_substitution, simplify_assignments
 from spec_repair.util.file_util import generate_temp_filename, get_line_from_file, read_file_lines, write_to_file
 from spec_repair.util.formula_string_util import shift_prev_to_next
+from spec_repair.util.spectra_text_util import canonical_spectra_text
 from spec_repair.util.formula_string_util import strip_vars
 
 SpectraToolbox = jpype.JClass('cores.SpectraToolbox')
@@ -41,9 +42,18 @@ def run_all_unrealisable_cores(spectra_str: str) -> List[Set[str]]:
     expensive call in the system - exponential in the number of expressions, and
     measured on genbuf at over thirteen hours inside `Checker$Memoize.seek`
     without returning - and the same specification text reaches it repeatedly.
+
+    The *key* is canonicalised so that `asm A; gar B` and `gar B; asm A` share an
+    entry. The *search* is still given `spectra_str` exactly as it arrived:
+    `_search_all_unrealisable_cores` maps Spectra's answer back onto names by
+    line number, so analysing reordered text would attach the wrong names to a
+    core. Checked against the real tool rather than assumed - permuting the
+    formulas of a two-core specification returns the same cores every time.
     """
     return unrealisable_core_cache.lookup_or_compute(
-        spectra_str, _bdd_package_name(), lambda: _search_all_unrealisable_cores(spectra_str))
+        canonical_spectra_text(spectra_str),
+        _bdd_package_name(),
+        lambda: _search_all_unrealisable_cores(spectra_str))
 
 
 def _search_all_unrealisable_cores(spectra_str: str) -> List[Set[str]]:
