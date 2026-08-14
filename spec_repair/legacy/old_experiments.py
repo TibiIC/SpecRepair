@@ -21,7 +21,7 @@ from spec_repair.util.patterns import PRS_REG
 from spec_repair.util.formula_string_util import format_spec, extract_all_expressions, negate, strip_vars
 from spec_repair.legacy.spec_dataframe_util import extract_df_content
 from spec_repair.util.asp_trace_util import generate_trace_asp, generate_model, simplify_assignments, run_clingo_raw
-from spec_repair.wrappers.spectra_toolbox import semantically_identical_spot, extract_all_expressions_spot, realizable
+from spec_repair.wrappers.spectra_toolbox import semantically_identical_spot, extract_all_expressions_spot, is_realizable
 from spec_repair.legacy.case_study_translator import delete_files, parenthetic_contents_with_function, translate_case_study, negate_and_simplify
 from spec_repair.config import PROJECT_PATH, FASTLAS, GENERATE_MULTIPLE_TRACES, PATH_TO_CLI, PRINT_CS
 from spec_repair.enums import SimEnv, Outcome, Learning, When
@@ -165,7 +165,7 @@ def strengthen_n(spectra_file, include_prev):
             return None
         start_file = f"{PROJECT_PATH}/input-files/strengthened/{folder}/{name}_dropped{count}.spectra"
         write_file(start_file, spec)
-        if realizable(start_file, suppress=True):
+        if is_realizable(start_file, suppress=True):
             # if not contains_contradictions(start_file, "assumption|asm"):
             old_specs.append(spec)
             start_files.append(start_file)
@@ -240,7 +240,7 @@ def drop_and_evaluate(spectra_file, repeat=1, limit=10, expressions=["assumption
             if start_file == "none exist":
                 print("none exist")
                 return None
-            if realizable(start_file, suppress=True):
+            if is_realizable(start_file, suppress=True):
                 old_specs.append(spec)
                 break
             # while not realizable(start_file, suppress=True):
@@ -599,7 +599,7 @@ def rq1_random():
     for name in files.keys():
         start_files = {files[name]["start"]: "non_temporal"}
         end_file = files[name]["end"]
-        assert (realizable(end_file))
+        assert (is_realizable(end_file))
         if runall:
             filename = re.search(r"/([^/]*)\.spectra", files[name]["end"]).group(1)
             start_files = get_start_files(filename)  # , cap=strengthened * 4)
@@ -607,7 +607,7 @@ def rq1_random():
         for start_file in start_files.keys():
             if start_count == strengthened:
                 continue
-            if not realizable(start_file):
+            if not is_realizable(start_file):
                 continue
 
             trace_file = generate_filename(start_file, "_auto_violation.txt")
@@ -925,7 +925,7 @@ def drop_and_run(limit=10, repeat=10, include_prev=False):
         # f"{PROJECT_PATH}/input-files/examples/lift_FINAL_NEW.spectra",
         f"{PROJECT_PATH}/input-files/examples/lift_FINAL.spectra"]
     # include_prevs = [False,True,True,False]
-    assert (all([realizable(file, False) for file in files]))
+    assert (all([is_realizable(file, False) for file in files]))
     total_df = None
     for file in files:
         results1 = drop_and_evaluate(file, repeat, limit, expressions=["assumption"], include_prev=include_prev)

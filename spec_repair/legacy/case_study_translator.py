@@ -5,7 +5,7 @@ import re
 
 from spec_repair.util.asp_trace_util import pRespondsToS_substitution
 from spec_repair.util.formula_string_util import parenthetic_contents, negate, push_negations
-from spec_repair.wrappers.spectra_toolbox import realizable
+from spec_repair.wrappers.spectra_toolbox import is_realizable
 from spec_repair.legacy.case_study_helpers import get_name
 from spec_repair.util.file_util import read_file_lines, write_file
 
@@ -274,7 +274,7 @@ def translate_case_study(folder, start_time, delete_broken=True, broad=False):
             log_line.append(re.sub(r"No_file_written:", "", translated_file_cli))
             log.writerow(log_line)
             return []
-        spec_is_realizable = realizable(translated_file_cli, True)
+        spec_is_realizable = is_realizable(translated_file_cli, True)
         if spec_is_realizable is None:
             log_line.append("Initial Spec Incompatible")
             log.writerow(log_line)
@@ -430,7 +430,7 @@ def check_BC_list(BC_list, filename, spec, start_time, delete_broken=True, broad
                 log_line.append(failed.group(1))
                 log.writerow(log_line)
                 continue
-            realizable_status = realizable(temp_file_cli, True)
+            realizable_status = is_realizable(temp_file_cli, True)
             if realizable_status is None:
                 log_line.append("Incompatible format")
                 log.writerow(log_line)

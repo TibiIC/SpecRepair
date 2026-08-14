@@ -85,20 +85,31 @@ def incomplete_trace(spec_path, target, seed, compliant_steps, walk_limit):
 
         # Phase 2, stopped early: walk until the solver can name a violating
         # input, then hand that input back rather than executing it.
+        #
+        # Whether an input is *the* violating one is the solver's answer, not
+        # `_hypothetical_violations`'s. That check evaluates with the system
+        # frozen at its current outputs - "what breaks if the system does not
+        # move" - which is the wrong question here for the same reason it was
+        # wrong in `_targeted_inputs`, where it was removed. It is especially
+        # wrong for an assumption like lift's `G(b1 & f1 -> next(!b1))`, whose
+        # antecedent needs a *system* variable: frozen, it can hardly ever
+        # confirm the violation, so good plans were discarded and the walk ran
+        # to its limit. Nothing is executed here anyway, so there is no second
+        # opinion to be had - the solver said this input breaks the target
+        # under a system that respects its guarantees, and that is the claim
+        # being handed to Eclipse to check.
         for _ in range(walk_limit):
-            candidates = ctg._targeted_inputs(spec, states, env_domains, variables,
-                                              repairable, {target}, rng, "trace_name_0")
-            if not candidates:
-                return None
-            proposed = candidates[0]
-            breaks = ctg._hypothetical_violations(spec, states, proposed, variables,
-                                                  repairable, "trace_name_0")
-            if target in breaks:
-                return states, proposed
-            # Not yet the violating step - a move towards it. Execute and go on.
-            if not step(proposed):
-                # The controller refused a step that was not meant to violate:
-                # this walk is spent.
+            violating = ctg._asp_next_inputs(spec, states, variables,
+                                             sorted(env_domains), {target},
+                                             "trace_name_0", horizon=1)
+            if violating:
+                return states, violating[0]
+
+            # Not violable in one step from here. Take a step that breaks
+            # nothing and try again from the next state.
+            onward = ctg._targeted_inputs(spec, states, env_domains, variables,
+                                          repairable, set(), rng, "trace_name_0")
+            if not onward or not any(step(c) for c in onward):
                 return None
         return None
     finally:

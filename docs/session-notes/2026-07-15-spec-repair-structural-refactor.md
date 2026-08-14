@@ -52,7 +52,7 @@ concrete causes rather than just "things feel messy":
      parsing/normalization (self-contained, no deps on the other two)
    - `util/file_util.py` — gained `write_trace`
    - **new** `wrappers/spectra_toolbox.py` — the JVM-backed
-     `SpectraToolbox`/`SpectraCLI` integration (`realizable`,
+     `SpectraToolbox`/`SpectraCLI` integration (`is_realizable`,
      `synthesise_*`, `run_all_unrealisable_cores*`) plus the `ltlfilt`-based
      Spot semantic-equivalence cluster (it calls `realizable()`, so keeping
      it separate would have forced a `util → wrappers` back-edge)

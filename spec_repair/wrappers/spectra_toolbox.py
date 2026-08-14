@@ -1,4 +1,3 @@
-import hashlib
 import os
 import os.path
 import platform
@@ -11,6 +10,7 @@ import jpype
 from jpype.types import *
 
 import spec_repair.wrappers.jvm  # noqa: F401 - import side effect starts the shared JVM
+from spec_repair.components.unrealisable_core_cache import UnrealisableCoreCache
 from spec_repair.enums import SimEnv
 from spec_repair.util.asp_trace_util import pRespondsToS_substitution, simplify_assignments
 from spec_repair.util.file_util import generate_temp_filename, get_line_from_file, read_file_lines, write_to_file
@@ -22,71 +22,39 @@ SpectraCLI = jpype.JClass('tau.smlab.syntech.Spectra.cli.SpectraCliTool')
 
 
 _UC_CACHE_ENV = "SPEC_REPAIR_UC_CACHE"
-_uc_cache: dict = {}
-_uc_stats = {"calls": 0, "hits": 0, "searches": 0, "skipped_realizable": 0}
+
+# One cache for the process, owned here rather than hidden inside the function.
+# Swap it or call .reset() to control it; SPEC_REPAIR_UC_CACHE=0 starts it off.
+unrealisable_core_cache = UnrealisableCoreCache(
+    enabled=os.environ.get(_UC_CACHE_ENV, "1").strip() != "0")
 
 
-def unrealisable_core_cache_stats() -> dict:
-    """A copy of the core-search counters, for measuring whether the cache earns its place."""
-    return dict(_uc_stats)
-
-
-def _uc_cache_key(spectra_str: str) -> str:
-    """
-    Key a core search on the *exact* specification text handed to Spectra.
-
-    Syntactic identity on purpose. Semantically equivalent specifications are not
-    interchangeable here: Spectra reports cores as sets of expression *names*,
-    and two specifications that mean the same thing can name their formulas
-    differently or be covered by different subsets of formulas, so a semantic key
-    would return names the caller cannot map back onto its own specification.
-
-    No comparison is needed to use it. `spec.to_str(is_to_compile=True)` is
-    already a canonical serialisation, so the hash of that string *is* the
-    syntactic identity, and lookup is a dict hit rather than a search.
-
-    The BDD package is part of the key because it is part of the computation:
-    CUDD and JTLV can differ in which cores they report, and results from the
-    two must not be served to each other.
-    """
-    package = "jtlv" if _bdd_args() else "cudd"
-    return f"{package}:{hashlib.sha256(spectra_str.encode('utf-8')).hexdigest()}"
+def _bdd_package_name() -> str:
+    return "jtlv" if _bdd_args() else "cudd"
 
 
 def run_all_unrealisable_cores(spectra_str: str) -> List[Set[str]]:
     """
     Gets the names of all unrealisable cores from a given spectra specification as string.
 
-    Memoised on the specification text, because the search is the most expensive
-    call in the system and the same text recurs: `filter_counter_traces` and
-    `new_spec_encoder` both ask for the cores of the node's specification, and
-    the search itself is exponential in the number of expressions - measured on
-    genbuf at over thirteen hours inside `Checker$Memoize.seek` without
-    returning. Set `SPEC_REPAIR_UC_CACHE=0` to disable.
-
-    Sound because the answer is a function of its input: same specification text,
-    same BDD package, same cores. Both are in the key.
+    Memoised through `unrealisable_core_cache`, because the search is the most
+    expensive call in the system - exponential in the number of expressions, and
+    measured on genbuf at over thirteen hours inside `Checker$Memoize.seek`
+    without returning - and the same specification text reaches it repeatedly.
     """
-    use_cache = os.environ.get(_UC_CACHE_ENV, "1").strip() != "0"
-    key = _uc_cache_key(spectra_str) if use_cache else None
-    _uc_stats["calls"] += 1
-    if key is not None and key in _uc_cache:
-        _uc_stats["hits"] += 1
-        # Copied out: callers build sets from this and one mutating the result
-        # would poison every later hit.
-        return [set(core) for core in _uc_cache[key]]
+    return unrealisable_core_cache.lookup_or_compute(
+        spectra_str, _bdd_package_name(), lambda: _search_all_unrealisable_cores(spectra_str))
 
+
+def _search_all_unrealisable_cores(spectra_str: str) -> List[Set[str]]:
+    """The actual search, with no memoisation of its own."""
     temp_spectra_file = generate_temp_filename(ext=".spectra")
     write_to_file(temp_spectra_file, spectra_str)
     pRespondsToS_substitution(temp_spectra_file)
     # A realizable specification has no unrealisable core by definition, so the
     # exhaustive exploreAllCores search below can only ever return [].
     if is_realizable(temp_spectra_file, suppress=True):
-        _uc_stats["skipped_realizable"] += 1
-        if key is not None:
-            _uc_cache[key] = []
         return []
-    _uc_stats["searches"] += 1
     output = run_all_unrealisable_cores_raw(temp_spectra_file)
     core_nums_list: List[Set[int]] = _extract_cores(output)
     core_names_list = []
@@ -97,8 +65,6 @@ def run_all_unrealisable_cores(spectra_str: str) -> List[Set[str]]:
             name = line_with_name.split("--")[1].strip()
             core_names.add(name)
         core_names_list.append(core_names)
-    if key is not None:
-        _uc_cache[key] = [set(core) for core in core_names_list]
     return core_names_list
 
 
