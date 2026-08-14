@@ -120,6 +120,21 @@ echo "clingo: $(command -v clingo) ($(clingo --version 2>&1 | head -1))"
 export SPEC_REPAIR_LEARNER="$LEARNER_ARG"
 export SPEC_REPAIR_FASTLAS_RUNS="${FASTLAS_RUNS:-10}"
 
+# Results are written to <case>_trace<N>_<learner>_<RUN_DATE>/, and every
+# pipeline step selects a run by globbing `*_<date>`. A job continuing an
+# earlier sweep therefore has to carry that sweep's date or its results land in
+# a second tree and post-processing silently sees half of each:
+#
+#     SPEC_REPAIR_RUN_DATE=2026-08-13 sbatch ... run_case_study.sbatch ...
+#
+# Inherited from the submitting environment when set - do not pass it through
+# `--export`, which on this cluster fails the job with "user env retrieval
+# failed requeued held". Unset, each job stamps its own start date.
+if [[ -n "${SPEC_REPAIR_RUN_DATE:-}" ]]; then
+    export SPEC_REPAIR_RUN_DATE
+    echo "run date: $SPEC_REPAIR_RUN_DATE (inherited)"
+fi
+
 # The array index selects one (case study, trace) pair. Built from what is on
 # disk rather than assumed: a controller-generated case study only has the
 # traces its controller produced, so case_study_3's pcar has 0, 1, 2 and 4.
