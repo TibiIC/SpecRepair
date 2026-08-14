@@ -126,14 +126,25 @@ def save_layered_graph(G: nx.DiGraph, filepath: str, depth: Optional[int] = None
 
 def learner_suffix(learner: str) -> str:
     """
-    `_fastlas` for a non-default solver, empty for ILASP.
+    `_<learner>` always - `_ilasp` as much as `_fastlas`.
 
-    Empty for the default deliberately: every existing output path, pulled
-    directory and downstream expectation was written against the unsuffixed
-    name, and an ILASP run should keep producing exactly those. A FastLAS run
-    lands beside it rather than overwriting it, so the two are comparable.
+    It used to be empty for the default learner, so that ILASP kept producing
+    the unsuffixed paths everything downstream had been written against. That
+    convenience cost more than it saved:
+
+    * the two arms of a sweep were shaped differently, so anything iterating
+      over runs needed to know which learner produced which name;
+    * an unsuffixed directory is indistinguishable from *any* older ILASP run at
+      the same date, which is the trap `running-on-ssh.md` already warns about
+      under "run directories are not cleared between sweeps";
+    * a query for the ILASP results of a live sweep reported `NO_DIR` for all
+      thirteen running jobs, which read exactly like "produced nothing" -
+      measured on 2026-08-14.
+
+    Old unsuffixed directories are unaffected: this changes where *new* runs
+    write, not how existing results are read.
     """
-    return "" if learner == DEFAULT_LEARNER else f"_{learner}"
+    return f"_{learner}"
 
 
 def run_date_str() -> str:

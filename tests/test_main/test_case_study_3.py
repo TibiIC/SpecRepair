@@ -32,7 +32,8 @@ own name and can be selected individually - which is what
     test_case_study_3_minepump_1_syn
     ...
 
-Output goes to `test_files/out/case_study_3/<case_study>_trace<ID>_<date>/`,
+Output goes to
+`test_files/out/case_study_3/<case_study>_trace<ID>_<learner>_<date>/`,
 which is the layout `pull_experiment_from_ssh.sh` expects under a different
 REMOTE_SUBDIR.
 """
