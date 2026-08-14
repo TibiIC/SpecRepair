@@ -100,10 +100,21 @@ on FastLAS. Long is expected here and is not itself evidence of a fault.
 
 ## Open, and unchanged from last night
 
-* **`exploreAllCores` has no bound.** `genbuf_3` on FastLAS is 13h30m inside
-  `Checker$Memoize.seek`; genbuf's trivial solutions are 13h13m into the same
-  call. Sibling genbuf traces cleared it in minutes. This is what blocks
-  genbuf's graphs, since it is the trivial solutions that are stuck.
+* **`exploreAllCores` does not return on genbuf.** `genbuf_3` on FastLAS is
+  13h30m inside `Checker$Memoize.seek`; genbuf's trivial solutions are 13h13m
+  into the same call. Sibling genbuf traces cleared it in minutes. This is what
+  blocks genbuf's graphs, since it is the trivial solutions that are stuck.
+
+  **It must not be bounded.** A time budget returns a silently smaller core set,
+  which is indistinguishable from a complete one and breaks the hitting-set
+  argument the trivial solution algorithm is proven on - a wrong trivial
+  solution is a wrong floor under every graph drawn against it. The tool's known
+  defect (it returns neither all cores nor only minimal ones) is already
+  accounted for by the recheck loop in
+  `get_all_trivial_solutions_guarantee_only`; truncation is a different and
+  unrecoverable failure. The options are to wait, to run it elsewhere, or to
+  report genbuf without graphs. Reducing the *number* of calls is fair game -
+  that is what the core cache does - since it changes no answer.
 * **colorsort died on SIGTERM at 28.5GB.** Exit 143, not the kernel's 137, so
   the unexplained SIGTERM is still unexplained. The growth itself is steady with
   elapsed time, which is what CUDD's native uncapped BDD tables do - not the

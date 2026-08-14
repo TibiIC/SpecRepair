@@ -128,6 +128,8 @@ Two things still open, both on the same two ceilings:
   tables do. The unexplained SIGTERM is therefore still unexplained.
 * `genbuf_3` on the FastLAS arm has been in `exploreAllCores` for 13 hours,
   where its sibling traces cleared the same code in minutes. Same wall as the
-  trivial solutions. Bounding that search - and treating an overrun as "Spectra
-  reached no verdict", which is the mechanism already used when synthesis
-  exhausts the heap - is the open decision.
+  trivial solutions. **Not to be bounded** - a truncated core set is silently
+  indistinguishable from a complete one and breaks the proven hitting-set
+  argument beneath the trivial solutions, so the options are to wait or to
+  report without graphs. Reducing how *often* it is called is fine and is what
+  the core cache does.
