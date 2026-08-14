@@ -1,3 +1,4 @@
+import hashlib
 import os
 import os.path
 import platform
@@ -20,24 +21,72 @@ SpectraToolbox = jpype.JClass('cores.SpectraToolbox')
 SpectraCLI = jpype.JClass('tau.smlab.syntech.Spectra.cli.SpectraCliTool')
 
 
+_UC_CACHE_ENV = "SPEC_REPAIR_UC_CACHE"
+_uc_cache: dict = {}
+_uc_stats = {"calls": 0, "hits": 0, "searches": 0, "skipped_realizable": 0}
+
+
+def unrealisable_core_cache_stats() -> dict:
+    """A copy of the core-search counters, for measuring whether the cache earns its place."""
+    return dict(_uc_stats)
+
+
+def _uc_cache_key(spectra_str: str) -> str:
+    """
+    Key a core search on the *exact* specification text handed to Spectra.
+
+    Syntactic identity on purpose. Semantically equivalent specifications are not
+    interchangeable here: Spectra reports cores as sets of expression *names*,
+    and two specifications that mean the same thing can name their formulas
+    differently or be covered by different subsets of formulas, so a semantic key
+    would return names the caller cannot map back onto its own specification.
+
+    No comparison is needed to use it. `spec.to_str(is_to_compile=True)` is
+    already a canonical serialisation, so the hash of that string *is* the
+    syntactic identity, and lookup is a dict hit rather than a search.
+
+    The BDD package is part of the key because it is part of the computation:
+    CUDD and JTLV can differ in which cores they report, and results from the
+    two must not be served to each other.
+    """
+    package = "jtlv" if _bdd_args() else "cudd"
+    return f"{package}:{hashlib.sha256(spectra_str.encode('utf-8')).hexdigest()}"
+
+
 def run_all_unrealisable_cores(spectra_str: str) -> List[Set[str]]:
     """
     Gets the names of all unrealisable cores from a given spectra specification as string.
+
+    Memoised on the specification text, because the search is the most expensive
+    call in the system and the same text recurs: `filter_counter_traces` and
+    `new_spec_encoder` both ask for the cores of the node's specification, and
+    the search itself is exponential in the number of expressions - measured on
+    genbuf at over thirteen hours inside `Checker$Memoize.seek` without
+    returning. Set `SPEC_REPAIR_UC_CACHE=0` to disable.
+
+    Sound because the answer is a function of its input: same specification text,
+    same BDD package, same cores. Both are in the key.
     """
+    use_cache = os.environ.get(_UC_CACHE_ENV, "1").strip() != "0"
+    key = _uc_cache_key(spectra_str) if use_cache else None
+    _uc_stats["calls"] += 1
+    if key is not None and key in _uc_cache:
+        _uc_stats["hits"] += 1
+        # Copied out: callers build sets from this and one mutating the result
+        # would poison every later hit.
+        return [set(core) for core in _uc_cache[key]]
+
     temp_spectra_file = generate_temp_filename(ext=".spectra")
     write_to_file(temp_spectra_file, spectra_str)
     pRespondsToS_substitution(temp_spectra_file)
     # A realizable specification has no unrealisable core by definition, so the
-    # exhaustive exploreAllCores search below can only ever return []. Paying a
-    # single realizability check first to skip it is a large win: on ColorSort's
-    # 77-formula spec exploreAllCores ran >16 minutes without returning, while
-    # the realizability check answers in ~1.4s. Every other case study's spec is
-    # small enough that exploreAllCores finishes in <1s either way, so this only
-    # ever adds ~0.05s there. `realizable` returns None when the file isn't in a
-    # form the CLI can check - deliberately fall through to the full search in
-    # that case rather than assume anything.
-    if realizable(temp_spectra_file, suppress=True):
+    # exhaustive exploreAllCores search below can only ever return [].
+    if is_realizable(temp_spectra_file, suppress=True):
+        _uc_stats["skipped_realizable"] += 1
+        if key is not None:
+            _uc_cache[key] = []
         return []
+    _uc_stats["searches"] += 1
     output = run_all_unrealisable_cores_raw(temp_spectra_file)
     core_nums_list: List[Set[int]] = _extract_cores(output)
     core_names_list = []
@@ -48,6 +97,8 @@ def run_all_unrealisable_cores(spectra_str: str) -> List[Set[str]]:
             name = line_with_name.split("--")[1].strip()
             core_names.add(name)
         core_names_list.append(core_names)
+    if key is not None:
+        _uc_cache[key] = [set(core) for core in core_names_list]
     return core_names_list
 
 
@@ -85,7 +136,7 @@ def semantically_identical_spot(to_cmp_file, baseline_file):
     if assumption is None:
         return SimEnv.Invalid
     if not assumption:
-        if realizable(to_cmp_file):
+        if is_realizable(to_cmp_file):
             return SimEnv.Realizable
         else:
             # This should never happen:
@@ -162,7 +213,7 @@ def violations_in_initial_conditions(file):
     return False
 
 
-def realizable(file, suppress=False):
+def is_realizable(file, suppress=False):
     if violations_in_initial_conditions(file):
         print("Spectra file in wrong format for CLI realizability check: (initial conditions)")
         print(file)
