@@ -83,6 +83,23 @@ def _error_file_arg() -> str:
 if not jpype.isJVMStarted():
     _native_dir = ensure_cudd_native()
     _jvm_args = ["-ea", "--enable-native-access=ALL-UNNAMED"]
+    # `SPEC_REPAIR_JVM_HEAP=48g` raises the maximum heap. Unset, the JVM takes
+    # its default of a quarter of RAM - about 15.5GB of a 62GB box - and leaves
+    # the other three quarters unused.
+    #
+    # That default is what stops colorsort. Its candidates are learned in
+    # seconds and then discarded: synthesis exhausts the heap, and
+    # `_synthesise_or_reject` turns the OutOfMemoryError into
+    # SpecificationNotVerifiableException, which the search records as "cannot
+    # verify" and skips. Measured on colorsort trace 2, which finished with no
+    # repair after three candidates failed verification in 46m, 1h59m and 30m.
+    #
+    # Only the Java heap. CUDD's BDD tables are native and uncapped, so this
+    # does not bound them - and the run's total footprint grows accordingly,
+    # which on a shared box is what earlyoom reacts to.
+    _heap = os.environ.get("SPEC_REPAIR_JVM_HEAP", "").strip()
+    if _heap:
+        _jvm_args.append(f"-Xmx{_heap}")
     _error_file = _error_file_arg()
     if _error_file:
         _jvm_args.append(_error_file)
