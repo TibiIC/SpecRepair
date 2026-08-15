@@ -28,9 +28,19 @@ BLOCK_RE = re.compile(r"^\s*(assumption|guarantee|asm|gar)\s*--\s*(\S+)\s*$")
 
 
 def parse_formulas(path):
-    """{name: (kind, formula_text)} for one .spectra file."""
+    """
+    {name: (kind, formula_text)} for one .spectra file, **re-serialised first**.
+
+    Both sides go through SpectraSpecification before being compared. Comparing
+    the files as written flags every formula as changed whenever the repaired
+    specification was serialised with different whitespace or parenthesisation
+    than the original - which is what made lift report 18 of 18 formulas
+    modified and minepump 6 of 6 on 2026-08-15.
+    """
+    from spec_repair.model.spectra_specification import SpectraSpecification
+    text = SpectraSpecification.from_file(path).to_str(is_to_compile=True)
     out = {}
-    lines = open(path, errors="replace").read().splitlines()
+    lines = text.splitlines()
     i = 0
     while i < len(lines):
         m = BLOCK_RE.match(lines[i])
@@ -79,9 +89,17 @@ def main():
             continue
         case, trace = m.group("case"), int(m.group("trace"))
         learner = m.group("learner") or "ilasp"
-        finals = sorted(glob.glob(os.path.join(runs_root, d, "final_specs", "*.spectra")))
+        # The merged result is the unit worth reporting - one specification per
+        # run - and comparing 91k final_specs through the model is neither
+        # affordable nor more informative. Falls back to final_specs only when a
+        # run has not been merged yet, sampling the first few.
+        merged = sorted(glob.glob(os.path.join(
+            runs_root, d, "unique_max_merged_specs", "*.spectra")))
+        finals = merged or sorted(glob.glob(os.path.join(
+            runs_root, d, "final_specs", "*.spectra")))[:5]
         if not finals:
             continue
+        source = "merged" if merged else "final (sample)"
         orig_path = os.path.join(specs_root, case, "original.spectra")
         if not os.path.isfile(orig_path):
             continue
@@ -96,6 +114,7 @@ def main():
             all_d_asm |= d_asm; all_d_gar |= d_gar
         rows.append({
             "case": case, "trace": trace, "learner": learner, "specs": len(finals),
+            "source": source,
             "w_asm": sorted(all_w_asm), "w_gar": sorted(all_w_gar),
             "d_asm": sorted(all_d_asm), "d_gar": sorted(all_d_gar),
             "min_changes": min(per_spec), "max_changes": max(per_spec),
@@ -114,8 +133,8 @@ def main():
         "and largest number of expressions any single repaired specification "
         "touched.",
         "",
-        "| case study | trace | learner | specs | asm weakened | gar weakened | dropped | changes/spec |",
-        "| --- | --- | --- | --- | --- | --- | --- | --- |",
+        "| case study | trace | learner | from | specs | asm weakened | gar weakened | dropped | changes |",
+        "| --- | --- | --- | --- | --- | --- | --- | --- | --- |",
     ]
     for r in sorted(rows, key=lambda r: (r["case"], r["trace"], r["learner"])):
         w_a = ", ".join(f"`{x}`" for x in r["w_asm"]) or "-"
@@ -123,8 +142,8 @@ def main():
         dropped = ", ".join(f"`{x}`" for x in r["d_asm"] + r["d_gar"]) or "-"
         rng = (f"{r['min_changes']}" if r["min_changes"] == r["max_changes"]
                else f"{r['min_changes']}-{r['max_changes']}")
-        out.append(f"| {r['case']} | {r['trace']} | {r['learner']} | {r['specs']} "
-                   f"| {w_a} | {w_g} | {dropped} | {rng} |")
+        out.append(f"| {r['case']} | {r['trace']} | {r['learner']} | {r['source']} "
+                   f"| {r['specs']} | {w_a} | {w_g} | {dropped} | {rng} |")
 
     total_specs = sum(r["specs"] for r in rows)
     asm_only = sum(1 for r in rows if r["w_asm"] and not r["w_gar"])
