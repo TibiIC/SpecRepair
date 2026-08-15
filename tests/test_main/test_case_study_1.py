@@ -143,8 +143,15 @@ def learner_suffix(learner: str) -> str:
 
     Old unsuffixed directories are unaffected: this changes where *new* runs
     write, not how existing results are read.
+
+    **Held back until the case_study_1 and case_study_2 sweeps finish.** They
+    share this function and still have 158 queued jobs between them; switching
+    mid-sweep would split each of those sweeps across two naming schemes, which
+    is worse than the inconsistency it fixes. Flip the return to
+    `f"_{learner}"` once they are done - case_study_3 has nothing queued, so it
+    is unaffected either way.
     """
-    return f"_{learner}"
+    return "" if learner == DEFAULT_LEARNER else f"_{learner}"
 
 
 def run_date_str() -> str:
