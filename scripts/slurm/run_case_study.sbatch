@@ -84,7 +84,16 @@ export LD_LIBRARY_PATH="$CONDA_PREFIX/lib:${LD_LIBRARY_PATH:-}"
 # (see above), so it is set here explicitly - without it the JVM starts and then
 # fails with "Class cores.SpectraToolbox is not found".
 export SPEC_REPAIR_TOOLS="${SPEC_REPAIR_TOOLS:-/vol/bitbucket/tg4018/Tools}"
-export PATH="$SPEC_REPAIR_TOOLS/bin:$PATH"
+# **Appended, not prepended.** Tools/bin carries its own Spot binaries, and
+# prepending them puts an `ltlfilt` on PATH that then loads `libspot.so.0` from
+# the conda env, because LD_LIBRARY_PATH points there. The two are different
+# Spot versions, so ltlfilt dies with
+# `symbol lookup error: undefined symbol: _ZN4spot14ltl_to_tgba_fm...` and exit
+# 127 - and `does_left_imply_right` reports only "the output of ltlfilt is
+# unexpected", which is what made every implication graph fail on 2026-08-15.
+# Appending leaves conda's matching ltlfilt/libspot pair in charge while FastLAS
+# and ILASP, which exist nowhere else, are still found here.
+export PATH="$PATH:$SPEC_REPAIR_TOOLS/bin"
 
 # clingo is invoked by name, and the compute nodes do not have it - the DoC lab
 # machines get it from /usr/bin as a system package, the GPU cluster nodes do
