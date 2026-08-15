@@ -1,5 +1,6 @@
 import copy
 import logging
+import os
 import re
 import subprocess
 from collections import Counter
@@ -480,7 +481,7 @@ def are_equivalent(left_exp: str, right_exp: str) -> bool:
     `does_left_imply_right` has always worked - equivalence simply never
     followed suit.
     """
-    cmd = ["ltlfilt", "-c", "-f", left_exp, LTLFiltOperation.EQUIVALENT.flag(), right_exp]
+    cmd = [_ltlfilt_cmd(), "-c", "-f", left_exp, LTLFiltOperation.EQUIVALENT.flag(), right_exp]
     p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stdin=subprocess.PIPE,
                          stderr=subprocess.PIPE)
     output = p.communicate()[0].decode("utf-8")
@@ -492,9 +493,30 @@ def are_equivalent(left_exp: str, right_exp: str) -> bool:
     return reg.group(1) == "1"
 
 
+_LTLFILT_ENV = "SPEC_REPAIR_LTLFILT"
+
+
+def _ltlfilt_cmd() -> str:
+    """
+    Which `ltlfilt` to run. `SPEC_REPAIR_LTLFILT=/path/to/ltlfilt` overrides.
+
+    Stock Spot is compiled with a ceiling of 32 acceptance sets, and a whole-GR1
+    comparison exceeds it as soon as a specification carries enough liveness:
+    `ltlfilt: Too many acceptance sets used.  The limit is 32.`, exit 2. That is
+    what stopped the `gr1` implication graphs for amba trace 0 and lift traces 2
+    and 3 on 2026-08-16, while `asm` and `gar` stayed under the ceiling and drew
+    fine.
+
+    Spot's own advice is to recompile, so /vol/bitbucket/tg4018/spot-maxacc is
+    2.14.5 built with `--enable-max-accsets=128`. Point this at it - and at its
+    lib directory on LD_LIBRARY_PATH - to draw those graphs.
+    """
+    return os.environ.get(_LTLFILT_ENV, "").strip() or "ltlfilt"
+
+
 def does_left_imply_right(left_exp: str, right_exp: str) -> bool:
     # TODO: introduce an assertion against ltl_ops which do not exist yet
-    linux_cmd = ["ltlfilt", "-c", "-f", f"{left_exp}", "--imply", f"{right_exp}"]
+    linux_cmd = [_ltlfilt_cmd(), "-c", "-f", f"{left_exp}", "--imply", f"{right_exp}"]
     p = subprocess.Popen(linux_cmd, stdout=subprocess.PIPE, stdin=subprocess.PIPE, stderr=subprocess.PIPE)
     output: str = p.communicate()[0].decode('utf-8')
     reg = re.search(r"([01])\n", output)
