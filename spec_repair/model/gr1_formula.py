@@ -182,9 +182,26 @@ class GR1Formula:
         return hash((self.temp_type, str(antecedent_hash), hash(str(self.consequent))))
 
     def __eq__(self, other):
-        formula1 = spot.formula(self.to_str(formatter=self.spot_formatter))
-        formula2 = spot.formula(other.to_str(formatter=self.spot_formatter))
-        return spot.are_equivalent(formula1, formula2)
+        """
+        Semantic equality, through `ltlfilt` in a subprocess.
+
+        It used to call `spot.formula` and `spot.are_equivalent` in *this*
+        process. libspot is loaded alongside the JVM by jpype, so a crash in
+        `spot::fnode::unique` (SIGSEGV, `si_addr 0x30`) takes the whole run
+        down - the same fault that was moved out of `spectra_specification`
+        on 2026-08-13 and missed here.
+
+        `merge` compares formulas to detect duplicates, so this ran on every
+        merge: elevator trace 0 segfaulted with exit 139 in step 2 on 21
+        specifications, and twelve runs failed to merge for the same reason.
+        """
+        if other is None or not isinstance(other, GR1Formula):
+            return NotImplemented
+        # Imported here, not at module scope: spectra_specification imports this
+        # module, so a top-level import would be circular.
+        from spec_repair.model.spectra_specification import are_equivalent
+        return are_equivalent(self.to_str(formatter=self.spot_formatter),
+                              other.to_str(formatter=self.spot_formatter))
 
     def __repr__(self):
         return self.to_str(formatter=self.spot_formatter)
