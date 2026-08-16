@@ -3,6 +3,8 @@ import logging
 import os
 import re
 import subprocess
+import time
+import tempfile
 from collections import Counter
 from copy import deepcopy
 from typing import TypedDict, Optional, TypeVar, List, Set, Any, Callable
@@ -491,7 +493,7 @@ def _equivalent_via_stdin(left_exp: str, right_exp: str) -> bool:
         # Keep the input. A tool that dies on a signal says nothing on stderr,
         # and the formula is the only way to find out why - elevator trace 0
         # crashed ltl2tgba with SIGSEGV here on 2026-08-16.
-        dump = generate_temp_filename(ext=".ltl")
+        dump = _crash_dump_path()
         write_to_file(dump, formula)
         raise Exception(
             f"ltl2tgba failed (exit {translate.returncode}) during the equivalence check.\n"
@@ -560,6 +562,19 @@ def _ltlfilt_cmd() -> str:
 _MAX_ARG_BYTES = 100_000
 
 
+def _crash_dump_path() -> str:
+    """
+    Somewhere a crashing formula survives.
+
+    `generate_temp_filename` puts files in the run's scratch directory, which is
+    swept when the process exits - so the first dump of the formula that kills
+    ltl2tgba was gone before it could be read.
+    """
+    directory = os.environ.get("SPEC_REPAIR_CRASH_DIR", "").strip() or tempfile.gettempdir()
+    os.makedirs(directory, exist_ok=True)
+    return os.path.join(directory, f"spec_repair_crash_{os.getpid()}_{time.time_ns()}.ltl")
+
+
 def _implies_via_stdin(left_exp: str, right_exp: str) -> bool:
     """
     `left -> right` checked without putting either formula on the command line.
@@ -583,7 +598,7 @@ def _implies_via_stdin(left_exp: str, right_exp: str) -> bool:
     translate_err = translate.stderr.read().decode("utf-8", "replace")
     translate.wait()
     if translate.returncode != 0:
-        dump = generate_temp_filename(ext=".ltl")
+        dump = _crash_dump_path()
         write_to_file(dump, formula)
         raise Exception(
             f"ltl2tgba failed (exit {translate.returncode}) during the comparison.\n"
