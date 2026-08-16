@@ -484,12 +484,14 @@ def are_equivalent(left_exp: str, right_exp: str) -> bool:
     cmd = [_ltlfilt_cmd(), "-c", "-f", left_exp, LTLFiltOperation.EQUIVALENT.flag(), right_exp]
     p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stdin=subprocess.PIPE,
                          stderr=subprocess.PIPE)
-    output = p.communicate()[0].decode("utf-8")
+    stdout_bytes, stderr_bytes = p.communicate()
+    output = stdout_bytes.decode("utf-8")
     reg = re.search(r"([01])\n", output)
     if not reg:
         raise Exception(
-            f"The output of ltlfilt is unexpected, ergo error occurred during the "
-            f"equivalence check of:\n{left_exp}\nand\n{right_exp}")
+            f"ltlfilt failed (exit {p.returncode}) during the equivalence check.\n"
+            f"ltlfilt said: {stderr_bytes.decode('utf-8', 'replace').strip() or '<nothing on stderr>'}\n"
+            f"left:\n{left_exp}\nright:\n{right_exp}")
     return reg.group(1) == "1"
 
 
@@ -518,11 +520,19 @@ def does_left_imply_right(left_exp: str, right_exp: str) -> bool:
     # TODO: introduce an assertion against ltl_ops which do not exist yet
     linux_cmd = [_ltlfilt_cmd(), "-c", "-f", f"{left_exp}", "--imply", f"{right_exp}"]
     p = subprocess.Popen(linux_cmd, stdout=subprocess.PIPE, stdin=subprocess.PIPE, stderr=subprocess.PIPE)
-    output: str = p.communicate()[0].decode('utf-8')
+    stdout_bytes, stderr_bytes = p.communicate()
+    output: str = stdout_bytes.decode('utf-8')
     reg = re.search(r"([01])\n", output)
     if not reg:
+        # ltlfilt's own message, not just "unexpected output". Three separate
+        # failures hid behind the old wording in one day: an ltlfilt/libspot ABI
+        # mismatch (exit 127), Spot's 32 acceptance-set ceiling (exit 2), and a
+        # third still being diagnosed. Each cost an investigation that the first
+        # line of stderr would have answered.
         raise Exception(
-            f"The output of ltlfilt is unexpected, ergo error occurred during the comparison of:\n{left_exp}\nand\n{right_exp}",
+            f"ltlfilt failed (exit {p.returncode}) during the comparison.\n"
+            f"ltlfilt said: {stderr_bytes.decode('utf-8', 'replace').strip() or '<nothing on stderr>'}\n"
+            f"left:\n{left_exp}\nright:\n{right_exp}",
         )
     result = reg.group(1)
     return result == "1"
