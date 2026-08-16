@@ -138,7 +138,15 @@ Each draws `original`, `trivial` (the floor) and `unique_max_merged` as groups,
 with edges for implication, so a sound repair sits strictly between the trivial
 solution and the original.
 
-Two bugs had to be fixed before any of these existed, both on 2026-08-16:
+**genbuf has no graphs, and cannot have them by this method.** Two reasons, both
+measured. Its trivial solutions were never generated - the `exploreAllCores`
+stall - so there is no floor to draw against. And the comparison itself does not
+complete: `ltlfilt` dies with `std::bad_alloc` translating genbuf's
+28-assumption conjunction into an automaton, having consumed ~59GB on a box with
+no `ulimit`. That is a scaling wall in the automata construction, distinct from
+the acceptance-set ceiling below, and raising the limit does not touch it.
+
+Three bugs had to be fixed before any of these existed, all on 2026-08-16:
 
 * **All graphs failed.** `PATH` put `Tools/bin/ltlfilt` (Spot 2.11.6) ahead of
   conda's while `LD_LIBRARY_PATH` supplied conda's `libspot.so.0` (2.14.3):
@@ -148,6 +156,13 @@ Two bugs had to be fixed before any of these existed, both on 2026-08-16:
   of 32 acceptance sets, which a whole-GR1 comparison passes. Rebuilt as 2.14.5
   with `--enable-max-accsets=128` in `/vol/bitbucket/tg4018/spot-maxacc`,
   selected by `SPEC_REPAIR_LTLFILT`.
+* **Every failure looked identical.** `does_left_imply_right` discarded
+  `ltlfilt`'s stderr and raised "the output of ltlfilt is unexpected" for all of
+  them, so an ABI mismatch (exit 127), an acceptance-set overflow (exit 2) and
+  an out-of-memory (also exit 2) were indistinguishable and each cost a separate
+  investigation. It now reports the exit code and what ltlfilt actually said -
+  which is how the `std::bad_alloc` above was found in one run rather than
+  three.
 
 ## 5. What did not finish, and why
 
