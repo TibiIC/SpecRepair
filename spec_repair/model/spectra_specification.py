@@ -516,8 +516,46 @@ def _ltlfilt_cmd() -> str:
     return os.environ.get(_LTLFILT_ENV, "").strip() or "ltlfilt"
 
 
+# Linux caps a single argv entry at 128KB (MAX_ARG_STRLEN). Merged
+# specifications pass that: conjoining 21 of them produced a formula that
+# failed with `OSError: [Errno 7] Argument list too long` on 2026-08-16.
+_MAX_ARG_BYTES = 100_000
+
+
+def _implies_via_stdin(left_exp: str, right_exp: str) -> bool:
+    """
+    `left -> right` checked without putting either formula on the command line.
+
+    Feeds `!(left -> right)` to `ltl2tgba` on stdin and asks `autfilt` whether
+    the automaton is empty: empty means the negation is unsatisfiable, so the
+    implication holds. Same verdict as `ltlfilt --imply`, no argv limit.
+    """
+    formula = f"!(({left_exp}) -> ({right_exp}))\n"
+    ltl2tgba = _ltlfilt_cmd().replace("ltlfilt", "ltl2tgba")
+    autfilt = _ltlfilt_cmd().replace("ltlfilt", "autfilt")
+    translate = subprocess.Popen([ltl2tgba, "-F", "-"], stdin=subprocess.PIPE,
+                                 stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    check = subprocess.Popen([autfilt, "--is-empty", "--quiet"],
+                             stdin=translate.stdout, stdout=subprocess.PIPE,
+                             stderr=subprocess.PIPE)
+    translate.stdout.close()
+    translate.stdin.write(formula.encode("utf-8"))
+    translate.stdin.close()
+    check.communicate()
+    translate_err = translate.stderr.read().decode("utf-8", "replace")
+    translate.wait()
+    if translate.returncode != 0:
+        raise Exception(
+            f"ltl2tgba failed (exit {translate.returncode}) during the comparison.\n"
+            f"it said: {translate_err.strip() or '<nothing on stderr>'}")
+    return check.returncode == 0
+
+
 def does_left_imply_right(left_exp: str, right_exp: str) -> bool:
     # TODO: introduce an assertion against ltl_ops which do not exist yet
+    if (len(left_exp.encode("utf-8")) > _MAX_ARG_BYTES
+            or len(right_exp.encode("utf-8")) > _MAX_ARG_BYTES):
+        return _implies_via_stdin(left_exp, right_exp)
     linux_cmd = [_ltlfilt_cmd(), "-c", "-f", f"{left_exp}", "--imply", f"{right_exp}"]
     p = subprocess.Popen(linux_cmd, stdout=subprocess.PIPE, stdin=subprocess.PIPE, stderr=subprocess.PIPE)
     stdout_bytes, stderr_bytes = p.communicate()
