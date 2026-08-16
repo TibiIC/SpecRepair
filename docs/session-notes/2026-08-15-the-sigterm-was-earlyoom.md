@@ -191,3 +191,47 @@ Complete on both arms: **elevator 10/10**, **lift 10/10**, **traffic_updated
 
 Longest running, all past a day: `genbuf_3` (FastLAS), `minepump_liveness_0`,
 `pcar_0` (ILASP, 21GB), `gyro_0`, `traffic_single_3` - both arms.
+
+## Post-processing, and two graph bugs (2026-08-16)
+
+Results compiled in [results/case-study-3-fastlas-report.md](../results/case-study-3-fastlas-report.md).
+
+**Every run collapses to one.** 19-21 final specifications merge to a single
+realisable specification, trivially maximal and semantically unique, on all 21
+merged runs.
+
+**The repair targets what the trace broke** - `floor_mutual_exclusion` for
+elevator 0/2/4, `assumption1_1`/`assumption2_1` for minepump, `ready_stays_ready`
+for gyro - and touches 1 to 5 expressions, never more.
+
+Neither number existed before two bugs were fixed:
+
+* **Every implication graph failed.** `PATH` put `Tools/bin/ltlfilt` (Spot
+  2.11.6) ahead of conda's while `LD_LIBRARY_PATH` supplied conda's
+  `libspot.so.0` (2.14.3) - mismatched ABI, exit 127. `does_left_imply_right`
+  discards stderr and says only "the output of ltlfilt is unexpected", so the
+  pipeline reported a bare `CalledProcessError`. Appending Tools instead of
+  prepending it fixed all three graph types; 98 graphs followed.
+* **`gr1` failed on liveness-heavy specifications.** Spot is compiled with a
+  ceiling of 32 acceptance sets and a whole-GR1 comparison passes it. Both
+  builds on the box had the same limit. Rebuilt Spot 2.14.5 with
+  `--enable-max-accsets=128` into `/vol/bitbucket/tg4018/spot-maxacc`, selected
+  by `SPEC_REPAIR_LTLFILT`; the exact lift formula that failed now returns 1.
+
+**The first modifications table was wrong** and is worth recording as such. It
+compared repaired specifications against the original as *text*, so every
+formula counted as changed wherever the serialiser differed: lift reported 18 of
+18 modified, minepump 6 of 6. Both sides now go through `SpectraSpecification`
+first, which is the lesson already written down for spec diffs and not applied.
+The corrected figures are 1-5 expressions per repair.
+
+**colorsort's zero is a verification failure, not a learning one.** FastLAS
+learned 3 candidates in 17s; all three were discarded as
+`SpecificationNotVerifiableException` after 46m, 1h59m and 30m, because
+synthesis exhausts the JVM heap - which defaults to a quarter of RAM and leaves
+the other three quarters unused. `SPEC_REPAIR_JVM_HEAP` now raises it.
+
+**genbuf's `exploreAllCores` is not a malformed-input problem.** Spectra parses
+the specification and decides realizability in 1.6s. genbuf is realizable with
+one violated assumption removed and unrealisable with two, and it is the core
+search at that point which does not return.
