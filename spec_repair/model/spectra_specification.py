@@ -465,6 +465,34 @@ class SpectraSpecification(ISpecification):
         return merged_spec
 
 
+def _equivalent_via_stdin(left_exp: str, right_exp: str) -> bool:
+    """
+    `left <-> right` checked without either formula on the command line.
+
+    Same trick as `_implies_via_stdin`: an empty automaton for
+    `!(left <-> right)` means the two cannot differ on any word.
+    """
+    formula = f"!(({left_exp}) <-> ({right_exp}))\n"
+    ltl2tgba = _ltlfilt_cmd().replace("ltlfilt", "ltl2tgba")
+    autfilt = _ltlfilt_cmd().replace("ltlfilt", "autfilt")
+    translate = subprocess.Popen([ltl2tgba, "-F", "-"], stdin=subprocess.PIPE,
+                                 stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    check = subprocess.Popen([autfilt, "--is-empty", "--quiet"],
+                             stdin=translate.stdout, stdout=subprocess.PIPE,
+                             stderr=subprocess.PIPE)
+    translate.stdout.close()
+    translate.stdin.write(formula.encode("utf-8"))
+    translate.stdin.close()
+    check.communicate()
+    translate_err = translate.stderr.read().decode("utf-8", "replace")
+    translate.wait()
+    if translate.returncode != 0:
+        raise Exception(
+            f"ltl2tgba failed (exit {translate.returncode}) during the equivalence check.\n"
+            f"it said: {translate_err.strip() or '<nothing on stderr>'}")
+    return check.returncode == 0
+
+
 def are_equivalent(left_exp: str, right_exp: str) -> bool:
     """
     Equivalence through `ltlfilt`, in a subprocess, never in this process.
@@ -481,6 +509,9 @@ def are_equivalent(left_exp: str, right_exp: str) -> bool:
     `does_left_imply_right` has always worked - equivalence simply never
     followed suit.
     """
+    if (len(left_exp.encode("utf-8")) > _MAX_ARG_BYTES
+            or len(right_exp.encode("utf-8")) > _MAX_ARG_BYTES):
+        return _equivalent_via_stdin(left_exp, right_exp)
     cmd = [_ltlfilt_cmd(), "-c", "-f", left_exp, LTLFiltOperation.EQUIVALENT.flag(), right_exp]
     p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stdin=subprocess.PIPE,
                          stderr=subprocess.PIPE)
