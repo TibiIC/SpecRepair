@@ -479,10 +479,11 @@ def _equivalent_via_stdin(left_exp: str, right_exp: str) -> bool:
     ltl2tgba = _ltlfilt_cmd().replace("ltlfilt", "ltl2tgba")
     autfilt = _ltlfilt_cmd().replace("ltlfilt", "autfilt")
     translate = subprocess.Popen([ltl2tgba, "-F", "-"], stdin=subprocess.PIPE,
-                                 stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+                                 stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                                 preexec_fn=_raise_stack_limit)
     check = subprocess.Popen([autfilt, "--is-empty", "--quiet"],
                              stdin=translate.stdout, stdout=subprocess.PIPE,
-                             stderr=subprocess.PIPE)
+                             stderr=subprocess.PIPE, preexec_fn=_raise_stack_limit)
     translate.stdout.close()
     translate.stdin.write(formula.encode("utf-8"))
     translate.stdin.close()
@@ -523,7 +524,7 @@ def are_equivalent(left_exp: str, right_exp: str) -> bool:
         return _equivalent_via_stdin(left_exp, right_exp)
     cmd = [_ltlfilt_cmd(), "-c", "-f", left_exp, LTLFiltOperation.EQUIVALENT.flag(), right_exp]
     p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stdin=subprocess.PIPE,
-                         stderr=subprocess.PIPE)
+                         stderr=subprocess.PIPE, preexec_fn=_raise_stack_limit)
     stdout_bytes, stderr_bytes = p.communicate()
     output = stdout_bytes.decode("utf-8")
     reg = re.search(r"([01])\n", output)
@@ -562,6 +563,28 @@ def _ltlfilt_cmd() -> str:
 _MAX_ARG_BYTES = 100_000
 
 
+def _raise_stack_limit() -> None:
+    """
+    Give the child as much stack as it is allowed.
+
+    Spot's translation recurses over the formula tree, so a deeply nested
+    formula overflows the default 8MB stack and the process dies on SIGSEGV
+    with nothing on stderr. Merging elevator's 21 solutions produces a formula
+    59,004 `X` operators deep, which does exactly that - and the same formula
+    translates fine once the stack is raised.
+
+    preexec_fn runs in the child after fork, so this affects only the tool.
+    """
+    try:
+        import resource
+        soft, hard = resource.getrlimit(resource.RLIMIT_STACK)
+        if hard != resource.RLIM_INFINITY and soft >= hard:
+            return
+        resource.setrlimit(resource.RLIMIT_STACK, (hard, hard))
+    except Exception:  # noqa: BLE001 - a tighter stack is not worth failing over
+        pass
+
+
 def _crash_dump_path() -> str:
     """
     Somewhere a crashing formula survives.
@@ -587,10 +610,11 @@ def _implies_via_stdin(left_exp: str, right_exp: str) -> bool:
     ltl2tgba = _ltlfilt_cmd().replace("ltlfilt", "ltl2tgba")
     autfilt = _ltlfilt_cmd().replace("ltlfilt", "autfilt")
     translate = subprocess.Popen([ltl2tgba, "-F", "-"], stdin=subprocess.PIPE,
-                                 stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+                                 stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                                 preexec_fn=_raise_stack_limit)
     check = subprocess.Popen([autfilt, "--is-empty", "--quiet"],
                              stdin=translate.stdout, stdout=subprocess.PIPE,
-                             stderr=subprocess.PIPE)
+                             stderr=subprocess.PIPE, preexec_fn=_raise_stack_limit)
     translate.stdout.close()
     translate.stdin.write(formula.encode("utf-8"))
     translate.stdin.close()
@@ -613,7 +637,8 @@ def does_left_imply_right(left_exp: str, right_exp: str) -> bool:
             or len(right_exp.encode("utf-8")) > _MAX_ARG_BYTES):
         return _implies_via_stdin(left_exp, right_exp)
     linux_cmd = [_ltlfilt_cmd(), "-c", "-f", f"{left_exp}", "--imply", f"{right_exp}"]
-    p = subprocess.Popen(linux_cmd, stdout=subprocess.PIPE, stdin=subprocess.PIPE, stderr=subprocess.PIPE)
+    p = subprocess.Popen(linux_cmd, stdout=subprocess.PIPE, stdin=subprocess.PIPE,
+                         stderr=subprocess.PIPE, preexec_fn=_raise_stack_limit)
     stdout_bytes, stderr_bytes = p.communicate()
     output: str = stdout_bytes.decode('utf-8')
     reg = re.search(r"([01])\n", output)
