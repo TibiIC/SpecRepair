@@ -22,7 +22,8 @@ from spec_repair.helpers.formatters.spectra_formula_formatter import SpectraForm
 from spec_repair.helpers.parsers.spectra_formula_parser import SpectraFormulaParser
 from spec_repair.helpers.formatters.spot_specification_formatter import SpotSpecificationFormatter
 from spec_repair.ltl_types import GR1FormulaType, GR1TemporalType, TemporalDialect, LTLFiltOperation
-from spec_repair.util.file_util import read_file_lines, validate_spectra_file
+from spec_repair.util.file_util import (generate_temp_filename, read_file_lines,
+                                        validate_spectra_file, write_to_file)
 from spec_repair.util.ltl_formula_util import get_disjuncts_from_disjunction
 from spec_repair.util.formula_string_util import format_spec
 from spec_repair.helpers.weakness_measurement.weakness_user_friendly import computeWeakness, Weakness
@@ -487,9 +488,15 @@ def _equivalent_via_stdin(left_exp: str, right_exp: str) -> bool:
     translate_err = translate.stderr.read().decode("utf-8", "replace")
     translate.wait()
     if translate.returncode != 0:
+        # Keep the input. A tool that dies on a signal says nothing on stderr,
+        # and the formula is the only way to find out why - elevator trace 0
+        # crashed ltl2tgba with SIGSEGV here on 2026-08-16.
+        dump = generate_temp_filename(ext=".ltl")
+        write_to_file(dump, formula)
         raise Exception(
             f"ltl2tgba failed (exit {translate.returncode}) during the equivalence check.\n"
-            f"it said: {translate_err.strip() or '<nothing on stderr>'}")
+            f"it said: {translate_err.strip() or '<nothing on stderr>'}\n"
+            f"formula ({len(formula)} chars) written to {dump}")
     return check.returncode == 0
 
 
@@ -576,9 +583,12 @@ def _implies_via_stdin(left_exp: str, right_exp: str) -> bool:
     translate_err = translate.stderr.read().decode("utf-8", "replace")
     translate.wait()
     if translate.returncode != 0:
+        dump = generate_temp_filename(ext=".ltl")
+        write_to_file(dump, formula)
         raise Exception(
             f"ltl2tgba failed (exit {translate.returncode}) during the comparison.\n"
-            f"it said: {translate_err.strip() or '<nothing on stderr>'}")
+            f"it said: {translate_err.strip() or '<nothing on stderr>'}\n"
+            f"formula ({len(formula)} chars) written to {dump}")
     return check.returncode == 0
 
 
