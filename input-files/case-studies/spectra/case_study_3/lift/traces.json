@@ -58,12 +58,11 @@
     {
       "trace": 4,
       "seed": 4,
-      "target": "one_floor_only1",
+      "target": "button1_stays_on",
       "violated": [
-        "one_floor_only1",
-        "one_floor_only2"
+        "button1_stays_on"
       ],
-      "steps": 2,
+      "steps": 7,
       "compliant_steps": 5,
       "max_random_steps": 40,
       "attempts": 25,
