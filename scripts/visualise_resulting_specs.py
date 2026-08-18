@@ -177,7 +177,7 @@ GROUP_COLOURS: Dict[str, str] = {
     "trivial": "#ffadad",
     "merged": "#bdb2ff",
     "max_merged": "#9bf6ff",
-    "unique_max_merged": "#a0c4ff",
+    "filtered_merged": "#a0c4ff",
 }
 EXTRA_COLOURS = ["#fdffb6", "#ffc6ff", "#d0d1ff", "#b5e48c", "#f6bd60"]
 DEFAULT_COLOUR = "#ffffff"
@@ -407,7 +407,7 @@ file or a directory of them:
       --group strong=input-files/case-studies/spectra/case_study_1/lift/strong.spectra \\
       --group ideal=input-files/case-studies/spectra/case_study_1/lift/ideal.spectra \\
       --group trivial=tests/test_files/out/trivial_solutions/2026-07-27/lift \\
-      --group unique_max_merged=.../unique_max_merged_specs
+      --group filtered_merged=.../filtered_merged_specs
 
 The legacy single-directory mode (-s/--spec_dir) still works and is unchanged.
 """

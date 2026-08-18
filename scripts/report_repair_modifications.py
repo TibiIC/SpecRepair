@@ -94,7 +94,7 @@ def main():
         # affordable nor more informative. Falls back to final_specs only when a
         # run has not been merged yet, sampling the first few.
         merged = sorted(glob.glob(os.path.join(
-            runs_root, d, "unique_max_merged_specs", "*.spectra")))
+            runs_root, d, "filtered_merged_specs", "*.spectra")))
         finals = merged or sorted(glob.glob(os.path.join(
             runs_root, d, "final_specs", "*.spectra")))[:5]
         if not finals:
