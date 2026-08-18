@@ -7,9 +7,9 @@ folder, produces:
 
     tests/test_files/out_ssh/<date>/<case_study>_<date>/
         final_specs/                  <- pulled from the remote (input)
-        merged_specs/                 <- step 2: merge of all final_specs
-        max_merged_specs/             <- step 3: maximal by guarantee (GAR)
-        unique_max_merged_specs/      <- step 4: semantically unique
+        unique_specs/                 <- step 2: semantically unique
+        max_unique_specs/             <- step 3: maximal by guarantee (GAR)
+        filtered_merged_specs/        <- step 4: merge of those only
         implication_graph_asm.png     <- step 6: assumptions only
         implication_graph_gar.png     <- step 6: guarantees only
         implication_graph_gr1.png     <- step 6: whole spec (asm -> gar)
@@ -19,10 +19,18 @@ with tests/test_diagnosis/test_trivial_solution.py, which writes to
 tests/test_files/out/trivial_solutions/<date>/all/<case_study>/. This script
 picks those up for the graph if they exist.
 
-Step 3 filters on guarantees only (GAR). All merged specifications share the
-same assumptions - merging conjoins them and every input came from the same
-original - so filtering on assumptions as well cannot remove anything, and
-comparing them costs a spot equivalence check per pair.
+The order is filter first, merge second: semantically unique -> strongest
+guarantees -> merge only those. This is the methodology as specified. Until
+2026-08-18 this script did the reverse - it merged the whole final_specs pool
+and filtered the merged output afterwards - which conjoined every redundant
+variant in the pool and blew a 10KB specification up into ~893K characters of
+nested X on runs with PREV. `scripts/filter_then_merge.py` does the same three
+stages standalone; the output directory name is shared deliberately so both
+produce filtered_merged_specs/ and the graph step can read either.
+
+Step 3 filters on guarantees only (GAR): `a` is dropped when another spec's
+guarantees are strictly stronger. Guarantee-incomparable specs all survive -
+they are different answers, not worse ones.
 
 All three graphs are drawn every time, because no single comparison tells the
 whole story - see GRAPH_TYPES below for why the gr1 one in particular is easy to
@@ -100,9 +108,9 @@ SETUPS = {
 }
 
 FINAL_SPECS = "final_specs"
-MERGED = "merged_specs"
-MAX_MERGED = "max_merged_specs"
-UNIQUE_MAX_MERGED = "unique_max_merged_specs"
+UNIQUE = "unique_specs"
+MAX_UNIQUE = "max_unique_specs"
+FILTERED_MERGED = "filtered_merged_specs"
 
 
 def graph_name(graph_type: str) -> str:
@@ -192,49 +200,56 @@ def save_specs(specs, out_dir: str, prefix: str = "spec") -> List[str]:
     return paths
 
 
-def step_2_merge(run_dir: str, og_spec: Optional[SpectraSpecification]) -> int:
+def step_2_unique(run_dir: str) -> int:
+    """final_specs -> UNIQUE. One representative per semantic equivalence class."""
     final_specs_dir = os.path.join(run_dir, FINAL_SPECS)
     if not os.path.isdir(final_specs_dir):
         print(f"  SKIP: no {FINAL_SPECS}/ in {run_dir}")
         return 0
     files_with_specs = get_files_with_specs_from_directory(final_specs_dir)
-    if len(files_with_specs) < 2:
-        print(f"  step 2: only {len(files_with_specs)} final spec(s); "
-              f"nothing to merge, copying through")
-        save_specs([s for _, s in files_with_specs], os.path.join(run_dir, MERGED))
-        return len(files_with_specs)
-
-    print(f"  step 2: merging {len(files_with_specs)} final specs...", flush=True)
-    # verify_inputs=False: these came out of the BFS repair search, which only
-    # records a spec once its oracle has accepted it, so they are realisable by
-    # construction. Re-checking costs one Spectra synthesis call each - about
-    # 11 minutes for a run like elevator_updated's 966 specs - to re-establish
-    # something already known. The post-merge realisability check still runs.
-    # An unrealisable merge is split in half and each half merged separately,
-    # rather than torn down with Spectra's exhaustive unrealisable-core search,
-    # so a large run no longer has to be refused up front to avoid hanging.
-    merged = merge_solutions([s for _, s in files_with_specs], og_spec=og_spec,
-                             verify_inputs=False)
-    save_specs(merged, os.path.join(run_dir, MERGED))
-    print(f"  step 2: merged {len(files_with_specs)} final specs -> {len(merged)} merged spec(s)")
-    return len(merged)
+    if not files_with_specs:
+        print(f"  SKIP: {FINAL_SPECS}/ is empty in {run_dir}")
+        return 0
+    print(f"  step 2: filtering {len(files_with_specs)} final specs...", flush=True)
+    unique = filter_semantically_unique_specifications(files_with_specs)
+    save_specs([s for _, s in unique], os.path.join(run_dir, UNIQUE))
+    print(f"  step 2: {len(files_with_specs)} final -> {len(unique)} semantically unique")
+    return len(unique)
 
 
 def step_3_maximal(run_dir: str) -> int:
-    merged_dir = os.path.join(run_dir, MERGED)
-    maximal = find_maximal_specifications_from_folder(merged_dir, GR1FormulaType.GAR)
-    save_specs([s for _, s in maximal], os.path.join(run_dir, MAX_MERGED))
-    print(f"  step 3: {len(maximal)} maximal (GAR) merged spec(s)")
+    """UNIQUE -> MAX_UNIQUE. Those no other spec's guarantees are strictly stronger than."""
+    maximal = find_maximal_specifications_from_folder(
+        os.path.join(run_dir, UNIQUE), GR1FormulaType.GAR)
+    save_specs([s for _, s in maximal], os.path.join(run_dir, MAX_UNIQUE))
+    print(f"  step 3: {len(maximal)} strongest-guarantee spec(s)")
     return len(maximal)
 
 
-def step_4_unique(run_dir: str) -> int:
-    max_dir = os.path.join(run_dir, MAX_MERGED)
-    files_with_specs = get_files_with_specs_from_directory(max_dir)
-    unique = filter_semantically_unique_specifications(files_with_specs)
-    save_specs([s for _, s in unique], os.path.join(run_dir, UNIQUE_MAX_MERGED))
-    print(f"  step 4: {len(unique)} semantically unique maximal merged spec(s)")
-    return len(unique)
+def step_4_merge(run_dir: str, og_spec: Optional[SpectraSpecification]) -> int:
+    """MAX_UNIQUE -> FILTERED_MERGED. Only the filtered pool is merged."""
+    files_with_specs = get_files_with_specs_from_directory(
+        os.path.join(run_dir, MAX_UNIQUE))
+    if len(files_with_specs) < 2:
+        print(f"  step 4: only {len(files_with_specs)} spec(s); nothing to merge, "
+              f"copying through")
+        save_specs([s for _, s in files_with_specs],
+                   os.path.join(run_dir, FILTERED_MERGED))
+        return len(files_with_specs)
+
+    print(f"  step 4: merging {len(files_with_specs)} filtered specs...", flush=True)
+    # verify_inputs=False: these came out of the BFS repair search, which only
+    # records a spec once its oracle has accepted it, so they are realisable by
+    # construction. Re-checking costs one Spectra synthesis call each to
+    # re-establish something already known. The post-merge realisability check
+    # still runs. An unrealisable merge is split in half and each half merged
+    # separately, rather than torn down with Spectra's exhaustive
+    # unrealisable-core search, so a large run need not be refused up front.
+    merged = merge_solutions([s for _, s in files_with_specs], og_spec=og_spec,
+                             verify_inputs=False)
+    save_specs(merged, os.path.join(run_dir, FILTERED_MERGED))
+    print(f"  step 4: merged {len(files_with_specs)} -> {len(merged)} spec(s)")
+    return len(merged)
 
 
 def step_6_graph(run_dir: str, case_study: str, date: str, graph_types: Tuple[str, ...],
@@ -256,7 +271,7 @@ def step_6_graph(run_dir: str, case_study: str, date: str, graph_types: Tuple[st
 
     for label, path in (references
                         + [("trivial", trivial),
-                           ("unique_max_merged", os.path.join(run_dir, UNIQUE_MAX_MERGED))]):
+                           ("filtered_merged", os.path.join(run_dir, FILTERED_MERGED))]):
         if os.path.exists(path):
             groups.append((label, path))
         else:
@@ -330,14 +345,14 @@ def main(argv=None) -> int:
                 og_spec = SpectraSpecification.from_file(og_path) if os.path.exists(og_path) else None
 
             if args.graph_only:
-                if not os.path.isdir(os.path.join(run_dir, UNIQUE_MAX_MERGED)):
-                    print(f"  --graph-only: no {UNIQUE_MAX_MERGED}/ - run without it first")
+                if not os.path.isdir(os.path.join(run_dir, FILTERED_MERGED)):
+                    print(f"  --graph-only: no {FILTERED_MERGED}/ - run without it first")
                     continue
             else:
-                if step_2_merge(run_dir, og_spec) == 0:
+                if step_2_unique(run_dir) == 0:
                     continue
                 step_3_maximal(run_dir)
-                step_4_unique(run_dir)
+                step_4_merge(run_dir, og_spec)
             if not args.skip_graph:
                 step_6_graph(run_dir, case_study, args.date, tuple(args.graph_type),
                              setup, legend=args.legend)
