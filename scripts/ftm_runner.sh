@@ -21,7 +21,7 @@ for prefix in "$@"; do
         n=$(find "$d/final_specs" -maxdepth 1 -name '*.spectra' 2>/dev/null | wc -l)
         [ "$n" -gt 0 ] || continue
         echo "##### $(basename $d) ($n final specs)"
-        timeout 21600 python -u scripts/filter_then_merge.py "$d" --max-inputs 600
+        timeout 21600 python -u scripts/filter_then_merge.py "$d"
         echo "  rc=$?"
     done
 done

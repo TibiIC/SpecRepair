@@ -7,6 +7,14 @@ Filter first, merge second - the methodology, in the order it was specified.
     2. strongest guarantees  of those, keep the ones no other specification's
                              guarantees are strictly stronger than (incomparable
                              ones all survive)
+
+Stage 1 comes first and there is no input cap. The order is not interchangeable:
+equivalent specifications imply each other in both directions, so neither is
+"strictly stronger" and stage 2 keeps them both. Stage 2 therefore cannot remove
+a single duplicate, and running it first would pay a full O(n^2) of guarantee
+implications while leaving stage 1 exactly as much work as before. Measured, the
+filters bear that out - stage 1 removes 50-65% of a pool, stage 2 removed
+nothing at all on every 21-specification run.
     3. merge                 only that pool is merged
 
 `scripts/run_experiment_pipeline.py` has had this backwards since it was written
@@ -19,7 +27,7 @@ same assumption, five of them carrying `PREV`, whose rewrite expands a
 Reports the count at each stage, because that is the number the methodology is
 described by.
 
-    python scripts/filter_then_merge.py <run_dir> [--out <dir>] [--max-inputs N]
+    python scripts/filter_then_merge.py <run_dir> [--out <dir>]
 """
 import argparse
 import glob
@@ -71,17 +79,12 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("run_dir")
     ap.add_argument("--out", default=None, help="where to write the merged result")
-    ap.add_argument("--max-inputs", type=int, default=0,
-                    help="stop before the O(n^2) filters if the pool is larger")
     args = ap.parse_args()
 
     files = sorted(glob.glob(os.path.join(args.run_dir, "final_specs", "*.spectra")))
     print(f"stage 0  final specs on disk          {len(files)}", flush=True)
     if not files:
         return 1
-    if args.max_inputs and len(files) > args.max_inputs:
-        print(f"         pool exceeds --max-inputs {args.max_inputs}; stopping", flush=True)
-        return 2
 
     specs = [SpectraSpecification.from_file(f) for f in files]
 
