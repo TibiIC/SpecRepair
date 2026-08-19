@@ -209,6 +209,38 @@ Traces 1 and 4 are re-running. Trace 3 cannot be, until its 142-hour process is
 killed - starting a second run against a live directory is the collision
 recorded under Bugs, not a fix for it.
 
+### What the re-runs found next
+
+The wall is gone and a second one is behind it. Five hours in:
+
+| run | elapsed | final specs | where the JVM is |
+| --- | --- | --- | --- |
+| genbuf_trace1 | 5h11m | 1 | `CUDDFactory.gr1Game0` |
+| genbuf_trace3 | 53m | 0 | `CUDDFactory.initialize0` |
+| genbuf_trace4 | 5h11m | 0 | `CUDDFactory.gr1Game0` |
+
+Trace 1 cleared the verification that had blocked it for 122 hours and wrote a
+specification, so the diagnosis holds. But traces 1 and 4 have each since spent
+over four hours inside a *single* BDD realisability game. The cost did not
+disappear; it moved out of Syntech's memoisation and into genuinely hard
+`gr1Game` calls on the guarantee subsets the enumeration probes.
+
+This also corrects a measurement recorded above. The 2.8s / 0.2s / 0.1s figures
+were taken on guarantee subsets of the *original* specification, and were read at
+the time as showing that per-call cost was not a factor. They do not generalise:
+the subsets reached while verifying a weakened candidate are far more expensive,
+and some of them do not finish in hours. The claim held for what was sampled,
+not for what the enumeration actually asks.
+
+The runs are being left to run untouched rather than bounded. Note for anyone
+reaching for a cap: the standing rule against truncating a core set was proven
+for the trivial-solution path, where a hitting set of the cores must realise the
+specification. It does not transfer to this call site, where the only use is
+testing whether the violated guarantees lie in the union - and an incomplete
+union is exactly what `exploreAllCores` gave all 47 finished runs.
+
+Count with results, colorsort excluded: **48 of 50**.
+
 Worth recording, because it is not obvious: MARCO is fast *here* and slow in the
 trivial-solution path, which was still enumerating after 2.5 hours on the same
 case study. Per-call cost is identical; what differs is the number of cores. The
