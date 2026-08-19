@@ -281,8 +281,17 @@ class BFSRepairOrchestrator:
                         # never verified into the results. Other branches are
                         # unaffected, which is the point - one bad candidate used
                         # to end the whole run with a TypeError.
-                        self._logger.record(-1, learned_spec, data, "Unverifiable")
-                        self._reporter.event("SKIP", "candidate Spectra cannot verify")
+                        # Say *which* of the two reasons it was. The exception
+                        # covers both "Spectra's BDD engine exhausted the heap"
+                        # and "the candidate breaks a structural rule", and the
+                        # log recorded neither - so colorsort traces 2 and 3
+                        # could run to completion abandoning every branch, and
+                        # leave nothing behind to say why 0 specifications came
+                        # out of 3h17m and 5h48m of search.
+                        reason = str(e).split("\n", 1)[0]
+                        self._logger.record(-1, learned_spec, data,
+                                            f"Unverifiable: {reason}")
+                        self._reporter.event("SKIP", f"cannot verify - {reason}")
                         continue
                     if not counter_examples_with_data:
                         learned_id = self._recorder.add(learned_spec)
