@@ -422,27 +422,80 @@ def spectra_to_DNF(formula):
     return prefix + '|'.join([negate(parts[0]), parts[1]]) + suffix
 
 
+def _spans(formula, keyword):
+    """(start, open_paren, close_paren) for each `keyword(...)`, parens balanced."""
+    out = []
+    for m in re.finditer(re.escape(keyword) + r"\s*\(", formula):
+        depth, i = 0, m.end() - 1
+        while i < len(formula):
+            if formula[i] == "(":
+                depth += 1
+            elif formula[i] == ")":
+                depth -= 1
+                if depth == 0:
+                    out.append((m.start(), m.end(), i))
+                    break
+            i += 1
+    return out
+
+
 def shift_prev_to_next(formula, variables):
-    # Assumes no nesting of next/prev
-    # filt = r'PREV\(' + r'|PREV\('.join(variables) + r'|PREV\(!'.join(variables)
-    filt = "PREV"
-    if not re.search(filt, formula):
+    """
+    Move a formula one timepoint forward, so that no PREV remains.
+
+    Spot has no past-time operators, so a Spectra formula mentioning PREV has to
+    be expressed with future operators before ltlfilt or ltl2tgba will look at
+    it. A formula reading "x held last step, y holds now, z holds next step" is
+    the same statement, one step later, as "x holds now, y next, z the step
+    after":
+
+        PREV(x)  ->  x          (was t-1, now t)
+        y        ->  X(y)       (was t,   now t+1)
+        next(z)  ->  X(X(z))    (was t+1, now t+2)
+
+    Only *bare* occurrences shift. An occurrence already inside `PREV(...)` or
+    `next(...)` has its offset set by that operator and must be left alone -
+    wrapping those as well is what this function used to do, and on amba a
+    single PREV in a formula carrying 300 `next` took it from 300 X operators to
+    **59,304**, 205,261 characters. ltl2tgba answers that with std::bad_alloc,
+    which is the whole of the "exit 2" and, once earlyoom got there first, the
+    "exit -15" failures across the 2026-08-18 post-processing runs.
+
+    The rewrite is linear now: one X per bare occurrence, nothing multiplied.
+    """
+    if not re.search("PREV", formula):
         return re.sub("next", "X", formula)
-    formula = re.sub("next", "XX", formula)
 
-    all_vars = '|'.join(["!" + var + "|" + var for var in variables])
-    # formula = re.sub(r"([^\(^!])(" + all_vars + r")|([^V^X])\((" + all_vars + ")", r"\1X(\2)", formula)
-    formula = re.sub(f"([^V^X])\(({all_vars})", r"\1(X(\2)", formula)
-    formula = re.sub(f"([^\(^!])({all_vars})", r"\1X(\2)", formula)
+    # Regions whose offset is already fixed by an operator; bare occurrences are
+    # everything outside them.
+    protected = []
+    for kw in ("PREV", "next"):
+        for start, open_end, close in _spans(formula, kw):
+            protected.append((start, close + 1))
+    protected.sort()
 
-    formula = re.sub(r"PREV\((" + all_vars + r")\)", r"\1", formula)
+    all_vars = "|".join(sorted(variables, key=len, reverse=True))
+    atom = re.compile(r"!?(" + all_vars + r")\b")
+
+    def shift_bare(text):
+        return atom.sub(lambda m: f"X({m.group(0)})", text)
+
+    out, cursor = [], 0
+    for start, end in protected:
+        if start < cursor:      # nested or overlapping; already covered
+            continue
+        out.append(shift_bare(formula[cursor:start]))
+        out.append(formula[start:end])
+        cursor = end
+    out.append(shift_bare(formula[cursor:]))
+    formula = "".join(out)
+
+    # Now the operators themselves: next(z) gains one step, PREV(x) loses its.
+    formula = re.sub(r"next\s*\(", "X(X(", formula)
+    for start, open_end, close in reversed(_spans(formula, "X(X")):
+        formula = formula[:close + 1] + ")" + formula[close + 1:]
+    formula = re.sub(r"PREV\s*\(", "(", formula)
     return formula
-    # save this as explanation of above:
-    # re.sub(r"([^\(^!])(!highwater|highwater|!pump|pump)|([^V^X])\((!highwater|highwater|!pump|pump)", r"\1X(\2)", formula)
-    # use this to test:
-    # temp_formula ='G(PREV(pump)&PREV(!methane)&!highwater&methane&!methane&pump->XX(!highwater)&XX(methane));'
-
-    # re.sub(r"([^V^X])\((!pump)", r"\1(X(\2))", formula)
 
 
 def remove_double_outer_brackets(string):

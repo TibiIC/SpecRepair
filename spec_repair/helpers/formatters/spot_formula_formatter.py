@@ -29,27 +29,60 @@ class SpotFormulaFormatter(ILTLFormatter):
     def _format(self, this_formula: LTLFormula, shift_in: int) -> Tuple[str, int]:
         match this_formula:
             case AtomicProposition(name=name, value=True):
-                return self._apply_shift(name, shift_in), shift_in
+                # shift_out is what this subformula asks the *context* to add,
+                # and an atom asks for nothing. Returning shift_in here made the
+                # binary cases below compound it - see the note there.
+                return self._apply_shift(name, shift_in), 0
             case AtomicProposition(name=name, value=False):
-                return self._apply_shift(f"!{name}", shift_in), shift_in
+                return self._apply_shift(f"!{name}", shift_in), 0
             case Not(formula=formula):
                 inner_formula, new_shift_out = self._format(formula, shift_in)
                 return f"!({inner_formula})", new_shift_out
             case And(left=left, right=right):
+                # Both sides are evaluated at the same point, so both get the
+                # same shift_in. Passing `shift_in + left_shift_out` to the
+                # right made the shift double at every binary node: with
+                # shift_out for an atom being shift_in itself, a single PREV in
+                # a formula of 300 conjuncts compounded to 59,304 X operators
+                # and 205,261 characters, which ltl2tgba answers with
+                # std::bad_alloc. Whichever side reaches further into the past
+                # sets the depth; the shallower side is padded to match.
                 lhs, left_shift_out = self._format(left, shift_in)
-                rhs, right_shift_out = self._format(right, shift_in + left_shift_out)
-                lhs = self._apply_shift(lhs, right_shift_out - left_shift_out)
-                return f"({lhs} & {rhs})", right_shift_out
+                rhs, right_shift_out = self._format(right, shift_in)
+                depth = max(left_shift_out, right_shift_out)
+                lhs = self._apply_shift(lhs, depth - left_shift_out)
+                rhs = self._apply_shift(rhs, depth - right_shift_out)
+                return f"({lhs} & {rhs})", depth
             case Or(left=left, right=right):
+                # Both sides are evaluated at the same point, so both get the
+                # same shift_in. Passing `shift_in + left_shift_out` to the
+                # right made the shift double at every binary node: with
+                # shift_out for an atom being shift_in itself, a single PREV in
+                # a formula of 300 conjuncts compounded to 59,304 X operators
+                # and 205,261 characters, which ltl2tgba answers with
+                # std::bad_alloc. Whichever side reaches further into the past
+                # sets the depth; the shallower side is padded to match.
                 lhs, left_shift_out = self._format(left, shift_in)
-                rhs, right_shift_out = self._format(right, shift_in + left_shift_out)
-                lhs = self._apply_shift(lhs, right_shift_out - left_shift_out)
-                return f"({lhs} | {rhs})", right_shift_out
+                rhs, right_shift_out = self._format(right, shift_in)
+                depth = max(left_shift_out, right_shift_out)
+                lhs = self._apply_shift(lhs, depth - left_shift_out)
+                rhs = self._apply_shift(rhs, depth - right_shift_out)
+                return f"({lhs} | {rhs})", depth
             case Implies(left=left, right=right):
+                # Both sides are evaluated at the same point, so both get the
+                # same shift_in. Passing `shift_in + left_shift_out` to the
+                # right made the shift double at every binary node: with
+                # shift_out for an atom being shift_in itself, a single PREV in
+                # a formula of 300 conjuncts compounded to 59,304 X operators
+                # and 205,261 characters, which ltl2tgba answers with
+                # std::bad_alloc. Whichever side reaches further into the past
+                # sets the depth; the shallower side is padded to match.
                 lhs, left_shift_out = self._format(left, shift_in)
-                rhs, right_shift_out = self._format(right, shift_in + left_shift_out)
-                lhs = self._apply_shift(lhs, right_shift_out - left_shift_out)
-                return f"({lhs} -> {rhs})", right_shift_out
+                rhs, right_shift_out = self._format(right, shift_in)
+                depth = max(left_shift_out, right_shift_out)
+                lhs = self._apply_shift(lhs, depth - left_shift_out)
+                rhs = self._apply_shift(rhs, depth - right_shift_out)
+                return f"({lhs} -> {rhs})", depth
             case Next(formula=formula):
                 inner_formula, new_shift_out = self._format(formula, shift_in)
                 return f"X({inner_formula})", new_shift_out
