@@ -2,6 +2,7 @@ import os
 import re
 from unittest import TestCase
 
+from spec_repair.config import PROJECT_PATH
 from spec_repair.enums import Learning
 from spec_repair.model.spectra_atom import SpectraAtom
 from spec_repair.model.spectra_specification import SpectraSpecification
@@ -17,12 +18,17 @@ def is_ascending(timepoint_poss: list[int]) -> bool:
 
 
 class TestSpec(BaseTestCase):
-    minepump_spec_file = '../input-files/examples/Minepump/minepump_strong.spectra'
-    traffic_spec_file = '../input-files/case-studies/spectra/case_study_1/traffic_single/strong.spectra'
-    traffic_updated_spec_file = 'test_files/traffic/traffic_updated_strong.spectra'
+    # Absolute, from PROJECT_PATH: these used to be relative to the tests/
+    # directory, which only resolves while some other class's chdir happens to
+    # be in force. Run from the repository root they resolved to
+    # SpecRepair/./test_files/... - missing the tests/ segment - and the
+    # Spectra CLI reported a FileNotFoundError that read like a broken tool.
+    minepump_spec_file = f'{PROJECT_PATH}/input-files/examples/Minepump/minepump_strong.spectra'
+    traffic_spec_file = f'{PROJECT_PATH}/input-files/case-studies/spectra/case_study_1/traffic_single/strong.spectra'
+    traffic_updated_spec_file = f'{PROJECT_PATH}/tests/test_files/traffic/traffic_updated_strong.spectra'
 
     def test_all_unrealisable_cores_raw_ideal(self):
-        ideal_spec_file_path = "../input-files/case-studies/spectra/case_study_1/minepump/ideal.spectra"
+        ideal_spec_file_path = f"{PROJECT_PATH}/input-files/case-studies/spectra/case_study_1/minepump/ideal.spectra"
         try:
             raw_cores = run_all_unrealisable_cores_raw(ideal_spec_file_path)
             self.assertIsNotNone(raw_cores, "Raw cores output should not be None")
@@ -33,7 +39,7 @@ class TestSpec(BaseTestCase):
             self.fail(f"Command line execution failed with error: {str(e)}")
 
     def test_all_unrealisable_cores_raw_one(self):
-        minepump_spec_file_path = "./test_files/unrealisable_core_util_tests/minepump_uc.spectra"
+        minepump_spec_file_path = f"{PROJECT_PATH}/tests/test_files/unrealisable_core_util_tests/minepump_uc.spectra"
         try:
             raw_cores = run_all_unrealisable_cores_raw(minepump_spec_file_path)
             self.assertIsNotNone(raw_cores, "Raw cores output should not be None")
@@ -44,7 +50,7 @@ class TestSpec(BaseTestCase):
             self.fail(f"Command line execution failed with error: {str(e)}")
 
     def test_all_unrealisable_cores_raw_multiple(self):
-        arbiter_spec_file_path = "./test_files/unrealisable_core_util_tests/arbiter_uc_pRespondsToS.spectra"
+        arbiter_spec_file_path = f"{PROJECT_PATH}/tests/test_files/unrealisable_core_util_tests/arbiter_uc_pRespondsToS.spectra"
         try:
             raw_cores = run_all_unrealisable_cores_raw(arbiter_spec_file_path)
             self.assertIsNotNone(raw_cores, "Raw cores output should not be None")
@@ -55,7 +61,7 @@ class TestSpec(BaseTestCase):
             self.fail(f"Command line execution failed with error: {str(e)}")
 
     def test_all_unrealisable_cores_ideal(self):
-        ideal_spec_file_path = "../input-files/case-studies/spectra/case_study_1/minepump/ideal.spectra"
+        ideal_spec_file_path = f"{PROJECT_PATH}/input-files/case-studies/spectra/case_study_1/minepump/ideal.spectra"
         spec = SpectraSpecification.from_file(ideal_spec_file_path)
         cores = run_all_unrealisable_cores(spec.to_str(is_to_compile=True))
         self.assertEqual([], cores)

@@ -246,11 +246,15 @@ def synthesise_controller(spec_file_path, output_folder_path, suppress=False) ->
         print("Spectra file in wrong format for CLI realizability check: (initial conditions)")
         print(spec_file_path)
         return False
-    # Check if parent directory exists
+    # Make the output directory rather than refusing: writing the controller
+    # there is this function's job, and returning False for a missing directory
+    # is indistinguishable from returning False for an unrealisable
+    # specification - which made a missing tests/test_files/out/controllers pass
+    # the unrealisable test for entirely the wrong reason. That directory is
+    # gitignored, so it never exists on a fresh checkout.
     parent_dir = os.path.dirname(output_folder_path)
-    if not os.path.exists(parent_dir):
-        print(f"Error: Path to output folder does not exist: {parent_dir}")
-        return False
+    if parent_dir:
+        os.makedirs(parent_dir, exist_ok=True)
 
     spec_file_path = pRespondsToS_substitution(spec_file_path)
     args = ["-i", spec_file_path] + _bdd_args() + ['-s', '--static', '-o', output_folder_path]
