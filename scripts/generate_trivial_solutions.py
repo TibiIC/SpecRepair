@@ -40,7 +40,8 @@ import sys
 REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, REPO_ROOT)
 
-from spec_repair.diagnosis.trivial_solution import get_all_trivial_solution
+from spec_repair.diagnosis.trivial_solution import (
+    get_all_trivial_solution, get_all_trivial_solutions_marco)
 from spec_repair.model.spectra_specification import SpectraSpecification
 from spec_repair.util.file_util import read_file_lines, write_to_file
 
@@ -72,6 +73,14 @@ def main(argv=None) -> int:
     parser.add_argument("--setup", choices=sorted(SETUPS), default="case_study_3")
     parser.add_argument("--case-study", default=None,
                         help="only this case study (default: every one with traces)")
+    parser.add_argument("--trace", type=int, default=None,
+                        help="only this trace number (default: every trace). One "
+                             "run per box is how the expensive case studies are "
+                             "parallelised.")
+    parser.add_argument("--marco", action="store_true",
+                        help="take the cores from our MARCO enumeration instead of "
+                             "Syntech's exploreAllCores. Needed for genbuf, where "
+                             "exploreAllCores does not finish.")
     args = parser.parse_args(argv)
 
     setup = SETUPS[args.setup]
@@ -89,13 +98,18 @@ def main(argv=None) -> int:
             # only the ones its controller reached a violation for.
             skipped += 1
             continue
+        if args.trace is not None:
+            traces = [t for t in traces
+                      if TRACE_ID_RE.search(os.path.basename(t))
+                      and int(TRACE_ID_RE.search(os.path.basename(t)).group(1)) == args.trace]
         for trace_path in traces:
             name = run_name(case_study, trace_path)
             out_dir = os.path.join(TRIVIAL_ROOT, args.date, "all", name)
             try:
                 spec = SpectraSpecification.from_file(spec_path)
                 trace = read_file_lines(trace_path)
-                specs = get_all_trivial_solution(spec, trace)
+                specs = (get_all_trivial_solutions_marco(spec, trace) if args.marco
+                         else get_all_trivial_solution(spec, trace))
             except Exception as e:  # noqa: BLE001 - one bad case study must not stop the rest
                 print(f"  {name}: FAILED ({type(e).__name__}: {e})")
                 failed += 1

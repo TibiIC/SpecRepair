@@ -168,6 +168,14 @@ def main():
     ap.add_argument("--out", default=None, help="where to write the merged result")
     ap.add_argument("--workers", type=int, default=8,
                     help="concurrent ltlfilt/ltl2tgba subprocesses (default 8)")
+    ap.add_argument("--unique-only", action="store_true",
+                    help="stop after the equivalence filter, applied to the raw "
+                         "pool, and write the representatives to unique_specs/. "
+                         "This is the count the paper reports as 'unique', which "
+                         "is not the same number the full pipeline reaches: there "
+                         "the guarantee filter has already removed dominated "
+                         "specifications, so classes that were entirely dominated "
+                         "never reach the equivalence check at all.")
     ap.add_argument("--strongest-first", action="store_true",
                     help="run the guarantee filter before the equivalence filter. "
                          "Same final set, far cheaper on a large pool")
@@ -186,6 +194,18 @@ def main():
         print(f"stage 0a identical serialisations     {len(specs)} -> {len(by_text)}",
               flush=True)
         specs = list(by_text.values())
+
+    if args.unique_only:
+        unique = semantically_unique(specs, workers=args.workers)
+        print(f"stage 1  semantically unique          {len(unique)}", flush=True)
+        # A name of its own: `unique_specs/` is what run_experiment_pipeline
+        # writes for its own stage 2, and these two are not the same set.
+        out = args.out or os.path.join(args.run_dir, "unique_from_final_specs")
+        os.makedirs(out, exist_ok=True)
+        for i, spec in enumerate(unique):
+            write_to_file(os.path.join(out, f"spec_{i}.spectra"), spec.to_str())
+        print(f"         written to {out}", flush=True)
+        return 0
 
     if args.strongest_first:
         # Same final set, reached more cheaply. Dropping a dominated

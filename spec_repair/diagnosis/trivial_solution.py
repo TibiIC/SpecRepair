@@ -7,6 +7,7 @@ from spec_repair.enums import Learning
 from spec_repair.model.spectra_specification import SpectraSpecification
 from spec_repair.ltl_types import GR1FormulaType
 from spec_repair.util.set_util import first_minimal_hitting_set, all_minimal_hitting_sets
+from spec_repair.diagnosis.all_unrealisable_cores import all_unrealisable_cores
 from spec_repair.wrappers.spectra_toolbox import run_all_unrealisable_cores
 
 
@@ -146,3 +147,81 @@ def get_all_trivial_solutions_guarantee_only(
 
     _seen[key] = trivial_specs
     return trivial_specs
+
+
+def get_all_trivial_solutions_marco(
+        spec: SpectraSpecification,
+        violation_trace: list[str],
+) -> list[SpectraSpecification]:
+    """
+    Every trivial solution, with the cores coming from our MARCO enumeration.
+
+    Same result as `get_all_trivial_solution` and a separate function on
+    purpose: the two differ in what they can assume about the cores they are
+    given, and that changes the shape of the search rather than just its speed.
+
+    `run_all_unrealisable_cores` calls Syntech's `exploreAllCores`, whose answer
+    is neither complete nor guaranteed minimal, so removing a hitting set of it
+    may leave a specification that is still unrealisable - hence the recheck and
+    recursion in `get_all_trivial_solutions_guarantee_only`. It is also where
+    genbuf stopped: fifteen hours at 100% CPU rescanning its own quadratic
+    memoisation, which is why genbuf is the case study with no trivial solutions
+    while the other eleven have theirs.
+
+    `all_unrealisable_cores` returns *every* core and each one minimal, so a
+    minimal hitting set of them intersects every core and the specification left
+    behind is realisable by construction. Each candidate still gets one
+    realisability check - a single Spectra call, not another enumeration -
+    because that assumption is worth testing rather than trusting, and anything
+    that fails it is reported rather than silently trivialised further.
+
+    :raises RuntimeError: if a candidate is unrealisable, which would mean the
+        core enumeration was incomplete after all.
+    """
+    if spec is None or violation_trace is None:
+        raise ValueError("Specification and violation trace must not be None")
+
+    learner = OptimisingSpecLearner()
+    violated_assumptions = get_violated_expression_names_of_type(
+        learner.get_spec_violations(spec, violation_trace, [], Learning.ASSUMPTION_WEAKENING),
+        'assumption'
+    )
+    print("Violated assumptions:", violated_assumptions)
+    new_spec = spec.extract_sub_specification(
+        lambda x: (x['type'] == GR1FormulaType.GAR) | (~x['name'].isin(violated_assumptions))
+    )
+
+    cores = all_unrealisable_cores(new_spec)
+    print(f"Unrealisable cores: {len(cores)}")
+    if not cores:
+        # Removing the violated assumptions was enough on its own.
+        return [new_spec]
+
+    trivial_specs: list[SpectraSpecification] = []
+    for guarantees_to_remove in all_minimal_hitting_sets(cores):
+        candidate = deepcopy(new_spec)
+        for guarantee_to_remove in guarantees_to_remove:
+            candidate.remove_formula(guarantee_to_remove)
+        if not _is_realisable(candidate):
+            raise RuntimeError(
+                "A minimal hitting set of the cores left an unrealisable "
+                f"specification (removed {sorted(guarantees_to_remove)}); the "
+                "core enumeration is incomplete.")
+        trivial_specs.append(candidate)
+    return trivial_specs
+
+
+def _is_realisable(spec: SpectraSpecification) -> bool:
+    """One Spectra realisability call on a specification held in memory."""
+    from spec_repair.util.file_util import discard_temp_file, generate_temp_filename, write_to_file
+    from spec_repair.wrappers.spectra_toolbox import is_realizable
+
+    path = generate_temp_filename(ext=".spectra")
+    write_to_file(path, spec.to_str(is_to_compile=True))
+    try:
+        verdict = is_realizable(path, suppress=True)
+    finally:
+        discard_temp_file(path)
+    if verdict is None:
+        raise RuntimeError("Spectra could not judge realisability of a candidate.")
+    return verdict
