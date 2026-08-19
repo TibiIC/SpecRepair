@@ -105,7 +105,34 @@ def _reject_unverifiable(output: Optional[str], spec: SpectraSpecification) -> N
 
 
 def get_unrealisable_core_expression_names(spec: SpectraSpecification) -> List[str]:
-    unrealisable_cores = run_all_unrealisable_cores(spec.to_str(is_to_compile=True))
+    """
+    Every guarantee that appears in some unrealisable core of `spec`.
+
+    Which enumeration answers that is chosen by `SPEC_REPAIR_MARCO_CORES`,
+    default off, because the two do not return the same set and the finished
+    experiments were all run against Syntech's.
+
+    Syntech's `exploreAllCores` is the default and does not terminate on genbuf.
+    Its memoisation is quadratic - `Checker$Memoize.lookupPos` walks every
+    previously checked subset calling `isSubset` - and a stack dump of
+    genbuf trace 3 on 2026-08-19 showed 136 hours of CPU inside exactly that
+    frame, at depth 0, still verifying the first candidate. genbuf traces 1, 3
+    and 4 have produced no results at all for that reason.
+
+    With `SPEC_REPAIR_MARCO_CORES=1` the cores come from our own MARCO
+    enumeration instead, which is not quadratic and returns every core, each
+    minimal. That is a *larger* set than Syntech's incomplete answer, so more
+    counter-traces survive `filter_counter_traces` - the results differ, which
+    is why this is opt-in rather than a swap.
+    """
+    import os
+    if os.environ.get("SPEC_REPAIR_MARCO_CORES") == "1":
+        from spec_repair.diagnosis.all_unrealisable_cores import all_unrealisable_cores
+        unrealisable_cores = all_unrealisable_cores(spec)
+    else:
+        unrealisable_cores = run_all_unrealisable_cores(spec.to_str(is_to_compile=True))
+    if not unrealisable_cores:
+        return []
     return list(set().union(*unrealisable_cores))
 
 class SpectraGR1Oracle(IOracle):

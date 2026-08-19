@@ -184,15 +184,25 @@ class AllUnrealisableCores:
                 grown = candidate
         return grown
 
-    def enumerate(self) -> List[Set[str]]:
+    def enumerate(self, progress_every: float = 60.0) -> List[Set[str]]:
         """
         Every minimal unrealisable core, each returned once.
 
         Terminates because each iteration blocks a region of the subset lattice
-        that no later seed can revisit, and the lattice is finite.
+        that no later seed can revisit, and the lattice is finite. How long that
+        takes is bounded by the *number* of cores, not by the cost of a single
+        realisability check, so a specification with a cheap oracle can still
+        run for hours - which is why it reports progress rather than going
+        silent. `progress_every` is in seconds; 0 turns the reporting off.
         """
+        import time
         cores: List[Set[str]] = []
+        started = last_report = time.time()
         while True:
+            if progress_every and time.time() - last_report >= progress_every:
+                last_report = time.time()
+                print(f"         cores: {self.stats} "
+                      f"({last_report - started:.0f}s elapsed)", flush=True)
             seed = self._next_seed()
             if seed is None:
                 break

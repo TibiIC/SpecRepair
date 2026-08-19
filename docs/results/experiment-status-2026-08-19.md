@@ -166,6 +166,56 @@ which turned one `PREV` into 59,010 `X` operators and killed ten merges on memor
 conditions it covers (`6e4df2a`), which is why colorsort's failures are still
 uncharacterised.
 
+## Why genbuf 1, 3 and 4 produced nothing
+
+All three stop in the same place - `verifying d1 candidate`, depth 0, node 1,
+the *first* candidate - after 122h, 142h and 122h. Each learns its 21 candidates
+in about a minute and then never returns from the first verification.
+
+A stack dump of the one still alive on 2026-08-19 (trace 3, gpu20) names the
+cause outright:
+
+    "main" ... cpu=489246243.18ms      <- 136 hours of CPU
+      at tau.smlab.syntech.cores.util.Checker$Memoize.isSubset(Checker.java:142)
+      at tau.smlab.syntech.cores.util.Checker$Memoize.lookupPos(Checker.java:88)
+      ... AllCoresPunchAlgorithm.computeCoresWithBase x24
+      at cores.SpectraToolbox.exploreAllCores(SpectraToolbox.java:53)
+
+Verification reaches `exploreAllCores` through `filter_counter_traces` ->
+`get_unrealisable_core_expression_names`, and on genbuf's 81 guarantees its
+quadratic memoisation never finishes. This is the same failure that kept genbuf
+from having trivial solutions, in a different call site.
+
+The cost is not the realisability oracle. Measured on genbuf: the full guarantee
+set answers in 2.8s, a subset of 80 in 0.2s, a subset of 40 in 0.1s. The
+algorithm is rescanning its own cache, not computing.
+
+`SPEC_REPAIR_MARCO_CORES=1` switches that call to our MARCO enumeration. It is
+opt-in: MARCO returns every core and each one minimal, which is a *larger* union
+than Syntech's incomplete answer, so more counter-traces survive the filter and
+the results are not identical to the 47 runs already finished. Where Syntech's
+does terminate the two agree - checked on gyro, same three names.
+
+Re-run with the flag on 2026-08-19, into the original directories
+(`SPEC_REPAIR_RUN_DATE=2026-08-13`, `n_runs=10`):
+
+| | before | after |
+| --- | --- | --- |
+| learn 21 candidates | 31.8s | 31.8s |
+| verify candidate #1 | never returned in 122h | ~14s |
+| first solution | none in five days | `SOLVED leaf #0` at 45.7s |
+
+Traces 1 and 4 are re-running. Trace 3 cannot be, until its 142-hour process is
+killed - starting a second run against a live directory is the collision
+recorded under Bugs, not a fix for it.
+
+Worth recording, because it is not obvious: MARCO is fast *here* and slow in the
+trivial-solution path, which was still enumerating after 2.5 hours on the same
+case study. Per-call cost is identical; what differs is the number of cores. The
+oracle asks about a specification that is barely unrealisable, so there are few
+cores; the trivial-solution path asks after stripping the violated assumptions,
+which leaves many.
+
 ## Details
 
 Numbered by run. Everything here is specific to one run and does not generalise.
