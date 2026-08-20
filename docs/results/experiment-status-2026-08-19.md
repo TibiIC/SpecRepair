@@ -241,6 +241,15 @@ union is exactly what `exploreAllCores` gave all 47 finished runs.
 
 Count with results, colorsort excluded: **48 of 50**.
 
+**Update 2026-08-20.** genbuf traces 0 and 2 are now merged - trace 0 in 21
+minutes once the equivalence check was bounded, trace 2 at 17:32 with all 210 of
+its equivalence checks timing out, so its unique count of 21 is an upper bound
+that establishes nothing while its merge of 1 is real. All five minepump traces
+are merged. 47 of 55 runs now have a corrected merge; the 8 without are
+colorsort 0-4 and genbuf 1/3/4, and the genbuf three are re-running. See
+[the 2026-08-20 session notes](../session-notes/2026-08-20-the-walls-behind-the-wall.md)
+and [what is still running](running-state-2026-08-20.md).
+
 Worth recording, because it is not obvious: MARCO is fast *here* and slow in the
 trivial-solution path, which was still enumerating after 2.5 hours on the same
 case study. Per-call cost is identical; what differs is the number of cores. The

@@ -34,6 +34,7 @@ import glob
 from concurrent.futures import ThreadPoolExecutor
 import itertools
 import os
+import time
 import sys
 
 REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -124,9 +125,17 @@ def semantically_unique(specs, workers=1):
               flush=True)
 
     kept = []
-    for spec in candidates:
+    started = last_report = time.time()
+    for n, spec in enumerate(candidates, 1):
         if not _equivalent_to_any(spec, kept, workers):
             kept.append(spec)
+        # This loop had no output at all, so a stage that runs for a day looked
+        # identical to one that had hung. The work per candidate grows with
+        # `kept`, so elapsed time alone does not say how far along it is.
+        if time.time() - last_report >= 60:
+            last_report = time.time()
+            print(f"         ...{n}/{len(candidates)} compared, {len(kept)} kept"
+                  f"{_undecided_note()} ({last_report - started:.0f}s)", flush=True)
     return kept
 
 
