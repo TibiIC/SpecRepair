@@ -39,9 +39,32 @@ import sys
 REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, REPO_ROOT)
 
+from spec_repair.exceptions import EquivalenceUndecided
 from spec_repair.ltl_types import GR1FormulaType
 from spec_repair.model.spectra_specification import SpectraSpecification
 from spec_repair.util.file_util import write_to_file
+
+
+UNDECIDED = []
+
+
+def _equivalent_or_undecided(spec, other):
+    """
+    Whether `spec` is equivalent to `other`, counting the checks that time out.
+
+    An undecided check is reported as *not* equivalent, which keeps both
+    specifications. That is the conservative direction for a filter - it can
+    only leave the pool larger than the exact answer would, never smaller, so no
+    repair is ever discarded on the strength of a question that was not
+    answered. It does mean the unique count is an upper bound whenever anything
+    lands in `UNDECIDED`, and the run says so at the end rather than reporting a
+    number that looks exact.
+    """
+    try:
+        return spec.equivalent_to(other)
+    except EquivalenceUndecided as e:
+        UNDECIDED.append(str(e))
+        return False
 
 
 def _equivalent_to_any(spec, kept, workers):
@@ -58,9 +81,10 @@ def _equivalent_to_any(spec, kept, workers):
     if not kept:
         return False
     if workers <= 1:
-        return any(spec.equivalent_to(other) for other in kept)
+        return any(_equivalent_or_undecided(spec, other) for other in kept)
     with ThreadPoolExecutor(max_workers=workers) as pool:
-        futures = [pool.submit(spec.equivalent_to, other) for other in kept]
+        futures = [pool.submit(_equivalent_or_undecided, spec, other)
+                   for other in kept]
         try:
             for f in futures:
                 if f.result():
@@ -162,6 +186,14 @@ def strongest_guarantees(specs, workers=1):
     return maxima
 
 
+def _undecided_note() -> str:
+    """A suffix naming how many equivalence checks were never decided."""
+    if not UNDECIDED:
+        return ""
+    return (f"   [upper bound: {len(UNDECIDED)} equivalence check(s) hit "
+            f"SPEC_REPAIR_EQUIV_TIMEOUT and were counted as not equivalent]")
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("run_dir")
@@ -197,7 +229,8 @@ def main():
 
     if args.unique_only:
         unique = semantically_unique(specs, workers=args.workers)
-        print(f"stage 1  semantically unique          {len(unique)}", flush=True)
+        print(f"stage 1  semantically unique          {len(unique)}"
+              f"{_undecided_note()}", flush=True)
         # A name of its own: `unique_specs/` is what run_experiment_pipeline
         # writes for its own stage 2, and these two are not the same set.
         out = args.out or os.path.join(args.run_dir, "unique_from_final_specs")
@@ -220,11 +253,13 @@ def main():
         strongest = strongest_guarantees(specs, workers=args.workers)
         print(f"stage 1  strongest guarantees         {len(strongest)}", flush=True)
         unique = semantically_unique(strongest, workers=args.workers)
-        print(f"stage 2  semantically unique          {len(unique)}", flush=True)
+        print(f"stage 2  semantically unique          {len(unique)}"
+              f"{_undecided_note()}", flush=True)
         strongest = unique
     else:
         unique = semantically_unique(specs, workers=args.workers)
-        print(f"stage 1  semantically unique          {len(unique)}", flush=True)
+        print(f"stage 1  semantically unique          {len(unique)}"
+              f"{_undecided_note()}", flush=True)
 
         strongest = strongest_guarantees(unique, workers=args.workers)
         print(f"stage 2  strongest guarantees         {len(strongest)}", flush=True)

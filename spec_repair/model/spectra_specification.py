@@ -12,6 +12,7 @@ from typing import TypedDict, Optional, TypeVar, List, Set, Any, Callable
 import pandas as pd
 import spot
 
+from spec_repair.exceptions import EquivalenceUndecided
 from spec_repair.interfaces.ispecification import ISpecification
 # from spec_repair.components.oracles.new_spec_oracle import NewSpecOracle
 from spec_repair.model.adaptation_learned import Adaptation
@@ -503,7 +504,121 @@ def _equivalent_via_stdin(left_exp: str, right_exp: str) -> bool:
     return check.returncode == 0
 
 
+# A residue this size is decided in well under a second; past it the
+# shortcut stops being a shortcut.
+_MAX_RESIDUE_CHARS = 3000
+
+
+def _split_top_level(formula: str) -> Optional[tuple]:
+    """
+    `formula` as (operator, operands) split at the outermost operator.
+
+    Recognises the two shapes this module builds: a whole specification is
+    `(assumptions) -> (guarantees)`, and each side is a conjunction. Returns
+    None for anything else, which simply means no shortcut is attempted.
+    """
+    f = formula.strip()
+    depth, arrows, ands = 0, [], []
+    i = 0
+    while i < len(f):
+        ch = f[i]
+        if ch == "(":
+            depth += 1
+        elif ch == ")":
+            depth -= 1
+        elif depth == 0 and f.startswith("->", i):
+            arrows.append(i)
+            i += 1
+        elif depth == 0 and ch == "&":
+            ands.append(i)
+        i += 1
+    if len(arrows) == 1:
+        return "->", [f[:arrows[0]].strip(), f[arrows[0] + 2:].strip()]
+    if arrows:
+        return None                      # nested implications: not our shape
+    if ands:
+        parts, prev = [], 0
+        for j in ands:
+            parts.append(f[prev:j].strip())
+            prev = j + 1
+        parts.append(f[prev:].strip())
+        return "&", [p for p in parts if p]
+    if f.startswith("(") and f.endswith(")"):
+        inner = _split_top_level(f[1:-1])
+        return inner
+    return None
+
+
+def _equivalent_by_structure(left_exp: str, right_exp: str, depth: int = 0) -> bool:
+    """
+    True when the two formulas can be *proved* equivalent structurally.
+
+    Sound and one-directional: a False result means "not proved", never "not
+    equivalent", so the exact check still runs. It never decides equivalence
+    wrongly, and it only ever saves work.
+
+    Two reductions, both standard:
+
+    * `A1 -> B1` and `A2 -> B2` are equivalent if `A1 == A2` and `B1 == B2`.
+      Each side is far smaller than the implication, and a whole-specification
+      comparison is exactly this shape.
+    * `C & L` and `C & R` are equivalent if `L == R`. The shared conjuncts are
+      usually nearly all of them: on the genbuf pair that held gpu08 for 23
+      hours, the guarantee sides share 105 of 108 conjuncts, so the residue is
+      3 conjuncts of 342 characters rather than 7.6KB.
+
+    The converse of neither holds - a shared context can mask a difference - so
+    failure here proves nothing.
+    """
+    if left_exp.strip() == right_exp.strip():
+        return True
+    if depth > 3:
+        return False
+    left = _split_top_level(left_exp)
+    right = _split_top_level(right_exp)
+    if not left or not right or left[0] != right[0]:
+        return False
+    op, left_parts, right_parts = left[0], left[1], right[1]
+
+    if op == "->":
+        # Structural proof only. Falling back to an exact check per side would
+        # defeat the point: the guarantee side of a specification is nearly the
+        # whole formula, so that check costs about what the one being avoided
+        # costs.
+        return all(_equivalent_by_structure(a, b, depth + 1)
+                   for a, b in zip(left_parts, right_parts))
+
+    left_set, right_set = set(left_parts), set(right_parts)
+    if left_set == right_set:
+        return True                      # same conjuncts, any order
+    left_only = [p for p in left_parts if p not in right_set]
+    right_only = [p for p in right_parts if p not in left_set]
+    if not left_only or not right_only or not (left_set & right_set):
+        # One side subsumes the other, or nothing is shared. `C` versus `C & R`
+        # is equivalent exactly when C implies R, which is not what this
+        # answers, so say nothing.
+        return False
+    residue_left, residue_right = "&".join(left_only), "&".join(right_only)
+    if max(len(residue_left), len(residue_right)) > _MAX_RESIDUE_CHARS:
+        # The residue is no longer small enough to be obviously cheap, and this
+        # shortcut exists only to be cheap.
+        return False
+    return _are_equivalent_exact(residue_left, residue_right)
+
+
 def are_equivalent(left_exp: str, right_exp: str) -> bool:
+    """
+    Equivalence of two formulas, cheaply where possible and exactly otherwise.
+
+    The structural shortcut runs first: it can only ever prove equivalence, and
+    when it cannot, `_are_equivalent_exact` gives the exact answer.
+    """
+    if _equivalent_by_structure(left_exp, right_exp):
+        return True
+    return _are_equivalent_exact(left_exp, right_exp)
+
+
+def _are_equivalent_exact(left_exp: str, right_exp: str) -> bool:
     """
     Equivalence through `ltlfilt`, in a subprocess, never in this process.
 
@@ -525,7 +640,15 @@ def are_equivalent(left_exp: str, right_exp: str) -> bool:
     cmd = [_ltlfilt_cmd(), "-c", "-f", left_exp, LTLFiltOperation.EQUIVALENT.flag(), right_exp]
     p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stdin=subprocess.PIPE,
                          stderr=subprocess.PIPE, preexec_fn=_raise_stack_limit)
-    stdout_bytes, stderr_bytes = p.communicate()
+    try:
+        stdout_bytes, stderr_bytes = p.communicate(timeout=_equiv_timeout())
+    except subprocess.TimeoutExpired:
+        p.kill()
+        p.communicate()
+        raise EquivalenceUndecided(
+            f"ltlfilt did not decide equivalence within "
+            f"{_equiv_timeout()}s ({len(left_exp)} and {len(right_exp)} "
+            f"characters).") from None
     output = stdout_bytes.decode("utf-8")
     reg = re.search(r"([01])\n", output)
     if not reg:
@@ -537,6 +660,23 @@ def are_equivalent(left_exp: str, right_exp: str) -> bool:
 
 
 _LTLFILT_ENV = "SPEC_REPAIR_LTLFILT"
+_EQUIV_TIMEOUT_ENV = "SPEC_REPAIR_EQUIV_TIMEOUT"
+
+
+def _equiv_timeout() -> Optional[float]:
+    """
+    Seconds to allow one equivalence check, from `SPEC_REPAIR_EQUIV_TIMEOUT`.
+
+    Unset or 0 means no limit, which is the historical behaviour and the only
+    one that answers exactly. A limit turns a check that would not converge into
+    an `EquivalenceUndecided` the caller must handle, rather than a process that
+    holds a machine for a day.
+    """
+    raw = os.environ.get(_EQUIV_TIMEOUT_ENV, "").strip()
+    if not raw:
+        return None
+    seconds = float(raw)
+    return seconds if seconds > 0 else None
 
 
 def _ltlfilt_cmd() -> str:

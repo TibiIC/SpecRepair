@@ -87,3 +87,20 @@ class SolverInvocationError(RuntimeError):
     assumption" - a claim about the specification, made because a shared library
     was missing.
     """
+
+
+class EquivalenceUndecided(Exception):
+    """
+    The equivalence check ran out of the time it was given.
+
+    Distinct from a failure: `ltlfilt` was working when it was stopped, and
+    neither "equivalent" nor "not equivalent" has been established. Raised only
+    when `SPEC_REPAIR_EQUIV_TIMEOUT` is set, so the default behaviour - wait for
+    an exact answer, however long it takes - is unchanged.
+
+    Deciding equivalence of two whole GR(1) specifications means complementing a
+    product automaton, and on genbuf that does not converge: two 108-conjunct,
+    28-atom formulas differing in three conjuncts ran for 21 and 23 hours at
+    100% CPU, memory climbing 200-275MB/h, and answered nothing. A caller that
+    can proceed without the answer should catch this and say what it assumed.
+    """
