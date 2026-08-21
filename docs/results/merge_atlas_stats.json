@@ -1,0 +1,688 @@
+{
+ "amba_trace0": {
+  "notes": [
+   "Whole GR1 graph did not complete"
+  ],
+  "stats": [
+   [
+    "final",
+    "21"
+   ],
+   [
+    "unique",
+    "21"
+   ],
+   [
+    "strongest",
+    "21"
+   ],
+   [
+    "merged",
+    "1"
+   ]
+  ]
+ },
+ "amba_trace1": {
+  "notes": [
+   "Whole GR1 graph did not complete"
+  ],
+  "stats": [
+   [
+    "final",
+    "21"
+   ],
+   [
+    "unique",
+    "21"
+   ],
+   [
+    "strongest",
+    "21"
+   ],
+   [
+    "merged",
+    "1"
+   ]
+  ]
+ },
+ "amba_trace2": {
+  "notes": [
+   "Whole GR1 graph did not complete"
+  ],
+  "stats": [
+   [
+    "final",
+    "21"
+   ],
+   [
+    "unique",
+    "21"
+   ],
+   [
+    "strongest",
+    "21"
+   ],
+   [
+    "merged",
+    "1"
+   ]
+  ]
+ },
+ "amba_trace4": {
+  "notes": [
+   "Whole GR1 graph did not complete"
+  ],
+  "stats": [
+   [
+    "final",
+    "21"
+   ],
+   [
+    "unique",
+    "16"
+   ],
+   [
+    "strongest",
+    "16"
+   ],
+   [
+    "merged",
+    "1"
+   ]
+  ]
+ },
+ "elevator_trace1": {
+  "notes": [],
+  "stats": [
+   [
+    "merged",
+    "1"
+   ]
+  ]
+ },
+ "elevator_trace3": {
+  "notes": [],
+  "stats": [
+   [
+    "merged",
+    "1"
+   ]
+  ]
+ },
+ "gyro_trace0": {
+  "notes": [],
+  "stats": [
+   [
+    "final",
+    "97"
+   ],
+   [
+    "unique",
+    "35"
+   ],
+   [
+    "strongest",
+    "24"
+   ],
+   [
+    "merged",
+    "1"
+   ]
+  ]
+ },
+ "gyro_trace1": {
+  "notes": [],
+  "stats": [
+   [
+    "final",
+    "109"
+   ],
+   [
+    "unique",
+    "50"
+   ],
+   [
+    "strongest",
+    "35"
+   ],
+   [
+    "merged",
+    "1"
+   ]
+  ]
+ },
+ "gyro_trace2": {
+  "notes": [],
+  "stats": [
+   [
+    "merged",
+    "1"
+   ]
+  ]
+ },
+ "gyro_trace3": {
+  "notes": [],
+  "stats": [
+   [
+    "merged",
+    "1"
+   ]
+  ]
+ },
+ "gyro_trace4": {
+  "notes": [],
+  "stats": [
+   [
+    "merged",
+    "1"
+   ]
+  ]
+ },
+ "lift_trace0": {
+  "notes": [],
+  "stats": [
+   [
+    "final",
+    "21"
+   ],
+   [
+    "unique",
+    "11"
+   ],
+   [
+    "strongest",
+    "11"
+   ],
+   [
+    "merged",
+    "1"
+   ]
+  ]
+ },
+ "lift_trace1": {
+  "notes": [],
+  "stats": [
+   [
+    "final",
+    "21"
+   ],
+   [
+    "unique",
+    "12"
+   ],
+   [
+    "strongest",
+    "12"
+   ],
+   [
+    "merged",
+    "1"
+   ]
+  ]
+ },
+ "lift_trace2": {
+  "notes": [],
+  "stats": [
+   [
+    "final",
+    "21"
+   ],
+   [
+    "unique",
+    "16"
+   ],
+   [
+    "strongest",
+    "16"
+   ],
+   [
+    "merged",
+    "1"
+   ]
+  ]
+ },
+ "lift_trace3": {
+  "notes": [],
+  "stats": [
+   [
+    "final",
+    "21"
+   ],
+   [
+    "unique",
+    "17"
+   ],
+   [
+    "strongest",
+    "17"
+   ],
+   [
+    "merged",
+    "1"
+   ]
+  ]
+ },
+ "lift_trace4": {
+  "notes": [],
+  "stats": [
+   [
+    "final",
+    "21"
+   ],
+   [
+    "unique",
+    "9"
+   ],
+   [
+    "strongest",
+    "9"
+   ],
+   [
+    "merged",
+    "1"
+   ]
+  ]
+ },
+ "minepump_liveness_trace1": {
+  "notes": [],
+  "stats": [
+   [
+    "final",
+    "17"
+   ],
+   [
+    "strongest",
+    "17"
+   ],
+   [
+    "unique",
+    "13"
+   ],
+   [
+    "merged",
+    "1"
+   ]
+  ]
+ },
+ "minepump_liveness_trace2": {
+  "notes": [],
+  "stats": [
+   [
+    "merged",
+    "1"
+   ]
+  ]
+ },
+ "minepump_liveness_trace3": {
+  "notes": [],
+  "stats": [
+   [
+    "final",
+    "19"
+   ],
+   [
+    "strongest",
+    "19"
+   ],
+   [
+    "unique",
+    "12"
+   ],
+   [
+    "merged",
+    "1"
+   ]
+  ]
+ },
+ "minepump_trace0": {
+  "notes": [],
+  "stats": [
+   [
+    "final",
+    "17"
+   ],
+   [
+    "unique",
+    "11"
+   ],
+   [
+    "strongest",
+    "11"
+   ],
+   [
+    "merged",
+    "1"
+   ]
+  ]
+ },
+ "minepump_trace1": {
+  "notes": [],
+  "stats": [
+   [
+    "final",
+    "26877"
+   ],
+   [
+    "strongest",
+    "296"
+   ],
+   [
+    "unique",
+    "54"
+   ],
+   [
+    "merged",
+    "50"
+   ]
+  ]
+ },
+ "minepump_trace2": {
+  "notes": [],
+  "stats": [
+   [
+    "final",
+    "23598"
+   ],
+   [
+    "strongest",
+    "94"
+   ],
+   [
+    "unique",
+    "36"
+   ],
+   [
+    "merged",
+    "35"
+   ]
+  ]
+ },
+ "minepump_trace3": {
+  "notes": [],
+  "stats": [
+   [
+    "final",
+    "23201"
+   ],
+   [
+    "strongest",
+    "120"
+   ],
+   [
+    "unique",
+    "45"
+   ],
+   [
+    "merged",
+    "40"
+   ]
+  ]
+ },
+ "minepump_trace4": {
+  "notes": [],
+  "stats": [
+   [
+    "final",
+    "27589"
+   ],
+   [
+    "strongest",
+    "178"
+   ],
+   [
+    "unique",
+    "50"
+   ],
+   [
+    "merged",
+    "48"
+   ]
+  ]
+ },
+ "pcar_trace0": {
+  "notes": [],
+  "stats": [
+   [
+    "merged",
+    "1"
+   ]
+  ]
+ },
+ "pcar_trace1": {
+  "notes": [],
+  "stats": [
+   [
+    "final",
+    "21"
+   ],
+   [
+    "unique",
+    "17"
+   ],
+   [
+    "strongest",
+    "17"
+   ],
+   [
+    "merged",
+    "1"
+   ]
+  ]
+ },
+ "pcar_trace2": {
+  "notes": [],
+  "stats": [
+   [
+    "merged",
+    "1"
+   ]
+  ]
+ },
+ "pcar_trace3": {
+  "notes": [],
+  "stats": [
+   [
+    "merged",
+    "1"
+   ]
+  ]
+ },
+ "pcar_trace4": {
+  "notes": [],
+  "stats": [
+   [
+    "merged",
+    "1"
+   ]
+  ]
+ },
+ "traffic_single_trace0": {
+  "notes": [],
+  "stats": [
+   [
+    "final",
+    "19"
+   ],
+   [
+    "unique",
+    "7"
+   ],
+   [
+    "strongest",
+    "7"
+   ],
+   [
+    "merged",
+    "1"
+   ]
+  ]
+ },
+ "traffic_single_trace2": {
+  "notes": [],
+  "stats": [
+   [
+    "final",
+    "19"
+   ],
+   [
+    "unique",
+    "7"
+   ],
+   [
+    "strongest",
+    "7"
+   ],
+   [
+    "merged",
+    "1"
+   ]
+  ]
+ },
+ "traffic_single_trace3": {
+  "notes": [],
+  "stats": [
+   [
+    "final",
+    "3300"
+   ],
+   [
+    "strongest",
+    "3"
+   ],
+   [
+    "unique",
+    "3"
+   ],
+   [
+    "merged",
+    "1"
+   ]
+  ]
+ },
+ "traffic_single_trace4": {
+  "notes": [],
+  "stats": [
+   [
+    "final",
+    "19"
+   ],
+   [
+    "unique",
+    "7"
+   ],
+   [
+    "strongest",
+    "7"
+   ],
+   [
+    "merged",
+    "1"
+   ]
+  ]
+ },
+ "traffic_updated_trace0": {
+  "notes": [],
+  "stats": [
+   [
+    "final",
+    "21"
+   ],
+   [
+    "unique",
+    "10"
+   ],
+   [
+    "strongest",
+    "10"
+   ],
+   [
+    "merged",
+    "1"
+   ]
+  ]
+ },
+ "traffic_updated_trace1": {
+  "notes": [],
+  "stats": [
+   [
+    "final",
+    "21"
+   ],
+   [
+    "unique",
+    "12"
+   ],
+   [
+    "strongest",
+    "12"
+   ],
+   [
+    "merged",
+    "1"
+   ]
+  ]
+ },
+ "traffic_updated_trace2": {
+  "notes": [],
+  "stats": [
+   [
+    "final",
+    "21"
+   ],
+   [
+    "unique",
+    "10"
+   ],
+   [
+    "strongest",
+    "10"
+   ],
+   [
+    "merged",
+    "1"
+   ]
+  ]
+ },
+ "traffic_updated_trace3": {
+  "notes": [],
+  "stats": [
+   [
+    "final",
+    "21"
+   ],
+   [
+    "unique",
+    "11"
+   ],
+   [
+    "strongest",
+    "11"
+   ],
+   [
+    "merged",
+    "1"
+   ]
+  ]
+ },
+ "traffic_updated_trace4": {
+  "notes": [],
+  "stats": [
+   [
+    "final",
+    "21"
+   ],
+   [
+    "unique",
+    "10"
+   ],
+   [
+    "strongest",
+    "10"
+   ],
+   [
+    "merged",
+    "1"
+   ]
+  ]
+ }
+}

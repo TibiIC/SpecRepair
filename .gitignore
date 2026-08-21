@@ -75,3 +75,8 @@ hs_err_pid*.log
 /all_statistics_*.csv
 /all_statistics_*.tex
 /all_statistics/
+
+# The merge atlas page, regenerable via scripts/build_merge_atlas.py from the
+# graphs in docs/results/graphs/ and docs/results/merge_atlas_stats.json. It
+# inlines every graph as base64, so the built page is ~10MB of duplication.
+/docs/results/merge-atlas.html
