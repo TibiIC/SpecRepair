@@ -1,5 +1,14 @@
 # What is running, as of 2026-08-20 22:45
 
+> **Superseded 2026-08-21 09:00.** This file sweeps gpu01-gpu20 only, and six live
+> searches were found outside that range - `genbuf_0`/`genbuf_1` on gpu26,
+> `genbuf_4`/`traffic_single_1`/`minepump_liveness_4` on gpu27, `pcar_3` on gpu29,
+> all running since 2026-08-14. `minepump_liveness_4` is therefore *not* stopped,
+> and `genbuf_1`/`genbuf_4` each have their original search running alongside the
+> MARCO re-run in the same directory. gpu22 and gpu28 refuse ssh and are unchecked.
+> Sweep gpu01-gpu30, and see
+> [the 2026-08-21 update](experiment-status-2026-08-19.md#update-2026-08-21-morning).
+
 Everything below runs on the lab machines under `setsid nohup`, so it is
 **unaffected by the laptop restarting**. Nothing here needs a live ssh session.
 This file exists so the state can be picked up cold.
