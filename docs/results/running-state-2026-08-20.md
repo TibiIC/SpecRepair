@@ -36,6 +36,25 @@ Sweep every box at once:
 
 ## Running now
 
+### merge-first (maximal realisable subsets) - added 2026-08-22 12:41
+
+The new `--maximal` pipeline, on all five minepump traces. Trace 0 finished in
+24 seconds (17 -> 1, guarantees equivalent to the original). The rest are pools
+of 23-28k specifications and are expected to take days; there is deliberately no
+bound on the enumeration, since a truncated one loses the maximality guarantee.
+
+| run | box | pool |
+| --- | --- | --- |
+| minepump_trace0 | gpu07 | 17 - **done**, 1 merge |
+| minepump_trace1 | gpu21 | 26,877 |
+| minepump_trace2 | gpu23 | 23,598 |
+| minepump_trace3 | gpu24 | 23,201 |
+| minepump_trace4 | gpu25 | 27,589 |
+
+Launcher: `/vol/bitbucket/tg4018/maximal_runner.sh <run> [<run>...]`, logs in
+`/vol/bitbucket/tg4018/max_logs/<run>.max.log`, output written to each run's
+`maximal_merged_specs/`. Same `rc=` convention as the other queues.
+
 ### genbuf re-runs, with MARCO cores (the 48 -> 50 work)
 
 | run | box | started | state |
