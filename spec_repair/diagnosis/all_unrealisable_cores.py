@@ -83,6 +83,27 @@ class CoreSearchStats:
 
 
 @dataclass
+class Enumeration:
+    """
+    Everything one MARCO run establishes about the subset lattice.
+
+    The cores are what `enumerate` has always returned. The maximal realisable
+    subsets fall out of the same run - a realisable seed is grown to one before
+    it is used to block its own down-set - and were previously discarded. They
+    are the strongest realisable conjunctions of the given names, which is what
+    a merge wants: see `spec_repair.diagnosis.maximal_merging`.
+
+    Both lists are complete only when the run finished. Stopping early leaves
+    both partial, and a partial core set silently breaks the hitting-set
+    argument the trivial-solution path depends on, so there is deliberately no
+    way to bound the enumeration from here.
+    """
+    cores: List[Set[str]] = field(default_factory=list)
+    maximal_realisable_subsets: List[Set[str]] = field(default_factory=list)
+    stats: CoreSearchStats = field(default_factory=CoreSearchStats)
+
+
+@dataclass
 class AllUnrealisableCores:
     """
     MARCO over a realisability oracle.
@@ -153,7 +174,15 @@ class AllUnrealisableCores:
         # optimal. Taking the last keeps the seed maximal and deterministic.
         models = [line for line in output.splitlines() if "sel(" in line]
         if not models:
-            return set() if "SATISFIABLE" in output else None
+            # No `sel` atoms is the *empty* selection, which is a real seed
+            # whenever the program is satisfiable - it is the maximal subset
+            # left once every singleton has been blocked, and growing it is how
+            # the empty maximal realisable subset gets recorded. Optimisation
+            # makes clingo report "OPTIMUM FOUND" rather than "SATISFIABLE", so
+            # testing only for the latter used to read this as "nothing left"
+            # and stop one step early.
+            satisfiable = "OPTIMUM FOUND" in output or "SATISFIABLE" in output
+            return set() if satisfiable else None
         self.stats.seeds += 1
         return {_unatom(m) for m in _MODEL_ATOM.findall(models[-1])}
 
@@ -185,8 +214,12 @@ class AllUnrealisableCores:
         return grown
 
     def enumerate(self, progress_every: float = 60.0) -> List[Set[str]]:
+        """Every minimal unrealisable core - `enumerate_all().cores`."""
+        return self.enumerate_all(progress_every=progress_every).cores
+
+    def enumerate_all(self, progress_every: float = 60.0) -> Enumeration:
         """
-        Every minimal unrealisable core, each returned once.
+        Every minimal unrealisable core and every maximal realisable subset.
 
         Terminates because each iteration blocks a region of the subset lattice
         that no later seed can revisit, and the lattice is finite. How long that
@@ -197,6 +230,7 @@ class AllUnrealisableCores:
         """
         import time
         cores: List[Set[str]] = []
+        subsets: List[Set[str]] = []
         started = last_report = time.time()
         while True:
             if progress_every and time.time() - last_report >= progress_every:
@@ -209,6 +243,8 @@ class AllUnrealisableCores:
             if self._check(seed):
                 mss = self._grow_to_maximal(seed)
                 self._blocked_down.append(mss)
+                if mss not in subsets:
+                    subsets.append(mss)
                 self.stats.maximal_realisable += 1
             else:
                 core = self._shrink_to_core(seed)
@@ -216,7 +252,8 @@ class AllUnrealisableCores:
                     cores.append(core)
                     self.stats.cores += 1
                 self._blocked_up.append(core)
-        return cores
+        return Enumeration(cores=cores, maximal_realisable_subsets=subsets,
+                           stats=self.stats)
 
 
 def _atom(name: str) -> str:

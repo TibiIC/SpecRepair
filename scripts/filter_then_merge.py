@@ -217,6 +217,15 @@ def main():
                          "the guarantee filter has already removed dominated "
                          "specifications, so classes that were entirely dominated "
                          "never reach the equivalence check at all.")
+    ap.add_argument("--maximal", action="store_true",
+                    help="merge FIRST, by enumerating maximal realisable subsets "
+                         "of the pooled guarantees, then report the unique and "
+                         "strongest counts over the result. The default order "
+                         "filters before merging, which can delete the only "
+                         "carrier of a formula the merge needed: on minepump "
+                         "trace 1 all 15 specs holding one such guarantee were "
+                         "dominated and dropped, and the merge could not conjoin "
+                         "what it never received. Writes maximal_merged_specs/.")
     ap.add_argument("--strongest-first", action="store_true",
                     help="run the guarantee filter before the equivalence filter. "
                          "Same final set, far cheaper on a large pool")
@@ -245,6 +254,26 @@ def main():
         out = args.out or os.path.join(args.run_dir, "unique_from_final_specs")
         os.makedirs(out, exist_ok=True)
         for i, spec in enumerate(unique):
+            write_to_file(os.path.join(out, f"spec_{i}.spectra"), spec.to_str())
+        print(f"         written to {out}", flush=True)
+        return 0
+
+    if args.maximal:
+        from spec_repair.diagnosis.maximal_merging import maximal_merges
+        merged = maximal_merges(specs)
+        print(f"stage 1  maximal realisable merges    {len(merged)}", flush=True)
+        # Both filters are reporting steps here, not gatekeepers: the merge has
+        # already happened, so nothing they drop can cost a later stage a
+        # formula. Inclusion-maximal subsets can still be semantically
+        # equivalent to one another, or one can dominate another outright.
+        unique = semantically_unique(merged, workers=args.workers)
+        print(f"stage 2  semantically unique          {len(unique)}"
+              f"{_undecided_note()}", flush=True)
+        strongest = strongest_guarantees(unique, workers=args.workers)
+        print(f"stage 3  strongest guarantees         {len(strongest)}", flush=True)
+        out = args.out or os.path.join(args.run_dir, "maximal_merged_specs")
+        os.makedirs(out, exist_ok=True)
+        for i, spec in enumerate(strongest):
             write_to_file(os.path.join(out, f"spec_{i}.spectra"), spec.to_str())
         print(f"         written to {out}", flush=True)
         return 0
