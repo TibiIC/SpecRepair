@@ -9,9 +9,17 @@ export SPEC_REPAIR_TOOLS=${SPEC_REPAIR_TOOLS:-/vol/bitbucket/tg4018/Tools}
 export PATH=$PATH:$SPEC_REPAIR_TOOLS/bin
 export SPEC_REPAIR_LTLFILT=/vol/bitbucket/tg4018/spot-maxacc/bin/ltlfilt
 export SPEC_REPAIR_CRASH_DIR=/vol/bitbucket/tg4018/crash
+# minepump trace 4 died with rc=139 after seven hours, on a pool of 12,148
+# distinct guarantees - the largest specification anything here has handed
+# Spectra. Unset, the JVM takes a quarter of RAM (~15.5GB of a 62GB box) and
+# leaves the rest idle; jvm.py already names that default as what stops
+# colorsort. No fatal-error log was written anywhere, so point one somewhere
+# findable before asking again.
+export SPEC_REPAIR_JVM_HEAP=${SPEC_REPAIR_JVM_HEAP:-48g}
+export SPEC_REPAIR_SPECTRA_CALL_LOG_DIR=${SPEC_REPAIR_SPECTRA_CALL_LOG_DIR:-/vol/bitbucket/tg4018/max_logs/jvm}
 export LD_LIBRARY_PATH=/vol/bitbucket/tg4018/spot-maxacc/lib:$CONDA_PREFIX/lib:$LD_LIBRARY_PATH
 cd /vol/bitbucket/tg4018/PhD/SpecRepair
-mkdir -p /vol/bitbucket/tg4018/max_logs
+mkdir -p /vol/bitbucket/tg4018/max_logs "$SPEC_REPAIR_SPECTRA_CALL_LOG_DIR"
 MAX_WORKERS=${MAX_WORKERS:-8}
 for r in "$@"; do
   L=/vol/bitbucket/tg4018/max_logs/${r}.max.log

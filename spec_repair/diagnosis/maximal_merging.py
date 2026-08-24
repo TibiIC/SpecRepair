@@ -33,8 +33,10 @@ way to the cores.
 carrying them. Specification-level merging would work too - conjunction absorbs
 a weakened variant that arrives alongside a stronger one, since
 `G_weak & G_strong == G_strong` - but pooling formulas keeps the element set
-small (roughly a thousand for minepump, against 26,877 specs) and stops a
-formula's fate depending on its company.
+small - though not as small as first assumed: minepump trace 1 pools 10,223
+distinct guarantees from its 26,877 specifications, and trace 4 pools 12,148.
+Pooling still stops a formula's fate depending on its company, but at this size
+the whole-pool pre-check below is itself a serious call.
 
 **Assumptions are never enumerated over.** Realisability is antitone in the
 guarantees but *monotone* in the assumptions - a stronger assumption asks the
@@ -275,6 +277,13 @@ def _merge_group(group: MergeGroup, oracle: SpecOracle,
     # unique maximum - there is nothing left to enumerate. Worth trying first:
     # it is the common case on the small case studies, and the expensive path
     # below only exists for pools where it fails.
+    # Say so before asking. This one call is a synthesis over every guarantee in
+    # the pool - 12,148 of them on minepump trace 4 - and it is the first thing
+    # the merge does, so a run that cannot get past it otherwise sits silent
+    # from start to finish with nothing but "stage 0" on screen.
+    log.info("  trying the whole pool at once (%d guarantees) - "
+             "one realisability check, and the unique maximum if it passes",
+             len(keys))
     everything = _build(group, keys)
     if oracle(everything):
         log.info("  the whole pool is realisable together - one maximal merge")
