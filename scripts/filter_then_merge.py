@@ -226,6 +226,14 @@ def main():
                          "trace 1 all 15 specs holding one such guarantee were "
                          "dominated and dropped, and the merge could not conjoin "
                          "what it never received. Writes maximal_merged_specs/.")
+    ap.add_argument("--directed", action="store_true",
+                    help="merge by descending from the ORIGINAL specification: "
+                         "check its guarantees against the pooled assumptions, "
+                         "take the minimal unrealisable cores of that, and weaken "
+                         "only the guarantees a core implicates. The same cores "
+                         "-> minimal-hitting-sets skeleton the trivial solutions "
+                         "use, with weakening in place of deletion. Writes "
+                         "directed_merged_specs/.")
     ap.add_argument("--strongest-first", action="store_true",
                     help="run the guarantee filter before the equivalence filter. "
                          "Same final set, far cheaper on a large pool")
@@ -254,6 +262,35 @@ def main():
         out = args.out or os.path.join(args.run_dir, "unique_from_final_specs")
         os.makedirs(out, exist_ok=True)
         for i, spec in enumerate(unique):
+            write_to_file(os.path.join(out, f"spec_{i}.spectra"), spec.to_str())
+        print(f"         written to {out}", flush=True)
+        return 0
+
+    if args.directed:
+        import logging
+        import re as _re
+        logging.basicConfig(level=logging.INFO, format="%(message)s")
+        from spec_repair.diagnosis.directed_merging import directed_merges
+        run = os.path.basename(os.path.normpath(args.run_dir))
+        case = _re.sub(r"_trace\d+_.*$", "", run)
+        original_path = os.path.join(
+            REPO_ROOT, "input-files", "case-studies", "spectra", "case_study_3",
+            case, "original.spectra")
+        if not os.path.exists(original_path):
+            print(f"no original specification at {original_path}", flush=True)
+            return 1
+        print(f"         original: {original_path}", flush=True)
+        original = SpectraSpecification.from_file(original_path)
+        merged = directed_merges(specs, original)
+        print(f"stage 1  directed merges              {len(merged)}", flush=True)
+        unique = semantically_unique(merged, workers=args.workers)
+        print(f"stage 2  semantically unique          {len(unique)}"
+              f"{_undecided_note()}", flush=True)
+        strongest = strongest_guarantees(unique, workers=args.workers)
+        print(f"stage 3  strongest guarantees         {len(strongest)}", flush=True)
+        out = args.out or os.path.join(args.run_dir, "directed_merged_specs")
+        os.makedirs(out, exist_ok=True)
+        for i, spec in enumerate(strongest):
             write_to_file(os.path.join(out, f"spec_{i}.spectra"), spec.to_str())
         print(f"         written to {out}", flush=True)
         return 0
