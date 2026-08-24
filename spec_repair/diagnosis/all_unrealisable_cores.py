@@ -202,10 +202,22 @@ class AllUnrealisableCores:
                 core = candidate
         return core
 
-    def _grow_to_maximal(self, seed: Set[str]) -> Set[str]:
-        """Add guarantees while the subset stays realisable."""
+    def _grow_to_maximal(self, seed: Set[str], progress_every: float = 0.0) -> Set[str]:
+        """
+        Add guarantees while the subset stays realisable.
+
+        One oracle call per name, so on a large element set this is where the
+        time goes - and the enumeration loop only reports between seeds, so
+        without a line from here a run can look dead for hours while working.
+        """
+        import time
         grown = set(seed)
-        for name in self._names:
+        last = time.time()
+        for index, name in enumerate(self._names):
+            if progress_every and time.time() - last >= progress_every:
+                last = time.time()
+                print(f"         growing: {index}/{len(self._names)} considered, "
+                      f"{len(grown)} kept", flush=True)
             if name in grown:
                 continue
             candidate = grown | {name}
@@ -241,7 +253,7 @@ class AllUnrealisableCores:
             if seed is None:
                 break
             if self._check(seed):
-                mss = self._grow_to_maximal(seed)
+                mss = self._grow_to_maximal(seed, progress_every=progress_every)
                 self._blocked_down.append(mss)
                 if mss not in subsets:
                     subsets.append(mss)
