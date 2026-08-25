@@ -138,3 +138,53 @@ class TestShrinkIsCheaperButEqual(TestCase):
         names = ["g0", "g1", "g2"]
         got, _ = self._run(names, [set(names)])
         self.assertEqual([("g0", "g1", "g2")], got)
+
+
+class TestDualityAgreesWithGrowing(TestCase):
+    """
+    The complements of the minimal hitting sets of the cores must be exactly the
+    maximal realisable subsets MARCO reaches by growing seeds.
+
+    That equality is the MUS/MCS duality, and it is what lets the directed merge
+    skip the growing entirely. If it ever stopped holding, the merge would
+    silently report the wrong subsets, so it is checked rather than assumed.
+    """
+
+    def _both_ways(self, names, cores):
+        from spec_repair.util.set_util import all_minimal_hitting_sets
+        oracle = oracle_from_cores(cores)
+
+        grown = AllUnrealisableCores(names, oracle).enumerate_all(progress_every=0)
+        lean = AllUnrealisableCores(names, oracle).enumerate_all(
+            progress_every=0, grow=False)
+
+        self.assertEqual(as_sorted(grown.cores), as_sorted(lean.cores),
+                         "skipping the growth changed which cores were found")
+        derived = [set(names) - set(h) for h in all_minimal_hitting_sets(lean.cores)]
+        return (sorted(tuple(sorted(s)) for s in grown.maximal_realisable_subsets),
+                sorted(tuple(sorted(s)) for s in derived))
+
+    def test_single_core(self):
+        got, derived = self._both_ways(["g1", "g2", "g3"], [{"g1", "g2"}])
+        self.assertEqual(got, derived)
+
+    def test_two_overlapping_cores(self):
+        got, derived = self._both_ways(
+            ["g1", "g2", "g3", "g4"], [{"g1", "g2"}, {"g2", "g3"}])
+        self.assertEqual(got, derived)
+
+    def test_three_disjoint_cores(self):
+        got, derived = self._both_ways(
+            [f"g{i}" for i in range(6)],
+            [{"g0", "g1"}, {"g2", "g3"}, {"g4", "g5"}])
+        self.assertEqual(got, derived)
+
+    def test_singleton_core_removes_one_element(self):
+        got, derived = self._both_ways(["g1", "g2", "g3"], [{"g2"}])
+        self.assertEqual(got, derived)
+
+    def test_nested_and_overlapping_mix(self):
+        got, derived = self._both_ways(
+            [f"g{i}" for i in range(5)],
+            [{"g0"}, {"g1", "g2"}, {"g2", "g3", "g4"}])
+        self.assertEqual(got, derived)

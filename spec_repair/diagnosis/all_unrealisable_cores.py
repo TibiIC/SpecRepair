@@ -253,7 +253,8 @@ class AllUnrealisableCores:
         """Every minimal unrealisable core - `enumerate_all().cores`."""
         return self.enumerate_all(progress_every=progress_every).cores
 
-    def enumerate_all(self, progress_every: float = 60.0) -> Enumeration:
+    def enumerate_all(self, progress_every: float = 60.0,
+                      grow: bool = True) -> Enumeration:
         """
         Every minimal unrealisable core and every maximal realisable subset.
 
@@ -277,10 +278,13 @@ class AllUnrealisableCores:
             if seed is None:
                 break
             if self._check(seed):
-                mss = self._grow_to_maximal(seed, progress_every=progress_every)
+                if grow:
+                    mss = self._grow_to_maximal(seed, progress_every=progress_every)
+                    if mss not in subsets:
+                        subsets.append(mss)
+                else:
+                    mss = set(seed)
                 self._blocked_down.append(mss)
-                if mss not in subsets:
-                    subsets.append(mss)
                 self.stats.maximal_realisable += 1
             else:
                 core = self._shrink_to_core(seed)

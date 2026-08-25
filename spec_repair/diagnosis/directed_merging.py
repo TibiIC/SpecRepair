@@ -265,6 +265,11 @@ def directed_merges(
     return results
 
 
+def _in_key_order(keys):
+    """`v0, v1, ... v10`, not the lexicographic `v0, v1, v10, v2`."""
+    return sorted(keys, key=lambda k: int(k[1:]))
+
+
 def _weakest_forced(original, pool: Pool, kept, candidates, oracle,
                     progress_every: float) -> List:
     """
@@ -282,14 +287,32 @@ def _weakest_forced(original, pool: Pool, kept, candidates, oracle,
     lookup = dict(zip(keys, candidates))
 
     def check(selected) -> bool:
-        rows = kept + [lookup[k] for k in sorted(selected, key=lambda k: int(k[1:]))]
+        rows = kept + [lookup[k] for k in _in_key_order(selected)]
         return oracle(_assemble(original, pool.assumptions, rows))
 
+    # Cores only, then the MUS/MCS duality: the maximal realisable subsets are
+    # the complements of the minimal hitting sets of the cores. Reading MARCO's
+    # own grown subsets would give the same answer on a completed run, but pays
+    # one oracle call per name outside every realisable seed to get there - on
+    # thousands of variants that is the dominant cost, and it is avoidable
+    # because the cores already determine the answer. It is also the same step
+    # `get_all_trivial_solutions_marco` takes one level up, where the elements
+    # are whole guarantees rather than variants of one.
     enumeration = AllUnrealisableCores(keys, check).enumerate_all(
-        progress_every=progress_every)
+        progress_every=progress_every, grow=False)
     log.info("   %s", enumeration.stats)
+    cores = enumeration.cores
+    if not cores:
+        # Nothing conflicts: every variant can be conjoined at once.
+        rows = kept + [lookup[k] for k in _in_key_order(keys)]
+        return [_assemble(original, pool.assumptions, rows)]
+
     out = []
-    for subset in enumeration.maximal_realisable_subsets:
-        rows = kept + [lookup[k] for k in sorted(subset, key=lambda k: int(k[1:]))]
+    hitting = all_minimal_hitting_sets(cores)
+    log.info("   %d core(s) -> %d maximal realisable subset(s)",
+             len(cores), len(hitting))
+    for drop in hitting:
+        subset = [k for k in keys if k not in drop]
+        rows = kept + [lookup[k] for k in _in_key_order(subset)]
         out.append(_assemble(original, pool.assumptions, rows))
     return out or [_assemble(original, pool.assumptions, kept)]
