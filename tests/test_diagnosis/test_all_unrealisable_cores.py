@@ -98,3 +98,43 @@ class TestAllUnrealisableCores(TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TestShrinkIsCheaperButEqual(TestCase):
+    """
+    Block deletion must find the same minimal cores as the old linear scan,
+    for many fewer questions - that saving is the whole reason it exists.
+    """
+
+    def _run(self, names, cores):
+        calls = []
+        base = oracle_from_cores(cores)
+
+        def counting(subset):
+            calls.append(len(subset))
+            return base(subset)
+
+        finder = AllUnrealisableCores(names, counting)
+        return as_sorted(finder.enumerate()), len(calls)
+
+    def test_small_core_in_a_large_set_costs_far_less_than_one_call_each(self):
+        names = [f"g{i}" for i in range(200)]
+        got, calls = self._run(names, [{"g7", "g150"}])
+        self.assertEqual([("g150", "g7")], got)
+        self.assertLess(calls, 60,
+                        f"block deletion should beat a 200-call linear scan, took {calls}")
+
+    def test_several_cores_are_all_found(self):
+        names = [f"g{i}" for i in range(60)]
+        cores = [{"g1", "g2"}, {"g5"}, {"g10", "g11", "g12"}]
+        got, _ = self._run(names, cores)
+        self.assertEqual(as_sorted(cores), got)
+
+    def test_single_element_core(self):
+        got, _ = self._run([f"g{i}" for i in range(40)], [{"g13"}])
+        self.assertEqual([("g13",)], got)
+
+    def test_core_spanning_the_whole_set_is_still_minimal(self):
+        names = ["g0", "g1", "g2"]
+        got, _ = self._run(names, [set(names)])
+        self.assertEqual([("g0", "g1", "g2")], got)

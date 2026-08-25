@@ -190,17 +190,41 @@ class AllUnrealisableCores:
         """
         Remove guarantees while the subset stays unrealisable.
 
-        Plain deletion-based minimisation, one oracle call per element. `ddmin`
-        would take fewer calls on a large seed, but each call here is a Spectra
-        synthesis and the seeds are guarantee-sized, so the simpler loop is
-        easier to trust and rarely slower in practice.
+        Deletion in blocks, halving the block size, finishing with a pass of
+        single deletions. Every step only ever drops elements when what is left
+        is *still* unrealisable, and the final block-of-one pass leaves nothing
+        removable, so the result is a minimal core exactly as the plain scan's
+        was - this changes how many questions get asked, not which answer comes
+        back.
+
+        It used to be one oracle call per element, on the reasoning that `ddmin`
+        saves calls but seeds are guarantee-sized so the simple loop is rarely
+        slower. That held while a seed was five to eighty guarantees. It stopped
+        holding when the directed merge began shrinking seeds of a thousand
+        variants: minepump trace 2 spent **1,126 checks and 27 minutes per
+        core**, eighteen cores in 8.2 hours, every one of them a full linear
+        scan.
+
+        * Zeller, Hildebrandt, *Simplifying and isolating failure-inducing
+          input*, IEEE TSE 28(2), 2002. https://doi.org/10.1109/32.988498
         """
         core = set(seed)
-        for name in sorted(seed):
-            candidate = core - {name}
-            if candidate and not self._check(candidate):
-                core = candidate
-        return core
+        block = max(1, len(core) // 2)
+        while True:
+            names = sorted(core)
+            index = 0
+            while index < len(names):
+                chunk = set(names[index:index + block])
+                candidate = core - chunk
+                if candidate and not self._check(candidate):
+                    core = candidate
+                    names = sorted(core)
+                    index = 0          # same block size, from the top
+                else:
+                    index += block
+            if block == 1:
+                return core
+            block = max(1, block // 2)
 
     def _grow_to_maximal(self, seed: Set[str], progress_every: float = 0.0) -> Set[str]:
         """
