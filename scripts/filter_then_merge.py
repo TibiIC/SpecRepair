@@ -43,6 +43,7 @@ sys.path.insert(0, REPO_ROOT)
 from spec_repair.exceptions import EquivalenceUndecided
 from spec_repair.ltl_types import GR1FormulaType
 from spec_repair.model.spectra_specification import SpectraSpecification
+from spec_repair.diagnosis.guarantee_filters import strongest_guarantees
 from spec_repair.util.file_util import write_to_file
 
 
@@ -139,62 +140,6 @@ def semantically_unique(specs, workers=1):
     return kept
 
 
-def strongest_guarantees(specs, workers=1):
-    """
-    The maximal specifications under "strictly stronger guarantees".
-
-    `a` is strictly stronger than `b` when a's guarantees imply b's and b's do
-    not imply a's. That relation is a strict partial order - transitive, because
-    implication is, and asymmetric by construction - so the maximal set can be
-    built incrementally instead of by comparing all n^2 pairs:
-
-        for each specification, compare it against the maxima found so far;
-        if one of them is strictly stronger, discard it and stop;
-        otherwise drop any maxima it is strictly stronger than, and keep it.
-
-    That costs O(n * |maxima|), not O(n^2), and |maxima| shrinks whenever a
-    dominating specification turns up. On a pool where most specifications are
-    dominated - a BFS repair search producing thousands of progressively weaker
-    variants - this is the cheap filter, and it is cheap in the right currency:
-    every check is a GAR-only implication, on the guarantees alone, rather than
-    a whole-specification equivalence.
-
-    Guarantee-incomparable specifications all survive. They are different
-    answers, not worse ones.
-    """
-    def strictly_stronger(a, b):
-        return (a.implies(b, GR1FormulaType.GAR)
-                and not b.implies(a, GR1FormulaType.GAR))
-
-    maxima = []
-    for n, spec in enumerate(specs, 1):
-        dominated = False
-        if workers <= 1 or len(maxima) < 4:
-            for m in maxima:
-                if strictly_stronger(m, spec):
-                    dominated = True
-                    break
-        else:
-            with ThreadPoolExecutor(max_workers=workers) as pool:
-                futures = [pool.submit(strictly_stronger, m, spec) for m in maxima]
-                try:
-                    for f in futures:
-                        if f.result():
-                            dominated = True
-                            break
-                finally:
-                    for f in futures:
-                        f.cancel()
-        if dominated:
-            continue
-        maxima = [m for m in maxima if not strictly_stronger(spec, m)]
-        maxima.append(spec)
-        if n % 250 == 0:
-            print(f"         ...{n}/{len(specs)} scanned, {len(maxima)} maxima",
-                  flush=True)
-    return maxima
-
-
 def _undecided_note() -> str:
     """A suffix naming how many equivalence checks were never decided."""
     if not UNDECIDED:
@@ -282,7 +227,7 @@ def main():
         from spec_repair.diagnosis.five_step import run_five_step
         from spec_repair.diagnosis.merge_invariants import (
             check_merge_output, response_shaped_guarantees)
-        report = run_five_step(specs)
+        report = run_five_step(specs, workers=args.workers)
         print(f"stage 1  merged assumptions            {report.pooled_assumptions}",
               flush=True)
         print(f"stage 2  soft semantically unique      {report.soft_unique}", flush=True)

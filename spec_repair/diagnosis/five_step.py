@@ -164,21 +164,21 @@ def rebase(specs: Sequence, assumptions: pd.DataFrame) -> List:
     return out
 
 
-def strongest_by_guarantees(specs: Sequence) -> List:
+def strongest_by_guarantees(specs: Sequence, workers: int = 8) -> List:
     """
     Step 4: drop any specification strictly weaker on guarantees than another.
 
-    What is left is an antichain - several specifications typically remain,
+    Delegates to `guarantee_filters.strongest_guarantees`, which builds the
+    maximal set incrementally against the maxima found so far - O(n * |maxima|)
+    rather than the O(n^2) of comparing every pair. That distinction is not
+    academic: step 4's input on minepump trace 1 is 12,881 specifications, and
+    the all-pairs version did not finish.
+
+    What is left is an antichain; several specifications typically remain,
     because weakenings of different formulas are incomparable.
     """
-    kept = []
-    for i, spec in enumerate(specs):
-        if any(other.implies(spec, GR1FormulaType.GAR)
-               and not spec.implies(other, GR1FormulaType.GAR)
-               for j, other in enumerate(specs) if i != j):
-            continue
-        kept.append(spec)
-    return kept
+    from spec_repair.diagnosis.guarantee_filters import strongest_guarantees
+    return strongest_guarantees(list(specs), workers=workers)
 
 
 def merge_losslessly(specs: Sequence, assumptions: pd.DataFrame,
@@ -237,7 +237,7 @@ def _default_oracle() -> SpecOracle:
 
 
 def run_five_step(specs: Sequence, oracle: Optional[SpecOracle] = None,
-                  progress_every: float = 60.0) -> FiveStepReport:
+                  progress_every: float = 60.0, workers: int = 8) -> FiveStepReport:
     """Run all five steps, reporting the count each one is described by."""
     started = time.time()
     report = FiveStepReport(inputs=len(specs))
@@ -256,7 +256,7 @@ def run_five_step(specs: Sequence, oracle: Optional[SpecOracle] = None,
     report.rebased = len(rebased)
     log.info("step 3  rebased on step-1 assumptions %d", report.rebased)
 
-    strongest = strongest_by_guarantees(rebased)
+    strongest = strongest_by_guarantees(rebased, workers=workers)
     report.strongest = len(strongest)
     log.info("step 4  strongest by guarantees       %d", report.strongest)
 

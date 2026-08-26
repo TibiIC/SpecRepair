@@ -24,16 +24,24 @@ SPECS=input-files/case-studies/spectra/case_study_3
 for prefix in "$@"; do
     for d in $ROOT/${prefix}_trace*_fastlas_2026-08-13; do
         [ -d "$d" ] || continue
-        merged="$d/filtered_merged_specs"
+        # Prefer the newest pipeline's output. five_step_specs is the five-step
+        # result; maximal_merged_specs came from the merge-first enumeration
+        # (genbuf trace 1 only); filtered_merged_specs is the original greedy
+        # merge. Without the fallbacks a run merged by anything but the greedy
+        # pipeline is silently skipped, which is how genbuf stayed off the
+        # atlas entirely.
+        # FIVE_STEP_ONLY=1 refuses to fall back, so a half-finished sweep
+        # cannot quietly draw some runs from the five-step merge and others from
+        # the greedy one - an atlas mixing two pipelines is worse than an
+        # incomplete one, because nothing on the page says which is which.
+        CANDIDATES="five_step_specs maximal_merged_specs filtered_merged_specs"
+        [ "${FIVE_STEP_ONLY:-0}" = "1" ] && CANDIDATES="five_step_specs"
+        merged=""
+        for candidate in $CANDIDATES; do
+            n=$(ls "$d/$candidate"/*.spectra 2>/dev/null | wc -l)
+            if [ "$n" -gt 0 ]; then merged="$d/$candidate"; break; fi
+        done
         n=$(ls "$merged"/*.spectra 2>/dev/null | wc -l)
-        # A run merged by the merge-first pipeline has no filtered_merged_specs;
-        # its output is maximal_merged_specs. genbuf trace 1 is the only one so
-        # far, and without this it is silently skipped and genbuf never reaches
-        # the atlas at all.
-        if [ "$n" -eq 0 ]; then
-            merged="$d/maximal_merged_specs"
-            n=$(ls "$merged"/*.spectra 2>/dev/null | wc -l)
-        fi
         [ "$n" -gt 0 ] || { echo "SKIP $(basename $d) - no corrected merge yet"; continue; }
         base=$(basename "$d" _fastlas_2026-08-13)
         case_study="${base%_trace*}"
@@ -45,6 +53,7 @@ for prefix in "$@"; do
             echo "  (no trivial solutions - graph will have no floor)"
         fi
         groups+=(--group "corrected_merged=$merged")
+        echo "  merge source: $(basename $merged) ($n spec(s))"
         for t in asm gar gr1; do
             timeout 3600 python -u scripts/visualise_resulting_specs.py \
                 -o "$d/corrected_graph_${t}.png" -t "$t" --legend compact \
