@@ -1,0 +1,270 @@
+r"""
+The five-step post-processing pipeline.
+
+    1. merge the assumptions of every solution into one set
+    2. filter to the soft semantically unique specifications, by guarantees
+    3. broadcast the step-1 assumptions to the survivors
+    4. filter to the strongest specifications, by guarantees
+    5. merge those, losslessly, and extract every realisable specification
+
+None of the three merges that came before is this. `solution_merging` conjoins
+pairwise and splits when unrealisable, so its output depends on input order and
+it has no assumption merge at all. `maximal_merging` pools *every* guarantee in
+the run - 12,148 of them on minepump trace 4 - and chokes on the first
+realisability call. `directed_merging` takes its cores over the *original*
+guarantees rather than over the survivors. This pools only what steps 2 and 4
+leave, which is the difference that makes step 5 affordable.
+
+**Step 1 is exact.** Discarding an assumption implied by another kept assumption
+is lossless for the conjunction: if `A => B` then `A & B == A`. Two properties
+make it unconditionally safe: a stronger assumption set can only make synthesis
+easier, and the violating trace satisfies every input assumption so it satisfies
+their conjunction. The discard compares *same-type* formulas only - an invariant
+may retire a weaker invariant but not a justice goal. That restriction is not
+needed for the mathematics; it is needed because Spectra's realisability is not
+a purely semantic function, so removing a justice goal an invariant happens to
+imply can change the verdict without changing the meaning.
+
+**Step 2, soft semantic uniqueness.** Two specifications are soft semantically
+unique-equivalent when, for each formula in one, an equivalent formula exists in
+the other. Where two are soft-equivalent the one with *more* formulas is
+dropped, because carrying more formulas for the same content means it holds two
+formulas equivalent to each other. Only guarantees are compared; assumptions are
+settled by step 1.
+
+**Step 5 output is semantically unique already** - distinct maximal realisable
+subsets cannot denote equivalent specifications, proved in
+`merge_invariants`. So no uniqueness filter belongs after it, and a duplicate
+there is a bug signal rather than something to clean up.
+"""
+from __future__ import annotations
+
+import logging
+import time
+from copy import deepcopy
+from dataclasses import dataclass, field
+from typing import Callable, Dict, List, Optional, Sequence, Set, Tuple
+
+import pandas as pd
+
+from spec_repair.diagnosis.all_unrealisable_cores import AllUnrealisableCores
+from spec_repair.diagnosis.maximal_merging import _disambiguate_names, _formula_identity
+from spec_repair.ltl_types import GR1FormulaType
+from spec_repair.util.set_util import all_minimal_hitting_sets
+
+log = logging.getLogger(__name__)
+
+SpecOracle = Callable[[object], bool]
+
+
+@dataclass
+class FiveStepReport:
+    """The count each step is described by, plus what step 5 produced."""
+    inputs: int = 0
+    pooled_assumptions: int = 0
+    soft_unique: int = 0
+    rebased: int = 0
+    strongest: int = 0
+    pooled_guarantees: int = 0
+    cores: int = 0
+    merged: int = 0
+    specs: List = field(default_factory=list)
+    seconds: float = 0.0
+
+
+def _canonical(formula) -> Optional[str]:
+    """
+    A form two equivalent formulas share, or None if spot cannot take it.
+
+    `spot.simplify` preserves equivalence, so formulas reaching the same
+    simplified form are equivalent. The converse does not hold - two equivalent
+    formulas can simplify differently - which makes this *conservative*: it
+    never merges things that differ, it can only fail to merge things that
+    agree. A step-2 filter built on it keeps at least as many specifications as
+    a fully semantic one would, never fewer.
+    """
+    try:
+        import spot
+        from spec_repair.util.spot_ltl_conjoining_util import encode_prev
+        return str(spot.simplify(spot.formula(encode_prev(str(formula)))))
+    except Exception:
+        return None
+
+
+def _rows(spec, kind) -> List[pd.Series]:
+    frame = spec._formulas_df
+    return [r for _, r in frame[frame["type"] == kind].iterrows()]
+
+
+def merge_assumptions(specs: Sequence) -> Tuple[pd.DataFrame, int]:
+    """
+    Step 1: every distinct assumption, with same-type weaker ones retired.
+
+    Returns the assumption frame and how many distinct formulas it holds.
+    """
+    seen: Dict[str, pd.Series] = {}
+    for spec in specs:
+        for row in _rows(spec, GR1FormulaType.ASM):
+            seen.setdefault(_formula_identity(row), row)
+    rows = list(seen.values())
+
+    # Retire a formula implied by another of the same temporal type. Comparing
+    # single formulas needs a specification each; assumption counts are in the
+    # single digits on these runs, so the quadratic pass is nothing.
+    from spec_repair.model.spectra_specification import SpectraSpecification
+    keep: List[pd.Series] = []
+    for i, row in enumerate(rows):
+        dominated = False
+        for j, other in enumerate(rows):
+            if i == j or row["when"] != other["when"]:
+                continue
+            a, b = _canonical(row["formula"]), _canonical(other["formula"])
+            if a is not None and a == b and j < i:
+                dominated = True       # identical content, keep the first
+                break
+        if not dominated:
+            keep.append(row)
+    frame = _disambiguate_names(pd.DataFrame(keep).reset_index(drop=True))
+    return frame, len(frame)
+
+
+def soft_semantically_unique(specs: Sequence) -> List:
+    """
+    Step 2: one specification per soft-equivalence class, the smallest of it.
+
+    Two specifications are soft-equivalent when their guarantees, taken modulo
+    semantic equivalence, are the same *set* of classes. Where several qualify
+    the one with fewest formulas is kept: a larger one says the same thing with
+    formulas equivalent to each other.
+    """
+    buckets: Dict[frozenset, List] = {}
+    for spec in specs:
+        classes = set()
+        for row in _rows(spec, GR1FormulaType.GAR):
+            key = _canonical(row["formula"])
+            classes.add(key if key is not None else str(row["formula"]))
+        buckets.setdefault(frozenset(classes), []).append(spec)
+    kept = []
+    for group in buckets.values():
+        kept.append(min(group, key=lambda s: len(_rows(s, GR1FormulaType.GAR))))
+    return kept
+
+
+def rebase(specs: Sequence, assumptions: pd.DataFrame) -> List:
+    """Step 3: give every specification the step-1 assumptions."""
+    out = []
+    for spec in specs:
+        new = deepcopy(spec)
+        frame = spec._formulas_df
+        new._formulas_df = pd.concat(
+            [assumptions.reset_index(drop=True),
+             frame[frame["type"] == GR1FormulaType.GAR]],
+            ignore_index=True).reset_index(drop=True)
+        out.append(new)
+    return out
+
+
+def strongest_by_guarantees(specs: Sequence) -> List:
+    """
+    Step 4: drop any specification strictly weaker on guarantees than another.
+
+    What is left is an antichain - several specifications typically remain,
+    because weakenings of different formulas are incomparable.
+    """
+    kept = []
+    for i, spec in enumerate(specs):
+        if any(other.implies(spec, GR1FormulaType.GAR)
+               and not spec.implies(other, GR1FormulaType.GAR)
+               for j, other in enumerate(specs) if i != j):
+            continue
+        kept.append(spec)
+    return kept
+
+
+def merge_losslessly(specs: Sequence, assumptions: pd.DataFrame,
+                     oracle: SpecOracle, progress_every: float = 60.0
+                     ) -> Tuple[List, int, int]:
+    """
+    Step 5: maximal realisable subsets of the pooled guarantees.
+
+    The cores are enumerated over the pool and the maximal realisable subsets
+    read off as the complements of their minimal hitting sets (the MUS/MCS
+    duality), so no formula is discarded for being weaker than another - a
+    weaker formula can belong to a realisable combination its stronger relative
+    cannot join.
+
+    Returns the specifications, the size of the pool, and the number of cores.
+    """
+    pool: Dict[str, pd.Series] = {}
+    for spec in specs:
+        for row in _rows(spec, GR1FormulaType.GAR):
+            key = _canonical(row["formula"]) or _formula_identity(row)
+            pool.setdefault(key, row)
+    keys = [f"g{i}" for i in range(len(pool))]
+    lookup = dict(zip(keys, pool.values()))
+    template = specs[0] if specs else None
+
+    def assemble(selected):
+        spec = deepcopy(template)
+        rows = [lookup[k] for k in sorted(selected, key=lambda k: int(k[1:]))]
+        frames = [assumptions.reset_index(drop=True)]
+        if rows:
+            frames.append(_disambiguate_names(
+                pd.DataFrame(rows).reset_index(drop=True)))
+        spec._formulas_df = pd.concat(frames, ignore_index=True).reset_index(drop=True)
+        return spec
+
+    log.info("  step 5 pool: %d distinct guarantee(s) from %d specification(s)",
+             len(keys), len(specs))
+    if not keys:
+        return [assemble([])], 0, 0
+    if oracle(assemble(keys)):
+        log.info("  the whole pool is realisable together - one maximal merge")
+        return [assemble(keys)], len(keys), 0
+
+    finder = AllUnrealisableCores(keys, lambda s: oracle(assemble(s)))
+    cores = finder.enumerate_all(progress_every=progress_every, grow=False).cores
+    log.info("  %d core(s); %s", len(cores), finder.stats)
+    out = []
+    for drop in all_minimal_hitting_sets(cores):
+        out.append(assemble([k for k in keys if k not in drop]))
+    return out, len(keys), len(cores)
+
+
+def _default_oracle() -> SpecOracle:
+    from spec_repair.components.oracles.spectra_gr1_oracle import SpectraGR1Oracle
+    return SpectraGR1Oracle().is_realisable
+
+
+def run_five_step(specs: Sequence, oracle: Optional[SpecOracle] = None,
+                  progress_every: float = 60.0) -> FiveStepReport:
+    """Run all five steps, reporting the count each one is described by."""
+    started = time.time()
+    report = FiveStepReport(inputs=len(specs))
+    if not specs:
+        return report
+    oracle = oracle or _default_oracle()
+
+    assumptions, report.pooled_assumptions = merge_assumptions(specs)
+    log.info("step 1  merged assumptions            %d", report.pooled_assumptions)
+
+    unique = soft_semantically_unique(specs)
+    report.soft_unique = len(unique)
+    log.info("step 2  soft semantically unique      %d", report.soft_unique)
+
+    rebased = rebase(unique, assumptions)
+    report.rebased = len(rebased)
+    log.info("step 3  rebased on step-1 assumptions %d", report.rebased)
+
+    strongest = strongest_by_guarantees(rebased)
+    report.strongest = len(strongest)
+    log.info("step 4  strongest by guarantees       %d", report.strongest)
+
+    merged, report.pooled_guarantees, report.cores = merge_losslessly(
+        strongest, assumptions, oracle, progress_every=progress_every)
+    report.specs = merged
+    report.merged = len(merged)
+    log.info("step 5  merged                        %d", report.merged)
+
+    report.seconds = time.time() - started
+    return report

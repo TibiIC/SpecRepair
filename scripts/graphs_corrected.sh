@@ -26,6 +26,14 @@ for prefix in "$@"; do
         [ -d "$d" ] || continue
         merged="$d/filtered_merged_specs"
         n=$(ls "$merged"/*.spectra 2>/dev/null | wc -l)
+        # A run merged by the merge-first pipeline has no filtered_merged_specs;
+        # its output is maximal_merged_specs. genbuf trace 1 is the only one so
+        # far, and without this it is silently skipped and genbuf never reaches
+        # the atlas at all.
+        if [ "$n" -eq 0 ]; then
+            merged="$d/maximal_merged_specs"
+            n=$(ls "$merged"/*.spectra 2>/dev/null | wc -l)
+        fi
         [ "$n" -gt 0 ] || { echo "SKIP $(basename $d) - no corrected merge yet"; continue; }
         base=$(basename "$d" _fastlas_2026-08-13)
         case_study="${base%_trace*}"

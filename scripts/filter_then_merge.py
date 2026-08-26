@@ -226,6 +226,16 @@ def main():
                          "trace 1 all 15 specs holding one such guarantee were "
                          "dominated and dropped, and the merge could not conjoin "
                          "what it never received. Writes maximal_merged_specs/.")
+    ap.add_argument("--five-step", action="store_true",
+                    help="the five-step pipeline: merge the assumptions of every "
+                         "solution, filter to the soft semantically unique "
+                         "specifications by guarantees, broadcast the merged "
+                         "assumptions, filter to the strongest by guarantees, "
+                         "then merge losslessly by unrealisable cores and their "
+                         "minimal hitting sets. Same unique -> strongest -> merge "
+                         "order as the default; what differs is the uniqueness "
+                         "test, the assumption coalescing, and the merge. Writes "
+                         "five_step_specs/.")
     ap.add_argument("--directed", action="store_true",
                     help="merge by descending from the ORIGINAL specification: "
                          "check its guarantees against the pooled assumptions, "
@@ -264,6 +274,36 @@ def main():
         for i, spec in enumerate(unique):
             write_to_file(os.path.join(out, f"spec_{i}.spectra"), spec.to_str())
         print(f"         written to {out}", flush=True)
+        return 0
+
+    if args.five_step:
+        import logging
+        logging.basicConfig(level=logging.INFO, format="%(message)s")
+        from spec_repair.diagnosis.five_step import run_five_step
+        from spec_repair.diagnosis.merge_invariants import (
+            check_merge_output, response_shaped_guarantees)
+        report = run_five_step(specs)
+        print(f"stage 1  merged assumptions            {report.pooled_assumptions}",
+              flush=True)
+        print(f"stage 2  soft semantically unique      {report.soft_unique}", flush=True)
+        print(f"stage 3  rebased                       {report.rebased}", flush=True)
+        print(f"stage 4  strongest by guarantees       {report.strongest}", flush=True)
+        print(f"stage 5  merged                        {report.merged}"
+              f"   (pool {report.pooled_guarantees}, {report.cores} core(s))", flush=True)
+        # Distinct maximal realisable subsets cannot be semantically equivalent,
+        # so a duplicate here means the cores were incomplete or realisability is
+        # not behaving semantically.
+        for problem in check_merge_output(report.specs):
+            print(f"         WARNING {problem}", flush=True)
+            named = sorted({n for m in report.specs
+                            for n in response_shaped_guarantees(m)})
+            if named:
+                print(f"         response-shaped guarantees: {named}", flush=True)
+        out = args.out or os.path.join(args.run_dir, "five_step_specs")
+        os.makedirs(out, exist_ok=True)
+        for i, spec in enumerate(report.specs):
+            write_to_file(os.path.join(out, f"spec_{i}.spectra"), spec.to_str())
+        print(f"         written to {out}   ({report.seconds:.0f}s)", flush=True)
         return 0
 
     if args.directed:
