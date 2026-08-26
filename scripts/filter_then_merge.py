@@ -283,6 +283,19 @@ def main():
         original = SpectraSpecification.from_file(original_path)
         merged = directed_merges(specs, original)
         print(f"stage 1  directed merges              {len(merged)}", flush=True)
+        # What the construction promises, checked rather than assumed. Distinct
+        # maximal realisable subsets cannot be semantically equivalent, so a
+        # duplicate here means the cores were incomplete or realisability is not
+        # behaving semantically - see spec_repair/diagnosis/merge_invariants.py.
+        from spec_repair.diagnosis.merge_invariants import (
+            check_merge_output, response_shaped_guarantees)
+        problems = check_merge_output(merged)
+        for problem in problems:
+            print(f"         WARNING {problem}", flush=True)
+        if problems:
+            named = sorted({n for m in merged for n in response_shaped_guarantees(m)})
+            if named:
+                print(f"         response-shaped guarantees present: {named}", flush=True)
         unique = semantically_unique(merged, workers=args.workers)
         print(f"stage 2  semantically unique          {len(unique)}"
               f"{_undecided_note()}", flush=True)
