@@ -30,9 +30,13 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 GRAPHS = os.path.join(ROOT, "docs", "results", "graphs")
 STATS = os.path.join(ROOT, "docs", "results", "merge_atlas_stats.json")
 
+# Assumptions and guarantees only. The whole-GR1 view answers neither of the
+# questions these graphs are read for - how the assumption sets differ, and how
+# the guarantee sets differ - while costing an hour a trace to draw and timing
+# out on amba every time. Older runs left gr1 PNGs behind; they are simply not
+# shown.
 TYPES = [("asm", "Assumptions", "tealed"),
-         ("gar", "Guarantees", "siennaed"),
-         ("gr1", "Whole GR1", "inked")]
+         ("gar", "Guarantees", "siennaed")]
 
 FAMILY_ORDER = ["amba", "elevator", "gyro", "lift", "minepump",
                 "minepump_liveness", "pcar", "traffic_single", "traffic_updated"]

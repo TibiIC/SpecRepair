@@ -50,7 +50,7 @@ import pandas as pd
 from spec_repair.diagnosis.all_unrealisable_cores import AllUnrealisableCores
 from spec_repair.diagnosis.maximal_merging import _disambiguate_names, _formula_identity
 from spec_repair.ltl_types import GR1FormulaType
-from spec_repair.util.set_util import all_minimal_hitting_sets
+from spec_repair.util.hitting_sets import minimal_hitting_sets
 
 log = logging.getLogger(__name__)
 
@@ -225,8 +225,11 @@ def merge_losslessly(specs: Sequence, assumptions: pd.DataFrame,
     finder = AllUnrealisableCores(keys, lambda s: oracle(assemble(s)))
     cores = finder.enumerate_all(progress_every=progress_every, grow=False).cores
     log.info("  %d core(s); %s", len(cores), finder.stats)
+    # Enumerated by clingo, not by walking every subset: trace 3 reaches this
+    # point with 7,056 cores over 79 formulas, where the brute force in
+    # set_util never returns.
     out = []
-    for drop in all_minimal_hitting_sets(cores):
+    for drop in minimal_hitting_sets(cores):
         out.append(assemble([k for k in keys if k not in drop]))
     return out, len(keys), len(cores)
 

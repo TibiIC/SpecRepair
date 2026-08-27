@@ -63,7 +63,7 @@ from spec_repair.diagnosis.maximal_merging import (
     _formula_identity,
 )
 from spec_repair.ltl_types import GR1FormulaType
-from spec_repair.util.set_util import all_minimal_hitting_sets
+from spec_repair.util.hitting_sets import minimal_hitting_sets
 
 log = logging.getLogger(__name__)
 
@@ -245,7 +245,7 @@ def directed_merges(
             "unrealisability.")
 
     results = []
-    hitting_sets = list(all_minimal_hitting_sets(cores))
+    hitting_sets = list(minimal_hitting_sets(cores))
     log.info("minimal hitting sets: %d - one branch each", len(hitting_sets))
     for number, hs in enumerate(hitting_sets, start=1):
         implicated = {_root_name(n, original_names) for n in hs}
@@ -308,7 +308,7 @@ def _weakest_forced(original, pool: Pool, kept, candidates, oracle,
         return [_assemble(original, pool.assumptions, rows)]
 
     out = []
-    hitting = all_minimal_hitting_sets(cores)
+    hitting = minimal_hitting_sets(cores)
     log.info("   %d core(s) -> %d maximal realisable subset(s)",
              len(cores), len(hitting))
     for drop in hitting:

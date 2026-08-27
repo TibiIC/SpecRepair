@@ -54,7 +54,11 @@ for prefix in "$@"; do
         fi
         groups+=(--group "corrected_merged=$merged")
         echo "  merge source: $(basename $merged) ($n spec(s))"
-        for t in asm gar gr1; do
+        # asm and gar only. The whole-GR1 graph costs an hour per trace and
+        # times out on amba every time (rc=124), and the comparison being asked
+        # of these pictures is between assumptions and between guarantees - the
+        # combined view answers neither. GRAPH_TYPES="asm gar gr1" restores it.
+        for t in ${GRAPH_TYPES:-asm gar}; do
             timeout 3600 python -u scripts/visualise_resulting_specs.py \
                 -o "$d/corrected_graph_${t}.png" -t "$t" --legend compact \
                 "${groups[@]}" > /dev/null 2>&1
