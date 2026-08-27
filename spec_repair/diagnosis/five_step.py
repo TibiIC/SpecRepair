@@ -178,7 +178,44 @@ def strongest_by_guarantees(specs: Sequence, workers: int = 8) -> List:
     because weakenings of different formulas are incomparable.
     """
     from spec_repair.diagnosis.guarantee_filters import strongest_guarantees
-    return strongest_guarantees(list(specs), workers=workers)
+    return strongest_guarantees(_drop_contained(specs), workers=workers)
+
+
+def _drop_contained(specs: Sequence) -> List:
+    """
+    Remove specifications whose guarantees are a proper subset of another's.
+
+    Sound and free. Each specification is a set of formulas drawn from a small
+    universe - step 5's pool is 79 to 151 formulas even where step 4's input is
+    thirteen thousand specifications - so many differ only by carrying fewer of
+    the same formulas. If A's canonical formulas contain B's then their conjunction
+    implies B's, so `B` is dominated, and establishing that needs a set
+    comparison rather than an implication check.
+
+    This exists because the semantic pass costs O(n * |maxima|) oracle calls and
+    |maxima| grows into the hundreds: minepump trace 1 managed 500 of its 12,881
+    specifications in seven and a half hours, which is eight days for the run.
+    Whatever this removes is removed for free.
+    """
+    keyed = []
+    for spec in specs:
+        classes = frozenset(
+            _canonical(row["formula"]) or str(row["formula"])
+            for row in _rows(spec, GR1FormulaType.GAR))
+        keyed.append((classes, spec))
+    # Longest first: a proper superset can only appear before its subsets, so
+    # one pass against what has been kept is enough.
+    keyed.sort(key=lambda pair: -len(pair[0]))
+    kept: List = []
+    kept_keys: List[frozenset] = []
+    for classes, spec in keyed:
+        if any(classes < seen for seen in kept_keys):
+            continue
+        kept_keys.append(classes)
+        kept.append(spec)
+    if len(kept) < len(keyed):
+        log.info("        containment pre-filter: %d -> %d", len(keyed), len(kept))
+    return kept
 
 
 def merge_losslessly(specs: Sequence, assumptions: pd.DataFrame,

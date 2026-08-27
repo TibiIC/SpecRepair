@@ -170,5 +170,35 @@ class TestEndToEnd(TestCase):
         self.assertEqual([], r.specs)
 
 
+class TestContainmentPreFilter(TestCase):
+    """
+    Step 4's cheap pass: a specification whose guarantees are a proper subset of
+    another's is dominated, and set comparison establishes that without an
+    oracle call.
+    """
+
+    def test_a_proper_subset_is_dropped(self):
+        from spec_repair.diagnosis.five_step import _drop_contained
+        small, large = spec(A_WEAK, G1), spec(A_WEAK, G1, G2)
+        kept = _drop_contained([small, large])
+        self.assertEqual(1, len(kept))
+        self.assertEqual(2, len(gars(kept[0])))
+
+    def test_incomparable_sets_are_both_kept(self):
+        from spec_repair.diagnosis.five_step import _drop_contained
+        self.assertEqual(2, len(_drop_contained([spec(A_WEAK, G1), spec(A_WEAK, G2)])))
+
+    def test_equal_sets_are_both_kept_for_the_semantic_pass(self):
+        from spec_repair.diagnosis.five_step import _drop_contained
+        self.assertEqual(2, len(_drop_contained([spec(A_WEAK, G1), spec(A_WEAK, G1)])))
+
+    def test_it_never_removes_a_maximal_specification(self):
+        from spec_repair.diagnosis.five_step import _drop_contained
+        pool = [spec(A_WEAK, G1), spec(A_WEAK, G2), spec(A_WEAK, G1, G2)]
+        kept = _drop_contained(pool)
+        self.assertEqual(1, len(kept))
+        self.assertEqual(2, len(gars(kept[0])))
+
+
 if __name__ == "__main__":
     unittest.main()
