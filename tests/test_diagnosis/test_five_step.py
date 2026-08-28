@@ -230,5 +230,33 @@ class TestEveryStageIsKept(TestCase):
         self.assertEqual(r.pooled_assumptions, len(asms(r.assumption_specs[0])))
 
 
+class TestStep2bSemanticUniqueness(TestCase):
+    """
+    The model's own equivalence check, which compares whole conjunctions rather
+    than sets of formulas, and so merges strictly more than the soft test.
+    """
+
+    def test_the_same_property_written_two_ways_collapses(self):
+        from spec_repair.diagnosis.five_step import semantically_unique
+        # G1 and G1_AGAIN are the same guarantee written differently
+        kept = semantically_unique([spec(A_WEAK, G1), spec(A_WEAK, G1_AGAIN)])
+        self.assertEqual(1, len(kept))
+
+    def test_genuinely_different_specifications_both_survive(self):
+        from spec_repair.diagnosis.five_step import semantically_unique
+        self.assertEqual(2, len(semantically_unique([spec(A_WEAK, G1), spec(A_WEAK, G2)])))
+
+    def test_it_is_never_larger_than_the_soft_count(self):
+        pool = [spec(A_WEAK, G1), spec(A_WEAK, G1_AGAIN), spec(A_WEAK, G2),
+                spec(A_WEAK, G1, G2)]
+        r = run_five_step(pool, oracle=lambda s: True, progress_every=0)
+        self.assertLessEqual(r.semantic_unique, r.soft_unique)
+
+    def test_the_kept_list_matches_the_reported_count(self):
+        pool = [spec(A_WEAK, G1), spec(A_WEAK, G1_AGAIN), spec(A_WEAK, G2)]
+        r = run_five_step(pool, oracle=lambda s: True, progress_every=0)
+        self.assertEqual(r.semantic_unique, len(r.semantic_unique_specs))
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -63,6 +63,7 @@ class FiveStepReport:
     inputs: int = 0
     pooled_assumptions: int = 0
     soft_unique: int = 0
+    semantic_unique: int = 0
     rebased: int = 0
     strongest: int = 0
     pooled_guarantees: int = 0
@@ -74,6 +75,7 @@ class FiveStepReport:
     # makes any later question about the middle of it a full re-run.
     assumption_specs: List = field(default_factory=list)
     unique_specs: List = field(default_factory=list)
+    semantic_unique_specs: List = field(default_factory=list)
     strongest_specs: List = field(default_factory=list)
     seconds: float = 0.0
 
@@ -154,6 +156,52 @@ def soft_semantically_unique(specs: Sequence) -> List:
     for group in buckets.values():
         kept.append(min(group, key=lambda s: len(_rows(s, GR1FormulaType.GAR))))
     return kept
+
+
+def semantically_unique(specs: Sequence, workers: int = 8) -> List:
+    """
+    One representative per guarantee-equivalence class, by the model's own check.
+
+    Where `soft_semantically_unique` asks whether two specifications carry the
+    same formulas up to equivalence, this asks whether they *say* the same
+    thing: `SpectraSpecification.equivalent_to` hands both conjunctions to spot
+    and compares the LTL. It is therefore strictly coarser - two specifications
+    can hold different formulas whose conjunctions agree - so this count is
+    always at most the soft one, and the gap between them is the number of
+    repairs that reach the same specification by different routes.
+
+    Built incrementally against the representatives found so far, O(n * |classes|)
+    rather than all pairs, for the same reason step 4 is: the classes are few
+    even when the input is in the thousands.
+    """
+    from concurrent.futures import ThreadPoolExecutor
+
+    def same(a, b):
+        return (a.implies(b, GR1FormulaType.GAR)
+                and b.implies(a, GR1FormulaType.GAR))
+
+    reps: List = []
+    for n, spec in enumerate(specs, 1):
+        seen = False
+        if workers <= 1 or len(reps) < 4:
+            seen = any(same(rep, spec) for rep in reps)
+        else:
+            with ThreadPoolExecutor(max_workers=workers) as pool:
+                futures = [pool.submit(same, rep, spec) for rep in reps]
+                try:
+                    for f in futures:
+                        if f.result():
+                            seen = True
+                            break
+                finally:
+                    for f in futures:
+                        f.cancel()
+        if not seen:
+            reps.append(spec)
+        if n % 250 == 0:
+            log.info("        ...%d/%d compared, %d semantic class(es)",
+                     n, len(specs), len(reps))
+    return reps
 
 
 def rebase(specs: Sequence, assumptions: pd.DataFrame) -> List:
@@ -310,7 +358,12 @@ def run_five_step(specs: Sequence, oracle: Optional[SpecOracle] = None,
     report.soft_unique = len(unique)
     log.info("step 2  soft semantically unique      %d", report.soft_unique)
 
-    rebased = rebase(unique, assumptions)
+    strict = semantically_unique(unique, workers=workers)
+    report.semantic_unique_specs = strict
+    report.semantic_unique = len(strict)
+    log.info("step 2b semantically unique           %d", report.semantic_unique)
+
+    rebased = rebase(strict, assumptions)
     # The merged assumption set, kept as a specification of its own so step 1's
     # result is readable without re-deriving it from a merged output.
     report.assumption_specs = rebased[:1]

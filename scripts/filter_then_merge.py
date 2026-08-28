@@ -231,6 +231,7 @@ def main():
         print(f"stage 1  merged assumptions            {report.pooled_assumptions}",
               flush=True)
         print(f"stage 2  soft semantically unique      {report.soft_unique}", flush=True)
+        print(f"stage 2b semantically unique           {report.semantic_unique}", flush=True)
         print(f"stage 3  rebased                       {report.rebased}", flush=True)
         print(f"stage 4  strongest by guarantees       {report.strongest}", flush=True)
         print(f"stage 5  merged                        {report.merged}"
@@ -251,6 +252,7 @@ def main():
         # step 4 is the first such question and will not be the last.
         for sub, specs in (("merged_assumptions", report.assumption_specs),
                            ("soft_unique_specs", report.unique_specs),
+                           ("semantic_unique_specs", report.semantic_unique_specs),
                            ("strongest_specs", report.strongest_specs)):
             stage_out = os.path.join(args.run_dir, sub)
             os.makedirs(stage_out, exist_ok=True)
