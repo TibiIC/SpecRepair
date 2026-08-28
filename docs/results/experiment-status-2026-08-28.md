@@ -113,6 +113,51 @@ source for colorsort and genbuf 3-4 since those produced no repairs.
 
 `†` derived from the repairs rather than read from `traces.json`.
 
+## Where each case study comes from
+
+Traced by searching the source trees for each specification's distinctive
+variables and module names, not by trusting the folder name. `files/SYNTECH15`,
+`SYNTECH17` and `SYNTECH19` are the salvage material and are gitignored, so this
+is the only record of which parts of them survived.
+
+| Case study | Module | Source |
+| --- | --- | --- |
+| `colorsort` | `ColorSort` | **SYNTECH15**, `ColorSortLTL*` - 19 variants there, LTL2/LTL3/TAG |
+| `elevator` | `Elevator` | **SYNTECH15**, `ElevatorLTL_386_Elevator` (SYNTECH17 also carries `Elevator_cmp_*`) |
+| `gyro` | `GyroAspect` | **SYNTECH15**, `GyroLTL_390_GyroAspect` / `GyroLTL_637_GyroAspect_fixed` |
+| `pcar` | `PCar` | **SYNTECH15**, `PcarLTL_552_PCar` / `PcarLTL_811_PCar_fixed` |
+| `genbuf` | `gen_buf_realizable_5_genbuf` | **in-repo**, `input-files/examples/genbuf_05.spectra` - the 5-sender GenBuf |
+| `amba` | `amba_ahb_realizable_amba_ahb_3` | **no upstream file in the repo.** AMBA AHB, 3 masters, realisable variant; added 2026-08-06 together with `amba_desugar`, and it carries its own `DwyerPatterns.spectra`, which is *not* identical to SYNTECH19's copy |
+| `lift` | `Lift` | inherited at the repo's first commit, 2024-06-18 |
+| `minepump` | `Minepump` | inherited at the repo's first commit, 2024-06-18 |
+| `minepump_liveness` | `Minepump` | inherited at the repo's first commit, 2024-06-18 |
+| `traffic_updated` | `TrafficE2`-style | inherited at the repo's first commit, 2024-06-18 |
+| `traffic_single` | `TrafficE2` | added 2024-07-03 |
+
+**Four of the eleven come from SYNTECH15.** None comes from SYNTECH17 or
+SYNTECH19: searching those trees for every case study's module name and
+variables returns nothing. One near-miss is worth recording so nobody chases it
+again - `traffic_updated`'s `greenA` does appear in
+`SYNTECH19/GROUP3Junction2_04Utils.spectra`, but as a parameter of a `Vehicle`
+predicate taking `greenA` through `greenH`, an unrelated specification.
+
+**Five have no upstream recorded anywhere in the repo.** `lift`, `minepump`,
+`minepump_liveness`, `traffic_updated` and `traffic_single` arrive fully formed
+- the first four in the initial commit of 2024-06-18, "moved repository from
+private fork to public repo", and `traffic_single` a fortnight later. They are
+recognisable as classic benchmarks, but this repository holds no evidence of
+which edition or paper they were taken from, and that gap should be closed from
+outside it rather than guessed at here.
+
+**What is repaired is not what the source contained.** Every
+`case_study_3/*/original.spectra` is a boolean-desugared form. `genbuf`'s source
+formulas are unnamed, which the parser silently ignored - the genbuf previously
+in the suite loaded as an *empty* specification and reported "violates nothing",
+so results predating 2026-08-06 are vacuous. `amba` needed `amba_desugar` to
+lower defines, arrays, `Int(0..N)` ranges, parameterised predicates, quantified
+templates, `forall` and two imported Dwyer patterns into the boolean+enum subset,
+ending at 63 formulas and 34 atoms.
+
 ## What the stages do
 
 **Step 1 is where the biggest reduction happens on the assumption side**, and it
