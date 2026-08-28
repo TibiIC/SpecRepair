@@ -244,6 +244,14 @@ def main():
                             for n in response_shaped_guarantees(m)})
             if named:
                 print(f"         response-shaped guarantees: {named}", flush=True)
+        # Step 4's survivors are written too: the guarantee graph compares
+        # original, trivial, strongest-unique and merged, and without these the
+        # third of those has nowhere to come from.
+        strong_out = os.path.join(args.run_dir, "strongest_specs")
+        os.makedirs(strong_out, exist_ok=True)
+        for i, spec in enumerate(report.strongest_specs):
+            write_to_file(os.path.join(strong_out, f"spec_{i}.spectra"), spec.to_str())
+        print(f"         strongest written to {strong_out}", flush=True)
         out = args.out or os.path.join(args.run_dir, "five_step_specs")
         os.makedirs(out, exist_ok=True)
         for i, spec in enumerate(report.specs):

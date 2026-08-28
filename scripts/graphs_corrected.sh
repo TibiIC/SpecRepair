@@ -53,11 +53,26 @@ for prefix in "$@"; do
             echo "  (no trivial solutions - graph will have no floor)"
         fi
         groups+=(--group "corrected_merged=$merged")
+        # A fourth group for the guarantee comparison only: what step 4 left,
+        # just before the merge. Seeing original, trivial, strongest-unique and
+        # merged on one picture shows how much of the distance from the floor to
+        # the ceiling the merge itself closes.
+        strongest="$d/strongest_specs"
+        sn=$(ls "$strongest"/*.spectra 2>/dev/null | wc -l)
         echo "  merge source: $(basename $merged) ($n spec(s))"
         # asm and gar only. The whole-GR1 graph costs an hour per trace and
         # times out on amba every time (rc=124), and the comparison being asked
         # of these pictures is between assumptions and between guarantees - the
         # combined view answers neither. GRAPH_TYPES="asm gar gr1" restores it.
+        if [ "$sn" -gt 0 ]; then
+            echo "  strongest: $sn spec(s)"
+            timeout ${GRAPH_TIMEOUT:-3600} python -u scripts/visualise_resulting_specs.py \
+                -o "$d/corrected_graph_gar_strongest.png" -t gar --legend compact \
+                "${groups[@]}" --group "strongest=$strongest" > /dev/null 2>&1
+            rc=$?
+            [ "$rc" -eq 0 ] && echo "  gar+strongest ok" \
+                            || echo "  gar+strongest FAILED rc=$rc"
+        fi
         for t in ${GRAPH_TYPES:-asm gar}; do
             # GRAPH_TIMEOUT seconds per graph. An hour is plenty for most
             # runs and not enough for genbuf, whose 81 guarantees make every

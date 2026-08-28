@@ -69,6 +69,7 @@ class FiveStepReport:
     cores: int = 0
     merged: int = 0
     specs: List = field(default_factory=list)
+    strongest_specs: List = field(default_factory=list)
     seconds: float = 0.0
 
 
@@ -218,6 +219,17 @@ def _drop_contained(specs: Sequence) -> List:
     return kept
 
 
+def _unique_by_guarantees(specs: Sequence) -> List:
+    """One representative per guarantee-equivalence class, order preserved."""
+    kept: List = []
+    for spec in specs:
+        if any(spec.implies(other, GR1FormulaType.GAR)
+               and other.implies(spec, GR1FormulaType.GAR) for other in kept):
+            continue
+        kept.append(spec)
+    return kept
+
+
 def merge_losslessly(specs: Sequence, assumptions: pd.DataFrame,
                      oracle: SpecOracle, progress_every: float = 60.0
                      ) -> Tuple[List, int, int]:
@@ -297,6 +309,13 @@ def run_five_step(specs: Sequence, oracle: Optional[SpecOracle] = None,
     log.info("step 3  rebased on step-1 assumptions %d", report.rebased)
 
     strongest = strongest_by_guarantees(rebased, workers=workers)
+    # Deduplicated by guarantee equivalence before being reported or drawn.
+    # Step 4 leaves an antichain under *strict* domination, which still admits
+    # two specifications that imply each other - neither is strictly stronger,
+    # so neither is dropped. They are one answer written twice, and would be two
+    # nodes saying the same thing on a graph.
+    strongest = _unique_by_guarantees(strongest)
+    report.strongest_specs = strongest
     report.strongest = len(strongest)
     log.info("step 4  strongest by guarantees       %d", report.strongest)
 

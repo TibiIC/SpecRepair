@@ -175,6 +175,10 @@ GROUP_COLOURS: Dict[str, str] = {
     # strong.spectra plays in the strengthened one - hence the same colour.
     "original": "#ffd6a5",
     "trivial": "#ffadad",
+    # The step-4 survivors: strongest by guarantees, deduplicated by guarantee
+    # equivalence. They sit between the merge and the pool, so they get a colour
+    # of their own rather than borrowing one.
+    "strongest": "#c9e4a6",
     "merged": "#bdb2ff",
     "max_merged": "#9bf6ff",
     "filtered_merged": "#a0c4ff",
