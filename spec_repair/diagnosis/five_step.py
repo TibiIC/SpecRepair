@@ -69,6 +69,11 @@ class FiveStepReport:
     cores: int = 0
     merged: int = 0
     specs: List = field(default_factory=list)
+    # Every stage's output, not just the last. Each of these costs hours to
+    # produce on a large run, and a pipeline that keeps only its final answer
+    # makes any later question about the middle of it a full re-run.
+    assumption_specs: List = field(default_factory=list)
+    unique_specs: List = field(default_factory=list)
     strongest_specs: List = field(default_factory=list)
     seconds: float = 0.0
 
@@ -301,10 +306,14 @@ def run_five_step(specs: Sequence, oracle: Optional[SpecOracle] = None,
     log.info("step 1  merged assumptions            %d", report.pooled_assumptions)
 
     unique = soft_semantically_unique(specs)
+    report.unique_specs = unique
     report.soft_unique = len(unique)
     log.info("step 2  soft semantically unique      %d", report.soft_unique)
 
     rebased = rebase(unique, assumptions)
+    # The merged assumption set, kept as a specification of its own so step 1's
+    # result is readable without re-deriving it from a merged output.
+    report.assumption_specs = rebased[:1]
     report.rebased = len(rebased)
     log.info("step 3  rebased on step-1 assumptions %d", report.rebased)
 

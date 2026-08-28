@@ -200,5 +200,35 @@ class TestContainmentPreFilter(TestCase):
         self.assertEqual(2, len(gars(kept[0])))
 
 
+class TestEveryStageIsKept(TestCase):
+    """
+    The report must carry each stage's specifications, not only the last.
+
+    These take hours to produce on a large run. A pipeline that returns only its
+    final answer makes any later question about the middle of it a full re-run,
+    which is how minepump trace 3's step-4 output came to need regenerating.
+    """
+
+    def test_all_stages_are_populated(self):
+        pool = [spec(A_STRONG, G1), spec(A_WEAK, G1, G1_AGAIN), spec(A_WEAK, G2)]
+        r = run_five_step(pool, oracle=lambda s: True, progress_every=0)
+        self.assertTrue(r.assumption_specs, "step 1 output missing")
+        self.assertTrue(r.unique_specs, "step 2 output missing")
+        self.assertTrue(r.strongest_specs, "step 4 output missing")
+        self.assertTrue(r.specs, "step 5 output missing")
+
+    def test_the_kept_lists_match_the_reported_counts(self):
+        pool = [spec(A_STRONG, G1), spec(A_WEAK, G2), spec(A_WEAK, G1, G1_AGAIN)]
+        r = run_five_step(pool, oracle=lambda s: True, progress_every=0)
+        self.assertEqual(r.soft_unique, len(r.unique_specs))
+        self.assertEqual(r.strongest, len(r.strongest_specs))
+        self.assertEqual(r.merged, len(r.specs))
+
+    def test_the_step_one_artefact_carries_the_merged_assumptions(self):
+        pool = [spec(A_STRONG, G1), spec(A_WEAK, G2)]
+        r = run_five_step(pool, oracle=lambda s: True, progress_every=0)
+        self.assertEqual(r.pooled_assumptions, len(asms(r.assumption_specs[0])))
+
+
 if __name__ == "__main__":
     unittest.main()

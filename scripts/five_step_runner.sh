@@ -16,7 +16,14 @@ cd /vol/bitbucket/tg4018/PhD/SpecRepair
 mkdir -p /vol/bitbucket/tg4018/five_logs "$SPEC_REPAIR_SPECTRA_CALL_LOG_DIR"
 for r in "$@"; do
   L=/vol/bitbucket/tg4018/five_logs/${r}.five.log
-  echo "=== $r on $(hostname -s) started $(date +%F_%T) ===" > $L
+  # Never truncate. Re-running this once destroyed minepump trace 3's recorded
+  # stage counts - hours of work whose only record was the log it overwrote.
+  # The previous log is kept under its finish time, and the live one appends.
+  if [ -f "$L" ]; then
+    ts=$(grep -m1 "^rc=" "$L" | sed -E "s/.*finished //" | tr -d " :" )
+    mv "$L" "${L%.log}.${ts:-$(date +%F_%H%M%S)}.log"
+  fi
+  echo "=== $r on $(hostname -s) started $(date +%F_%T) ===" >> $L
   python -u scripts/filter_then_merge.py \
       tests/test_files/out/case_study_3/${r}_fastlas_2026-08-13 \
       --five-step --workers ${FIVE_WORKERS:-8} >> $L 2>&1

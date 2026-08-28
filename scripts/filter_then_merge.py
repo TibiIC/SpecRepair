@@ -244,14 +244,20 @@ def main():
                             for n in response_shaped_guarantees(m)})
             if named:
                 print(f"         response-shaped guarantees: {named}", flush=True)
-        # Step 4's survivors are written too: the guarantee graph compares
-        # original, trivial, strongest-unique and merged, and without these the
-        # third of those has nowhere to come from.
-        strong_out = os.path.join(args.run_dir, "strongest_specs")
-        os.makedirs(strong_out, exist_ok=True)
-        for i, spec in enumerate(report.strongest_specs):
-            write_to_file(os.path.join(strong_out, f"spec_{i}.spectra"), spec.to_str())
-        print(f"         strongest written to {strong_out}", flush=True)
+        # Every stage is written, not just the last. These take hours to
+        # produce and are inputs to analysis nobody has thought of yet; a
+        # pipeline that keeps only its final answer forces a full re-run to ask
+        # any question about the middle of it. The guarantee graph wanting
+        # step 4 is the first such question and will not be the last.
+        for sub, specs in (("merged_assumptions", report.assumption_specs),
+                           ("soft_unique_specs", report.unique_specs),
+                           ("strongest_specs", report.strongest_specs)):
+            stage_out = os.path.join(args.run_dir, sub)
+            os.makedirs(stage_out, exist_ok=True)
+            for i, spec in enumerate(specs):
+                write_to_file(os.path.join(stage_out, f"spec_{i}.spectra"),
+                              spec.to_str())
+            print(f"         {sub}: {len(specs)} written", flush=True)
         out = args.out or os.path.join(args.run_dir, "five_step_specs")
         os.makedirs(out, exist_ok=True)
         for i, spec in enumerate(report.specs):
