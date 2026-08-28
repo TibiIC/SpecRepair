@@ -158,16 +158,22 @@ def build(out_path):
     )
     if not multi:
         merge_line = "every run merges to <b>1</b>"
-        headline = ("Every run on this page collapses to a single specification: the merge "
-                    "finds the repairs compatible and conjoins them.")
+        headline = ("Every run on this page collapses to a single specification. Because step&nbsp;1 "
+                    "merges the assumptions of every solution and broadcasts them, all of these share "
+                    "one assumption set by construction &mdash; any variation there would be an "
+                    "artifact of the merge rather than a property of the repairs.")
     else:
         merge_line = f"merged counts <b>1&ndash;{max(int(v) for v in merged_values)}</b>"
         names = ", ".join(r.replace("_", " ") for r in multi)
+        one = len(multi) == 1
         headline = (
-            f"Not every run collapses to a single specification any more. {names} "
-            f"merge to counts in the tens rather than to 1 &mdash; the first runs here whose "
-            f"repairs are not all mutually compatible. These counts are upper bounds: "
-            f"<code>merge_solutions</code> does not test every pair."
+            f"Not every run collapses to a single specification. {names} "
+            f"{'merges' if one else 'merge'} to more than 1 &mdash; "
+            f"{'the only run here whose' if one else 'the runs here whose'} "
+            f"repairs are not all mutually compatible. These are maximal realisable subsets, "
+            f"read off as the complements of the minimal hitting sets of the unrealisable cores, "
+            f"so they are complete rather than an upper bound &mdash; and distinct maximal subsets "
+            f"cannot be semantically equivalent, so none of them repeats another."
         )
 
     nav = "".join(
@@ -291,12 +297,14 @@ figcaption{{font-size:.72rem;letter-spacing:.07em;text-transform:uppercase;color
 <div class="wrap">
 <header class="top">
 <h1>Corrected Merge Atlas</h1>
-<p class="lede">Implication graphs for every case&nbsp;study&nbsp;3 run that has been through the
-methodology in its specified order &mdash; semantically unique, then strongest guarantees, then merge.
-Each run is shown three ways: assumptions alone, guarantees alone, and the whole GR1 specification.</p>
+<p class="lede">Implication graphs for every case&nbsp;study&nbsp;3 run through the five-step
+pipeline &mdash; merge the assumptions of every solution, filter to the soft semantically unique
+specifications, broadcast those assumptions, filter to the strongest, then merge losslessly by
+unrealisable cores and their minimal hitting sets. Each run is shown twice: assumptions alone and
+guarantees alone.</p>
 <p class="lede second">{headline}</p>
 <div class="meta"><span><b>{n_runs}</b> runs</span><span><b>{n_graphs}</b> graphs</span>
-<span>{merge_line}</span><span>date <b>2026-08-13</b></span>{pending_meta}</div>
+<span>{merge_line}</span><span>date <b>2026-08-13</b></span><span>pipeline <b>five-step</b></span>{pending_meta}</div>
 </header>
 <nav aria-label="Case studies"><ul>{nav}</ul></nav>
 <main>

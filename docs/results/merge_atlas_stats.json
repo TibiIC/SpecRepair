@@ -1,20 +1,18 @@
 {
  "amba_trace0": {
-  "notes": [
-   "Whole GR1 graph did not complete"
-  ],
+  "notes": [],
   "stats": [
    [
-    "final",
-    "21"
+    "assumptions",
+    "43"
    ],
    [
     "unique",
-    "21"
+    "1"
    ],
    [
     "strongest",
-    "21"
+    "1"
    ],
    [
     "merged",
@@ -23,21 +21,19 @@
   ]
  },
  "amba_trace1": {
-  "notes": [
-   "Whole GR1 graph did not complete"
-  ],
+  "notes": [],
   "stats": [
    [
-    "final",
-    "21"
+    "assumptions",
+    "44"
    ],
    [
     "unique",
-    "21"
+    "1"
    ],
    [
     "strongest",
-    "21"
+    "1"
    ],
    [
     "merged",
@@ -46,21 +42,40 @@
   ]
  },
  "amba_trace2": {
-  "notes": [
-   "Whole GR1 graph did not complete"
-  ],
+  "notes": [],
   "stats": [
    [
-    "final",
-    "21"
+    "assumptions",
+    "44"
    ],
    [
     "unique",
-    "21"
+    "1"
    ],
    [
     "strongest",
-    "21"
+    "1"
+   ],
+   [
+    "merged",
+    "1"
+   ]
+  ]
+ },
+ "amba_trace3": {
+  "notes": [],
+  "stats": [
+   [
+    "assumptions",
+    "43"
+   ],
+   [
+    "unique",
+    "1"
+   ],
+   [
+    "strongest",
+    "1"
    ],
    [
     "merged",
@@ -69,21 +84,40 @@
   ]
  },
  "amba_trace4": {
-  "notes": [
-   "Whole GR1 graph did not complete"
-  ],
+  "notes": [],
   "stats": [
    [
-    "final",
-    "21"
+    "assumptions",
+    "23"
    ],
    [
     "unique",
-    "16"
+    "1"
    ],
    [
     "strongest",
-    "16"
+    "1"
+   ],
+   [
+    "merged",
+    "1"
+   ]
+  ]
+ },
+ "elevator_trace0": {
+  "notes": [],
+  "stats": [
+   [
+    "assumptions",
+    "17"
+   ],
+   [
+    "unique",
+    "1"
+   ],
+   [
+    "strongest",
+    "1"
    ],
    [
     "merged",
@@ -95,6 +129,39 @@
   "notes": [],
   "stats": [
    [
+    "assumptions",
+    "8"
+   ],
+   [
+    "unique",
+    "1"
+   ],
+   [
+    "strongest",
+    "1"
+   ],
+   [
+    "merged",
+    "1"
+   ]
+  ]
+ },
+ "elevator_trace2": {
+  "notes": [],
+  "stats": [
+   [
+    "assumptions",
+    "18"
+   ],
+   [
+    "unique",
+    "1"
+   ],
+   [
+    "strongest",
+    "1"
+   ],
+   [
     "merged",
     "1"
    ]
@@ -103,6 +170,39 @@
  "elevator_trace3": {
   "notes": [],
   "stats": [
+   [
+    "assumptions",
+    "8"
+   ],
+   [
+    "unique",
+    "1"
+   ],
+   [
+    "strongest",
+    "1"
+   ],
+   [
+    "merged",
+    "1"
+   ]
+  ]
+ },
+ "elevator_trace4": {
+  "notes": [],
+  "stats": [
+   [
+    "assumptions",
+    "17"
+   ],
+   [
+    "unique",
+    "1"
+   ],
+   [
+    "strongest",
+    "1"
+   ],
    [
     "merged",
     "1"
@@ -113,16 +213,16 @@
   "notes": [],
   "stats": [
    [
-    "final",
-    "97"
+    "assumptions",
+    "48"
    ],
    [
     "unique",
-    "35"
+    "18"
    ],
    [
     "strongest",
-    "24"
+    "1"
    ],
    [
     "merged",
@@ -134,16 +234,16 @@
   "notes": [],
   "stats": [
    [
-    "final",
-    "109"
+    "assumptions",
+    "58"
    ],
    [
     "unique",
-    "50"
+    "20"
    ],
    [
     "strongest",
-    "35"
+    "1"
    ],
    [
     "merged",
@@ -155,6 +255,18 @@
   "notes": [],
   "stats": [
    [
+    "assumptions",
+    "53"
+   ],
+   [
+    "unique",
+    "17"
+   ],
+   [
+    "strongest",
+    "1"
+   ],
+   [
     "merged",
     "1"
    ]
@@ -163,6 +275,18 @@
  "gyro_trace3": {
   "notes": [],
   "stats": [
+   [
+    "assumptions",
+    "51"
+   ],
+   [
+    "unique",
+    "18"
+   ],
+   [
+    "strongest",
+    "1"
+   ],
    [
     "merged",
     "1"
@@ -173,6 +297,18 @@
   "notes": [],
   "stats": [
    [
+    "assumptions",
+    "56"
+   ],
+   [
+    "unique",
+    "18"
+   ],
+   [
+    "strongest",
+    "1"
+   ],
+   [
     "merged",
     "1"
    ]
@@ -182,16 +318,16 @@
   "notes": [],
   "stats": [
    [
-    "final",
-    "21"
+    "assumptions",
+    "28"
    ],
    [
     "unique",
-    "11"
+    "1"
    ],
    [
     "strongest",
-    "11"
+    "1"
    ],
    [
     "merged",
@@ -203,16 +339,16 @@
   "notes": [],
   "stats": [
    [
-    "final",
-    "21"
+    "assumptions",
+    "27"
    ],
    [
     "unique",
-    "12"
+    "1"
    ],
    [
     "strongest",
-    "12"
+    "1"
    ],
    [
     "merged",
@@ -224,16 +360,16 @@
   "notes": [],
   "stats": [
    [
-    "final",
-    "21"
+    "assumptions",
+    "44"
    ],
    [
     "unique",
-    "16"
+    "1"
    ],
    [
     "strongest",
-    "16"
+    "1"
    ],
    [
     "merged",
@@ -245,16 +381,16 @@
   "notes": [],
   "stats": [
    [
-    "final",
-    "21"
+    "assumptions",
+    "42"
    ],
    [
     "unique",
-    "17"
+    "1"
    ],
    [
     "strongest",
-    "17"
+    "1"
    ],
    [
     "merged",
@@ -266,16 +402,37 @@
   "notes": [],
   "stats": [
    [
-    "final",
-    "21"
+    "assumptions",
+    "25"
    ],
    [
     "unique",
-    "9"
+    "1"
    ],
    [
     "strongest",
-    "9"
+    "1"
+   ],
+   [
+    "merged",
+    "1"
+   ]
+  ]
+ },
+ "minepump_liveness_trace0": {
+  "notes": [],
+  "stats": [
+   [
+    "assumptions",
+    "19"
+   ],
+   [
+    "unique",
+    "10704"
+   ],
+   [
+    "strongest",
+    "1"
    ],
    [
     "merged",
@@ -287,16 +444,16 @@
   "notes": [],
   "stats": [
    [
-    "final",
-    "17"
-   ],
-   [
-    "strongest",
-    "17"
+    "assumptions",
+    "20"
    ],
    [
     "unique",
-    "13"
+    "1"
+   ],
+   [
+    "strongest",
+    "1"
    ],
    [
     "merged",
@@ -308,6 +465,18 @@
   "notes": [],
   "stats": [
    [
+    "assumptions",
+    "5"
+   ],
+   [
+    "unique",
+    "132"
+   ],
+   [
+    "strongest",
+    "1"
+   ],
+   [
     "merged",
     "1"
    ]
@@ -317,16 +486,37 @@
   "notes": [],
   "stats": [
    [
-    "final",
-    "19"
-   ],
-   [
-    "strongest",
-    "19"
+    "assumptions",
+    "20"
    ],
    [
     "unique",
-    "12"
+    "1"
+   ],
+   [
+    "strongest",
+    "1"
+   ],
+   [
+    "merged",
+    "1"
+   ]
+  ]
+ },
+ "minepump_liveness_trace4": {
+  "notes": [],
+  "stats": [
+   [
+    "assumptions",
+    "17"
+   ],
+   [
+    "unique",
+    "12080"
+   ],
+   [
+    "strongest",
+    "1"
    ],
    [
     "merged",
@@ -338,16 +528,16 @@
   "notes": [],
   "stats": [
    [
-    "final",
-    "17"
+    "assumptions",
+    "14"
    ],
    [
     "unique",
-    "11"
+    "1"
    ],
    [
     "strongest",
-    "11"
+    "1"
    ],
    [
     "merged",
@@ -355,93 +545,42 @@
    ]
   ]
  },
- "minepump_trace1": {
-  "notes": [],
-  "stats": [
-   [
-    "final",
-    "26877"
-   ],
-   [
-    "strongest",
-    "296"
-   ],
-   [
-    "unique",
-    "54"
-   ],
-   [
-    "merged",
-    "50"
-   ]
-  ]
- },
- "minepump_trace2": {
-  "notes": [],
-  "stats": [
-   [
-    "final",
-    "23598"
-   ],
-   [
-    "strongest",
-    "94"
-   ],
-   [
-    "unique",
-    "36"
-   ],
-   [
-    "merged",
-    "35"
-   ]
-  ]
- },
  "minepump_trace3": {
   "notes": [],
   "stats": [
    [
-    "final",
-    "23201"
-   ],
-   [
-    "strongest",
-    "120"
+    "assumptions",
+    "5"
    ],
    [
     "unique",
-    "45"
-   ],
-   [
-    "merged",
-    "40"
-   ]
-  ]
- },
- "minepump_trace4": {
-  "notes": [],
-  "stats": [
-   [
-    "final",
-    "27589"
+    "10944"
    ],
    [
     "strongest",
-    "178"
-   ],
-   [
-    "unique",
-    "50"
+    "77"
    ],
    [
     "merged",
-    "48"
+    "12"
    ]
   ]
  },
  "pcar_trace0": {
   "notes": [],
   "stats": [
+   [
+    "assumptions",
+    "185"
+   ],
+   [
+    "unique",
+    "116"
+   ],
+   [
+    "strongest",
+    "1"
+   ],
    [
     "merged",
     "1"
@@ -452,16 +591,16 @@
   "notes": [],
   "stats": [
    [
-    "final",
-    "21"
+    "assumptions",
+    "20"
    ],
    [
     "unique",
-    "17"
+    "1"
    ],
    [
     "strongest",
-    "17"
+    "1"
    ],
    [
     "merged",
@@ -473,6 +612,18 @@
   "notes": [],
   "stats": [
    [
+    "assumptions",
+    "128"
+   ],
+   [
+    "unique",
+    "42"
+   ],
+   [
+    "strongest",
+    "1"
+   ],
+   [
     "merged",
     "1"
    ]
@@ -481,6 +632,18 @@
  "pcar_trace3": {
   "notes": [],
   "stats": [
+   [
+    "assumptions",
+    "109"
+   ],
+   [
+    "unique",
+    "1484"
+   ],
+   [
+    "strongest",
+    "1"
+   ],
    [
     "merged",
     "1"
@@ -491,6 +654,18 @@
   "notes": [],
   "stats": [
    [
+    "assumptions",
+    "260"
+   ],
+   [
+    "unique",
+    "35"
+   ],
+   [
+    "strongest",
+    "1"
+   ],
+   [
     "merged",
     "1"
    ]
@@ -500,16 +675,37 @@
   "notes": [],
   "stats": [
    [
-    "final",
-    "19"
+    "assumptions",
+    "13"
    ],
    [
     "unique",
-    "7"
+    "1"
    ],
    [
     "strongest",
-    "7"
+    "1"
+   ],
+   [
+    "merged",
+    "1"
+   ]
+  ]
+ },
+ "traffic_single_trace1": {
+  "notes": [],
+  "stats": [
+   [
+    "assumptions",
+    "6"
+   ],
+   [
+    "unique",
+    "26572"
+   ],
+   [
+    "strongest",
+    "1"
    ],
    [
     "merged",
@@ -521,16 +717,16 @@
   "notes": [],
   "stats": [
    [
-    "final",
-    "19"
+    "assumptions",
+    "12"
    ],
    [
     "unique",
-    "7"
+    "1"
    ],
    [
     "strongest",
-    "7"
+    "1"
    ],
    [
     "merged",
@@ -542,16 +738,16 @@
   "notes": [],
   "stats": [
    [
-    "final",
-    "3300"
-   ],
-   [
-    "strongest",
-    "3"
+    "assumptions",
+    "8"
    ],
    [
     "unique",
-    "3"
+    "7873"
+   ],
+   [
+    "strongest",
+    "1"
    ],
    [
     "merged",
@@ -563,16 +759,16 @@
   "notes": [],
   "stats": [
    [
-    "final",
-    "19"
+    "assumptions",
+    "14"
    ],
    [
     "unique",
-    "7"
+    "1"
    ],
    [
     "strongest",
-    "7"
+    "1"
    ],
    [
     "merged",
@@ -584,16 +780,16 @@
   "notes": [],
   "stats": [
    [
-    "final",
-    "21"
+    "assumptions",
+    "18"
    ],
    [
     "unique",
-    "10"
+    "1"
    ],
    [
     "strongest",
-    "10"
+    "1"
    ],
    [
     "merged",
@@ -605,16 +801,16 @@
   "notes": [],
   "stats": [
    [
-    "final",
-    "21"
+    "assumptions",
+    "22"
    ],
    [
     "unique",
-    "12"
+    "1"
    ],
    [
     "strongest",
-    "12"
+    "1"
    ],
    [
     "merged",
@@ -626,16 +822,16 @@
   "notes": [],
   "stats": [
    [
-    "final",
-    "21"
+    "assumptions",
+    "17"
    ],
    [
     "unique",
-    "10"
+    "1"
    ],
    [
     "strongest",
-    "10"
+    "1"
    ],
    [
     "merged",
@@ -647,16 +843,16 @@
   "notes": [],
   "stats": [
    [
-    "final",
-    "21"
+    "assumptions",
+    "22"
    ],
    [
     "unique",
-    "11"
+    "1"
    ],
    [
     "strongest",
-    "11"
+    "1"
    ],
    [
     "merged",
@@ -668,16 +864,16 @@
   "notes": [],
   "stats": [
    [
-    "final",
+    "assumptions",
     "21"
    ],
    [
     "unique",
-    "10"
+    "1"
    ],
    [
     "strongest",
-    "10"
+    "1"
    ],
    [
     "merged",

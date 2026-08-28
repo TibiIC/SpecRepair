@@ -59,7 +59,11 @@ for prefix in "$@"; do
         # of these pictures is between assumptions and between guarantees - the
         # combined view answers neither. GRAPH_TYPES="asm gar gr1" restores it.
         for t in ${GRAPH_TYPES:-asm gar}; do
-            timeout 3600 python -u scripts/visualise_resulting_specs.py \
+            # GRAPH_TIMEOUT seconds per graph. An hour is plenty for most
+            # runs and not enough for genbuf, whose 81 guarantees make every
+            # implication check expensive even though its merged set is one
+            # specification - asm and gar both hit rc=124 on traces 0, 1 and 2.
+            timeout ${GRAPH_TIMEOUT:-3600} python -u scripts/visualise_resulting_specs.py \
                 -o "$d/corrected_graph_${t}.png" -t "$t" --legend compact \
                 "${groups[@]}" > /dev/null 2>&1
             rc=$?
