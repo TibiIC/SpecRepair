@@ -22,7 +22,15 @@ TRIVIAL=tests/test_files/out/trivial_solutions/2026-08-13/all
 SPECS=input-files/case-studies/spectra/case_study_3
 
 for prefix in "$@"; do
-    for d in $ROOT/${prefix}_trace*_fastlas_2026-08-13; do
+    # A prefix names a case study and matches all its traces; an exact run name
+    # matches just that one, so a slow case study can be split across boxes
+    # instead of three of them racing to write the same PNGs.
+    if [ -d "$ROOT/${prefix}_fastlas_2026-08-13" ]; then
+        targets="$ROOT/${prefix}_fastlas_2026-08-13"
+    else
+        targets="$ROOT/${prefix}_trace*_fastlas_2026-08-13"
+    fi
+    for d in $targets; do
         [ -d "$d" ] || continue
         # Prefer the newest pipeline's output. five_step_specs is the five-step
         # result; maximal_merged_specs came from the merge-first enumeration

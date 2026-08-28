@@ -61,6 +61,7 @@ SpecOracle = Callable[[object], bool]
 class FiveStepReport:
     """The count each step is described by, plus what step 5 produced."""
     inputs: int = 0
+    admitting: int = 0
     pooled_assumptions: int = 0
     soft_unique: int = 0
     semantic_unique: int = 0
@@ -341,14 +342,50 @@ def _default_oracle() -> SpecOracle:
     return SpectraGR1Oracle().is_realisable
 
 
+class TraceNotAdmitted(Exception):
+    """A stage produced a specification the violating trace no longer satisfies."""
+
+
 def run_five_step(specs: Sequence, oracle: Optional[SpecOracle] = None,
-                  progress_every: float = 60.0, workers: int = 8) -> FiveStepReport:
-    """Run all five steps, reporting the count each one is described by."""
+                  progress_every: float = 60.0, workers: int = 8,
+                  admits: Optional[Callable[[object], bool]] = None) -> FiveStepReport:
+    """
+    Run all five steps, reporting the count each one is described by.
+
+    `admits(spec)` says whether the violating trace still satisfies a
+    specification's assumptions. Given one, it is used twice, and both uses
+    matter:
+
+    * as a **filter on the input**, because the premise that made step 1 safe -
+      every input assumption admits the trace, so their conjunction does - is
+      not true of every pool. minepump_liveness trace 1 records repairs that
+      violate `assumption3_1` themselves, and pooling their assumptions put the
+      violated formula back, so the merged specification failed the trace it was
+      repaired for.
+    * as a **gate on the output**, because that failure was written out and
+      tabulated rather than raised, and only turned up when an ordering
+      comparison looked odd days later.
+    """
     started = time.time()
     report = FiveStepReport(inputs=len(specs))
     if not specs:
         return report
     oracle = oracle or _default_oracle()
+
+    if admits is not None:
+        keeping = [s for s in specs if admits(s)]
+        report.admitting = len(keeping)
+        if len(keeping) < len(specs):
+            log.warning("step 0  dropped %d of %d specification(s) whose "
+                        "assumptions the trace no longer satisfies",
+                        len(specs) - len(keeping), len(specs))
+        if not keeping:
+            raise TraceNotAdmitted(
+                "no input specification admits the violating trace; the pool "
+                "cannot be merged into a repair")
+        specs = keeping
+    else:
+        report.admitting = len(specs)
 
     assumptions, report.pooled_assumptions = merge_assumptions(specs)
     log.info("step 1  merged assumptions            %d", report.pooled_assumptions)
@@ -386,6 +423,13 @@ def run_five_step(specs: Sequence, oracle: Optional[SpecOracle] = None,
     report.specs = merged
     report.merged = len(merged)
     log.info("step 5  merged                        %d", report.merged)
+
+    if admits is not None:
+        rejected = [i for i, spec in enumerate(report.specs) if not admits(spec)]
+        if rejected:
+            raise TraceNotAdmitted(
+                f"merged specification(s) {rejected} do not admit the violating "
+                f"trace; the assumption merge has undone the repair")
 
     report.seconds = time.time() - started
     return report

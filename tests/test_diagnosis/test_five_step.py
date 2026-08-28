@@ -258,5 +258,46 @@ class TestStep2bSemanticUniqueness(TestCase):
         self.assertEqual(r.semantic_unique, len(r.semantic_unique_specs))
 
 
+class TestTraceIsAdmitted(TestCase):
+    """
+    The violating trace must still satisfy what the pipeline produces.
+
+    minepump_liveness trace 1 is why this exists. Its pool records repairs whose
+    assumptions the trace violates, so step 1 pooled the violated formula back
+    in and the merged specification failed the very trace it was repaired for -
+    written out, tabulated, and only noticed days later because an ordering
+    comparison looked odd.
+    """
+
+    def _pool(self):
+        return [spec(A_WEAK, G1), spec(A_STRONG, G2)]
+
+    def test_specifications_not_admitting_the_trace_are_dropped_first(self):
+        pool = self._pool()
+        # only the first admits the trace
+        admits = lambda s: asms(s) == asms(spec(A_WEAK, G1))
+        r = run_five_step(pool, oracle=lambda s: True, progress_every=0,
+                          admits=admits)
+        self.assertEqual(2, r.inputs)
+        self.assertEqual(1, r.admitting, "the non-admitting spec was not dropped")
+        self.assertEqual(1, r.pooled_assumptions, "its assumption was pooled anyway")
+
+    def test_an_output_that_loses_the_trace_is_raised_not_written(self):
+        from spec_repair.diagnosis.five_step import TraceNotAdmitted
+        with self.assertRaises(TraceNotAdmitted):
+            run_five_step(self._pool(), oracle=lambda s: True, progress_every=0,
+                          admits=lambda s: len(asms(s)) < 2)
+
+    def test_a_pool_where_nothing_admits_the_trace_is_refused(self):
+        from spec_repair.diagnosis.five_step import TraceNotAdmitted
+        with self.assertRaises(TraceNotAdmitted):
+            run_five_step(self._pool(), oracle=lambda s: True, progress_every=0,
+                          admits=lambda s: False)
+
+    def test_without_a_check_the_behaviour_is_unchanged(self):
+        r = run_five_step(self._pool(), oracle=lambda s: True, progress_every=0)
+        self.assertEqual(r.inputs, r.admitting)
+
+
 if __name__ == "__main__":
     unittest.main()

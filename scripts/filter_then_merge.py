@@ -224,10 +224,47 @@ def main():
     if args.five_step:
         import logging
         logging.basicConfig(level=logging.INFO, format="%(message)s")
-        from spec_repair.diagnosis.five_step import run_five_step
+        import re as _re5
+        from spec_repair.diagnosis.five_step import run_five_step, TraceNotAdmitted
+        from spec_repair.components.learners.optimising_final_spec_learner import (
+            OptimisingSpecLearner)
+        from spec_repair.components.new_spec_encoder import (
+            get_violated_expression_names_of_type)
+        from spec_repair.enums import Learning
+        from spec_repair.util.file_util import read_file_lines
         from spec_repair.diagnosis.merge_invariants import (
             check_merge_output, response_shaped_guarantees)
-        report = run_five_step(specs, workers=args.workers)
+        # The violating trace this run was repaired for. Without it the merge
+        # can pool a violated assumption back in and undo the repair silently,
+        # which is what happened to minepump_liveness trace 1.
+        run5 = os.path.basename(os.path.normpath(args.run_dir))
+        case5 = _re5.sub(r"_trace\d+_.*$", "", run5)
+        trace_no = _re5.search(r"_trace(\d+)_", run5)
+        trace_path = os.path.join(
+            REPO_ROOT, "input-files", "case-studies", "spectra", "case_study_3",
+            case5, f"violation_trace_{trace_no.group(1)}.txt") if trace_no else None
+        admits = None
+        if trace_path and os.path.exists(trace_path):
+            trace_lines = read_file_lines(trace_path)
+            _learner = OptimisingSpecLearner()
+
+            def admits(spec, _t=trace_lines, _l=_learner):
+                violated = get_violated_expression_names_of_type(
+                    _l.get_spec_violations(spec, _t, [], Learning.ASSUMPTION_WEAKENING),
+                    "assumption")
+                return not violated
+
+            print(f"         trace gate: {trace_path}", flush=True)
+        else:
+            print("         WARNING no violation trace found; the merge is not "
+                  "checked against it", flush=True)
+        try:
+            report = run_five_step(specs, workers=args.workers, admits=admits)
+        except TraceNotAdmitted as exc:
+            print(f"stage !   TRACE NOT ADMITTED: {exc}", flush=True)
+            return 2
+        print(f"stage 0  admitting the trace           {report.admitting}"
+              f" of {report.inputs}", flush=True)
         print(f"stage 1  merged assumptions            {report.pooled_assumptions}",
               flush=True)
         print(f"stage 2  soft semantically unique      {report.soft_unique}", flush=True)
