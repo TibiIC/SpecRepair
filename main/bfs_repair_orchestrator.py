@@ -293,6 +293,28 @@ class BFSRepairOrchestrator:
                                             f"Unverifiable: {reason}")
                         self._reporter.event("SKIP", f"cannot verify - {reason}")
                         continue
+                    if not counter_examples_with_data and not self._is_solution(learned_spec, data):
+                        # Verification found nothing, but the trace this branch
+                        # exists to accommodate still breaks an assumption. That
+                        # is not a repair, and recording it puts a specification
+                        # into final_specs that fails its own trace - which is
+                        # how minepump_liveness trace 1 came to merge into a
+                        # specification the trace still violated.
+                        #
+                        # "No counter-examples" and "is a solution" are different
+                        # questions. The first asks Spectra whether the system
+                        # can be forced to fail; the second re-evaluates the
+                        # violation trace against the new assumptions. Only
+                        # _record_if_solution asked the second, and that is the
+                        # fallback path for an exhausted branch, so the main path
+                        # never did.
+                        self._logger.record(-1, learned_spec, data,
+                                            "Rejected: trace still violates an assumption")
+                        self._reporter.event(
+                            "REJECT", "verified, but the trace still violates an "
+                                      "assumption - the learner's weakening does "
+                                      "not cover the violation")
+                        continue
                     if not counter_examples_with_data:
                         learned_id = self._recorder.add(learned_spec)
                         self._om.connect_leaf_node(learned_spec, learned_id, prev=(spec, data))
