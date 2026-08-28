@@ -28,7 +28,15 @@ export SPEC_REPAIR_RUN_DATE=2026-08-13
 export SPEC_REPAIR_MARCO_CORES=1
 export SPEC_REPAIR_LEARNER=fastlas
 export SPEC_REPAIR_FASTLAS_RUNS=10
-export SPEC_REPAIR_JVM_HEAP=${SPEC_REPAIR_JVM_HEAP:-48g}
+# 24g, not 48g. The first attempt asked for 48g on a 62GB box and all five
+# colorsort runs came back rc=143 between three and eight hours in - SIGTERM
+# from earlyoom, which is active on these machines. jvm.py says why: -Xmx bounds
+# the Java heap only, CUDD's BDD tables are native and uncapped, so the process
+# footprint grows past the heap and earlyoom reacts to the total. The default of
+# a quarter of RAM is too small for colorsort's synthesis and 48g leaves no room
+# for the native side; this sits between them, and the boxes are shared, so
+# other users' memory counts against the same budget.
+export SPEC_REPAIR_JVM_HEAP=${SPEC_REPAIR_JVM_HEAP:-24g}
 export SPEC_REPAIR_SPECTRA_CALL_LOG_DIR=${SPEC_REPAIR_SPECTRA_CALL_LOG_DIR:-/vol/bitbucket/tg4018/rerun_logs/jvm}
 cd /vol/bitbucket/tg4018/PhD/SpecRepair
 mkdir -p /vol/bitbucket/tg4018/rerun_logs "$SPEC_REPAIR_SPECTRA_CALL_LOG_DIR"
