@@ -1,0 +1,15 @@
+=== run 0 ===
+rules: ['antecedent_exception(assumption3_1,0,V0,V1) :- timepoint_of_op(current,V0,V0,V1), not_holds_at(pump,V0,V1), time(V0), trace(V1).', 'antecedent_exception(assumption3_1,1,V0,V1) :- timepoint_of_op(current,V0,V0,V1), holds_at(flag,V0,V1), time(V0), trace(V1).']
+  score=0 n=2
+    antecedent_exception(assumption3_1,0,[('current', 'pump=false')])
+    antecedent_exception(assumption3_1,1,[('current', 'flag=true')])
+
+=== run 1 ===
+rules: ['antecedent_exception(assumption3_1,1,V0,V1) :- timepoint_of_op(current,V0,V0,V1), holds_at(highwater,V0,V1), time(V0), trace(V1).', 'antecedent_exception(assumption3_1,0,V0,V1) :- timepoint_of_op(current,V0,V0,V1), not_holds_at(methane,V0,V1), time(V0), trace(V1).']
+  score=0 n=2
+    antecedent_exception(assumption3_1,1,[('current', 'highwater=true')])
+    antecedent_exception(assumption3_1,0,[('current', 'methane=false')])
+
+=== run 2 ===
+rules: None
+

@@ -1,3 +1,4 @@
+import logging
 from typing import Dict, List, Tuple
 
 from spec_repair.enums import Learning
@@ -22,7 +23,11 @@ from spec_repair.interfaces.irecorder import IRecorder
 from spec_repair.components.recorders.unique_recorder import UniqueRecorder
 from spec_repair.loggers.progress_reporter import ProgressReporter, Timed
 from spec_repair.loggers.spec_logger import SpecLogger
+from spec_repair.diagnosis.learner_fault import (
+    LearnerContractViolation, report_learner_fault)
 from spec_repair.wrappers.asp_wrappers import get_violations
+
+_log = logging.getLogger(__name__)
 
 
 def _learning_label(learning_type) -> str:
@@ -58,6 +63,7 @@ class BFSRepairOrchestrator:
         self._intermediate_recorder = intermediate_recorder
         self._logger = logger
         self._reporter = reporter or ProgressReporter(to_stdout=False, heartbeat_seconds=0)
+        self._learner_faults = 0
         self._initialise_repair()
 
     @property
@@ -184,6 +190,51 @@ class BFSRepairOrchestrator:
             asp, exp_type=Learning.ASSUMPTION_WEAKENING.exp_type())
         return not get_violated_expression_names_of_type(violations, "assumption")
 
+    def _report_learner_fault(self, spec, learned_spec, data, learner):
+        """
+        A learned specification that still violates its own trace: report it as
+        the contract violation it is.
+
+        Everything needed to reproduce it offline goes into the bundle - the
+        task the solver was given, its raw answer, the adaptations parsed from
+        it, and the specification before and after - because by the time this is
+        noticed the search has moved on and the task is gone.
+        """
+        self._learner_faults += 1
+        violations = get_violations(
+            NewSpecEncoder.encode_ASP(learned_spec, data.trace, []),
+            exp_type=Learning.ASSUMPTION_WEAKENING.exp_type())
+        violated = get_violated_expression_names_of_type(violations, "assumption")
+        recorder_folder = getattr(self._recorder, "debug_folder", None)
+        try:
+            bundle = report_learner_fault(
+                spec_before=spec,
+                spec_after=learned_spec,
+                # The whole chain that produced this specification, not just
+                # the last step - the fault may have been introduced earlier.
+                adaptations=list(data.adaptation_history or []),
+                violated_assumptions=sorted(violated),
+                artifacts=list(getattr(learner, "learning_artifacts", [])),
+                trace=data.trace or [],
+                debug_folder=recorder_folder,
+                note=f"learning_type={data.learning_type}, "
+                     f"depth={data.learning_steps}",
+            )
+        except LearnerContractViolation:
+            raise
+        except Exception as e:                      # diagnostics must not kill the run
+            self._logger.record(-1, learned_spec, data,
+                                f"LEARNER FAULT (bundle failed: {e})")
+            self._reporter.event("FAULT", f"trace still violated; bundle failed: {e}")
+            return
+        self._logger.record(-1, learned_spec, data,
+                            f"LEARNER FAULT: trace still violates "
+                            f"{', '.join(sorted(violated)) or 'an assumption'}")
+        self._reporter.event(
+            "FAULT", f"LEARNER CONTRACT VIOLATED - trace still violates "
+                     f"{', '.join(sorted(violated)) or 'an assumption'}; "
+                     f"bundle: {bundle}")
+
     def _record_if_solution(self, spec: ISpecification, data: RepairData) -> bool:
         """
         Record a terminating branch as a leaf when it is in fact a solution.
@@ -294,26 +345,24 @@ class BFSRepairOrchestrator:
                         self._reporter.event("SKIP", f"cannot verify - {reason}")
                         continue
                     if not counter_examples_with_data and not self._is_solution(learned_spec, data):
-                        # Verification found nothing, but the trace this branch
-                        # exists to accommodate still breaks an assumption. That
-                        # is not a repair, and recording it puts a specification
-                        # into final_specs that fails its own trace - which is
-                        # how minepump_liveness trace 1 came to merge into a
-                        # specification the trace still violated.
+                        # This is a DEFECT, not a branch outcome. The learning
+                        # task demanded entailed(<trace>) as its positive
+                        # example, so no solution to it can leave the trace
+                        # violating an assumption. If one does, something in the
+                        # chain from task to specification is wrong - the modes,
+                        # the bias, the ASP encoding, the parsing of the returned
+                        # rules, or the application of the adaptations. It is not
+                        # enough to drop the candidate quietly: that is how
+                        # minepump_liveness trace 1 shipped three final specs
+                        # that failed their own trace, with nothing in the run
+                        # saying so.
                         #
-                        # "No counter-examples" and "is a solution" are different
-                        # questions. The first asks Spectra whether the system
-                        # can be forced to fail; the second re-evaluates the
-                        # violation trace against the new assumptions. Only
-                        # _record_if_solution asked the second, and that is the
-                        # fallback path for an exhausted branch, so the main path
-                        # never did.
-                        self._logger.record(-1, learned_spec, data,
-                                            "Rejected: trace still violates an assumption")
-                        self._reporter.event(
-                            "REJECT", "verified, but the trace still violates an "
-                                      "assumption - the learner's weakening does "
-                                      "not cover the violation")
+                        # So: log it as an error, write a bundle that reproduces
+                        # it offline, and count it for the run summary. The
+                        # search continues (one bad branch should not cost a
+                        # fifty-run sweep), unless SPEC_REPAIR_STRICT_LEARNER=1
+                        # asks to stop at the first.
+                        self._report_learner_fault(spec, learned_spec, data, learner)
                         continue
                     if not counter_examples_with_data:
                         learned_id = self._recorder.add(learned_spec)
@@ -337,5 +386,16 @@ class BFSRepairOrchestrator:
             counts = {r: self._unresolved.count(r) for r in set(self._unresolved)}
             self._reporter.event("LIMIT", "unresolved branches: " + ", ".join(
                 f"{n}x {reason}" for reason, n in sorted(counts.items())))
+        if self._learner_faults:
+            # Loud, at the end, where a sweep's summary is actually read. A run
+            # that produced these has results that cannot be trusted until the
+            # bundles are looked at.
+            _log.error("%d LEARNER CONTRACT VIOLATION(S) in this run: a learned "
+                       "specification still violated the trace it was repaired "
+                       "for. See the learner_faults/ bundles.",
+                       self._learner_faults)
+            self._reporter.event(
+                "FAULT", f"{self._learner_faults} learner contract violation(s) "
+                         f"- results are not trustworthy until investigated")
         self._reporter.finish(len(self._recorder.get_specs()),
                               len(self._intermediate_recorder.get_specs()))

@@ -9,6 +9,7 @@ from spec_repair.components.new_spec_encoder import NewSpecEncoder
 from spec_repair.components.repair_data import RepairData
 from spec_repair.model.adaptation_learned import Adaptation
 from spec_repair.model.counter_trace import CounterTrace, complete_cts_from_ct
+from spec_repair.diagnosis.learner_fault import LearningArtifact
 from spec_repair.enums import Learning
 from spec_repair.exceptions import NoViolationException, NoWeakeningException, DeadlockRequiredException, \
     NoAssumptionWeakeningException
@@ -128,6 +129,7 @@ class OptimisingSpecLearner(ILearner):
 
     def find_possible_adaptations(self, spec: SpectraSpecification, trace, cts, learning_type) -> List[
         List[Adaptation]]:
+        self.reset_learning_artifacts()
         violations = self.get_spec_violations(spec, trace, cts, learning_type)
         con_adaptations = self.find_consequent_exception_adaptations(spec, trace, cts, learning_type, violations)
         ant_adaptations = self.find_antecedent_exception_adaptations(spec, trace, cts, learning_type, violations)
@@ -167,10 +169,37 @@ class OptimisingSpecLearner(ILearner):
             spec, trace, cts, learning_type, violations,
             self._config.with_only(INVARIANT_TO_RESPONSE_WEAKENING))
 
+    def reset_learning_artifacts(self):
+        """Start a fresh record of what the solver was asked and answered."""
+        self._learning_artifacts: List[LearningArtifact] = []
+
+    def record_learning_artifact(self, artifact: LearningArtifact):
+        if not hasattr(self, "_learning_artifacts"):
+            self._learning_artifacts = []
+        self._learning_artifacts.append(artifact)
+
+    @property
+    def learning_artifacts(self) -> List[LearningArtifact]:
+        """
+        The tasks and raw answers behind the most recent
+        `find_possible_adaptations` call.
+
+        Read by the orchestrator when a learned specification turns out to
+        violate its own trace, which should be impossible - the bundle is what
+        makes that reproducible offline.
+        """
+        return getattr(self, "_learning_artifacts", [])
+
     def find_adaptations_with_heuristic(self, spec, trace, cts, learning_type, violations, config):
         self.spec_encoder.set_learning_config(config)
         ilasp: str = self.spec_encoder.encode_ILASP(spec, trace, cts, violations, learning_type)
         output: str = run_ILASP(ilasp)
+        # Kept so that a solution which fails its own trace can be reproduced
+        # offline from the exact task and answer that produced it. See
+        # spec_repair.diagnosis.learner_fault.
+        self.record_learning_artifact(LearningArtifact(
+            solver="ilasp", task=ilasp, raw_outputs=[output],
+            learning_type=str(learning_type), config=str(config)))
         adaptations: Optional[
             List[Tuple[int, List[Adaptation]]]] = ILASPInterpreter.extract_learned_possible_adaptations(output)
         if not adaptations:

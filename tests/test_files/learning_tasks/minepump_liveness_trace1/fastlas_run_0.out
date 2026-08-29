@@ -1,0 +1,2 @@
+antecedent_exception(assumption3_1,0,V0,V1) :- timepoint_of_op(current,V0,V0,V1), not_holds_at(pump,V0,V1), time(V0), trace(V1).
+antecedent_exception(assumption3_1,1,V0,V1) :- timepoint_of_op(current,V0,V0,V1), holds_at(flag,V0,V1), time(V0), trace(V1).

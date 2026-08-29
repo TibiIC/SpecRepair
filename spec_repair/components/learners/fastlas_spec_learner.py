@@ -31,6 +31,7 @@ from typing import List, Optional, Tuple
 
 from spec_repair.components.learners.optimising_final_spec_learner import OptimisingSpecLearner
 from spec_repair.config import SETUP_DICT
+from spec_repair.diagnosis.learner_fault import LearningArtifact
 from spec_repair.helpers.parsers.fastlas_interpreter import FastLASInterpreter
 from spec_repair.interfaces.iheuristic_manager import IHeuristicManager
 from spec_repair.components.heuristic_managers.no_filter_heuristic_manager import NoFilterHeuristicManager
@@ -340,6 +341,7 @@ def enumerate_solutions(
         n_runs: int,
         fastlas_args: Tuple[str, ...] = DEFAULT_FASTLAS_ARGS,
         seed_constraints: Optional[List[str]] = None,
+        capture: Optional[List[Tuple[str, str]]] = None,
 ) -> List[Tuple[int, List[Adaptation]]]:
     """
     Enumerate up to `n_runs` distinct solutions of a FastLAS task.
@@ -359,13 +361,20 @@ def enumerate_solutions(
 
     :param seed_constraints: exclusions to start from, as if already found.
         For testing what a given constraint does to the reachable space.
+    :param capture: if given, each (task_sent, raw_output) pair is appended to
+        it. The task differs per run - the accumulated exclusions are part of
+        it - so a fault bundle needs the exact text of the run that produced the
+        offending solution, not just the initial task.
     """
     adaptations: List[Tuple[int, List[Adaptation]]] = []
     seen = set()
     constraints: List[str] = list(seed_constraints or [])
 
     for _ in range(n_runs):
-        output = run_fastlas(with_exclusions(fastlas_task, constraints), fastlas_args)
+        task_sent = with_exclusions(fastlas_task, constraints)
+        output = run_fastlas(task_sent, fastlas_args)
+        if capture is not None:
+            capture.append((task_sent, output))
         rules: Optional[List[str]] = FastLASInterpreter.extract_learned_rules(output)
         if rules is None:
             # UNSATISFIABLE, or nothing on stdout: no further solution exists
@@ -417,4 +426,13 @@ class FastLASSpecLearner(OptimisingSpecLearner):
         self.spec_encoder.set_learning_config(config)
         las: str = self.spec_encoder.encode_ILASP(spec, trace, cts, violations, learning_type)
         fastlas_task: str = translate_ilasp_task_to_fastlas(las)
-        return enumerate_solutions(fastlas_task, self.n_runs, self.fastlas_args)
+        # Captured so a solution that fails its own trace can be reproduced from
+        # the exact task and answer. See spec_repair.diagnosis.learner_fault.
+        captured: List[Tuple[str, str]] = []
+        solutions = enumerate_solutions(fastlas_task, self.n_runs,
+                                        self.fastlas_args, capture=captured)
+        for task_sent, output in captured:
+            self.record_learning_artifact(LearningArtifact(
+                solver="fastlas", task=task_sent, raw_outputs=[output],
+                learning_type=str(learning_type), config=str(config)))
+        return solutions
