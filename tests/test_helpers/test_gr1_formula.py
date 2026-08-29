@@ -210,7 +210,7 @@ class TestGR1Formula(TestCase):
         )
         formula.integrate(adaptation)
         output = formula.to_str(self.formatter)
-        expected_output = "G(((b=true|(a=true&d=true))->c=true))"
+        expected_output = "G((((a=true&d=true)|b=true)->c=true))"
         self.assertEqual(expected_output, output)
 
     def test_integrate_adaptation_to_formula_antecedent_exception_6(self):
@@ -227,7 +227,7 @@ class TestGR1Formula(TestCase):
         )
         formula.integrate(adaptation)
         output = formula.to_str(self.formatter)
-        expected_output = "G((((b=true|(a=true&d=true))|(a=true&e=true))->c=true))"
+        expected_output = "G(((((a=true&d=true)|(a=true&e=true))|b=true)->c=true))"
         self.assertEqual(expected_output, output)
 
     def test_integrate_adaptation_to_formula_antecedent_exception_7(self):
@@ -244,8 +244,43 @@ class TestGR1Formula(TestCase):
         )
         formula.integrate(adaptation)
         output = formula.to_str(self.formatter)
-        expected_output = "G((((b=true|(next(d=true)&PREV(a=true)))|PREV((a=true&e=true)))->c=true))"
+        expected_output = "G(((((next(d=true)&PREV(a=true))|PREV((a=true&e=true)))|b=true)->c=true))"
         self.assertEqual(expected_output, output)
+
+    def test_integrate_all_narrows_every_indexed_disjunct(self):
+        """
+        A solution's exception rules all index the *same* antecedent.
+
+        Applying them one at a time used to rewrite the antecedent underneath
+        the indices not yet used - narrowing disjunct 0 removed it and appended
+        the narrowed version, so the rule for index 1 landed on what index 0 had
+        just produced and the real disjunct 1 came through untouched. That is
+        how a repair could be recorded while its own violation trace still
+        passed through the disjunct nobody guarded.
+        """
+        def fresh():
+            return GR1Formula(
+                temp_type=GR1TemporalType.INVARIANT,
+                antecedent=Or(AtomicProposition("a", True), AtomicProposition("b", True)),
+                consequent=AtomicProposition("c", True),
+            )  # G((a|b) -> c)
+
+        first = Adaptation(type='antecedent_exception', formula_name='a_always',
+                           disjunction_index=0,
+                           atom_temporal_operators=[('current', 'd=false')])
+        second = Adaptation(type='antecedent_exception', formula_name='a_always',
+                            disjunction_index=1,
+                            atom_temporal_operators=[('current', 'e=false')])
+
+        expected = "G((((a=true&d=true)|(b=true&e=true))->c=true))"
+        forwards = fresh()
+        forwards.integrate_all([first, second])
+        self.assertEqual(expected, forwards.to_str(self.formatter))
+
+        # and the result must not depend on the order the learner listed them in
+        backwards = fresh()
+        backwards.integrate_all([second, first])
+        self.assertEqual(expected, backwards.to_str(self.formatter))
 
     def test_integrate_adaptation_to_formula_antecedent_exception_8(self):
         formula = GR1Formula(
@@ -631,7 +666,7 @@ class TestGR1Formula(TestCase):
         )
         formula.integrate(adaptation)
         output = formula.to_str(self.spot_formatter)
-        expected_output = "G(((b | (a & d)) -> c))"
+        expected_output = "G((((a & d) | b) -> c))"
         self.assertEqual(expected_output, output)
 
     def test_spot_integrate_adaptation_to_formula_antecedent_exception_6(self):
@@ -648,7 +683,7 @@ class TestGR1Formula(TestCase):
         )
         formula.integrate(adaptation)
         output = formula.to_str(self.spot_formatter)
-        expected_output = "G((((b | (a & d)) | (a & e)) -> c))"
+        expected_output = "G(((((a & d) | (a & e)) | b) -> c))"
         self.assertEqual(expected_output, output)
 
     def test_spot_integrate_adaptation_to_formula_antecedent_exception_7(self):
@@ -665,7 +700,7 @@ class TestGR1Formula(TestCase):
         )
         formula.integrate(adaptation)
         output = formula.to_str(self.spot_formatter)
-        expected_output = "G((((X(b) | (X(X(d)) & a)) | (a & e)) -> X(c)))"
+        expected_output = "G(((((X(X(d)) & a) | (a & e)) | X(b)) -> X(c)))"
         self.assertEqual(expected_output, output)
 
     def test_spot_integrate_adaptation_to_formula_antecedent_exception_8(self):

@@ -95,20 +95,64 @@ this formula, checked 2026-08-29:
 Index 0 guards `highwater & PREV(!pump)` and index 1 guards `highwater & !pump`,
 matching the LTL-side order exactly. The index was applied faithfully.
 
-The actual problem is the shape of the encoding. `antecedent_holds` is derived by
-**one rule per disjunct**, each guarded by its own `antecedent_exception`. An
-exception on index 0 blocks only the first rule; the second still derives
-`antecedent_holds` on its own. So a hypothesis that excepts one disjunct does not
-stop the antecedent holding, and at t=7 the antecedent holds through the disjunct
-the learner did not except. The weakening is real, faithful to the hypothesis, and
-insufficient by construction.
+The actual problem is the shape of the encoding - and then, one level below
+that, the way a solution is applied. `antecedent_holds` is derived by **one rule
+per disjunct**, each guarded by its own `antecedent_exception`:
 
-Which leaves the question of why the learner accepted a hypothesis that does not
-cover its example. The likeliest answer on record is that FastLAS ignores `#bias`
-constraints, so the hypothesis space is not the one the task intends; that is
-noted rather than demonstrated.
+    antecedent_holds(assumption3_1,T,S) :- root(current,...,0), root(prev,...,1),
+                                           not antecedent_exception(assumption3_1,0,T,S).
+    antecedent_holds(assumption3_1,T,S) :- root(current,...,2),
+                                           not antecedent_exception(assumption3_1,1,T,S).
+
+So excepting one disjunct does not stop the antecedent holding; the other rule
+still derives it unaided. A hypothesis that excepts only index 0 cannot cover
+the example.
+
+**And the learner never proposed one.** Dumping the antecedent-only task for
+this formula and running it, checked 2026-08-29, every one of its ten optimal
+solutions contains *two* rules, one per index:
+
+    %% Solution 2 (score 6)
+    antecedent_exception(assumption3_1,0,V1,V2) :- timepoint_of_op(current,V1,V1,V2); holds_at(flag,V1,V2).
+    antecedent_exception(assumption3_1,1,V1,V2) :- timepoint_of_op(current,V1,V1,V2); not_holds_at(pump,V1,V2).
+
+The task is right, the bias is right, and the hypothesis covers its example. The
+solution is destroyed on the way in.
+
+### The indices are numbered against a formula that no longer exists
+
+Each rule's `disjunction_index` numbers the disjuncts of the antecedent *as the
+encoder saw it*. `integrate_multiple` applied the adaptations one at a time, and
+`_integrate_antecedent_exception` rewrote the antecedent each time - it removed
+the indexed disjunct and appended the narrowed version at the end, then
+`_normalize()` ran. By the time the second rule was applied, index 1 named a
+different disjunct than the learner meant.
+
+Applying Solution 2's two rules to the real formula, in each order:
+
+    ORIGINAL   G(((highwater & PREV(!pump)) | (highwater & !pump)) -> next(highwater))
+    0 then 1   G(( highwater & !pump                                    <-- untouched
+                 | ((highwater & PREV(!pump)) & !flag) & pump) -> next(highwater))
+    1 then 0   G((((highwater & !pump) & pump)
+                 | ((highwater & PREV(!pump)) & !flag)) -> next(highwater))
+
+Both adaptations were applied in both cases. In the order the search uses, the
+second landed on the disjunct the first had already narrowed, and
+`highwater & !pump` came through untouched - which is exactly `spec_0`, and
+exactly the disjunct the t=7 violation fires through. The weakening was real,
+strictly weaker, faithful to *an* adaptation, and silently not the one learned.
 
 ## What was done about it
+
+* **The solution is applied in one pass.** `GR1Formula.integrate_all` takes a
+  whole solution and resolves every antecedent exception against the *untouched*
+  antecedent, then rebuilds it once, position by position - a disjunct nobody
+  excepted is carried over unchanged, and a disjunct that was excepted is
+  replaced in place by its narrowings. `integrate_multiple` groups by formula
+  name and routes each group through it. The result no longer depends on the
+  order the learner happened to list its rules in, and both orders of Solution 2
+  now give the same, fully-narrowed formula. The single-adaptation
+  `integrate` path is unchanged in behaviour; it is now a one-element batch.
 
 * **The merge refuses to lose the trace.** `run_five_step` takes an `admits`
   predicate and uses it twice: as a filter on the input, dropping

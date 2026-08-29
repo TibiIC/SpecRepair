@@ -1,5 +1,5 @@
 from copy import deepcopy
-from typing import TypeVar, Optional
+from typing import List, TypeVar, Optional
 
 import spot
 
@@ -112,6 +112,23 @@ class GR1Formula:
     def to_str(self, formatter: ILTLFormatter) -> str:
         return self.to_ltl_formula().format(formatter)
 
+    def integrate_all(self, adaptations: List[Adaptation]):
+        """
+        Apply a whole learned solution to this formula.
+
+        Antecedent exceptions are applied together, because their
+        `disjunction_index` values all number the *same* antecedent; see
+        `_integrate_antecedent_exceptions`. Everything else is order-independent
+        and goes through `integrate` one at a time.
+        """
+        antecedent = [a for a in adaptations if a.type == "antecedent_exception"]
+        if antecedent:
+            self._integrate_antecedent_exceptions(antecedent)
+            self._normalize()
+        for adaptation in adaptations:
+            if adaptation.type != "antecedent_exception":
+                self.integrate(adaptation)
+
     def integrate(self, adaptation: Adaptation):
         # TODO: move this to adaptation_learned.py
         match adaptation.type:
@@ -140,27 +157,53 @@ class GR1Formula:
             self.consequent = Or(self.consequent, new_disjunct)
 
     def _integrate_antecedent_exception(self, adaptation: Adaptation):
+        self._integrate_antecedent_exceptions([adaptation])
+
+    def _integrate_antecedent_exceptions(self, adaptations: List[Adaptation]):
+        """
+        Apply every antecedent exception the learner returned, in one pass.
+
+        A learned solution carries one `antecedent_exception` rule per disjunct
+        of the antecedent, and each rule's `disjunction_index` numbers the
+        disjuncts of the antecedent *as the encoder saw it*. Applying them one
+        at a time rewrites the antecedent underneath the indices that have not
+        been used yet - narrowing disjunct 0 removes it from the list and
+        appends the narrowed version at the end, so index 1 no longer names what
+        the learner meant. The disjunct that then goes unguarded is the one the
+        violation comes through, which is how a search could record a repair
+        that still fails its own trace.
+
+        So the indices are resolved against the untouched antecedent and the new
+        antecedent is built once, position by position.
+        """
         if self.temp_type == GR1TemporalType.JUSTICE:
             self.temp_type = GR1TemporalType.INVARIANT
             self.consequent = Eventually(self.consequent)
+
         if self.antecedent is None:
-            first_temp_op, first_atom_assignment = adaptation.atom_temporal_operators[0]
-            first_atom_assignment = replace_false_true(first_atom_assignment)
-            self.antecedent = self._generate_literal(first_atom_assignment, first_temp_op)
-            for op, atom in adaptation.atom_temporal_operators[1:]:
-                atom = replace_false_true(atom)
-                new_disjunct = self._generate_literal(atom, op)
-                self.antecedent = Or(self.antecedent, new_disjunct)
-        else:
-            disjuncts = get_disjuncts_from_disjunction(self.antecedent)
-            disjunct = disjuncts[adaptation.disjunction_index]
-            disjuncts.remove(disjunct)
-            for op, atom in adaptation.atom_temporal_operators:
-                atom = replace_false_true(atom)
-                new_disjunct = self._generate_literal(atom, op)
-                new_disjunct = And(deepcopy(disjunct), new_disjunct)
-                disjuncts.append(new_disjunct)
-            self.antecedent = disjoin_all(disjuncts)
+            # No disjuncts to index into: the exception becomes the antecedent.
+            for adaptation in adaptations:
+                for op, atom in adaptation.atom_temporal_operators:
+                    literal = self._generate_literal(replace_false_true(atom), op)
+                    self.antecedent = (literal if self.antecedent is None
+                                       else Or(self.antecedent, literal))
+            return
+
+        original = get_disjuncts_from_disjunction(self.antecedent)
+        by_index: dict[int, List[Adaptation]] = {}
+        for adaptation in adaptations:
+            by_index.setdefault(adaptation.disjunction_index, []).append(adaptation)
+
+        rewritten: List = []
+        for index, disjunct in enumerate(original):
+            if index not in by_index:
+                rewritten.append(disjunct)
+                continue
+            for adaptation in by_index[index]:
+                for op, atom in adaptation.atom_temporal_operators:
+                    literal = self._generate_literal(replace_false_true(atom), op)
+                    rewritten.append(And(deepcopy(disjunct), literal))
+        self.antecedent = disjoin_all(rewritten)
 
     def _generate_literal(self, atom, op):
         new_disjunct = self.ilasp_parser.parse(atom)

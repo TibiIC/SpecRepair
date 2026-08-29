@@ -5,7 +5,7 @@ import re
 import subprocess
 import time
 import tempfile
-from collections import Counter
+from collections import Counter, OrderedDict
 from copy import deepcopy
 from typing import TypedDict, Optional, TypeVar, List, Set, Any, Callable
 
@@ -90,8 +90,23 @@ class SpectraSpecification(ISpecification):
             raise e
 
     def integrate_multiple(self, adaptations: List[Adaptation]):
+        """
+        Apply a learned solution, grouping by the formula each adaptation names.
+
+        Applying them one by one is not safe: a solution's antecedent exceptions
+        index the same antecedent, so the first one rewrites the list the rest
+        are numbered against. `GR1Formula.integrate_all` resolves them together.
+        """
+        by_formula: "OrderedDict[str, List[Adaptation]]" = OrderedDict()
         for adaptation in adaptations:
-            self.integrate(adaptation)
+            by_formula.setdefault(adaptation.formula_name, []).append(adaptation)
+        for name, group in by_formula.items():
+            formula = self.get_formula(name)
+            before = formula.to_str(self._formater)
+            formula.integrate_all(group)
+            logging.getLogger(__name__).debug(
+                "%s: %s -> %s", name, before, formula.to_str(self._formater))
+            self.replace_formula(name, formula)
         return self
 
     def integrate(self, adaptation: Adaptation):
