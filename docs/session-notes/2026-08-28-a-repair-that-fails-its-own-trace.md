@@ -81,15 +81,32 @@ The index was 0, so `_integrate_antecedent_exception` narrowed
 violation comes through the untouched one. (The reordering is that function
 removing the indexed disjunct and appending the narrowed version at the end.)
 
-That index crosses a representation boundary: it is parsed out of the ASP rule
-the learner returns (`adaptation_learned.py:50`) and applied to the disjunct
-list of the parsed LTL formula (`gr1_formula.py:156`). Those two orderings must
-agree, and on this formula the outcome is consistent with their not agreeing.
-The formula is one whose Spectra source is `highwater & (PREV(!pump) | !pump)` -
-a conjunction over an inner disjunction, distributed into a disjunction during
-normalisation, so the order depends on which representation is doing the
-counting. **This is localised, not root-caused**: proving the ASP side numbers
-them differently needs the encoder's own dump, which is the next step.
+The index crosses a representation boundary - parsed out of the ASP rule the
+learner returns (`adaptation_learned.py:50`), applied to the disjunct list of the
+parsed LTL formula (`gr1_formula.py:156`) - so the first suspicion was that the
+two orderings disagree. **They do not.** Dumping the encoder's own output for
+this formula, checked 2026-08-29:
+
+    antecedent_holds(assumption3_1,T,S) :- root(current,...,0), root(prev,...,1),
+                                           not antecedent_exception(assumption3_1,0,T,S).
+    antecedent_holds(assumption3_1,T,S) :- root(current,...,2),
+                                           not antecedent_exception(assumption3_1,1,T,S).
+
+Index 0 guards `highwater & PREV(!pump)` and index 1 guards `highwater & !pump`,
+matching the LTL-side order exactly. The index was applied faithfully.
+
+The actual problem is the shape of the encoding. `antecedent_holds` is derived by
+**one rule per disjunct**, each guarded by its own `antecedent_exception`. An
+exception on index 0 blocks only the first rule; the second still derives
+`antecedent_holds` on its own. So a hypothesis that excepts one disjunct does not
+stop the antecedent holding, and at t=7 the antecedent holds through the disjunct
+the learner did not except. The weakening is real, faithful to the hypothesis, and
+insufficient by construction.
+
+Which leaves the question of why the learner accepted a hypothesis that does not
+cover its example. The likeliest answer on record is that FastLAS ignores `#bias`
+constraints, so the hypothesis space is not the one the task intends; that is
+noted rather than demonstrated.
 
 ## What was done about it
 
