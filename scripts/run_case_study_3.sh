@@ -190,7 +190,11 @@ fi
 # different dates, and every pipeline step selects a run by globbing
 # `*_<date>`, so half the results were silently left behind. A two-day sweep
 # would scatter across three.
-RUN_DATE="$(date +%Y-%m-%d)"
+# Overridable so a single trace can be relaunched into the batch it belongs to.
+# Restarting one run of a sweep started yesterday would otherwise stamp it with
+# today's date, and every pipeline step globs `*_<date>` - so the re-run would
+# be invisible to the merge that collects its siblings.
+RUN_DATE="${RUN_DATE:-$(date +%Y-%m-%d)}"
 
 # Session name is scoped to the selection, so a single-case-study rerun can be
 # started alongside a full run already in progress.
