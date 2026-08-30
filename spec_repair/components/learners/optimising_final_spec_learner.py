@@ -85,7 +85,24 @@ class OptimisingSpecLearner(ILearner):
             new_tasks = [(new_spec, new_repair_data) for new_spec, new_repair_data in zip(new_specs, new_repair_datas)]
             return new_tasks
         except NoWeakeningException as e:
-            _log.info("no weakening available (%s)", type(e).__name__)
+            # The learning task was UNSAT: no weakening of the shapes this
+            # methodology has - antecedent exception, consequent exception,
+            # invariant-to-response - repairs this branch. That is a limitation
+            # of the hypothesis space, exactly like the deadlock and timeout
+            # cases below, and it is recorded the same way.
+            #
+            # It used to return [] with no reason set, which the orchestrator
+            # reads as "nowhere to go and nothing worth keeping" - a broken
+            # invariant - and answers with MitigationMadeNoProgressException,
+            # killing the whole run. minepump_liveness trace 2 died that way in
+            # both the 2026-08-13 and 2026-08-29 sweeps, at 8 minutes, having
+            # already recorded 163 solutions on other branches. A justice goal
+            # such as GF(flag=false) is the common case: none of the three
+            # weakening shapes applies to it, so a counter-strategy that
+            # violates one leaves the learner with an empty hypothesis space.
+            reason = f"no {data.learning_type.exp_type_str()} weakening available"
+            _log.info("%s (%s)", reason, type(e).__name__)
+            data.unresolvable_reason = reason
             return []
         except NoViolationException as e:
             if not data.counter_traces and data.learning_type == Learning.GUARANTEE_WEAKENING:
