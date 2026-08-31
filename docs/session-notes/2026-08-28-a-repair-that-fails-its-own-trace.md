@@ -119,6 +119,15 @@ solutions contains *two* rules, one per index:
 The task is right, the bias is right, and the hypothesis covers its example. The
 solution is destroyed on the way in.
 
+> **Correction, 2026-08-31.** That run used *ILASP*, not FastLAS - the output
+> above is ILASP's `%% Solution N (score N)` format, and case study 3 runs
+> FastLAS. `OptimisingSpecLearner` calls `run_ILASP` unconditionally, and
+> instantiating it rather than `FastLASSpecLearner` ran the wrong solver. The
+> conclusion holds - the defect is downstream of either solver, and the real
+> FastLAS run agrees - but see
+> [2026-08-31](2026-08-31-too-quiet-and-too-loud.md) and the captured
+> artifacts under `tests/test_files/learning_tasks/minepump_liveness_trace1/`.
+
 ### The indices are numbered against a formula that no longer exists
 
 Each rule's `disjunction_index` numbers the disjuncts of the antecedent *as the
