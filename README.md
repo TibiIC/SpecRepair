@@ -1,9 +1,53 @@
-This repository contains code for weakening GR(1) specifications via Inductive Logic Programming.
-The code utilises Python 3.10.11 and the old functionality lies in the file old_experiments.py
+# SpecRepair
 
-Currently, the project entails multiple functionalities for experimentation, testing & future work.
+Automated repair of GR(1) reactive specifications, driven by Inductive Logic
+Programming.
 
-Most of this repo continues the work of "Adapting Specifications for Reactive Controllers", available [here](https://ieeexplore.ieee.org/abstract/document/10174043).
+A GR(1) specification splits into *assumptions* about the environment and
+*guarantees* the controller must uphold. Such a specification can fail in two
+ways, and both are common in practice. It can be **unrealisable** — no
+controller satisfies the guarantees against those assumptions — or it can be
+realisable but **contradicted by reality**: a trace observed from the deployed
+system violates an assumption the engineer believed to hold. Either way, the
+specification, not the world, is what has to change.
+
+SpecRepair takes a specification in [Spectra](https://github.com/SpectraSynthesizer)
+together with a violating trace, and returns repaired specifications that no
+longer admit the observed behaviour. Repair proceeds by *weakening*: the tool
+diagnoses which formulas are at fault (from a violating trace, or from the
+unrealisable cores Spectra reports), encodes the specification and the trace as
+an Answer Set Programming learning task, and asks an ILP learner
+([ILASP](https://github.com/ilaspltd/ILASP-releases) or
+[FastLAS](https://github.com/spike-imperial/FastLAS)) for the weakest
+modifications that resolve the fault. Each learned repair is fed back into the
+loop until the specification is consistent with the trace and realisable again.
+
+Repair is rarely unique. Rather than committing to one arbitrary fix, the
+orchestrator explores the whole space of repair choices, deduplicating along the
+way by semantic rather than syntactic equivalence, and post-processes the
+results into the set of *maximal* (i.e. weakest-necessary) repairs — merging
+solutions where their conjunction stays realisable, and filtering out those
+implied by others. The result is a lattice of genuinely distinct repair options,
+which can be rendered as an implication graph for a human to choose from.
+
+## What is in this repository
+
+- `spec_repair/` — the library: specification model and parsers, ASP/ILP
+  encoders, learner and oracle wrappers, the repair orchestrators, and the
+  post-processing pipeline (`spec_repair/diagnosis/`).
+- `scripts/` — thin command-line entry points and experiment runners.
+- `case_studies/`, `input-files/` — the benchmark specifications (minepump,
+  lift, arbiter, traffic, genbuf, AMBA, …) and the mutated variants used to
+  generate repair tasks.
+- `docs/` — the experiment methodology, notably [the end-to-end pipeline](docs/experiment-pipeline.md),
+  plus session notes recording why individual design decisions were made.
+- `tests/` — the test suite, and the fixtures the experiments read and write.
+
+The code targets Python 3.10.11. Older functionality lives under
+`spec_repair/legacy/` and is kept for reference only.
+
+Most of this repo continues the work of "Adapting Specifications for Reactive
+Controllers", available [here](https://ieeexplore.ieee.org/abstract/document/10174043).
 
 ## Setup
 
