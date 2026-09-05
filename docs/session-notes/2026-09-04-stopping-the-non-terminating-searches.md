@@ -246,3 +246,92 @@ ssh gpu20 bash /vol/bitbucket/tg4018/postproc_logs/status.sh
 
 It reads the shared NFS logs directly rather than fanning out over ssh, because
 lab boxes cannot ssh to each other.
+
+## Part 9: the experiment table, as of 2026-09-05 03:00
+
+Columns follow `docs/results/tables/tab_total.tex` — Explored / Unique /
+Preferred / Final / Trivial — split into two tables so the search side and the
+post-processing side can be read separately. All figures are from each run's own
+`status.txt` and its output directories, not reconstructed.
+
+### Search
+
+`Complete` is the honest column: it is `phase: done` in `status.txt`, meaning the
+queue drained and the search proved it had found *every* repair. Anything else
+was stopped mid-flight and its solution set is a **lower bound**.
+
+| Case Study | Runtime | Explored | Queue left | Depth | Complete | Intermediate | Realisable (final) |
+| --- | ---: | ---: | ---: | ---: | :---: | ---: | ---: |
+| AMBA 0 | 23m18s | 1 | 0 | 0 | **yes** | 0 | 21 |
+| AMBA 1 | 23m14s | 1 | 0 | 0 | **yes** | 0 | 21 |
+| AMBA 2 | 23m42s | 1 | 0 | 0 | **yes** | 0 | 21 |
+| AMBA 3 | 25m39s | 1 | 0 | 0 | **yes** | 0 | 21 |
+| AMBA 4 | 15m04s | 1 | 0 | 0 | **yes** | 0 | 21 |
+| GenBuf 0 | 113h29m | 1 | 0 | 0 | no | 2 | 1 |
+| GenBuf 1 | 113h29m | 1 | 0 | 0 | no | 3 | 1 |
+| GenBuf 2 | **1m18s** | 1 | 0 | 0 | **yes** | 0 | 21 |
+| GenBuf 3 | 6h22m | 1 | 0 | 0 | no | 0 | 0 |
+| GenBuf 4 | 6h21m | 1 | 0 | 0 | no | 0 | 0 |
+| Gyro 0 | 30h49m | 564 | 29,761 | 2 | no | 9 | 85 |
+| Gyro 1 | 35h06m | 287 | 22,215 | 1 | no | 8 | 74 |
+| Gyro 2 | 35h06m | 410 | 28,192 | 2 | no | 9 | 96 |
+| Gyro 3 | 35h05m | 289 | 22,064 | 1 | no | 8 | 68 |
+| Gyro 4 | 35h06m | 362 | 35,713 | 2 | no | 14 | 115 |
+| Minepump Liveness 0 | 113h29m | 5,886 | 69,213 | 3 | no | 3,587 | 34,651 |
+| Minepump Liveness 1 | **21.7s** | 1 | 0 | 0 | **yes** | 0 | 18 |
+| Minepump Liveness 2 | 127h21m | 4,255 | 212,459 | 4 | no | 1,028 | 21,456 |
+| Minepump Liveness 3 | **44.2s** | 1 | 0 | 0 | **yes** | 0 | 19 |
+| Minepump Liveness 4 | 113h29m | 5,819 | 80,344 | 4 | no | 3,920 | 35,603 |
+
+**Eight of twenty runs are complete.** Every one of those eight terminated at
+the *root node* — `Explored 1, Depth 0`. Not one search that expanded past its
+first node has ever finished.
+
+That reframes Part 1. The split is not "big case studies are slow". It is
+binary: either the root node's candidates are all solutions and the run is over
+in seconds-to-minutes, or the search branches and never comes back. AMBA 4 took
+15 minutes; Gyro 4 has spent 35 hours to explore 362 nodes with 35,713 still
+queued. GenBuf 2 finished in **78 seconds** while GenBuf 0 and 1 have spent 113
+hours on their first node.
+
+Depth is the tell: the deepest any run has reached is 4, on Minepump Liveness 2,
+after 127 hours.
+
+### Post-processing
+
+| Case Study | Realisable | Unique | Preferred | Merged (final) | Trivial | Graphs |
+| --- | ---: | ---: | ---: | ---: | ---: | --- |
+| AMBA 0 | 21 | 21 | 21 | 1 | *n/a* | asm, gar |
+| AMBA 1–4 | 21 | *running* | *running* | *running* | *n/a* | *running* |
+| GenBuf 0 | 1 | 1 | 1 | 1 | *n/a* | asm, gar |
+| GenBuf 1–2 | 1 / 21 | *running* | *running* | *running* | *n/a* | *running* |
+| GenBuf 3–4 | 0 | — | — | — | *n/a* | — |
+| Gyro 0 | 85 | 33 | 24 | 1 | 2 | asm, gar, gr1 |
+| Gyro 1 | 74 | 31 | 31 | 1 | 2 | asm, gar, gr1 |
+| Gyro 2 | 96 | 37 | 29 | 1 | 2 | asm, gar, gr1 |
+| Gyro 3 | 68 | 26 | 26 | 1 | 2 | asm, gar, gr1 |
+| Gyro 4 | 115 | 37 | 26 | 1 | 2 | asm, gar, gr1 |
+| Minepump Liveness 0 | 34,651 | *step 2* | — | — | 2 | — |
+| Minepump Liveness 1 | 18 | 12 | 12 | 1 | 2 | asm, gar, gr1 |
+| Minepump Liveness 2 | 21,456 | *step 2* | — | — | 2 | — |
+| Minepump Liveness 3 | 19 | 12 | 12 | 1 | 2 | asm, gar, gr1 |
+| Minepump Liveness 4 | 35,603 | *step 2* | — | — | 2 | — |
+
+Three things this table says that the search table does not:
+
+**Every completed post-processing run merges to exactly 1.** Gyro 4 goes
+115 → 37 → 26 → 1; Minepump Liveness 1 goes 18 → 12 → 12 → 1; AMBA 0 goes
+21 → 21 → 21 → 1. Whether that is a genuine lattice collapse or the merge
+conjoining more than it should is the open question, and it is uniform enough to
+be worth checking before any of these numbers go in a paper.
+
+**Trivial solutions do not exist for AMBA or GenBuf.** `trivial_solutions/2026-08-29/all/`
+has entries for arbiter, colorsort, elevator, gyro, humanoid, lift, minepump,
+minepump_liveness, pcar and traffic — but neither AMBA nor GenBuf. That is why
+the pipeline logs `no trivial ... - omitted from graph` for those two, and why
+their `Trivial` column is *n/a* rather than 0.
+
+**The three large Minepump runs are still in step 2** after seven hours, on
+34,651 / 21,456 / 35,603 specifications. Step 2 is semantic uniqueness, the same
+pairwise `ltlfilt` cost as Part 2, so it is quadratic in exactly the same way.
+These are days out, not hours.
