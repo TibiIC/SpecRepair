@@ -49,6 +49,23 @@ The code targets Python 3.10.11. Older functionality lives under
 Most of this repo continues the work of "Adapting Specifications for Reactive
 Controllers", available [here](https://ieeexplore.ieee.org/abstract/document/10174043).
 
+## Results
+
+The implication graphs and stage counts for the current case-study-3 run
+(2026-08-29) are published as a single self-contained page, readable on a phone:
+
+**[Spectra Repair Atlas](https://claude.ai/code/artifact/2fb2b369-3b4e-48e1-bfec-7f0f1ecae76b)**
+
+It is a snapshot rather than a live view. For live status of the searches and
+the post-processing jobs on the lab machines:
+
+```bash
+ssh gpu20 bash /vol/bitbucket/tg4018/postproc_logs/status.sh
+```
+
+The reasoning behind those numbers is in
+[docs/session-notes/](docs/session-notes/2026-09-04-stopping-the-non-terminating-searches.md).
+
 ## Setup
 
 In order to run the code it is necessary to install the following:

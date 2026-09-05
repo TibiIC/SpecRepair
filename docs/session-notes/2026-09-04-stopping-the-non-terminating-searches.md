@@ -335,3 +335,27 @@ their `Trivial` column is *n/a* rather than 0.
 34,651 / 21,456 / 35,603 specifications. Step 2 is semantic uniqueness, the same
 pairwise `ltlfilt` cost as Part 2, so it is quadratic in exactly the same way.
 These are days out, not hours.
+
+## Part 10: the atlas, and where to read it from a phone
+
+**No, the graphs were not on the atlas.** `docs/results/merge-atlas.html` is dated
+2026-08-28, predates every graph in this note, and is untracked in git — it has
+never been part of the repository.
+
+Rather than regenerate that file, the 25 graphs that currently exist are
+published as a page, with the two tables above alongside them:
+
+**<https://claude.ai/code/artifact/2fb2b369-3b4e-48e1-bfec-7f0f1ecae76b>**
+
+It is a single self-contained page — every PNG is embedded, so there is nothing
+to fetch and it works on a phone. Tap any graph to open it full size. The page is
+private until shared from its own share menu.
+
+What is on it: Gyro 0–4 in all three views, Minepump Liveness 1 and 3 in all
+three, AMBA 0 and GenBuf 0 in `asm` and `gar` only. That is every graph that
+exists — the missing ones are missing for the reasons in Parts 5 and 6, not
+because they were skipped.
+
+It is a snapshot, not a live view. AMBA 1–4 and GenBuf 1–2 are re-running now and
+the three large Minepump runs are days from having graphs at all; the page needs
+republishing once they land.
