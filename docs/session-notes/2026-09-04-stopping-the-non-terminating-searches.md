@@ -566,3 +566,77 @@ skipped: there is nothing to post-process.
 These are step-2 bound in exactly the way Part 2 describes, and Traffic Single 1
 at 55,145 specifications is larger than anything that has finished. They are not
 quick.
+
+## The pre-merge guarantee view, and what it shows
+
+A fourth graph now sits beside the existing three:
+`implication_graph_gar_with_unique_min.png`. It is the guarantees-only view with
+a fourth group added — the strongest-guarantee survivors of step 3, *before* the
+merge collapses them. **36 drawn, no failures.**
+
+### Naming
+
+The strongest guarantee formula admits the *fewest* infinite traces, so it is
+semantically **minimal**, not maximal — consistent with Cavezza's weakness
+measure, where a larger value means a weaker formula and the strongest sits at
+the minimum. The directories still read `max_unique_specs/`; only the graph
+labels use the correct name.
+
+| graph group | on disk | stage |
+| --- | --- | --- |
+| `original` | `original.spectra` | the specification being repaired |
+| `trivial` | `trivial_solutions/` | the floor |
+| `unique_min` | `max_unique_specs/` | step 3, pre-merge |
+| `unique_min_merged` | `filtered_merged_specs/` | step 4, post-merge |
+
+Renaming the directories through the pipeline and the five-step code is a
+separate change, not made here — it would invalidate paths mid-experiment.
+
+### min_unique generated where it was missing
+
+The 2026-08-13 runs never had `max_unique_specs/`, because the pre-2026-08-18
+pipeline wrote different directories. Generated for 21 runs: Elevator 0–4,
+Lift 0–4, Traffic Updated 0–4, Traffic Single 0/2/4, PCar 1. The searches were
+not re-run; only steps 2–4.
+
+**`unique` and `min` came out identical in all 21.** The minimal-guarantee filter
+removed nothing. It only bites on PCar (161→67, 96→65) and Gyro (33→24, 37→29,
+37→26).
+
+### What the view says: on guarantees, the merge absorbs nothing
+
+In every run drawn, the `unique_min` solutions sit in the *same equivalence
+bubble* as the original and the merged result. Gyro 0 puts 24 of them there;
+PCar 0 puts 67 — the largest pre-merge set in the experiment, and the one with
+the biggest `unique`→`min` drop.
+
+So collapsing 24 or 67 solutions to one loses no guarantee distinction, because
+there was none. All the variation between distinct repairs lives on the
+**assumption** side.
+
+That also explains why `unique == min` almost everywhere: with equivalent
+guarantees, no solution is strictly stronger than another, so the minimal filter
+has nothing to drop. It is not that step 3 is broken — it is that the guarantee
+dimension is degenerate for these repairs, and step 3 is correctly reporting so.
+
+It also means the "everything merges to exactly 1" result from Part 9 is less
+alarming than it looked: on guarantees the solutions really are one
+specification. Whether that holds on the assumption side is the open question,
+and it needs the same view drawn for `asm`.
+
+### A bug of mine, caught before publishing
+
+Trivial solutions are stored two ways: **per run** (`all/pcar_trace0`) for the
+2026-08-12 and 08-13 sets, and **per case study** (`all/pcar`) for 08-22 and
+08-29. My first script only looked for the second form, so all 22 graphs from
+the 08-13 runs silently dropped the trivial group — no error, just a missing
+group and a three-entry legend. Fixed to try the run directory first and fall
+back to the case study, the order `run_experiment_pipeline.py` itself uses; the
+22 were deleted and redrawn.
+
+Worth noting for the tables: **AMBA and GenBuf have no trivial solutions at
+2026-08-29** — that date's set covers arbiter, colorsort, elevator, gyro,
+humanoid, lift, minepump, minepump_liveness, pcar and traffic only. Their new
+graphs legitimately carry three groups, matching their existing `gar` graphs.
+
+Atlas: <https://claude.ai/code/artifact/2fb2b369-3b4e-48e1-bfec-7f0f1ecae76b>
