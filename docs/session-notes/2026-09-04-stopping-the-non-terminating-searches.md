@@ -490,3 +490,79 @@ methodology decision, not a bug fix, so it is not one I have made.
 
 The alternative is honest and cheap: report GenBuf as out of scope for semantic
 post-processing, with the conjunct-count table above as the reason.
+
+## All eleven case studies, not four
+
+The atlas showed four case studies, which was wrong as a picture of the
+experiment. There are **eleven**, and 55 runs. Only AMBA, GenBuf, Gyro and
+Minepump Liveness appear in the 2026-08-29 re-run because the disjunction bug
+only invalidated those 18 runs; the other seven were never re-run and their
+latest results are from **2026-08-13**.
+
+Those seven have valid searches. What they do not have is comparable
+post-processing: the 08-13 runs went through the pre-2026-08-18 pipeline, which
+merged before filtering and wrote `merged_specs/` rather than `unique_specs/`.
+Their stage counts are marked *old* in the atlas rather than silently mixed in
+with the 08-29 numbers.
+
+### The root-node finding holds across all 55 runs
+
+| | runs | complete | of those, past depth 0 |
+| --- | ---: | ---: | ---: |
+| all case studies | 55 | 28 | **0** |
+
+Every one of the 28 complete runs terminated at `Explored 1, Depth 0`. Adding
+seven more case studies did not produce a single counter-example. Elevator, Lift
+and Traffic Updated finish all five traces in under a minute each — and all of
+them at the root node.
+
+The stopped runs are worse than the 08-29 four suggested. PCar 4 ran **238
+hours** and was stopped with **263,266** nodes queued, at depth 2. Traffic Single
+3 ran 303 hours. PCar's four unfinished traces each sit above 200,000 queued.
+
+### ColorSort is past the translation cliff, and that explains the zero specs
+
+ColorSort has produced **zero** specifications on every trace of every date, and
+that has been open since July. Measuring it against the cliff:
+
+| Case study | ASM conjuncts | ASM translate | GAR conjuncts | GAR translate |
+| --- | ---: | ---: | ---: | ---: |
+| Traffic Single | 3 | 0.02s | 2 | 0.02s |
+| Elevator | 2 | 0.02s | 5 | 0.02s |
+| Minepump | 3 | 0.02s | 3 | 0.02s |
+| Gyro | 4 | 0.02s | 8 | 0.03s |
+| PCar | 4 | 0.02s | 5 | 0.02s |
+| Minepump Liveness | 4 | 0.33s | 5 | 0.02s |
+| Traffic Updated | 5 | 0.02s | 4 | 0.02s |
+| AMBA | 8 | 0.10s | 55 | **timeout** |
+| Lift | 11 | 0.03s | 7 | 0.02s |
+| **ColorSort** | **25** | **timeout** | **52** | **timeout** |
+| **GenBuf** | **28** | **timeout** | **81** | **timeout** |
+
+ColorSort and GenBuf are the only two case studies whose *assumptions* are past
+the cliff, and they are precisely the two that return nothing and sit at node 1
+in `verifying d1 candidate` — ColorSort for 20 minutes to 2 hours before being
+stopped, GenBuf for days. Same signature, same cause: waiting on an automaton
+that does not arrive.
+
+That is a much better answer than "ColorSort produces no specs". It produces no
+specs because it cannot complete a single semantic comparison, and no amount of
+waiting or memory changes that. It also predicts the fix is the same one GenBuf
+needs — comparison that does not go through whole-specification translation.
+
+Note the ordering: it is the **assumption** conjunct count that decides. AMBA has
+a worse guarantee formula than ColorSort (55 vs 52) and still runs, because AMBA's
+repairs never touch its guarantees. Lift has 11 assumption conjuncts, more than
+AMBA's 8, and is entirely fine — the cliff is between 20 and 23, and nothing sits
+in that gap.
+
+### Post-processing launched for the six runs that had no graphs
+
+Minepump 1–4 (23,201–27,589 specs) and Traffic Single 1 and 3 (55,145 and
+15,504) had no graphs at all. Post-processing is now running for all six, one per
+box on gpu01/04/05/06/20/21, against their 2026-08-13 output. ColorSort is
+skipped: there is nothing to post-process.
+
+These are step-2 bound in exactly the way Part 2 describes, and Traffic Single 1
+at 55,145 specifications is larger than anything that has finished. They are not
+quick.
