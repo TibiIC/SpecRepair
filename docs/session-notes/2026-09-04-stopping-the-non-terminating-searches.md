@@ -359,3 +359,134 @@ because they were skipped.
 It is a snapshot, not a live view. AMBA 1–4 and GenBuf 1–2 are re-running now and
 the three large Minepump runs are days from having graphs at all; the page needs
 republishing once they land.
+
+---
+
+# 2026-09-08: why GenBuf is the outlier
+
+Three days on, nothing is wedged — every remaining job is alive and burning CPU.
+But GenBuf is behaving unlike every other case study, and this is the reason.
+
+## The symptom that does not fit
+
+GenBuf trace 2's post-processing has spent **three days on 21 specifications**.
+AMBA's 21 specifications took about 35 minutes. Same stage, same count, same
+pipeline. And AMBA is the *bigger* case study:
+
+| | original size | variables | formulas |
+| --- | ---: | ---: | ---: |
+| AMBA | 37,030 B | 34 | 63 |
+| GenBuf | 14,342 B | 24 | 109 |
+| Gyro | 1,571 B | 6 | 12 |
+| Minepump Liveness | 606 B | 4 | 9 |
+
+So it is not size. Sampling the live `ltlfilt` on gpu22 showed a single
+comparison running 24 minutes on a formula of **1,327 bytes with 2 justice
+goals**. That is a tiny formula. Something about it is pathological.
+
+## It is not the repair
+
+First guess was that the learned exceptions were the problem. They do look
+overfitted — GenBuf's weakenings attach arbitrary conjunctions of unrelated
+signals, e.g. `stoB_REQ2`'s exception mentions `stateG12`, and `stoB_REQ3`'s
+mentions `btoR_REQ0`:
+
+```
+G(((stoB_REQ2 & !btoS_ACK2) -> (X(stoB_REQ2) | (((stateG12 & stoB_REQ1) & stoB_REQ3) & stoB_REQ4))))
+```
+
+I stripped all five learned disjuncts back to the unrepaired form and timed both
+through `ltl2tgba`. **Both time out at 120s.** The exceptions are not the cause —
+GenBuf's *original* assumptions are already beyond translation.
+
+(The exceptions still look like overfitting and are worth their own look. They
+are just not what is costing the days.)
+
+## What it actually is
+
+Translating the conjunction to an automaton is exponential in the number of
+top-level conjuncts. Bisecting GenBuf's assumption conjunction, taking the first
+*k* of its 28 conjuncts:
+
+| conjuncts | automaton states | translation |
+| ---: | ---: | ---: |
+| 15 | 28 | 0.07s |
+| 18 | 163 | 0.18s |
+| 20 | 487 | 0.87s |
+| 21 | 730 | 2.03s |
+| 22 | 1,459 | 10.51s |
+| 23 | 2,188 | 23.97s |
+| 28 | — | **>300s** |
+
+States double per conjunct; time grows about 2.4× per conjunct. The cliff sits
+between 20 and 23 conjuncts, and it is sharp.
+
+Every case study measured against that cliff — `ltl2tgba` on the original
+specification's assumption and guarantee conjunctions:
+
+| Case study | ASM conjuncts | ASM translate | GAR conjuncts | GAR translate |
+| --- | ---: | ---: | ---: | ---: |
+| Minepump Liveness | 4 | 0.33s (11 states) | 5 | 0.02s (3 states) |
+| Gyro | 4 | 0.02s (5 states) | 8 | 0.03s (4 states) |
+| AMBA | 8 | 0.10s (9 states) | 55 | **timeout** |
+| GenBuf | **28** | **timeout** | **81** | **timeout** |
+
+This is the whole story, and it lines up exactly with which runs finish.
+
+## Why AMBA survives its own untranslatable guarantees
+
+AMBA's GAR conjunction has 55 conjuncts and does not translate either — yet
+AMBA's `gar` graphs drew fine in 35 minutes. That looked like a contradiction,
+so I checked it.
+
+The 21 AMBA final specifications are 21 distinct files, but their **guarantee
+formulas are byte-identical** — 27,421 bytes, the same in every one. AMBA's
+repairs weaken assumptions only and never touch the guarantees. So every GAR
+comparison hits Spot's syntactic fast path and returns in **0.04s** without ever
+building an automaton. The formula being untranslatable never comes up.
+
+That also explains the six-hour `gr1` hang from 09-04. `gr1` is
+`(assumptions) -> (guarantees)`, so the two sides are coupled and the specs
+*differ* on the assumption side. The syntactic shortcut no longer applies, Spot
+has to build the automaton for the 55-conjunct guarantee formula, and it does not
+come back.
+
+## Why GenBuf does not survive
+
+GenBuf is the one case study where the formula that **changes** is also the one
+that is **too big to translate**. Its repairs weaken assumptions, its assumption
+conjunction is 28 conjuncts, and so no comparison can take the fast path. Every
+semantic operation — the visited-set check in the search, `are_equivalent` in
+post-processing step 2, every edge of every graph — needs a translation that does
+not terminate in any useful time.
+
+That is why GenBuf sits at node 1 for days: it is not stuck in a loop, it is
+waiting on an automaton that will not finish. The 133% CPU is Spot and the JVM
+doing real work on an intractable input.
+
+So the two bottlenecks in this experiment are now fully separated:
+
+* **Gyro, Minepump Liveness** — formulas translate in milliseconds. What kills
+  them is the O(V²) visited-set scan from Part 2. Python-side, fixable.
+* **GenBuf** — the O(V²) scan is irrelevant; it never gets far enough to matter.
+  What kills it is exponential LTL-to-automaton translation on a 28-conjunct
+  assumption set. Not fixable by touching the dedup.
+* **AMBA** — sits on the boundary and only passes because its repairs happen to
+  leave the large formula untouched. That is luck, not headroom: any repair that
+  touched AMBA's guarantees would put it in GenBuf's position.
+
+## What follows from this
+
+Semantic comparison by automaton translation does not scale to GenBuf, and AMBA
+only clears it on a technicality. Bigger machines and longer waits will not
+change that — the curve above is exponential, and GenBuf is five conjuncts past
+where it goes vertical.
+
+If GenBuf has to be in the results, the comparison has to stop going through
+whole-specification translation — comparing formula-by-formula rather than
+conjunction-to-conjunction would keep every individual translation small, at the
+cost of a weaker (sound but incomplete) notion of equivalence. That is a
+methodology decision, not a bug fix, so it is not one I have made.
+
+The alternative is honest and cheap: report GenBuf as out of scope for semantic
+post-processing, with the conjunct-count table above as the reason.
