@@ -116,3 +116,71 @@ The graph runs are calling **two different `ltlfilt` binaries**: the conda one o
 since. Worth pinning deliberately before any timing numbers from these runs are
 quoted, because the builds differ in their acceptance-set ceiling and therefore
 in what they can decide at all.
+
+## The stale jobs, and the bug behind them
+
+Five long-running processes had been sitting on the boxes since mid-August.
+Three of them were **not stale at all** — `filter_then_merge.py` runs on gpu25,
+gpu14 and gpu09, writing to `five_logs/` and `uniq_logs/`, directories I had not
+found. All three had written within the minute when checked. They were left
+alone. Judging "stale" from the `trivial_solutions/` output directory alone was
+the wrong test.
+
+Two were genuinely stuck, both `generate_trivial_solutions.py`:
+
+| host | job | how it stuck |
+| --- | --- | --- |
+| gpu06 | `2026-08-13`, all case studies | iterating every case study, blocked on one past the translation cliff — last output `genbuf_trace2`, 2026-08-19 |
+| gpu04 | `--case-study genbuf --trace 1 --marco` | log ends at `Unrealisable cores: 2936`, then 18 days of silence in the hitting-set computation over them |
+
+Same root cause as everything else in these notes: GenBuf past the cliff. Both
+killed. 26 and 21 CPU-days, no output from either since 2026-08-19.
+
+### The bug they were hiding
+
+`generate_trivial_solutions.py` says it plainly:
+
+> A trivial solution exists per (case study, **trace**), not per case study, and
+> writing them to the per-case-study path would mean five different traces
+> overwriting each other.
+
+`trivial_solutions/2026-08-13/all/` is per run — `gyro_trace0` — and correct.
+But `trivial_solutions/2026-08-29/all/` is per **case study** — `gyro` — and its
+directory list contains `arbiter`, `humanoid`, `gyro_updated`,
+`traffic_updated_updated`. Those are case_study_1 and _2 names. That set was
+written by the case_study_1 module, which repairs `strong.spectra`, not case
+study 3's `original.spectra`.
+
+The specifications differ, not just the paths: the 08-29 gyro trivial weakens
+`ready_stays_ready`, while the correct per-trace one weakens
+`ready_infinitely_often`.
+
+**So every graph drawn for a 2026-08-29 run carried the wrong trivial group** —
+Gyro 0–4 and Minepump Liveness 1 and 3 — and AMBA, absent from that set
+entirely, was reported as simply having no trivial solutions.
+
+### Fixed
+
+Regenerated with the correct script for gyro, minepump_liveness and amba at
+2026-08-29. All three exited 0 in **four minutes**: the 26-day job was never
+blocked on these, only on GenBuf and ColorSort. Fifteen correct per-run
+directories, including AMBA's, which was not missing but never generated.
+
+Every affected graph was then redrawn — 24 pre-merge graphs and 12 pipeline
+graphs, 36 in total, no failures. The counts changed:
+
+| | before | after |
+| --- | --- | --- |
+| Gyro, per trace | 2 trivial | **3 trivial** |
+| Minepump Liveness, per trace | 2 trivial | **1 trivial** |
+| AMBA, per trace | none | **1 trivial** |
+
+GenBuf and ColorSort were deliberately skipped; regenerating their trivial
+solutions would just recreate the 21-day hang.
+
+The pipeline redraws also pin `SPEC_REPAIR_LTLFILT` to the `spot-acc128` build,
+which settles the mixed-Spot-build question raised above — those twelve graphs
+were all produced by one known binary.
+
+Atlas (177 graphs, all trivial groups now correct):
+<https://claude.ai/code/artifact/2fb2b369-3b4e-48e1-bfec-7f0f1ecae76b>
