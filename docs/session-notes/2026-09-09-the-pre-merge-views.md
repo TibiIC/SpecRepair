@@ -184,3 +184,5 @@ were all produced by one known binary.
 
 Atlas (177 graphs, all trivial groups now correct):
 <https://claude.ai/code/artifact/2fb2b369-3b4e-48e1-bfec-7f0f1ecae76b>
+
+Continued in [2026-09-10](2026-09-10-filter-then-merge-and-a-status-script.md).
