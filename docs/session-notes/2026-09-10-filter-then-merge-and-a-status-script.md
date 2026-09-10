@@ -149,3 +149,161 @@ write one". So the section is bounded to recently-touched directories and
 labelled as candidates rather than proof of life, with the `pgrep` command to
 confirm. Better a hedged answer than a confident wrong one — the first version
 would have had someone conclude GenBuf had stopped when it had not.
+
+## A randomness audit of the reporting
+
+Asked to confirm nothing in the reported numbers is random. Audited every RNG
+call site in `spec_repair/`, `scripts/` and `main/`.
+
+### The reporting path is deterministic
+
+`filter_then_merge.py` contains no RNG at all. The pool is
+`sorted(glob.glob(...))`, every set is consumed through `sorted(...)`, and
+`_equivalent_to_any` submits futures in `kept` order and consumes them in order,
+so even at `--workers 8` the result does not depend on scheduling. The same
+holds for `run_experiment_pipeline.py`, `visualise_resulting_specs.py`,
+`generate_trivial_solutions.py` and `spectra_specification.py`. Every stage count
+reported came from exhaustive directory listings.
+
+### Where RNG exists, and whether it can reach a number
+
+| site | seeded? | reaches the reporting? |
+| --- | --- | --- |
+| `controller_trace_generation.py` | `random.Random(seed)`, seed = trace index | yes, by design - the traces are the input |
+| `spec_mutation.py`, `violation_trace_generation.py`, `generate_*_traces.py` | rng passed in, seeded by caller | no - case study 1 and 2 paths |
+| `file_util.generate_random_string` | unseeded | no - temp **filenames** only |
+| `heuristics.manual_choice` | unseeded fallback | no - only fires when `config.MANUAL` is False; it is True, and the callers are all in `legacy/` |
+| `heuristics.random_choice` | unseeded | **no - dead code** |
+| `weakness_measurement/syntax_utils.py` | - | no - unused import |
+| `legacy/old_experiments.py` | unseeded | no - legacy |
+
+The one that needed chasing was `counter_trace.py:265`:
+
+```python
+def complete_ct_from_ct(ct, spec, entailed_list,
+                        heuristic: HeuristicType = random_choice) -> CounterTrace:
+```
+
+An unseeded random default, in a module the BFS uses. It has **no callers** -
+the live path calls the plural `complete_cts_from_ct`, which returns the whole
+list and makes no choice. `random_choice` is referenced nowhere else. The live
+heuristic manager is `NoFilterHeuristicManager`, and none of the heuristic
+managers under `components/` mention `random`.
+
+### FastLAS, and a memory of mine that was wrong
+
+I nearly reported FastLAS as deterministic on the strength of a stale note. The
+module docstring is explicit, and was corrected on 2026-08-04:
+
+> FastLAS 2.1.0 *is* non-deterministic: given a hypothesis space with several
+> equally-optimal candidates it returns different ones on different runs. (An
+> earlier note here claimed the opposite. That was an artefact of a broken
+> translation.)
+
+What saves the reporting is that `enumerate_adaptations` **enumerates rather than
+samples**: each solution found is added to `#bias` as a constraint forbidding it
+and the next run asks for something else, stopping when the task goes
+UNSATISFIABLE. So the solution *set* is deterministic and complete.
+
+The residual exposure is real but bounded: `n_runs = 10` is a ceiling, so **if a
+task has more than ten equally-optimal solutions, which ten come back is not
+guaranteed reproducible**. Nothing in the outputs says whether that ever bit.
+
+### A false alarm I raised, and the real gap underneath
+
+I reported that seven traces had "no recorded seed" and offered to recover the
+seeds by search. Both were wrong, and the second contradicts a standing
+instruction not to manipulate seeds. `generate_case_study_3.py` line 60 is
+`for seed in range(traces)` with `"trace": seed, "seed": seed` - **the seed is
+the trace index by construction**. Nothing was ever lost.
+
+What *is* missing from `lift/traces.json` (1 entry for 5 traces) and
+`pcar/traces.json` (2 for 5) is the **target assumption**, and the script says
+why that matters:
+
+> Generation is reproducible from the seed, but only if you know which
+> assumption it aimed at: a trace whose preferred target proved unreachable fell
+> back to another, and nothing in the trace file says which.
+
+A later partial re-run overwrote those manifests wholesale. So lift 0-3 and
+pcar 0-2 have lost the record of what they aimed at. The trace files themselves
+are intact and are fixed inputs, so no reported number moves.
+
+The same comment carries a caveat that applies everywhere: replaying a single
+trace reproduces it for the small case studies but **not for the larger ones**,
+because Spectra's `Env` is global to the JVM and state accumulates across calls.
+Reproducibility is at the granularity of regenerating a whole case study in
+order, not one trace.
+
+### Measurements, de-randomised
+
+My own comparison benchmark had used `random.sample`. Re-run deterministically
+(first 300 specs by sorted filename, `itertools.combinations` in order) on
+`minepump_trace1`:
+
+| | sampled | deterministic |
+| --- | ---: | ---: |
+| distinct assumption strings | 2 / 300 | **2 / 300** |
+| distinct guarantee strings | 300 / 300 | **300 / 300** |
+| one comparison | 52.0 ms | **53.0 ms** |
+
+Same conclusions, now reproducible. Note the shape: minepump's repairs vary the
+**guarantees** and leave the assumptions alone - the mirror image of Gyro and
+AMBA. Identical strings already short-circuit at 0.0 ms, so the assumption half
+of every minepump comparison is free and the guarantee half always pays.
+
+Where the 53 ms goes: 13 ms is re-serialising both specs (`to_formatted_string`
+is recomputed on every comparison and is trivially cacheable), 40 ms is process
+spawn for a 116-byte formula. Memoising the *pairwise result* would not help -
+each (candidate, representative) pair is compared exactly once, and all 300
+guarantee strings are distinct, so a string-keyed cache would never hit either.
+
+## GenBuf trace 2 stopped: no equivalence timeout
+
+The one post-processing job not progressing. It printed `stage 0 final specs on
+disk 21` at 09-09 22:42 and nothing since - and the progress line prints every
+60 seconds, so silence meant it was stuck inside a single comparison.
+
+It was: one `ltlfilt` at **99.9% CPU for 24 hours 15 minutes**, 3.9 GB resident,
+on the first pair.
+
+`SPEC_REPAIR_EQUIV_TIMEOUT` was unset, and `_equiv_timeout`'s docstring names
+this exact failure:
+
+> Unset or 0 means no limit... A limit turns a check that would not converge into
+> an `EquivalenceUndecided` the caller must handle, rather than a process that
+> holds a machine for a day.
+
+Twenty-one specifications need up to 210 comparisons. At 24 hours each that is
+not a slow job, it is an impossible one - GenBuf is past the cliff, as
+established on 2026-09-08. Stopped, and recorded as not computable alongside
+GenBuf 3 and 4. GenBuf 0 and 1 completed only because they hold **one**
+specification each, so stage 1 makes zero comparisons.
+
+Setting a timeout would not rescue it. Undecided checks are conservatively
+treated as *not* equivalent, so a timed-out GenBuf would report 21 unique
+specifications - an upper bound that reads as a result, which is the failure mode
+`semantically_unique`'s docstring warns about.
+
+**Latent risk for the other eight:** they run without a timeout too. They are
+progressing, so nothing is wrong now, but a single pathological pair would hang
+any of them the same way, silently. Worth setting
+`SPEC_REPAIR_EQUIV_TIMEOUT` on the next launch and treating a non-empty
+`UNDECIDED` list as a reason to exclude a run rather than report it.
+
+## Post-processing, end of day
+
+Eight jobs live and progressing, all with visible counters:
+
+| job | compared | kept |
+| --- | ---: | ---: |
+| ts_t3 | 6,174 / 15,504 | 1,733 |
+| mp_t0 | 5,924 / 34,651 | 905 |
+| mp_t2b | 5,917 / 23,598 | 936 |
+| ts_t1 | 5,474 / 55,145 | 584 |
+| mp_t4 | 5,332 / 35,603 | 823 |
+| mp_t1 | 5,110 / 26,877 | 852 |
+| mp_t3 | 4,431 / 23,201 | 875 |
+| mp_t2 | 3,965 / 21,456 | 1,206 |
+
+Your `minepump_trace4.uniq` is at 26,900 / 27,589 - 97%.
