@@ -307,3 +307,5 @@ Eight jobs live and progressing, all with visible counters:
 | mp_t2 | 3,965 / 21,456 | 1,206 |
 
 Your `minepump_trace4.uniq` is at 26,900 / 27,589 - 97%.
+
+Continued in [2026-09-15](2026-09-15-ltl-asp-equivalence-and-the-two-previous-operators.md).

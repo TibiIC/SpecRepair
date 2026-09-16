@@ -84,6 +84,18 @@ def to_dnf(f: LTLFormula) -> LTLFormula:
             return to_dnf(Or(Not(formula.left), Not(formula.right)))
         if isinstance(formula, Or):
             return to_dnf(And(Not(formula.left), Not(formula.right)))
+        # !(A -> B) === A & !B. Purely propositional: the implication carries no
+        # temporal operator of its own, so nothing here crosses Prev's t=0
+        # boundary and this needs none of the care the Prev case below does.
+        # Any Prev inside A or B is reached by the recursive calls and handled
+        # by the rules that already exist for it.
+        #
+        # The positive direction was already covered further down
+        # (`to_dnf(Implies(...)) -> to_dnf(Or(Not(left), right))`); only the
+        # negated one was missing, so `!(a->b)` anywhere in a formula raised
+        # NotImplementedError instead of converting.
+        if isinstance(formula, Implies):
+            return to_dnf(And(formula.left, Not(formula.right)))
         # !Next(x) === Next(!x): Next never hits a real boundary in
         # Spectra's realizability game (it's forward-infinite, so there's
         # always a next state to talk about), so negation commutes through

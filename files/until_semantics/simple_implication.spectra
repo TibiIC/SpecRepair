@@ -1,0 +1,7 @@
+module SimpleImplication
+
+env boolean a;
+sys boolean b;
+
+guarantee -- g1
+	G(a->b);
