@@ -1,35 +1,17 @@
-% Structural LTL-to-ASP: a formula is an AST of facts, evaluated over traces.
+% Structural LTL-to-ASP. This file assembles the rules; nothing else.
+% Paths are relative to this file, so clingo can be run from anywhere.
 %
-% Rules are split by concern; this file only assembles them. Paths are relative
-% to this file, so clingo can be run from anywhere.
-%
-%   ltl/time.asp            succ/first/last/reach, and lasso support
+%   ltl/time.asp            succ, has_succ, has_pred, reach
 %   ltl/propositional.asp   atomic, negate, and/or, implies
-%   ltl/future.asp          next, until, eventually, always  (+ strong/weak)
-%   ltl/past.asp            previous (Y), weakprevious (Z)
-%   ltl/satisfiability.asp  sat/1 and unsat/1
+%   ltl/future.asp          next, until, eventually, always
+%   ltl/past.asp            previous
+%   ltl/satisfiability.asp  sat
 %
-% A formula is a tree of numbered nodes:
+% The traces, symbols, formula and the semantics(strong|weak) choice are inputs,
+% not rules, so they live with the case rather than here. The original worked
+% example is ltl/example.asp:
 %
-%   root(N).                     the whole formula
-%   atomic(N,a).  true(N).
-%   negate(N,F).  conjunction(N,F)...  disjunction(N,F)...
-%   implies(N,F,G).  until(N,F,G).
-%   next(N,F).  previous(N,F).  weakprevious(N,F).
-%   eventually(N,F).  always(N,F).
-%
-% A trace is named, has instants, and lists only the atoms TRUE at each:
-%
-%   trace_name(s).  time(0..2,s).  trace(1,a,s).
-%   loop(1,s).                     OPTIONAL: makes s infinite, looping to 1
-%
-% Choose a reading for the future operators at the end of a FINITE trace:
-%
-%   semantics(strong).   the trace must show it
-%   semantics(weak).     the trace must not refute it
-%
-% A lasso needs neither - its last instant has a successor, so the weak rules
-% never fire. Exactly one semantics/1 fact should be present for finite traces.
+%   clingo ltl2asp_ext.asp ltl/example.asp
 
 #include "ltl/time.asp".
 #include "ltl/propositional.asp".

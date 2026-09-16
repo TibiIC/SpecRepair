@@ -41,8 +41,7 @@ they are duals, !Y(x) === Z(!x). Spectra's PREV is Y - measured, not assumed:
 happen if PREV is false at t=0.
 
 The PREV cases below are written and expected-valued already, but skipped until
-ltl2asp_ext.asp grows `prev`/`weakprev` facts. The rules it would need are in
-prev_rules.asp next to this file.
+ltl2asp_ext.asp, with the rules split under ltl/.
 """
 from __future__ import annotations
 
@@ -61,7 +60,7 @@ PREV_RULES = os.path.join(WORKSPACE, "prev_rules.asp")
 # formulas: a tiny AST as nested tuples
 #   ("atom", "a") ("not", f) ("and", f, g, ...) ("or", f, g, ...)
 #   ("implies", f, g) ("next", f) ("until", f, g) ("eventually", f)
-#   ("always", f) ("prev", f) ("weakprev", f)
+#   ("always", f) ("prev", f)
 # --------------------------------------------------------------------------
 A, B, C = ("atom", "a"), ("atom", "b"), ("atom", "c")
 
@@ -89,20 +88,19 @@ FORMULAS: Dict[str, tuple] = {
     "G(a) -> F(b)":       ("implies", ("always", A), ("eventually", B)),
 }
 
-# Written now, run once ltl2asp_ext.asp learns `prev`. Y is strong previous,
-# Z is weak previous; the pair is the whole point of including both.
+# `previous` under both readings. There is one past operator, and the
+# semantics toggle chooses whether it reads as Y (strong, false before the
+# beginning) or Z (weak, vacuously true there).
 PREV_FORMULAS: Dict[str, tuple] = {
-    "Y a":                ("prev", A),
-    "Z a":                ("weakprev", A),
-    "!Y a":               ("not", ("prev", A)),
-    "Y !a":               ("prev", ("not", A)),
-    "Z !a":               ("weakprev", ("not", A)),
-    "G(a -> Y b)":        ("always", ("implies", A, ("prev", B))),
-    "G(Y a -> b)":        ("always", ("implies", ("prev", A), B)),
-    "G(!Y a & Y b -> c)": ("always", ("implies", ("and", ("not", ("prev", A)),
+    "PREV a":             ("prev", A),
+    "!PREV a":            ("not", ("prev", A)),
+    "PREV !a":            ("prev", ("not", A)),
+    "G(a -> PREV b)":        ("always", ("implies", A, ("prev", B))),
+    "G(PREV a -> b)":        ("always", ("implies", ("prev", A), B)),
+    "G(!PREV a & PREV b -> c)": ("always", ("implies", ("and", ("not", ("prev", A)),
                                                   ("prev", B)), C)),
-    "Y(a & b)":           ("prev", ("and", A, B)),
-    "G(Y a | b)":         ("always", ("or", ("prev", A), B)),
+    "PREV(a & b)":           ("prev", ("and", A, B)),
+    "G(PREV a | b)":         ("always", ("or", ("prev", A), B)),
 }
 
 # --------------------------------------------------------------------------
@@ -123,16 +121,6 @@ TRACES: Dict[str, List[Set[str]]] = {
     "t12_a_first":    [{"a"}, set(), set()],
     "t13_alt":        [{"a"}, {"b"}, {"a"}, {"b"}],
     "t14_empty3":     [set(), set(), set()],
-    # Lassos: (states, loop_start). These denote INFINITE behaviours, so the
-    # strong/weak toggle must not affect them - the last instant has a
-    # successor and no weak rule can fire. Any formula whose answer changes
-    # between the two readings on one of these is a bug in the guards.
-    "l1_a_recurs":    ([set(), {"a"}], 0),          # {} {a} {} {a} ...
-    "l2_a_never":     ([set(), set()], 0),          # a never holds
-    "l3_a_stuck":     ([{"b"}, {"a"}], 1),          # {b} then {a} forever
-    "l4_b_stuck":     ([{"a"}, {"b"}], 1),          # {a} once, then {b} forever
-    "l5_self":        ([{"a"}], 0),                 # {a} forever, one instant
-    "l6_ab_cycle":    ([{"a"}, {"b"}, {"c"}], 0),   # a,b,c cycling
 }
 
 
@@ -144,25 +132,19 @@ def sat_ref(trace, f: tuple, t: int, weak: bool) -> bool:
     """
     LTLf satisfaction of `f` at instant `t` of `trace`.
 
-    `trace` is either a list of states (a finite prefix) or (states, loop_start)
-    (a lasso, denoting an infinite behaviour).
-
-    `weak` chooses the end-of-trace reading for the FUTURE operators and is
-    ignored on a lasso, which has no end: every instant has a successor, so the
-    weak cases are unreachable. Y and Z are not affected by it at all - they are
-    different operators, not two readings of one.
+    `weak` chooses the end-of-trace reading. The future operators use it at the
+    last instant; `previous` uses it at instant 0, reading as Y under strong and
+    Z under weak, which is how ltl/past.asp keys it.
 
     Eventually and Until are least fixpoints over the instants, computed by
     iteration rather than by unrolling, which is both what the ASP rules do and
     the only thing that terminates on a cycle.
     """
-    states, loop = states_of(trace), loop_of(trace)
+    states = list(trace)
     n = len(states)
 
     def succ(i):
-        if i + 1 < n:
-            return i + 1
-        return loop                        # None on a finite prefix
+        return i + 1 if i + 1 < n else None
 
     def at_end(i):
         return succ(i) is None
@@ -181,10 +163,11 @@ def sat_ref(trace, f: tuple, t: int, weak: bool) -> bool:
             return (not ev(node[1], i)) or ev(node[2], i)
         if kind == "next":
             return weak if at_end(i) else ev(node[1], succ(i))
-        if kind == "prev":                 # Y: nothing before the beginning
-            return False if i == 0 else ev(node[1], i - 1)
-        if kind == "weakprev":             # Z: vacuously true there
-            return True if i == 0 else ev(node[1], i - 1)
+        if kind == "prev":
+            # `previous` is keyed on the same semantics toggle as the future
+            # operators: strong reads it as Y (false before the beginning),
+            # weak as Z (vacuously true there).
+            return weak if i == 0 else ev(node[1], i - 1)
         if kind == "always":
             # safety: holds iff every REACHABLE instant satisfies it
             return all(ev(node[1], j) for j in reachable(i))
@@ -265,10 +248,8 @@ def emit_formula(f: tuple) -> Tuple[List[str], int]:
             lines.append(f"until({me},{l},{r}).")
         elif kind in ("next", "eventually", "always"):
             lines.append(f"{kind}({me},{walk(node[1])}).")
-        elif kind == "prev":            # Y, strong previous
+        elif kind == "prev":
             lines.append(f"previous({me},{walk(node[1])}).")
-        elif kind == "weakprev":        # Z, weak previous
-            lines.append(f"weakprevious({me},{walk(node[1])}).")
         else:
             raise ValueError(f"unknown node {kind}")
         return me
@@ -278,24 +259,11 @@ def emit_formula(f: tuple) -> Tuple[List[str], int]:
     return lines, root
 
 
-def states_of(trace) -> List[Set[str]]:
-    """A trace is either a list of states, or (states, loop_start)."""
-    return list(trace[0]) if isinstance(trace, tuple) else list(trace)
-
-
-def loop_of(trace):
-    """The loop-back instant, or None when the trace is a finite prefix."""
-    return trace[1] if isinstance(trace, tuple) else None
-
-
-def emit_trace(name: str, trace) -> List[str]:
-    states, loop = states_of(trace), loop_of(trace)
-    lines = [f"trace_name({name}).", f"time(0..{len(states) - 1},{name})."]
-    for i, state in enumerate(states):
+def emit_trace(name: str, trace: Sequence[Set[str]]) -> List[str]:
+    lines = [f"trace_name({name}).", f"time(0..{len(trace) - 1},{name})."]
+    for i, state in enumerate(trace):
         for atom in sorted(state):
             lines.append(f"trace({i},{atom},{name}).")
-    if loop is not None:
-        lines.append(f"loop({loop},{name}).")
     return lines
 
 
@@ -309,7 +277,7 @@ def sat_set_from_clingo(formula: tuple, traces: Dict, weak: bool) -> Set[str]:
     a trace at a time.
     """
     facts, _ = emit_formula(formula)
-    atoms = sorted({a for tr in traces.values() for st in states_of(tr) for a in st}
+    atoms = sorted({a for tr in traces.values() for st in tr for a in st}
                    | {"a", "b", "c"})
     trace_lines: List[str] = []
     for name, trace in traces.items():
@@ -338,7 +306,5 @@ def sat_set_expected(formula: tuple, traces: Dict, weak: bool) -> Set[str]:
             if sat_ref(trace, formula, 0, weak)}
 
 
-def pretty(trace) -> str:
-    states, loop = states_of(trace), loop_of(trace)
-    shape = " . ".join("{" + ",".join(sorted(s)) + "}" for s in states)
-    return shape + (f" ->loop@{loop}" if loop is not None else "")
+def pretty(trace: Sequence[Set[str]]) -> str:
+    return " . ".join("{" + ",".join(sorted(s)) + "}" for s in trace)

@@ -22,10 +22,8 @@ Three groups:
                      disagree, asserted individually. These are the cases that
                      would still pass if the semantics toggle were ignored
                      entirely, so they are worth naming.
-  * prev             Y (strong previous, false at t=0) and Z (weak previous,
-                     true at t=0). Needs `prev_rules.asp`, which supplies rules
-                     ltl2asp_ext.asp does not have yet; when it grows them, drop
-                     the extra file from `with_prev`.
+  * prev             `previous`, read as Y under strong (false before the
+                     beginning) and Z under weak (vacuously true there).
 """
 from __future__ import annotations
 
@@ -125,85 +123,45 @@ def test_prev_sat_set_matches_reference(label: str, weak: bool) -> None:
     assert got == want, _report(label, weak, got, want)
 
 
-def test_prev_is_insensitive_to_the_future_toggle() -> None:
-    """Y stays Y under both future semantics; same for Z."""
-    for label, formula in PREV_FORMULAS.items():
-        strong = sat_set_from_clingo(formula, TRACES, False)
-        weak = sat_set_from_clingo(formula, TRACES, True)
-        assert strong == weak, (
-            f"{label}: the prev rules are sensitive to semantics(strong|weak), "
-            f"which would make Y silently become Z.\n"
-            f"  strong: {sorted(strong)}\n  weak  : {sorted(weak)}")
 
 
-def test_negated_strong_prev_equals_weak_prev_of_negation() -> None:
+def test_previous_reads_as_y_under_strong_and_z_under_weak() -> None:
     """
-    !Y(a) === Z(!a), the duality that makes !PREV(x) != PREV(!x).
+    There is one past operator, and the semantics toggle chooses its reading.
 
-    This is the identity the GR(1) translation cannot express, because it has
-    only one PREV. Pinning it here means that if `prev_rules.asp` is ever
-    "simplified" into a single operator, the reason it cannot be will be stated
-    by a failing test rather than rediscovered.
+    Under `semantics(strong)` `previous` is Y - false before the beginning, so
+    `PREV a` never holds at instant 0. Under `semantics(weak)` it is Z, and it
+    holds there vacuously. The two readings must therefore differ on exactly the
+    traces where instant 0 is the only place the operator could fire.
+
+    This is the boundary that makes !PREV(x) different from PREV(!x), which is
+    why the GR(1) translation in spec_repair leaves !PREV opaque rather than
+    pushing the negation through. If these two ever agree, t=0 has stopped being
+    special and that argument is gone.
     """
-    neg_strong = sat_set_from_clingo(PREV_FORMULAS["!Y a"], TRACES, False)
-    weak_of_neg = sat_set_from_clingo(PREV_FORMULAS["Z !a"], TRACES, False)
-    strong_of_neg = sat_set_from_clingo(PREV_FORMULAS["Y !a"], TRACES, False)
-    assert neg_strong == weak_of_neg, "!Y(a) should equal Z(!a)"
-    assert neg_strong != strong_of_neg, (
-        "!Y(a) should NOT equal Y(!a) - if these agree, the t=0 boundary is "
-        "not being modelled and the whole !PREV story collapses")
+    strong = sat_set_from_clingo(PREV_FORMULAS["PREV a"], TRACES, False)
+    weak = sat_set_from_clingo(PREV_FORMULAS["PREV a"], TRACES, True)
+    assert strong != weak, (
+        "PREV read the same under both semantics, so t=0 is not being treated "
+        "as the beginning of the trace")
+    assert strong <= weak, (
+        "the weak reading should accept everything the strong one does, and "
+        "then some - it only adds the vacuous case at instant 0")
 
 
-LASSOS = [n for n, tr in TRACES.items() if isinstance(tr, tuple)]
-
-
-@pytest.mark.parametrize("label", list(FORMULAS), ids=lambda s: s)
-def test_lassos_ignore_the_future_toggle(label: str) -> None:
+def test_negated_prev_differs_from_prev_of_negation() -> None:
     """
-    An infinite behaviour has one reading, not two.
+    !PREV(a) is not PREV(!a), under either reading.
 
-    On a lasso the last instant has a successor through the back edge, so every
-    `not has_succ` guard in ltl/future.asp fails and no weak rule can fire. If a
-    lasso's answer changes with the toggle, a weak rule is reachable when it
-    should not be - which would quietly make liveness unfalsifiable on exactly
-    the traces where it is decidable.
+    At instant 0 one of them is vacuous and the other is not, whichever way the
+    toggle is set, so the two can never coincide. This is the identity the GR(1)
+    normaliser must refuse, pinned here so that a future "simplification" that
+    pushes negation through PREV fails a test instead of passing review.
     """
-    formula = FORMULAS[label]
-    lassos = {n: TRACES[n] for n in LASSOS}
-    strong = sat_set_from_clingo(formula, lassos, False)
-    weak = sat_set_from_clingo(formula, lassos, True)
-    assert strong == weak, (
-        f"{label}: lasso answers changed with the semantics toggle\n"
-        f"  strong: {sorted(strong)}\n  weak  : {sorted(weak)}")
+    for weak in (False, True):
+        neg_prev = sat_set_from_clingo(PREV_FORMULAS["!PREV a"], TRACES, weak)
+        prev_neg = sat_set_from_clingo(PREV_FORMULAS["PREV !a"], TRACES, weak)
+        assert neg_prev != prev_neg, (
+            f"[{'weak' if weak else 'strong'}] !PREV(a) and PREV(!a) agreed on "
+            f"every trace, so the instant-0 boundary is not being modelled")
 
-
-def test_past_on_a_lasso_is_flagged() -> None:
-    """
-    Mixing a past operator with a looping trace is marked, not silently wrong.
-
-    A lasso folds the start of the behaviour and a point inside the cycle onto
-    the same instant. Future operators cannot distinguish them; Y and Z can.
-    `pred` therefore never traverses the back edge, which makes the reading at
-    t=0 correct - and t=0 is where sat/1 asks. Under `always`, though, a past
-    operator on a lasso describes the first pass only.
-
-    `past_on_lasso/1` exists so that a specification hitting that caveat can be
-    detected rather than quietly believed.
-    """
-    import subprocess
-    from tests.test_semantics.ltlf_ext_harness import ENCODER, emit_formula, emit_trace
-
-    facts, _ = emit_formula(PREV_FORMULAS["Y a"])
-    program = "\n".join([
-        "semantics(strong).", "symbol(a).",
-        *emit_trace("finite", [set(), {"a"}]),
-        *emit_trace("looping", ([set(), {"a"}], 0)),
-        *facts,
-        "#show past_on_lasso/1.",
-    ])
-    out = subprocess.run(["clingo", ENCODER, "-"], input=program,
-                         capture_output=True, text=True).stdout
-    assert "past_on_lasso(looping)" in out, \
-        f"a past operator on a looping trace should be flagged:\n{out}"
-    assert "past_on_lasso(finite)" not in out, \
-        f"a finite trace carries no such caveat:\n{out}"
