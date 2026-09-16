@@ -104,7 +104,7 @@ def emit_formula(f: tuple) -> Tuple[List[str], int]:
         elif kind == "w_until":
             l, r = walk(node[1]), walk(node[2])
             lines.append(f"w_until({me},{l},{r}).")
-        elif kind in ("since", "w_since", "release", "trigger"):
+        elif kind in ("since", "w_since", "release", "s_release", "trigger"):
             l, r = walk(node[1]), walk(node[2])
             lines.append(f"{kind}({me},{l},{r}).")
         elif kind in ("once", "historically"):
@@ -175,11 +175,23 @@ def holds(trace: Sequence[Set[str]], f: tuple, t: int) -> bool:
                     return all(ev(node[1], m) for m in range(i, j))
             return all(ev(node[1], m) for m in range(i, n))   # a forever
         if k == "release":
-            # b holds up to and including the instant a releases it
+            # weak release (R): b holds up to and including the instant a
+            # releases it - and if a never comes, b forever is enough.
             for j in range(i, n):
                 if not ev(node[2], j):
-                    return any(ev(node[1], m) for m in range(i, j))
+                    return False
+                if ev(node[1], j):
+                    return True
             return True
+        if k == "s_release":
+            # strong release (M): as R, but the release must actually happen.
+            # b holding forever is NOT enough.
+            for j in range(i, n):
+                if not ev(node[2], j):
+                    return False
+                if ev(node[1], j):
+                    return True
+            return False
 
         # past
         if k == "prev":
@@ -217,7 +229,7 @@ def holds(trace: Sequence[Set[str]], f: tuple, t: int) -> bool:
 _PREDICATE = {
     "next": "next", "w_next": "w_next", "eventually": "eventually",
     "w_eventually": "w_eventually", "always": "always", "until": "until",
-    "w_until": "w_until", "release": "release", "prev": "previous",
+    "w_until": "w_until", "release": "release", "s_release": "s_release", "prev": "previous",
     "w_prev": "w_previous", "since": "since", "w_since": "w_since",
     "once": "once", "historically": "historically", "trigger": "trigger",
 }
@@ -298,4 +310,14 @@ TRACES: Dict[str, List[Set[str]]] = {
     "a_e_b":   [{"a"}, set(), {"b"}],
     "b_e_a":   [{"b"}, set(), {"a"}],
     "abc":     [{"a"}, {"b"}, {"c"}],
+    # `once`/`historically` are only really pinned by a trace where the atom is
+    # in the middle: with it only ever at instant 0, a broken recursive case
+    # still passes on the base case alone.
+    "e_a_e":   [set(), {"a"}, set()],
+    "e_b_e":   [set(), {"b"}, set()],
+    "ab_e_ab": [{"a", "b"}, set(), {"a", "b"}],
+    "b_ab_a":  [{"b"}, {"a", "b"}, {"a"}],
+    "bb_ab":   [{"b"}, {"b"}, {"a", "b"}],
+    "bbb":     [{"b"}, {"b"}, {"b"}],
+    "e_ab":    [set(), {"a", "b"}],
 }

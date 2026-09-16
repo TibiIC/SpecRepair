@@ -64,6 +64,19 @@ CASES = [
     ("F a",             ("eventually", A),                  ("eventually",)),
     ("G a",             ("always", A),                      ("always",)),
     ("a R b",           ("release", A, B),                   ("release",)),
+    ("a M b",           ("s_release", A, B),                 ("s_release",)),
+    ("G(a -> b R c)",   ("always", ("implies", A, ("release", B, C))), ("always", "release")),
+    ("G(a -> b M c)",   ("always", ("implies", A, ("s_release", B, C))), ("always", "s_release")),
+    ("G(a -> b S c)",   ("always", ("implies", A, ("since", B, C))), ("always", "since")),
+    ("G(O a -> b)",     ("always", ("implies", ("once", A), B)), ("always", "once")),
+    ("G(H a -> b)",     ("always", ("implies", ("historically", A), B)), ("always", "historically")),
+    ("F(a S b)",        ("eventually", ("since", A, B)),     ("eventually", "since")),
+    ("O(a U b)",        ("once", ("until", A, B)),           ("once", "until")),
+    ("w_next w_next a", ("w_next", ("w_next", A)),           ("w_next",)),
+    ("w_prev w_prev a", ("w_prev", ("w_prev", A)),           ("w_prev",)),
+    ("a U (b U c)",     ("until", A, ("until", B, C)),       ("until",)),
+    ("(a W b) & (b R a)", ("and", ("w_until", A, B), ("release", B, A)),
+                          ("w_until", "release")),
     ("a S b",           ("since", A, B),                    ("since",)),
     ("a B b",           ("w_since", A, B),                  ("w_since",)),
     ("O a",             ("once", A),                        ("once",)),
@@ -111,6 +124,70 @@ DUALITIES = [
      ("until", "release")),
     ("!O a  ===  H !a",
      ("not", ("once", A)), ("historically", ("not", A)), ("once", "historically")),
+    ("!H a  ===  O !a",
+     ("not", ("historically", A)), ("once", ("not", A)), ("historically", "once")),
+    ("!(a W b)  ===  (!a) M (!b)",
+     ("not", ("w_until", A, B)),
+     ("s_release", ("not", A), ("not", B)), ("w_until", "s_release")),
+    ("!(a R b)  ===  (!a) U (!b)",
+     ("not", ("release", A, B)),
+     ("until", ("not", A), ("not", B)), ("release", "until")),
+    ("!(a M b)  ===  (!a) W (!b)",
+     ("not", ("s_release", A, B)),
+     ("w_until", ("not", A), ("not", B)), ("s_release", "w_until")),
+    ("G a  ===  !F !a",
+     ("always", A), ("not", ("eventually", ("not", A))), ("always", "eventually")),
+    ("H a  ===  !O !a",
+     ("historically", A), ("not", ("once", ("not", A))), ("historically", "once")),
+]
+
+
+# Derived-operator identities: each says one operator is expressible with
+# others. If an encoder implements them as independent rule sets rather than
+# deriving them, these are what catch the two definitions drifting apart.
+IDENTITIES = [
+    ("a M b  ===  b U (a & b)",
+     ("s_release", A, B), ("until", B, ("and", A, B)), ("s_release", "until")),
+    ("a R b  ===  b W (a & b)",
+     ("release", A, B), ("w_until", B, ("and", A, B)), ("release", "w_until")),
+    ("a W b  ===  (a U b) | G a",
+     ("w_until", A, B), ("or", ("until", A, B), ("always", A)),
+     ("w_until", "until", "always")),
+    ("F F a  ===  F a",
+     ("eventually", ("eventually", A)), ("eventually", A), ("eventually",)),
+    ("G G a  ===  G a",
+     ("always", ("always", A)), ("always", A), ("always",)),
+    ("O O a  ===  O a",
+     ("once", ("once", A)), ("once", A), ("once",)),
+    ("H H a  ===  H a",
+     ("historically", ("historically", A)), ("historically", A), ("historically",)),
+]
+
+
+# Expansion laws: the fixpoint characterisation of each recursive operator.
+# These are the sharpest structural tests in the suite - they pin the recursive
+# rule AND its interaction with the boundary operator it unrolls through, so a
+# base case at the wrong end (the `w_since`/`has_succ` mistake) fails here even
+# when the operator's own test passes.
+EXPANSIONS = [
+    ("a U b  ===  b | (a & X(a U b))",
+     ("until", A, B),
+     ("or", B, ("and", A, ("next", ("until", A, B)))), ("until", "next")),
+    ("a W b  ===  b | (a & wX(a W b))",
+     ("w_until", A, B),
+     ("or", B, ("and", A, ("w_next", ("w_until", A, B)))), ("w_until", "w_next")),
+    ("a S b  ===  b | (a & Y(a S b))",
+     ("since", A, B),
+     ("or", B, ("and", A, ("prev", ("since", A, B)))), ("since", "prev")),
+    ("a B b  ===  b | (a & wY(a B b))",
+     ("w_since", A, B),
+     ("or", B, ("and", A, ("w_prev", ("w_since", A, B)))), ("w_since", "w_prev")),
+    ("a R b  ===  b & (a | wX(a R b))",
+     ("release", A, B),
+     ("and", B, ("or", A, ("w_next", ("release", A, B)))), ("release", "w_next")),
+    ("a M b  ===  b & (a | X(a M b))",
+     ("s_release", A, B),
+     ("and", B, ("or", A, ("next", ("s_release", A, B)))), ("s_release", "next")),
 ]
 
 
@@ -196,3 +273,63 @@ def test_semantics_toggle_is_inert(label, formula, kinds) -> None:
         f"{label} still depends on semantics(strong|weak)\n"
         f"  under strong: {sorted(strong)}\n"
         f"  under weak  : {sorted(weak)}")
+
+
+@pytest.mark.parametrize("label,lhs,rhs,kinds", IDENTITIES,
+                         ids=[i[0] for i in IDENTITIES])
+def test_identity(label, lhs, rhs, kinds) -> None:
+    """One operator expressed with others, checked through clingo."""
+    for k in kinds:
+        if not supported(k):
+            pytest.skip(f"encoder does not define: {k}")
+    left, right = sat_names(lhs, TRACES), sat_names(rhs, TRACES)
+    assert left == right, _report(f"identity {label}", left, right)
+
+
+@pytest.mark.parametrize("label,lhs,rhs,kinds", IDENTITIES,
+                         ids=[f"ref:{i[0]}" for i in IDENTITIES])
+def test_identity_holds_in_the_reference_too(label, lhs, rhs, kinds) -> None:
+    for name, trace in TRACES.items():
+        assert holds(trace, lhs, 0) == holds(trace, rhs, 0), (
+            f"the REFERENCE breaks {label} on {name}: "
+            f"{[sorted(s) for s in trace]}")
+
+
+@pytest.mark.parametrize("label,lhs,rhs,kinds", EXPANSIONS,
+                         ids=[e[0] for e in EXPANSIONS])
+def test_expansion_law(label, lhs, rhs, kinds) -> None:
+    """
+    The fixpoint characterisation of a recursive operator.
+
+    Sharper than the operator's own test: it pins the recursive rule together
+    with the boundary operator it unrolls through. A base case attached at the
+    wrong end still satisfies the operator test on traces that never reach that
+    end, but cannot satisfy the expansion law.
+    """
+    for k in kinds:
+        if not supported(k):
+            pytest.skip(f"encoder does not define: {k}")
+    left, right = sat_names(lhs, TRACES), sat_names(rhs, TRACES)
+    assert left == right, _report(f"expansion {label}", left, right)
+
+
+@pytest.mark.parametrize("label,lhs,rhs,kinds", EXPANSIONS,
+                         ids=[f"ref:{e[0]}" for e in EXPANSIONS])
+def test_expansion_law_holds_in_the_reference_too(label, lhs, rhs, kinds) -> None:
+    for name, trace in TRACES.items():
+        assert holds(trace, lhs, 0) == holds(trace, rhs, 0), (
+            f"the REFERENCE breaks {label} on {name}: "
+            f"{[sorted(s) for s in trace]}")
+
+
+@pytest.mark.parametrize("label,strong,weak,kinds", [
+    ("M -> R", ("s_release", A, B), ("release", A, B), ("s_release", "release")),
+], ids=["M -> R"])
+def test_strong_release_implies_weak_release(label, strong, weak, kinds) -> None:
+    """Strong release is the demanding one: M implies R, never the reverse."""
+    for k in kinds:
+        if not supported(k):
+            pytest.skip(f"encoder does not define: {k}")
+    s, w = sat_names(strong, TRACES), sat_names(weak, TRACES)
+    assert s <= w, f"{label}: M accepted traces R rejects: {sorted(s - w)}"
+    assert s != w, f"{label}: M and R agreed everywhere, so 'b forever' is not distinguished"
