@@ -123,6 +123,16 @@ TRACES: Dict[str, List[Set[str]]] = {
     "t12_a_first":    [{"a"}, set(), set()],
     "t13_alt":        [{"a"}, {"b"}, {"a"}, {"b"}],
     "t14_empty3":     [set(), set(), set()],
+    # Lassos: (states, loop_start). These denote INFINITE behaviours, so the
+    # strong/weak toggle must not affect them - the last instant has a
+    # successor and no weak rule can fire. Any formula whose answer changes
+    # between the two readings on one of these is a bug in the guards.
+    "l1_a_recurs":    ([set(), {"a"}], 0),          # {} {a} {} {a} ...
+    "l2_a_never":     ([set(), set()], 0),          # a never holds
+    "l3_a_stuck":     ([{"b"}, {"a"}], 1),          # {b} then {a} forever
+    "l4_b_stuck":     ([{"a"}, {"b"}], 1),          # {a} once, then {b} forever
+    "l5_self":        ([{"a"}], 0),                 # {a} forever, one instant
+    "l6_ab_cycle":    ([{"a"}, {"b"}, {"c"}], 0),   # a,b,c cycling
 }
 
 
@@ -130,48 +140,98 @@ TRACES: Dict[str, List[Set[str]]] = {
 # reference evaluator
 # --------------------------------------------------------------------------
 
-def sat_ref(f: tuple, trace: Sequence[Set[str]], t: int, weak: bool) -> bool:
+def sat_ref(trace, f: tuple, t: int, weak: bool) -> bool:
     """
-    LTLf satisfaction of `f` at instant `t`, in the strong or weak reading.
+    LTLf satisfaction of `f` at instant `t` of `trace`.
 
-    `weak` flips only the end-of-trace cases. Everything inside the trace is the
-    same in both readings, which is why a formula that never reaches the last
-    instant gives the same answer either way.
+    `trace` is either a list of states (a finite prefix) or (states, loop_start)
+    (a lasso, denoting an infinite behaviour).
+
+    `weak` chooses the end-of-trace reading for the FUTURE operators and is
+    ignored on a lasso, which has no end: every instant has a successor, so the
+    weak cases are unreachable. Y and Z are not affected by it at all - they are
+    different operators, not two readings of one.
+
+    Eventually and Until are least fixpoints over the instants, computed by
+    iteration rather than by unrolling, which is both what the ASP rules do and
+    the only thing that terminates on a cycle.
     """
-    last = len(trace) - 1
-    kind = f[0]
-    if kind == "atom":
-        return f[1] in trace[t]
-    if kind == "not":
-        return not sat_ref(f[1], trace, t, weak)
-    if kind == "and":
-        return all(sat_ref(g, trace, t, weak) for g in f[1:])
-    if kind == "or":
-        return any(sat_ref(g, trace, t, weak) for g in f[1:])
-    if kind == "implies":
-        return (not sat_ref(f[1], trace, t, weak)) or sat_ref(f[2], trace, t, weak)
-    if kind == "next":
-        if t >= last:
-            return weak                      # nothing after the end to check
-        return sat_ref(f[1], trace, t + 1, weak)
-    if kind == "eventually":
-        if any(sat_ref(f[1], trace, j, weak) for j in range(t, len(trace))):
-            return True
-        return weak                          # could still happen later
-    if kind == "always":
-        # no weak variant: a counterexample inside the trace is final
-        return all(sat_ref(f[1], trace, j, weak) for j in range(t, len(trace)))
-    if kind == "until":
-        for j in range(t, len(trace)):
-            if sat_ref(f[2], trace, j, weak):
-                return all(sat_ref(f[1], trace, k, weak) for k in range(t, j))
-        # right side never seen: weak accepts if the left side held throughout
-        return weak and all(sat_ref(f[1], trace, k, weak) for k in range(t, len(trace)))
-    if kind == "prev":                       # Y, strong: false at the beginning
-        return False if t == 0 else sat_ref(f[1], trace, t - 1, weak)
-    if kind == "weakprev":                   # Z, weak: true at the beginning
-        return True if t == 0 else sat_ref(f[1], trace, t - 1, weak)
-    raise ValueError(f"unknown node {kind}")
+    states, loop = states_of(trace), loop_of(trace)
+    n = len(states)
+
+    def succ(i):
+        if i + 1 < n:
+            return i + 1
+        return loop                        # None on a finite prefix
+
+    def at_end(i):
+        return succ(i) is None
+
+    def ev(node, i):
+        kind = node[0]
+        if kind == "atom":
+            return node[1] in states[i]
+        if kind == "not":
+            return not ev(node[1], i)
+        if kind == "and":
+            return all(ev(g, i) for g in node[1:])
+        if kind == "or":
+            return any(ev(g, i) for g in node[1:])
+        if kind == "implies":
+            return (not ev(node[1], i)) or ev(node[2], i)
+        if kind == "next":
+            return weak if at_end(i) else ev(node[1], succ(i))
+        if kind == "prev":                 # Y: nothing before the beginning
+            return False if i == 0 else ev(node[1], i - 1)
+        if kind == "weakprev":             # Z: vacuously true there
+            return True if i == 0 else ev(node[1], i - 1)
+        if kind == "always":
+            # safety: holds iff every REACHABLE instant satisfies it
+            return all(ev(node[1], j) for j in reachable(i))
+        if kind == "eventually":
+            return i in lfp(lambda j: ev(node[1], j), None)
+        if kind == "until":
+            return i in lfp(lambda j: ev(node[2], j), lambda j: ev(node[1], j))
+        raise ValueError(f"unknown node {kind}")
+
+    def reachable(i):
+        seen, stack = set(), [i]
+        while stack:
+            j = stack.pop()
+            if j in seen:
+                continue
+            seen.add(j)
+            k = succ(j)
+            if k is not None:
+                stack.append(k)
+        return seen
+
+    def lfp(goal, guard):
+        """
+        Least fixpoint: instants from which `goal` is eventually reached, moving
+        only through instants satisfying `guard` (None = unguarded, i.e. F).
+
+        The weak end-of-trace case is folded in here: on a finite prefix the
+        last instant is accepted when the trace merely failed to refute the
+        obligation - unguarded for F, and guard-holding for U.
+        """
+        current = set()
+        while True:
+            grown = set(current)
+            for j in range(n):
+                if goal(j):
+                    grown.add(j)
+                elif guard is None or guard(j):
+                    k = succ(j)
+                    if k is not None and k in current:
+                        grown.add(j)
+                    elif k is None and weak and (guard is None or guard(j)):
+                        grown.add(j)
+            if grown == current:
+                return current
+            current = grown
+
+    return ev(f, t)
 
 
 # --------------------------------------------------------------------------
@@ -203,8 +263,12 @@ def emit_formula(f: tuple) -> Tuple[List[str], int]:
         elif kind == "until":
             l, r = walk(node[1]), walk(node[2])
             lines.append(f"until({me},{l},{r}).")
-        elif kind in ("next", "eventually", "always", "prev", "weakprev"):
+        elif kind in ("next", "eventually", "always"):
             lines.append(f"{kind}({me},{walk(node[1])}).")
+        elif kind == "prev":            # Y, strong previous
+            lines.append(f"previous({me},{walk(node[1])}).")
+        elif kind == "weakprev":        # Z, weak previous
+            lines.append(f"weakprevious({me},{walk(node[1])}).")
         else:
             raise ValueError(f"unknown node {kind}")
         return me
@@ -214,37 +278,28 @@ def emit_formula(f: tuple) -> Tuple[List[str], int]:
     return lines, root
 
 
-def emit_trace(name: str, trace: Sequence[Set[str]]) -> List[str]:
-    lines = [f"trace_name({name}).", f"time(0..{len(trace) - 1},{name})."]
-    for i, state in enumerate(trace):
+def states_of(trace) -> List[Set[str]]:
+    """A trace is either a list of states, or (states, loop_start)."""
+    return list(trace[0]) if isinstance(trace, tuple) else list(trace)
+
+
+def loop_of(trace):
+    """The loop-back instant, or None when the trace is a finite prefix."""
+    return trace[1] if isinstance(trace, tuple) else None
+
+
+def emit_trace(name: str, trace) -> List[str]:
+    states, loop = states_of(trace), loop_of(trace)
+    lines = [f"trace_name({name}).", f"time(0..{len(states) - 1},{name})."]
+    for i, state in enumerate(states):
         for atom in sorted(state):
             lines.append(f"trace({i},{atom},{name}).")
+    if loop is not None:
+        lines.append(f"loop({loop},{name}).")
     return lines
 
 
-def encoder_rules(with_prev: bool) -> str:
-    """The rule block, with the file's own traces/formula/semantics stripped."""
-    with open(ENCODER) as fh:
-        body = fh.read()
-    keep = []
-    for line in body.splitlines():
-        s = line.strip()
-        if not s or s.startswith("%"):
-            continue
-        if s.startswith(("semantics(", "trace_name(", "time(", "trace(",
-                         "root(", "always(0", "implies(1", "atomic(", "symbol(",
-                         "disjunction(", "#show")):
-            continue
-        keep.append(line)
-    rules = "\n".join(keep)
-    if with_prev and os.path.exists(PREV_RULES):
-        with open(PREV_RULES) as fh:
-            rules += "\n" + fh.read()
-    return rules
-
-
-def sat_set_from_clingo(formula: tuple, traces: Dict[str, List[Set[str]]],
-                        weak: bool, with_prev: bool) -> Set[str]:
+def sat_set_from_clingo(formula: tuple, traces: Dict, weak: bool) -> Set[str]:
     """
     Which of `traces` clingo reports as satisfying `formula`.
 
@@ -254,19 +309,21 @@ def sat_set_from_clingo(formula: tuple, traces: Dict[str, List[Set[str]]],
     a trace at a time.
     """
     facts, _ = emit_formula(formula)
-    atoms = sorted({a for st in traces.values() for s in st for a in s} | {"a", "b", "c"})
+    atoms = sorted({a for tr in traces.values() for st in states_of(tr) for a in st}
+                   | {"a", "b", "c"})
     trace_lines: List[str] = []
     for name, trace in traces.items():
         trace_lines += emit_trace(name, trace)
+    # The encoder is a real file argument now that it holds nothing but rules,
+    # so its #include paths resolve and nothing has to be stripped out of it.
     program = "\n".join([
-        encoder_rules(with_prev),
         f"semantics({'weak' if weak else 'strong'}).",
         *[f"symbol({a})." for a in atoms],
         *trace_lines,
         *facts,
         "#show sat/1.",
     ])
-    proc = subprocess.run(["clingo", "-"], input=program,
+    proc = subprocess.run(["clingo", ENCODER, "-"], input=program,
                           capture_output=True, text=True)
     if "SATISFIABLE" not in proc.stdout:
         raise RuntimeError(
@@ -275,12 +332,13 @@ def sat_set_from_clingo(formula: tuple, traces: Dict[str, List[Set[str]]],
     return set(re.findall(r"sat\(([^)]+)\)", proc.stdout))
 
 
-def sat_set_expected(formula: tuple, traces: Dict[str, List[Set[str]]],
-                     weak: bool) -> Set[str]:
+def sat_set_expected(formula: tuple, traces: Dict, weak: bool) -> Set[str]:
     """The same set, from the reference evaluator."""
     return {name for name, trace in traces.items()
-            if sat_ref(formula, trace, 0, weak)}
+            if sat_ref(trace, formula, 0, weak)}
 
 
-def pretty(trace: Sequence[Set[str]]) -> str:
-    return " . ".join("{" + ",".join(sorted(s)) + "}" for s in trace)
+def pretty(trace) -> str:
+    states, loop = states_of(trace), loop_of(trace)
+    shape = " . ".join("{" + ",".join(sorted(s)) + "}" for s in states)
+    return shape + (f" ->loop@{loop}" if loop is not None else "")

@@ -65,7 +65,7 @@ def _report(label: str, weak: bool, got: Set[str], want: Set[str]) -> str:
 def test_sat_set_matches_reference(label: str, weak: bool) -> None:
     """The set of traces clingo satisfies is the set the semantics require."""
     formula = FORMULAS[label]
-    got = sat_set_from_clingo(formula, TRACES, weak, with_prev=False)
+    got = sat_set_from_clingo(formula, TRACES, weak)
     want = sat_set_expected(formula, TRACES, weak)
     assert got == want, _report(label, weak, got, want)
 
@@ -77,7 +77,7 @@ DISCRIMINATING = [
     (label, name)
     for label, f in FORMULAS.items()
     for name, tr in TRACES.items()
-    if sat_ref(f, tr, 0, False) != sat_ref(f, tr, 0, True)
+    if sat_ref(tr, f, 0, False) != sat_ref(tr, f, 0, True)
 ]
 
 
@@ -96,12 +96,12 @@ def test_strong_and_weak_actually_differ(label: str, trace_name: str) -> None:
     formula = FORMULAS[label]
     trace = TRACES[trace_name]
     strong = trace_name in sat_set_from_clingo(formula, {trace_name: trace},
-                                               False, with_prev=False)
+                                               False)
     weak = trace_name in sat_set_from_clingo(formula, {trace_name: trace},
-                                             True, with_prev=False)
-    assert strong == sat_ref(formula, trace, 0, False), \
+                                             True)
+    assert strong == sat_ref(trace, formula, 0, False), \
         f"{label} on {pretty(trace)}: strong reading disagrees with clingo"
-    assert weak == sat_ref(formula, trace, 0, True), \
+    assert weak == sat_ref(trace, formula, 0, True), \
         f"{label} on {pretty(trace)}: weak reading disagrees with clingo"
     assert strong != weak, \
         (f"{label} on {pretty(trace)} was supposed to tell the two readings "
@@ -120,7 +120,7 @@ def test_prev_sat_set_matches_reference(label: str, weak: bool) -> None:
     strong and weak disagree means the prev rules got wired to the toggle.
     """
     formula = PREV_FORMULAS[label]
-    got = sat_set_from_clingo(formula, TRACES, weak, with_prev=True)
+    got = sat_set_from_clingo(formula, TRACES, weak)
     want = sat_set_expected(formula, TRACES, weak)
     assert got == want, _report(label, weak, got, want)
 
@@ -128,8 +128,8 @@ def test_prev_sat_set_matches_reference(label: str, weak: bool) -> None:
 def test_prev_is_insensitive_to_the_future_toggle() -> None:
     """Y stays Y under both future semantics; same for Z."""
     for label, formula in PREV_FORMULAS.items():
-        strong = sat_set_from_clingo(formula, TRACES, False, with_prev=True)
-        weak = sat_set_from_clingo(formula, TRACES, True, with_prev=True)
+        strong = sat_set_from_clingo(formula, TRACES, False)
+        weak = sat_set_from_clingo(formula, TRACES, True)
         assert strong == weak, (
             f"{label}: the prev rules are sensitive to semantics(strong|weak), "
             f"which would make Y silently become Z.\n"
@@ -145,10 +145,65 @@ def test_negated_strong_prev_equals_weak_prev_of_negation() -> None:
     "simplified" into a single operator, the reason it cannot be will be stated
     by a failing test rather than rediscovered.
     """
-    neg_strong = sat_set_from_clingo(PREV_FORMULAS["!Y a"], TRACES, False, with_prev=True)
-    weak_of_neg = sat_set_from_clingo(PREV_FORMULAS["Z !a"], TRACES, False, with_prev=True)
-    strong_of_neg = sat_set_from_clingo(PREV_FORMULAS["Y !a"], TRACES, False, with_prev=True)
+    neg_strong = sat_set_from_clingo(PREV_FORMULAS["!Y a"], TRACES, False)
+    weak_of_neg = sat_set_from_clingo(PREV_FORMULAS["Z !a"], TRACES, False)
+    strong_of_neg = sat_set_from_clingo(PREV_FORMULAS["Y !a"], TRACES, False)
     assert neg_strong == weak_of_neg, "!Y(a) should equal Z(!a)"
     assert neg_strong != strong_of_neg, (
         "!Y(a) should NOT equal Y(!a) - if these agree, the t=0 boundary is "
         "not being modelled and the whole !PREV story collapses")
+
+
+LASSOS = [n for n, tr in TRACES.items() if isinstance(tr, tuple)]
+
+
+@pytest.mark.parametrize("label", list(FORMULAS), ids=lambda s: s)
+def test_lassos_ignore_the_future_toggle(label: str) -> None:
+    """
+    An infinite behaviour has one reading, not two.
+
+    On a lasso the last instant has a successor through the back edge, so every
+    `not has_succ` guard in ltl/future.asp fails and no weak rule can fire. If a
+    lasso's answer changes with the toggle, a weak rule is reachable when it
+    should not be - which would quietly make liveness unfalsifiable on exactly
+    the traces where it is decidable.
+    """
+    formula = FORMULAS[label]
+    lassos = {n: TRACES[n] for n in LASSOS}
+    strong = sat_set_from_clingo(formula, lassos, False)
+    weak = sat_set_from_clingo(formula, lassos, True)
+    assert strong == weak, (
+        f"{label}: lasso answers changed with the semantics toggle\n"
+        f"  strong: {sorted(strong)}\n  weak  : {sorted(weak)}")
+
+
+def test_past_on_a_lasso_is_flagged() -> None:
+    """
+    Mixing a past operator with a looping trace is marked, not silently wrong.
+
+    A lasso folds the start of the behaviour and a point inside the cycle onto
+    the same instant. Future operators cannot distinguish them; Y and Z can.
+    `pred` therefore never traverses the back edge, which makes the reading at
+    t=0 correct - and t=0 is where sat/1 asks. Under `always`, though, a past
+    operator on a lasso describes the first pass only.
+
+    `past_on_lasso/1` exists so that a specification hitting that caveat can be
+    detected rather than quietly believed.
+    """
+    import subprocess
+    from tests.test_semantics.ltlf_ext_harness import ENCODER, emit_formula, emit_trace
+
+    facts, _ = emit_formula(PREV_FORMULAS["Y a"])
+    program = "\n".join([
+        "semantics(strong).", "symbol(a).",
+        *emit_trace("finite", [set(), {"a"}]),
+        *emit_trace("looping", ([set(), {"a"}], 0)),
+        *facts,
+        "#show past_on_lasso/1.",
+    ])
+    out = subprocess.run(["clingo", ENCODER, "-"], input=program,
+                         capture_output=True, text=True).stdout
+    assert "past_on_lasso(looping)" in out, \
+        f"a past operator on a looping trace should be flagged:\n{out}"
+    assert "past_on_lasso(finite)" not in out, \
+        f"a finite trace carries no such caveat:\n{out}"

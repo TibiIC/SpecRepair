@@ -36,7 +36,8 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(description=__doc__)
-    ap.add_argument("--prev", action="store_true", help="include the Y/Z formulas")
+    ap.add_argument("--prev", action="store_true",
+                    help="include the Y/Z formulas (past is built in now)")
     ap.add_argument("--diff", action="store_true",
                     help="only rows where strong and weak disagree")
     ap.add_argument("--emit", action="store_true", help="write generated_cases.asp")
@@ -49,12 +50,12 @@ def main(argv=None) -> int:
     print(f"{'formula':26} {'trace':13} {'trace shape':26} {'strong':>8} {'weak':>8}")
     mismatches = rows = 0
     for label, f in formulas.items():
-        strong_set = sat_set_from_clingo(f, TRACES, False, args.prev)
-        weak_set = sat_set_from_clingo(f, TRACES, True, args.prev)
+        strong_set = sat_set_from_clingo(f, TRACES, False)
+        weak_set = sat_set_from_clingo(f, TRACES, True)
         for name, trace in TRACES.items():
             s_got, w_got = name in strong_set, name in weak_set
-            s_exp = sat_ref(f, trace, 0, False)
-            w_exp = sat_ref(f, trace, 0, True)
+            s_exp = sat_ref(trace, f, 0, False)
+            w_exp = sat_ref(trace, f, 0, True)
             mismatches += (s_got != s_exp) + (w_got != w_exp)
             if args.diff and s_got == w_got:
                 continue
