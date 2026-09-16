@@ -13,19 +13,14 @@ trace_name(g1).
 time(0..1,g1).
 trace(1,a,g1).
 
-% Trace {} · {b,c}
-trace_name(g2).
-time(0..1,g2).
-trace(1,c,g2).
-
 % Formula G(a → b v c)
 root(0).
-always(0,1).
-implies(1,2,3).
-atomic(2,a).
-disjunction(3,4).
-atomic(4,b).
-atomic(4,c).
+always(0,a_impl_disj_b_c).
+implies(a_impl_disj_b_c,atom_a,disj_b_c).
+atomic(atom_a,a).
+disjunction(disj_b_c,disj_comp).
+atomic(disj_comp,b).
+atomic(disj_comp,c).
 
 #show sat/1.
 %#show holds/3.
