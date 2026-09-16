@@ -1,21 +1,19 @@
 #!/usr/bin/env python3
 """
-Interactive table for ltl2asp_ext.asp: every formula, every trace, both semantics.
+Interactive table over ltl2asp_ext.asp: every formula, every trace, both sides.
 
-The formulas, traces and reference evaluator live in
-`tests/test_semantics/ltlf_ext_harness.py`, so this script and the pytest suite
+Formulas, traces and the reference evaluator live in
+`tests/test_semantics/ltlf_weak_ops.py`, so this script and the pytest suite
 cannot drift apart. Add a formula there and it appears in both.
 
     conda activate arm_env
-    python files/until_semantics/ltlf_testkit.py           # the table
-    python files/until_semantics/ltlf_testkit.py --prev    # + the Y/Z formulas
-    python files/until_semantics/ltlf_testkit.py --diff    # only the rows where
-                                                           # strong and weak differ
-    python files/until_semantics/ltlf_testkit.py --emit    # write generated_cases.asp
+    python files/until_semantics/ltlf_testkit.py              # the table
+    python files/until_semantics/ltlf_testkit.py --disagree   # only mismatches
+    python files/until_semantics/ltlf_testkit.py --example    # check ltl/example.asp
 
-For the same checks as assertions instead of a table:
+For the same checks as assertions:
 
-    python -m pytest tests/test_semantics/test_ltlf_asp_ext.py -q
+    python -m pytest tests/test_semantics/test_ltlf_weak_operators.py -q
 """
 from __future__ import annotations
 
@@ -26,59 +24,64 @@ import sys
 REPO = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 sys.path.insert(0, REPO)
 
-from tests.test_semantics.ltlf_ext_harness import (  # noqa: E402
-    FORMULAS, PREV_FORMULAS, TRACES, emit_formula, emit_trace, pretty,
-    sat_ref, sat_set_from_clingo,
+from tests.test_semantics.ltlf_weak_ops import (  # noqa: E402
+    EXAMPLE_FORMULA, EXAMPLE_TRACES, TRACES, expected_names, holds,
+    sat_names, sat_names_of_files, supported,
 )
+from tests.test_semantics.test_ltlf_weak_operators import CASES  # noqa: E402
 
 HERE = os.path.dirname(os.path.abspath(__file__))
+EXAMPLE = os.path.join(HERE, "ltl", "example.asp")
+
+
+def check_example() -> int:
+    """Does the hand-written example file encode the formula it claims to?"""
+    stated = sat_names(EXAMPLE_FORMULA, EXAMPLE_TRACES)
+    actual = sat_names_of_files([EXAMPLE])
+    print(f"  {EXAMPLE}")
+    print(f"    the file satisfies        : {sorted(actual) or '{}'}")
+    print(f"    its stated formula would  : {sorted(stated) or '{}'}")
+    if stated == actual:
+        print("    -> the file encodes what its comment says")
+        return 0
+    print("    -> MISMATCH: the facts and the comment describe different formulas")
+    return 1
 
 
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(description=__doc__)
-    ap.add_argument("--prev", action="store_true",
-                    help="include the Y/Z formulas (past is built in now)")
-    ap.add_argument("--diff", action="store_true",
-                    help="only rows where strong and weak disagree")
-    ap.add_argument("--emit", action="store_true", help="write generated_cases.asp")
+    ap.add_argument("--disagree", action="store_true",
+                    help="only rows where clingo and the reference differ")
+    ap.add_argument("--example", action="store_true",
+                    help="check ltl/example.asp against its stated formula")
     args = ap.parse_args(argv)
 
-    formulas = dict(FORMULAS)
-    if args.prev:
-        formulas.update(PREV_FORMULAS)
+    if args.example:
+        return check_example()
 
-    print(f"{'formula':26} {'trace':13} {'trace shape':26} {'strong':>8} {'weak':>8}")
-    mismatches = rows = 0
-    for label, f in formulas.items():
-        strong_set = sat_set_from_clingo(f, TRACES, False)
-        weak_set = sat_set_from_clingo(f, TRACES, True)
+    print(f"{'formula':22} {'trace':10} {'trace shape':28} {'clingo':>8} {'ref':>6}")
+    rows = bad = 0
+    for label, formula, kinds in CASES:
+        missing = [k for k in kinds if not supported(k)]
+        if missing:
+            print(f"{label:22} {'-':10} not defined: {', '.join(missing)}")
+            continue
+        got = sat_names(formula, TRACES)
         for name, trace in TRACES.items():
-            s_got, w_got = name in strong_set, name in weak_set
-            s_exp = sat_ref(trace, f, 0, False)
-            w_exp = sat_ref(trace, f, 0, True)
-            mismatches += (s_got != s_exp) + (w_got != w_exp)
-            if args.diff and s_got == w_got:
+            g, e = name in got, holds(trace, formula, 0)
+            if args.disagree and g == e:
                 continue
             rows += 1
-            mark = lambda got, exp: ("SAT" if got else "-") + ("" if got == exp else "!")
-            print(f"{label:26} {name:13} {pretty(trace):26} "
-                  f"{mark(s_got, s_exp):>8} {mark(w_got, w_exp):>8}")
-        if not args.diff:
+            bad += g != e
+            shape = " . ".join("{" + ",".join(sorted(s)) + "}" for s in trace)
+            print(f"{label:22} {name:10} {shape:28} "
+                  f"{('sat' if g else '-'):>8} {('sat' if e else '-'):>6}"
+                  f"{'' if g == e else '   <-- differ'}")
+        if not args.disagree:
             print()
 
-    print(f"\n{rows} rows, {mismatches} disagreements with the reference evaluator")
-    if args.emit:
-        out = os.path.join(HERE, "generated_cases.asp")
-        with open(out, "w") as fh:
-            fh.write("% Generated by files/until_semantics/ltlf_testkit.py --emit\n")
-            for label, f in formulas.items():
-                facts, _ = emit_formula(f)
-                fh.write(f"\n% Formula {label}\n" + "\n".join(facts) + "\n")
-            for name, trace in TRACES.items():
-                fh.write(f"\n% Trace {pretty(trace)}\n"
-                         + "\n".join(emit_trace(name, trace)) + "\n")
-        print(f"wrote {out}")
-    return 1 if mismatches else 0
+    print(f"\n{rows} rows, {bad} disagreements with the reference evaluator")
+    return 1 if bad else 0
 
 
 if __name__ == "__main__":

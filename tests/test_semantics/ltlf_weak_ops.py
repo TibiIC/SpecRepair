@@ -295,6 +295,30 @@ def expected_names(formula: tuple, traces: Dict[str, List[Set[str]]]) -> Set[str
     return {n for n, tr in traces.items() if holds(tr, formula, 0)}
 
 
+def sat_names_of_files(paths: List[str]) -> Set[str]:
+    """
+    Which traces clingo satisfies, running hand-written .asp files as they are.
+
+    Used to check a file like ltl/example.asp against the formula its comment
+    claims to encode. A hand-numbered fact block can say something other than
+    what its author meant - `conjunction(x,A). conjunction(x,B).` is a two-part
+    conjunction where `disjunction(y,A). disjunction(y,B).` would have been two
+    disjuncts - and nothing in the file itself notices.
+    """
+    import re
+    proc = subprocess.run(["clingo", ENCODER, *paths, "--outf=0"],
+                          capture_output=True, text=True)
+    if "SATISFIABLE" not in proc.stdout:
+        raise RuntimeError(f"clingo failed:\n{proc.stdout[-600:]}\n{proc.stderr[-300:]}")
+    return set(re.findall(r"sat\(([^)]+)\)", proc.stdout))
+
+
+# The formula ltl/example.asp says it encodes, and the trace it defines. Kept
+# here so the file's comment can be checked against its facts.
+EXAMPLE_FORMULA = ("always", ("implies", A, ("or", B, C)))   # G(a -> b | c)
+EXAMPLE_TRACES: Dict[str, List[Set[str]]] = {"g1": [set(), {"a", "c"}]}
+
+
 TRACES: Dict[str, List[Set[str]]] = {
     "e1":      [set()],
     "a1":      [{"a"}],

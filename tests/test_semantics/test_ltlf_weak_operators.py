@@ -333,3 +333,42 @@ def test_strong_release_implies_weak_release(label, strong, weak, kinds) -> None
     s, w = sat_names(strong, TRACES), sat_names(weak, TRACES)
     assert s <= w, f"{label}: M accepted traces R rejects: {sorted(s - w)}"
     assert s != w, f"{label}: M and R agreed everywhere, so 'b forever' is not distinguished"
+
+
+# --------------------------------------------------------------------------
+# 5. the hand-written example file
+# --------------------------------------------------------------------------
+
+def test_example_file_encodes_the_formula_it_claims() -> None:
+    """
+    `ltl/example.asp` must satisfy what its comment says it encodes.
+
+    Hand-numbered fact blocks can quietly say something other than their author
+    meant, and nothing in the file notices. The multiplicity of a node is
+    carried by WHICH id you repeat:
+
+        disjunction(y,A).  disjunction(y,B).    two disjuncts of y
+        conjunction(x,A).  conjunction(x,B).    two conjuncts of x
+
+    so repeating the conjunction's id where the disjunction's was meant turns
+    `b | c` into `b & c` with no error and no warning - the formula still parses
+    and still evaluates, just to something else.
+
+    The emitter in ltlf_weak_ops builds the same formula from an AST, where that
+    mistake is not expressible. Comparing the two is what pins the file.
+    """
+    import os
+    from tests.test_semantics.ltlf_weak_ops import (
+        EXAMPLE_FORMULA, EXAMPLE_TRACES, sat_names_of_files,
+    )
+    example = os.path.join(
+        os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))),
+        "files", "until_semantics", "ltl", "example.asp")
+
+    actual = sat_names_of_files([example])
+    stated = sat_names(EXAMPLE_FORMULA, EXAMPLE_TRACES)
+    assert actual == stated, (
+        f"\nltl/example.asp does not encode the formula its comment claims."
+        f"\n  the file satisfies       : {sorted(actual) or '{}'}"
+        f"\n  its stated formula would : {sorted(stated) or '{}'}"
+        f"\n  stated formula: G(a -> b | c),  trace g1: {{}} . {{a,c}}")
